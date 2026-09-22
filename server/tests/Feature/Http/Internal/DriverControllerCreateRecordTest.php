@@ -10,11 +10,12 @@ use Illuminate\Http\Request;
 /**
  * Covers the internal DriverController createRecord and updateRecord flows
  * against an in-memory SQLite fixture. The creation closure executes end to
- * end: company resolution, user creation with driver typing, existing-user
- * adoption and conflict detection, organization membership checks, and the
- * exception-to-error-response branches. Role assignment requires the full
- * spatie permission boot unavailable in the harness, so flows settle in the
- * documented error branch after the user record is persisted.
+ * end: company resolution, managed account creation with driver typing
+ * through ProfileAccountManager, and the exception-to-error-response
+ * branches. Role assignment requires the full spatie permission boot, which
+ * this fixture leaves out, so flows settle in the documented error branch
+ * after the user record is persisted (see
+ * DriverControllerExistingUserAdoptionTest for the full flow).
  */
 if (!function_exists('Fleetbase\Support\session')) {
     eval('namespace Fleetbase\Support; function session($key = null, $default = null) { if ($key === null) { return new class { public function has($k) { return \session($k) !== null; } public function get($k, $d = null) { return \session($k, $d); } }; } return \session($key, $default); }');
@@ -101,6 +102,28 @@ function fleetopsInternalDriverCreateBoot(): SQLiteConnection
         }
     });
     Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+    app()->instance('hash', new class implements Illuminate\Contracts\Hashing\Hasher {
+        public function info($hashedValue): array
+        {
+            return [];
+        }
+
+        public function make($value, array $options = []): string
+        {
+            return 'hashed:' . $value;
+        }
+
+        public function check($value, $hashedValue, array $options = []): bool
+        {
+            return 'hashed:' . $value === $hashedValue;
+        }
+
+        public function needsRehash($hashedValue, array $options = []): bool
+        {
+            return false;
+        }
+    });
+    Illuminate\Support\Facades\Hash::clearResolvedInstance('hash');
 
     $schema = $connection->getSchemaBuilder();
     $tables = [
@@ -158,31 +181,33 @@ test('create record provisions a driver-typed user before role assignment', func
         ->and($connection->table('company_users')->count())->toBeGreaterThanOrEqual(0);
 });
 
-test('create record rejects users that already belong to a driver', function () {
+test('create record ignores a picked user account and resolves the login from the email', function () {
     $connection = fleetopsInternalDriverCreateBoot();
-    $connection->table('users')->insert(['uuid' => '11111111-1111-4111-8111-111111111111', 'company_uuid' => 'company-1', 'name' => 'Existing', 'type' => 'driver']);
-    $connection->table('drivers')->insert(['uuid' => 'driver-1', 'company_uuid' => 'company-1', 'user_uuid' => '11111111-1111-4111-8111-111111111111']);
+    $connection->table('users')->insert(['uuid' => '11111111-1111-4111-8111-111111111111', 'company_uuid' => 'company-1', 'name' => 'Existing', 'email' => 'existing@example.com', 'type' => 'driver']);
 
-    $result = (new DriverController())->createRecord(fleetopsInternalDriverCreateRequest([
-        'name'      => 'Existing',
+    (new DriverController())->createRecord(fleetopsInternalDriverCreateRequest([
+        'name'      => 'Someone Else',
+        'email'     => 'someone@example.com',
         'user_uuid' => '11111111-1111-4111-8111-111111111111',
     ]));
 
-    expect($result)->toBeInstanceOf(JsonResponse::class)
-        ->and($result->getData(true))->toBe(['error' => 'This user account already belongs to a driver.']);
+    // The login account is managed by the profile: a new driver account is
+    // created for the email rather than the picked account being taken over
+    expect($connection->table('users')->count())->toBe(2)
+        ->and($connection->table('users')->where('email', 'someone@example.com')->value('type'))->toBe('driver')
+        ->and($connection->table('users')->where('uuid', '11111111-1111-4111-8111-111111111111')->value('name'))->toBe('Existing');
 });
 
-test('create record adopts an existing user and applies photo avatars', function () {
+test('create record applies photo avatars to the new driver account', function () {
     $connection = fleetopsInternalDriverCreateBoot();
-    $connection->table('users')->insert(['uuid' => '11111111-1111-4111-8111-111111111111', 'company_uuid' => 'company-1', 'name' => 'Adoptable', 'type' => 'driver']);
 
     $result = (new DriverController())->createRecord(fleetopsInternalDriverCreateRequest([
-        'name'       => 'Adoptable',
-        'user_uuid'  => '11111111-1111-4111-8111-111111111111',
+        'name'       => 'Photo Driver',
         'photo_uuid' => '22222222-2222-4222-8222-222222222222',
     ]));
 
-    // Avatar update applies before the harness role-assignment limitation.
+    // Avatar is set when the account is created, before the harness
+    // role-assignment limitation.
     expect($connection->table('users')->value('avatar_uuid'))->toBe('22222222-2222-4222-8222-222222222222')
         ->and($result)->toBeInstanceOf(JsonResponse::class)
         ->and($result->getData(true))->toHaveKey('error');

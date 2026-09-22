@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
 use Fleetbase\FleetOps\Exceptions\UserAlreadyExistsException;
+use Fleetbase\FleetOps\Support\ProfileAccountManager;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\CompanyUser;
 use Fleetbase\Models\Model;
@@ -157,9 +158,13 @@ class Contact extends Model
         return $this->belongsTo(User::class, 'user_uuid');
     }
 
+    /**
+     * The contact's login account: a managed `contact`/`customer` account, or a
+     * team member's account linked by email or phone.
+     */
     public function user(): BelongsTo|Builder
     {
-        return $this->belongsTo(User::class, 'user_uuid')->where('type', $this->type);
+        return $this->belongsTo(User::class, 'user_uuid');
     }
 
     public function photo(): BelongsTo
@@ -316,74 +321,16 @@ class Contact extends Model
      */
     public static function createUserFromContact(Contact $contact, bool $sendInvite = false, bool $update = false): User
     {
-        // Check if user already exist with email or phone number
-        $existingUser = null;
-        if ($contact->email || $contact->phone) {
-            $existingUser = User::where(function ($query) use ($contact) {
-                $query->where('company_uuid', $contact->company_uuid)
-                    ->orWhereHas('companyUsers', function ($query) use ($contact) {
-                        $query->where('company_uuid', $contact->company_uuid);
-                    });
-            })
-                ->where(function ($query) use ($contact) {
-                    if ($contact->email) {
-                        $query->where('email', $contact->email);
-                    }
-
-                    if ($contact->phone) {
-                        $method = $contact->email ? 'orWhere' : 'where';
-                        $query->{$method}('phone', Utils::formatPhoneNumber($contact->phone));
-                    }
-                })
-                ->whereNull('deleted_at')
-                ->first();
-        }
-
-        if ($existingUser) {
-            if ($contact->isCustomer()) {
-                $contact->assertCustomerUserCanBeAssigned($existingUser);
-            }
-
-            // Check if existing user belongs to another contact
-            $existingUserContact = Contact::where(['user_uuid' => $existingUser->uuid, 'company_uuid' => $contact->company_uuid])->whereHas('user')->first();
-            if ($existingUserContact) {
-                throw new UserAlreadyExistsException('User already exists, try to assigning the user to this contact.', $existingUser);
-            }
-            // Assign the user to this contact instead
-            $contact->setAttribute('user_uuid', $existingUser->uuid);
-            if ($update) {
-                $contact->update(['user_uuid' => $existingUser->uuid]);
-            }
-            $contact->setRelation('user', $existingUser);
-
-            return $existingUser;
-        }
-
-        // Load company
         $contact->loadMissing('company');
 
-        // Create the user record
-        $user = User::create([
-            'company_uuid' => $contact->company_uuid,
-            'name'         => $contact->name,
-            'email'        => $contact->email,
-            'phone'        => $contact->phone ? Utils::formatPhoneNumber($contact->phone) : null,
-            'username'     => Str::slug($contact->name . '_' . Str::random(4), '_'),
-            'password'     => Str::random(),
-            'timezone'     => $contact->company->timezone ?? date_default_timezone_get(),
-            'status'       => 'pending',
-        ]);
-
-        // Set user type
-        $user->setType($contact->type);
-
-        // Assign to company without triggering core organization invitations.
-        static::assignUserToContactCompany($contact, $user);
-
-        // Assign customer role
-        if ($contact->isCustomer()) {
-            $user->assignSingleRole('Fleet-Ops Customer');
-        }
+        $user = ProfileAccountManager::resolveForProfile(
+            $contact->company_uuid,
+            $contact->isCustomer() ? 'customer' : 'contact',
+            $contact->name,
+            $contact->email,
+            $contact->phone,
+            ['timezone' => $contact->company->timezone ?? null]
+        );
 
         // Set user to contact
         $contact->setAttribute('user_uuid', $user->uuid);
@@ -411,6 +358,13 @@ class Contact extends Model
         }
 
         $this->assertCustomerUserCanBeAssigned($user);
+
+        // A team member's account keeps its own organization role
+        if (ProfileAccountManager::isStaffAccount($user)) {
+            $this->setRelation('user', $user);
+
+            return $user;
+        }
 
         $this->loadMissing('company');
         if ($this->company) {
@@ -511,7 +465,8 @@ class Contact extends Model
         // Get the company user instance
         $companyUser = $user->getCompanyUser($this->company);
 
-        if ($companyUser) {
+        // A team member's account keeps its own organization role
+        if ($companyUser && ProfileAccountManager::isManagedAccount($user)) {
             $companyUser->assignSingleRole($this->isCustomer() ? 'Fleet-Ops Customer' : 'Fleet-Ops Contact');
         }
 
@@ -546,12 +501,21 @@ class Contact extends Model
             return;
         }
 
+        // A team member of the organization can hold a customer profile
+        if (ProfileAccountManager::isStaffAccount($user) && ProfileAccountManager::isCompanyMember($user, $this->company_uuid)) {
+            return;
+        }
+
         throw new CustomerUserConflictException(static::customerUserConflictMessage($user), $user);
     }
 
     public static function customerUserConflictMessage(?User $user = null): string
     {
         $field = $user?->email ? 'email' : ($user?->phone ? 'phone number' : 'user account');
+
+        if (ProfileAccountManager::isManagedAccount($user)) {
+            return 'This ' . $field . ' is already used by a ' . $user->type . ' and cannot be used for a customer account.';
+        }
 
         return 'This ' . $field . ' belongs to an existing staff user and cannot be used for a customer account.';
     }
@@ -591,32 +555,31 @@ class Contact extends Model
         return User::where('uuid', $this->user_uuid)->first();
     }
 
+    /**
+     * Push the contact's changed proxy fields (name, email, phone, timezone) to
+     * its login account. A team member's account only takes the name.
+     *
+     * @throws \Fleetbase\FleetOps\Exceptions\ProfileIdentityConflictException
+     */
     public function syncWithUser(): bool
     {
+        // A new contact's account was just resolved from these values
+        if (!$this->exists) {
+            return false;
+        }
+
         $updates = [];
-
-        if ($this->isDirty('name')) {
-            $updates['name'] = $this->name;
+        foreach (['name', 'email', 'phone', 'timezone'] as $field) {
+            if ($this->isDirty($field)) {
+                $updates[$field] = $this->{$field};
+            }
         }
 
-        if ($this->isDirty('email')) {
-            $updates['email'] = $this->email;
+        if (empty($updates)) {
+            return false;
         }
 
-        if ($this->isDirty('phone')) {
-            $updates['phone'] = $this->phone;
-        }
-
-        if ($this->isDirty('timezone')) {
-            $updates['timezone'] = $this->timezone;
-        }
-
-        $user = $this->getUser();
-        if ($user) {
-            return $user->update($updates);
-        }
-
-        return false;
+        return ProfileAccountManager::syncProxyFields($this->getUser(), $updates);
     }
 
     /**
@@ -638,12 +601,14 @@ class Contact extends Model
      */
     public function deleteUser(): ?bool
     {
-        $this->loadMissing('user');
-        if ($this->user && $this->user->type === $this->type) {
-            return $this->user->delete();
+        $user = $this->getUser();
+        if (!ProfileAccountManager::isManagedAccount($user)) {
+            return false;
         }
 
-        return false;
+        ProfileAccountManager::releaseForProfile($user, $this->company_uuid);
+
+        return $user->trashed();
     }
 
     public function getUser(): ?User

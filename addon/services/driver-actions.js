@@ -5,6 +5,7 @@ import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { dasherize } from '@ember/string';
 import { PANEL_DEFAULTS, closePanelsThen } from '../utils/context-panel';
+import { confirmLoginAction, hasInactiveLogin, hasManagedLogin } from '../utils/profile-login-actions';
 
 export default class DriverActionsService extends ResourceActionService {
     @service('universe/menu-service') menuService;
@@ -422,7 +423,104 @@ export default class DriverActionsService extends ResourceActionService {
             { separator: true },
             { text: this.intl.t('driver.actions.locate-driver'), icon: 'location-dot', fn: () => this.locate(driver), permission: 'fleet-ops view driver' },
             { text: this.intl.t('driver.actions.create-issue'), icon: 'triangle-exclamation', fn: () => this.createIssue(driver), permission: 'fleet-ops create issue' },
+            ...this.accountMenuItems(driver),
         ];
+    }
+
+    /**
+     * The login account section of a driver's actions menu. Only offered when
+     * the driver has a login managed from Fleet-Ops; a staff-linked driver's
+     * login is managed from IAM.
+     */
+    accountMenuItems(driver) {
+        if (!hasManagedLogin(driver)) {
+            return [];
+        }
+
+        const items = this.accountRowActionItems()
+            .filter(({ isVisible }) => isVisible(driver))
+            // eslint-disable-next-line no-unused-vars
+            .map(({ label, fn, isVisible, ...item }) => ({ ...item, text: label, fn: () => fn(driver) }));
+
+        return [{ separator: true }, ...items];
+    }
+
+    /**
+     * Login account actions for the drivers table row menu.
+     */
+    accountRowActionItems() {
+        const permission = 'fleet-ops update driver';
+
+        return [
+            {
+                label: this.intl.t('profile-account.actions.reset-password'),
+                icon: 'key',
+                fn: (driver) => this.resetCredentials(driver),
+                permission,
+                isVisible: (driver) => hasManagedLogin(driver),
+            },
+            {
+                label: this.intl.t('profile-account.actions.send-credentials'),
+                icon: 'paper-plane',
+                fn: (driver) => this.sendCredentials(driver),
+                permission,
+                isVisible: (driver) => hasManagedLogin(driver),
+            },
+            {
+                label: this.intl.t('profile-account.actions.deactivate-login'),
+                icon: 'lock',
+                class: 'text-red-500 hover:text-red-600',
+                fn: (driver) => this.deactivateLogin(driver),
+                permission,
+                isVisible: (driver) => hasManagedLogin(driver) && !hasInactiveLogin(driver),
+            },
+            {
+                label: this.intl.t('profile-account.actions.reactivate-login'),
+                icon: 'unlock',
+                fn: (driver) => this.reactivateLogin(driver),
+                permission,
+                isVisible: (driver) => hasManagedLogin(driver) && hasInactiveLogin(driver),
+            },
+        ];
+    }
+
+    @action resetCredentials(driver, options = {}) {
+        return this.modalsManager.show('modals/reset-profile-credentials', {
+            profile: driver,
+            endpoint: `drivers/${driver.id}/reset-credentials`,
+            ...options,
+        });
+    }
+
+    @action sendCredentials(driver) {
+        return confirmLoginAction(this, driver, {
+            title: this.intl.t('profile-account.prompts.send-credentials-title'),
+            body: this.intl.t('profile-account.prompts.send-credentials-body', { name: driver.name }),
+            acceptButtonText: this.intl.t('profile-account.actions.send-credentials'),
+            endpoint: `drivers/${driver.id}/send-credentials`,
+            successMessage: this.intl.t('profile-account.prompts.send-credentials-success', { name: driver.name }),
+        });
+    }
+
+    @action deactivateLogin(driver) {
+        return confirmLoginAction(this, driver, {
+            title: this.intl.t('profile-account.actions.deactivate-login'),
+            body: this.intl.t('profile-account.prompts.deactivate-login-body', { name: driver.name }),
+            acceptButtonText: this.intl.t('profile-account.actions.deactivate-login'),
+            acceptButtonScheme: 'danger',
+            endpoint: `drivers/${driver.id}/deactivate-login`,
+            successMessage: this.intl.t('profile-account.prompts.deactivate-login-success', { name: driver.name }),
+        });
+    }
+
+    @action reactivateLogin(driver) {
+        return confirmLoginAction(this, driver, {
+            title: this.intl.t('profile-account.actions.reactivate-login'),
+            body: this.intl.t('profile-account.prompts.reactivate-login-body', { name: driver.name }),
+            acceptButtonText: this.intl.t('profile-account.actions.reactivate-login'),
+            endpoint: `drivers/${driver.id}/reactivate-login`,
+            successMessage: this.intl.t('profile-account.prompts.reactivate-login-success', { name: driver.name }),
+        });
     }
 
     @action createIssue(driver) {

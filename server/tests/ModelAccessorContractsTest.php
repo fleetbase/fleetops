@@ -130,12 +130,49 @@ class FleetOpsContactSyncUserFake extends Fleetbase\Models\User
         return true;
     }
 
-    public function delete()
+    public function save(array $options = []): bool
     {
-        $this->deleted = true;
+        $this->updates[] = $this->getDirty();
+        $this->syncOriginal();
 
         return true;
     }
+
+    public function delete()
+    {
+        $this->deleted = true;
+        $this->setAttribute('deleted_at', '2026-01-01 00:00:00');
+
+        return true;
+    }
+}
+
+function fleetopsModelAccessorsUseProfileAccountTables(): void
+{
+    $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
+    $schema     = $connection->getSchemaBuilder();
+    $schema->create('users', function ($table) {
+        $table->string('uuid')->nullable();
+        $table->string('type')->nullable();
+        $table->string('email')->nullable();
+        $table->string('phone')->nullable();
+        $table->timestamp('deleted_at')->nullable();
+    });
+    foreach (['drivers', 'contacts'] as $profileTable) {
+        $schema->create($profileTable, function ($table) {
+            $table->string('uuid')->nullable();
+            $table->string('user_uuid')->nullable();
+            $table->string('company_uuid')->nullable();
+            $table->timestamp('deleted_at')->nullable();
+        });
+    }
+
+    $resolver = new ConnectionResolver([
+        'default' => $connection,
+        'mysql'   => $connection,
+    ]);
+    $resolver->setDefaultConnection('mysql');
+    EloquentModel::setConnectionResolver($resolver);
 }
 
 class FleetOpsContactAccessorFake extends Contact
@@ -858,6 +895,8 @@ test('contact accessors imports notifications and customer identity helpers are 
 });
 
 test('contact user sync lookup and deletion guards are stable', function () {
+    fleetopsModelAccessorsUseProfileAccountTables();
+
     $user = new FleetOpsContactSyncUserFake();
     $user->setRawAttributes([
         'uuid'  => 'user-uuid',
@@ -868,22 +907,25 @@ test('contact user sync lookup and deletion guards are stable', function () {
     ], true);
 
     $contact           = new FleetOpsContactAccessorFake();
+    $contact->exists   = true;
     $contact->fakeUser = $user;
     $contact->setRawAttributes([
-        'uuid'      => 'contact-uuid',
-        'user_uuid' => 'not-a-uuid',
-        'type'      => 'customer',
-        'name'      => 'Old Name',
-        'email'     => 'old@example.com',
-        'phone'     => '+15550000000',
-        'timezone'  => 'UTC',
+        'uuid'         => 'contact-uuid',
+        'company_uuid' => 'company-uuid',
+        'user_uuid'    => 'not-a-uuid',
+        'type'         => 'customer',
+        'name'         => 'Old Name',
+        'email'        => 'old@example.com',
+        'phone'        => '+15550000000',
+        'timezone'     => 'UTC',
     ], true);
 
     $contact->name     = 'New Name';
-    $contact->email    = 'new@example.com';
-    $contact->phone    = '+15551112222';
+    $contact->email    = 'New@Example.com';
+    $contact->phone    = '+1 555-111-2222';
     $contact->timezone = 'Asia/Singapore';
 
+    // Proxy fields are normalized and pushed to the managed account
     expect($contact->syncWithUser())->toBeTrue()
         ->and($user->updates[0])->toBe([
             'name'     => 'New Name',
@@ -895,26 +937,46 @@ test('contact user sync lookup and deletion guards are stable', function () {
         ->and($contact->hasUser())->toBeTrue()
         ->and($contact->doesntHaveUser())->toBeFalse();
 
-    $deleteContact       = new FleetOpsContactAccessorFake();
-    $deleteContact->type = 'customer';
-    $deleteContact->setRelation('user', $user);
+    // An unsaved contact's account was just resolved from these values
+    $newContact           = new FleetOpsContactAccessorFake();
+    $newContact->fakeUser = $user;
+    $newContact->name     = 'Brand New';
+
+    // A saved contact with no proxy changes has nothing to sync
+    $cleanContact           = new FleetOpsContactAccessorFake();
+    $cleanContact->exists   = true;
+    $cleanContact->fakeUser = $user;
+    $cleanContact->setRawAttributes(['name' => 'New Name', 'type' => 'customer'], true);
+
+    expect($newContact->syncWithUser())->toBeFalse()
+        ->and($cleanContact->syncWithUser())->toBeFalse()
+        ->and($user->updates)->toHaveCount(1);
+
+    // Deleting the only profile holding a managed account deletes the account
+    $deleteContact               = new FleetOpsContactAccessorFake();
+    $deleteContact->type         = 'customer';
+    $deleteContact->company_uuid = 'company-uuid';
+    $deleteContact->fakeUser     = $user;
 
     expect($deleteContact->deleteUser())->toBeTrue()
-        ->and($user->deleted)->toBeTrue()
-        ->and($deleteContact->loadedMissing)->toBe(['user']);
+        ->and($user->deleted)->toBeTrue();
 
-    $mismatchedUser = new FleetOpsContactSyncUserFake();
-    $mismatchedUser->setRawAttributes(['type' => 'admin'], true);
+    // A team member's account linked to the contact is never deleted
+    $staffUser = new FleetOpsContactSyncUserFake();
+    $staffUser->setRawAttributes(['uuid' => 'staff-uuid', 'type' => 'admin'], true);
 
-    $mismatchedContact       = new FleetOpsContactAccessorFake();
-    $mismatchedContact->type = 'customer';
-    $mismatchedContact->setRelation('user', $mismatchedUser);
+    $staffContact           = new FleetOpsContactAccessorFake();
+    $staffContact->type     = 'customer';
+    $staffContact->fakeUser = $staffUser;
 
     $emptyContact           = new FleetOpsContactAccessorFake();
+    $emptyContact->exists   = true;
     $emptyContact->fakeUser = null;
     $emptyContact->setRawAttributes(['user_uuid' => 'not-a-uuid'], true);
+    $emptyContact->name = 'Changed';
 
-    expect($mismatchedContact->deleteUser())->toBeFalse()
+    expect($staffContact->deleteUser())->toBeFalse()
+        ->and($staffUser->deleted)->toBeFalse()
         ->and($emptyContact->syncWithUser())->toBeFalse()
         ->and($emptyContact->getUser())->toBeNull()
         ->and($emptyContact->hasUser())->toBeFalse()

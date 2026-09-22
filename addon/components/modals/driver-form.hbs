@@ -41,14 +41,14 @@
                         <label>
                             {{t "common.email"}}
                         </label>
-                        <Input @value={{@options.driver.email}} @type="text" class="w-full form-input" placeholder={{t "common.email"}} />
+                        <Input @value={{@options.driver.email}} @type="text" class="w-full form-input" placeholder={{t "common.email"}} disabled={{@options.driver.is_staff_linked}} />
                     </div>
 
                     <div class="input-group">
                         <label>
                             {{t "common.phone"}}
                         </label>
-                        <PhoneInput @value={{@options.driver.phone}} @onInput={{fn (mut @options.driver.phone)}} class="form-input w-full" />
+                        <PhoneInput @value={{@options.driver.phone}} @onInput={{fn (mut @options.driver.phone)}} class="form-input w-full" disabled={{@options.driver.is_staff_linked}} />
                     </div>
 
                     <div class="input-group">

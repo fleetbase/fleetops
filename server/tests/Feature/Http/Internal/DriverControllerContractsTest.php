@@ -1131,6 +1131,29 @@ test('internal driver controller verify code returns driver resource and handles
     ]);
 });
 
+test('internal driver controller refuses phone login and code verification for deactivated drivers', function () {
+    FleetOpsInternalDriverAuthControllerProbe::resetProbe();
+    app()->instance('request', Request::create('/', 'POST', ['phone' => '15551234567']));
+
+    $deactivated = fleetopsInternalDriverAuthUser();
+    $deactivated->setAttribute('status', 'inactive');
+    FleetOpsInternalDriverAuthControllerProbe::$loginUser          = $deactivated;
+    FleetOpsInternalDriverAuthControllerProbe::$verificationUser   = $deactivated;
+    FleetOpsInternalDriverAuthControllerProbe::$verificationExists = true;
+
+    $controller = new FleetOpsInternalDriverAuthControllerProbe();
+    $login      = $controller->loginWithPhone();
+    $verify     = $controller->verifyCode(new Request(['identity' => '+15551234567', 'code' => '111111']));
+
+    expect($login->getStatusCode())->toBe(403)
+        ->and($login->getData(true))->toBe(['error' => 'This driver login has been deactivated.'])
+        ->and($verify->getStatusCode())->toBe(403)
+        ->and($verify->getData(true))->toBe(['error' => 'This driver login has been deactivated.'])
+        // No code is sent and no token is issued
+        ->and(FleetOpsInternalDriverAuthControllerProbe::$verifications)->toBe([])
+        ->and(FleetOpsInternalDriverAuthControllerProbe::$tokens)->toBe([]);
+});
+
 test('internal driver controller delegates login and create driver verification flows to api controller', function () {
     $request = new Request(['for' => 'create_driver']);
 

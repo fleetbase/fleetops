@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Mail\CustomerCredentialsMail;
 use Fleetbase\FleetOps\Models\Contact;
+use Fleetbase\FleetOps\Support\ProfileAccountManager;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\User;
 use Illuminate\Http\Request;
@@ -19,6 +20,10 @@ class CustomerController extends Controller
 
         if (!$user) {
             return response()->error('Unable to create customer portal login.');
+        }
+
+        if ($error = $this->staffLinkedError($user)) {
+            return $error;
         }
 
         if ($user->status !== 'active') {
@@ -39,6 +44,10 @@ class CustomerController extends Controller
             return response()->error('Unable to send customer portal credentials.');
         }
 
+        if ($error = $this->staffLinkedError($user)) {
+            return $error;
+        }
+
         $password = $this->randomPassword();
         $user->changePassword($password);
         $this->sendCustomerCredentials($user, $password, $customer);
@@ -57,6 +66,10 @@ class CustomerController extends Controller
             return response()->error('Customer portal login not found.');
         }
 
+        if ($error = $this->staffLinkedError($user)) {
+            return $error;
+        }
+
         $user->deactivate();
 
         return response()->json([
@@ -71,6 +84,10 @@ class CustomerController extends Controller
 
         if (!$user) {
             return response()->error('Customer portal login not found.');
+        }
+
+        if ($error = $this->staffLinkedError($user)) {
+            return $error;
         }
 
         $user->activate();
@@ -149,6 +166,10 @@ class CustomerController extends Controller
             return response()->error('Unable to reset customer credentials');
         }
 
+        if ($error = $this->staffLinkedError($user)) {
+            return $error;
+        }
+
         // Change password
         $user->changePassword($password);
 
@@ -161,6 +182,19 @@ class CustomerController extends Controller
             'status'   => 'ok',
             'customer' => $this->customerPayload($this->freshCustomer($customer)),
         ]);
+    }
+
+    /**
+     * A customer linked to a team member's account signs in with that account,
+     * which is managed in IAM.
+     */
+    protected function staffLinkedError(User $user): ?\Illuminate\Http\JsonResponse
+    {
+        if (ProfileAccountManager::isStaffAccount($user)) {
+            return response()->error('This customer signs in with a team member account. Manage this login in IAM.', 422);
+        }
+
+        return null;
     }
 
     protected function resolveCustomer(Request $request): Contact
@@ -213,10 +247,12 @@ class CustomerController extends Controller
         $customer->loadMissing('user');
 
         return [
-            'id'        => $customer->public_id,
-            'uuid'      => $customer->uuid,
-            'user_uuid' => $customer->user_uuid,
-            'user'      => $customer->user ? [
+            'id'              => $customer->public_id,
+            'uuid'            => $customer->uuid,
+            'user_uuid'       => $customer->user_uuid,
+            'is_staff_linked' => ProfileAccountManager::isStaffAccount($customer->user),
+            'login_status'    => $customer->user?->status,
+            'user'            => $customer->user ? [
                 'id'             => $customer->user->public_id,
                 'uuid'           => $customer->user->uuid,
                 'name'           => $customer->user->name,

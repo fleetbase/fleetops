@@ -252,10 +252,12 @@ test('contact update guards types resolve users and portal seams persist', funct
         $probe->callProtected('assertContactInputIsValid', [$request, &$input, $contact]);
     })->toThrow(Exception::class);
 
-    // User references resolve through uuid or public id
-    expect($probe->callProtected('resolveUserUuid', ['user_contactseam']))->toBe('88888888-8888-4888-8888-888888888881')
-        ->and($probe->callProtected('resolveUserUuid', ['88888888-8888-4888-8888-888888888881']))->toBe('88888888-8888-4888-8888-888888888881')
-        ->and($probe->callProtected('resolveUserUuid', ['unknown-user']))->toBe('unknown-user');
+    // The login account is managed by the profile, so user references are dropped
+    $userInput = ['name' => 'Seam Contact', 'user_uuid' => '88888888-8888-4888-8888-888888888881', 'user' => 'user_contactseam'];
+    Closure::bind(function (array &$input) {
+        $this->resolveUserInput(Request::create('/x', 'PUT', []), $input);
+    }, $probe, ContactController::class)($userInput);
+    expect($userInput)->toBe(['name' => 'Seam Contact']);
 
     // Portal seams read users, mint passwords, and persist meta quietly
     expect($probe->callProtected('contactUser', [$contact])?->uuid)->toBe('88888888-8888-4888-8888-888888888881')

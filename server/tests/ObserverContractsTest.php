@@ -263,6 +263,7 @@ class FleetOpsDriverObserverUserFake extends User
     public function delete()
     {
         $this->deleted = true;
+        $this->setAttribute('deleted_at', '2026-01-01 00:00:00');
 
         return true;
     }
@@ -1149,14 +1150,30 @@ test('contact observer prevents changing existing customer contact type', functi
 });
 
 test('driver observer defaults location unassigns related records and deletes driver users', function () {
+    // releaseForProfile looks for the account's remaining driver/contact profiles
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    foreach (['drivers', 'contacts'] as $profileTable) {
+        $connection->getSchemaBuilder()->create($profileTable, function ($table) {
+            $table->string('uuid')->nullable();
+            $table->string('user_uuid')->nullable();
+            $table->string('company_uuid')->nullable();
+            $table->timestamp('deleted_at')->nullable();
+        });
+    }
+
     $driver = new Driver();
     $driver->setRawAttributes([
-        'uuid'      => 'driver-uuid',
-        'user_uuid' => 'user-uuid',
+        'uuid'         => 'driver-uuid',
+        'user_uuid'    => 'user-uuid',
+        'company_uuid' => 'company-uuid',
     ], true);
 
     $observer = new FleetOpsDriverObserverProbe();
     $user     = new FleetOpsDriverObserverUserFake();
+    $user->setRawAttributes(['uuid' => 'user-uuid', 'type' => 'driver'], true);
 
     $observer->user = $user;
     $observer->creating($driver);
@@ -1174,6 +1191,14 @@ test('driver observer defaults location unassigns related records and deletes dr
         ])
         ->and($observer->unassigned)->toBe(['driver-uuid'])
         ->and($user->deleted)->toBeTrue();
+
+    // A team member's account linked to the driver is never deleted
+    $staff = new FleetOpsDriverObserverUserFake();
+    $staff->setRawAttributes(['uuid' => 'staff-uuid', 'type' => 'user'], true);
+    $observer->user = $staff;
+    $observer->deleted($driver);
+
+    expect($staff->deleted)->toBeFalse();
 
     $driverWithLocation           = new Driver();
     $location                     = new Fleetbase\LaravelMysqlSpatial\Types\Point(1.3, 103.8);
