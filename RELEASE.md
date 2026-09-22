@@ -11,6 +11,10 @@
 - AI resource search no longer fails on every call with `Unknown column 'sensor_type'`, and database errors are no longer passed to the model.
 
 ---
+## Dependencies
+- `@fleetbase/fleetops-data` upgraded to `^0.2.2`, which adds the read-only login state (`is_staff_linked`, `login_status`) to the driver and contact models.
+
+---
 ## Testing
 - Unit tests cover the new AI tools and console commands, and the AI capability registration.
 
