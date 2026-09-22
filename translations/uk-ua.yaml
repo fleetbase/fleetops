@@ -437,7 +437,8 @@ trailer:
         fifth_wheel: Седельно-зчіпний пристрій
         pintle_hook: Буксирувальний гак
         ball_hitch: Кульове зчеплення
-        gooseneck: "Гусяча шия" (Gooseneck)
+        gooseneck: >-
+            "Гусяча шия" (Gooseneck)
         drawbar: Дишло
         other: Інше
     brake-types:
@@ -2644,7 +2645,7 @@ order-config:
         dropdown-text: Дозволяє вибрати опцію з випадного списку
         datetime: Вибір дати та часу
         datetime-text: Дозволяє вибрати дату та час
-		port: Вибір порту
+        port: Вибір порту
         port-text: Дозволяє користувачеві вибрати порт
         vessel: Вибір судна
         vessel-text: Дозволяє користувачеві вибрати судно
