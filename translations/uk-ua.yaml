@@ -771,6 +771,9 @@ contact:
 
 customer:
     fields:
+        addresses: Адреси
+        no-addresses: У цього клієнта немає збережених адрес.
+        primary-address: Основна
         customer-details: Деталі клієнта
         select-address: Вибрати адресу
         new-address: Нова адреса

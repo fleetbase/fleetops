@@ -1,7 +1,7 @@
 <div class="details-wrapper" ...attributes>
-    <ContentPanel @title={{t "driver.fields.user-account"}} @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "common.details"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
-            <div class="field-info-container md:col-span-3">
+            <div class="field-info-container col-span-2">
                 <div class="field-name">{{t "common.name"}}</div>
                 <div class="field-value">{{n-a @resource.name}}</div>
             </div>
@@ -13,11 +13,6 @@
                 <div class="field-name">{{t "common.phone"}}</div>
                 <ClickToCopy @value={{@resource.phone}} class="field-value">{{n-a @resource.phone}}</ClickToCopy>
             </div>
-        </div>
-    </ContentPanel>
-
-    <ContentPanel @title={{t "driver.fields.driver-details"}} @open={{true}} @wrapperClass="bordered-top">
-        <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
             <div class="field-info-container">
                 <div class="field-name">{{t "common.id"}}</div>
                 <ClickToCopy @value={{@resource.public_id}} class="field-value">{{n-a @resource.public_id}}</ClickToCopy>

@@ -770,6 +770,9 @@ contact:
 
 customer:
     fields:
+        addresses: Addresses
+        no-addresses: This customer has no saved addresses.
+        primary-address: Primary
         customer-details: Customer Details
         select-address: Select Address
         new-address: New Adddress
