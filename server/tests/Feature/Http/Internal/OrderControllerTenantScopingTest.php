@@ -169,7 +169,6 @@ test('order lookups resolve the callers own records', function () {
         ->and($probe->callHelper('findOrderForSchedule', 'order_own1')?->uuid)->toBe(FLEETOPS_TENANT_OWN_ORDER)
         ->and($probe->callHelper('findOrderForProofs', FLEETOPS_TENANT_OWN_ORDER)?->uuid)->toBe(FLEETOPS_TENANT_OWN_ORDER)
         ->and($probe->callHelper('findOrderForDriverPing', 'order_own1')?->uuid)->toBe(FLEETOPS_TENANT_OWN_ORDER)
-        ->and($probe->callHelper('findOrderByTrackingNumber', 'FLB-OWN-1')?->uuid)->toBe(FLEETOPS_TENANT_OWN_ORDER)
         ->and($probe->callHelper('findEntityProofSubject', 'entity-own')?->uuid)->toBe('entity-own')
         ->and($probe->callHelper('resolveProof', 'proof_own1')?->uuid)->toBe('proof-own')
         ->and($probe->callHelper('resolveProof', 'proof-own')?->uuid)->toBe('proof-own');
@@ -204,7 +203,6 @@ test('order lookups refuse identifiers belonging to another company', function (
         ->and($probe->callHelper('findPayloadForStart', 'payload-victim'))->toBeNull()
         ->and($probe->callHelper('findOrderForSchedule', 'order_victim1'))->toBeNull()
         ->and($probe->callHelper('findOrderForProofs', FLEETOPS_TENANT_VICTIM_ORDER))->toBeNull()
-        ->and($probe->callHelper('findOrderByTrackingNumber', 'FLB-VICTIM-1'))->toBeNull()
         ->and($probe->callHelper('findEntityProofSubject', 'entity-victim'))->toBeNull()
         ->and($probe->callHelper('resolveProof', 'proof_victim1'))->toBeNull()
         ->and($probe->callHelper('resolveProof', 'proof-victim'))->toBeNull()
@@ -217,6 +215,25 @@ test('order lookups refuse identifiers belonging to another company', function (
     // the endpoint cannot be used to probe which ids exist in other tenants.
     expect(fn () => $probe->callHelper('findOrderForDriverPing', 'order_victim1'))
         ->toThrow(ModelNotFoundException::class);
+});
+
+test('the public tracking lookup finds an order by its tracking number alone', function () {
+    $connection = fleetopsOrderTenantBoot();
+    fleetopsOrderTenantSeed($connection);
+    $probe = new FleetOpsInternalOrderTenantScopeProbe();
+
+    // `fleet-ops/lookup` backs the public Track Order page: recipients have no session
+    // and the tracking number is the credential. It must work without a company, and
+    // for whichever company owns the order.
+    session(['company' => null]);
+
+    expect($probe->callHelper('findOrderByTrackingNumber', 'FLB-OWN-1')?->uuid)->toBe(FLEETOPS_TENANT_OWN_ORDER)
+        ->and($probe->callHelper('findOrderByTrackingNumber', 'FLB-VICTIM-1')?->uuid)->toBe(FLEETOPS_TENANT_VICTIM_ORDER)
+        ->and($probe->callHelper('findOrderByTrackingNumber', 'FLB-UNKNOWN'))->toBeNull();
+
+    session(['company' => 'company-1']);
+
+    expect($probe->callHelper('findOrderByTrackingNumber', 'FLB-VICTIM-1')?->uuid)->toBe(FLEETOPS_TENANT_VICTIM_ORDER);
 });
 
 test('order lookups fail closed when no company session is present', function () {

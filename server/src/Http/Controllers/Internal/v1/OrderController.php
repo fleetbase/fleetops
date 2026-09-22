@@ -1877,16 +1877,23 @@ class OrderController extends FleetOpsController
         return new OrderResource($order);
     }
 
+    /**
+     * Find the order a tracking number belongs to, for the public Track Order page.
+     *
+     * Deliberately NOT company-scoped, unlike the lifecycle lookups above. The
+     * `fleet-ops/lookup` route is public: the tracking page is used by recipients who
+     * have no session, and the tracking number itself is what grants access. Scoping
+     * it to the session company made every lookup from that page fail, because there
+     * is no company to scope to.
+     */
     protected function findOrderByTrackingNumber(string $trackingNumber): ?Order
     {
         /** @var Order|null $order */
-        $order = $this->scopedToCompany(
-            Order::whereHas(
-                'trackingNumber',
-                function ($query) use ($trackingNumber) {
-                    $query->where('tracking_number', $trackingNumber);
-                }
-            )
+        $order = Order::whereHas(
+            'trackingNumber',
+            function ($query) use ($trackingNumber) {
+                $query->where('tracking_number', $trackingNumber);
+            }
         )->first();
 
         return $order;
