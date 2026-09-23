@@ -1,0 +1,44 @@
+<div class="space-y-6">
+    {{#unless @embedded}}
+        <InfoBlock @type="info" @icon="circle-info" class="mb-4">
+            Configure system-wide telematics data retention defaults here. Organizations can override these values from Fleet-Ops &rsaquo; Settings &rsaquo; Telematics Data. A value of 0 keeps rows forever.
+        </InfoBlock>
+    {{/unless}}
+
+    <ContentPanel @title="Retention Defaults" @open={{true}} @wrapperClass="bordered-classic">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <InputGroup @name="Device Event Retention (days)" @helpText="Delete telemetry events older than this. 0 keeps them forever.">
+                <Input @type="number" @value={{this.eventRetentionDays}} min="0" max="3650" class="form-input w-full" />
+            </InputGroup>
+            <InputGroup @name="Strip Raw Payloads After (days)" @helpText="Remove the raw provider payload from kept events after this many days. 0 disables compaction.">
+                <Input @type="number" @value={{this.eventCompactAfterDays}} min="0" max="3650" class="form-input w-full" />
+            </InputGroup>
+            <InputGroup @name="Position Retention (days)" @helpText="Delete vehicle and trailer positions older than this. 0 keeps them forever.">
+                <Input @type="number" @value={{this.positionRetentionDays}} min="0" max="3650" class="form-input w-full" />
+            </InputGroup>
+            <InputGroup @name="Processed Deliveries (hours)" @helpText="Delete processed delivery envelopes older than this.">
+                <Input @type="number" @value={{this.processedRetentionHours}} min="0" max="720" class="form-input w-full" />
+            </InputGroup>
+            <InputGroup @name="Quarantined Deliveries (days)" @helpText="Delete quarantined delivery envelopes older than this.">
+                <Input @type="number" @value={{this.quarantineRetentionDays}} min="0" max="365" class="form-input w-full" />
+            </InputGroup>
+            <InputGroup @name="Sync Runs (days)" @helpText="Delete finished sync run diagnostics older than this.">
+                <Input @type="number" @value={{this.syncRunRetentionDays}} min="0" max="365" class="form-input w-full" />
+            </InputGroup>
+        </div>
+        <InputGroup @name="Log Telemetry Activity" @helpText="Write telemetry-driven device, event and vehicle saves to the activity log. Off by default; every poll otherwise adds several activity rows per device.">
+            <Toggle @isToggled={{this.logTelemetryActivity}} @onToggle={{fn (mut this.logTelemetryActivity)}} />
+        </InputGroup>
+        <div class="flex justify-end mt-4">
+            <Button
+                @type="primary"
+                @size="sm"
+                @icon="save"
+                @text="Save Defaults"
+                @onClick={{perform this.saveSettings}}
+                @disabled={{this.saveSettings.isRunning}}
+                @isLoading={{or this.saveSettings.isRunning this.loadSettings.isRunning}}
+            />
+        </div>
+    </ContentPanel>
+</div>

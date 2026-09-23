@@ -239,6 +239,12 @@ class TelematicService
         if ($provider instanceof \Fleetbase\FleetOps\Contracts\TelemetryProviderInterface) {
             return app(Telemetry\Ingestor::class)->ingest($telematic, $provider, $payload, $this);
         }
+
+        return Retention\TelemetryActivity::run($telematic->company_uuid, fn () => $this->ingestLegacySnapshot($telematic, $provider, $payload));
+    }
+
+    protected function ingestLegacySnapshot(Telematic $telematic, TelematicProviderInterface $provider, array $payload): array
+    {
         $device = $this->linkDevice($telematic, $provider->normalizeDevice($payload));
 
         $event  = null;
@@ -299,7 +305,9 @@ class TelematicService
         ], fn ($value) => $value !== null);
         $event->payload      = $eventData['payload'] ?? $eventData['meta'] ?? $eventData;
         $event->_key         = $eventKey;
-        $event->meta         = array_merge($eventData['meta'] ?? [], [
+        // Providers hand over the raw unit in `meta`; it already lives in `payload`.
+        // Persist only the normalized block so each event is stored once, not twice.
+        $event->meta = array_filter([
             'telematic_uuid'    => $telematic->uuid,
             'telematic_id'      => $telematic->public_id,
             'provider_event_id' => $event->ident,
@@ -310,7 +318,9 @@ class TelematicService
             'odometer'          => $eventData['odometer'] ?? null,
             'ignition'          => $eventData['ignition'] ?? null,
             'fuel_level'        => $eventData['fuel_level'] ?? null,
-        ]);
+            'telemetry'         => data_get($eventData, 'meta.telemetry'),
+            'provider_status'   => data_get($eventData, 'meta.provider_status'),
+        ], fn ($value) => $value !== null);
 
         $location = $this->normalizeLocation($eventData['location'] ?? null);
         if ($location) {

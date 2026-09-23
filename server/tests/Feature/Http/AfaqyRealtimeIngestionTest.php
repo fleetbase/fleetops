@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../Support/AfaqyTestCrypto.php';
 require_once __DIR__ . '/../../Support/ExampleTelemetryProvider.php';
 require_once __DIR__ . '/../../Support/TelemetryTestEnvironment.php';
+require_once __DIR__ . '/../../Support/PruneTelematicsDataProbe.php';
 
 use Fleetbase\FleetOps\Http\Controllers\TelematicPositionWebhookController;
 use Fleetbase\FleetOps\Jobs\ProcessTelematicDelivery;
@@ -123,6 +124,12 @@ test('database ingestion deduplicates poll and push and never regresses device s
     expect(DeviceEvent::withoutGlobalScopes()->count())->toBe(2);
     expect(count($GLOBALS['afaqy_broadcasts']))->toBe(1);
     expect($device->last_position->getLat())->toBe(24.0);
+    // The raw unit is stored once, in payload; meta carries only the normalized block.
+    $stored = DeviceEvent::withoutGlobalScopes()->orderBy('id')->first();
+    expect(data_get($stored->payload, '_id'))->toBe('unit-1')
+        ->and($stored->meta)->not->toHaveKeys(['_id', 'last_update'])
+        ->and(data_get($stored->meta, 'telemetry.position_at'))->toBe('2026-09-15T11:59:00.000000Z')
+        ->and(data_get($stored->meta, 'telematic_uuid'))->toBe('integration-1');
 });
 
 test('webhook authenticates before durable acceptance and worker quarantines unknown shapes', function () {
@@ -282,7 +289,7 @@ test('five thousand units and a duplicate reconciliation sweep fit the local pro
     expect($elapsed)->toBeLessThan(60.0);
 })->skip(getenv('AFAQY_RUN_LOAD_TESTS') !== '1', 'Opt-in local processing benchmark; production latency requires deployment testing.');
 
-test('inbox maintenance retains replayable payloads and cleans expired rows during a broker outage', function () {
+test('inbox recovery leaves retention to the prune command, which expires processed deliveries by policy', function () {
     $telematic   = afaqyDbFixture();
     $inbox       = new Inbox();
     $pending     = $inbox->accept($telematic, afaqyDbUnit(), 'poll');
@@ -297,9 +304,17 @@ test('inbox maintenance retains replayable payloads and cleans expired rows duri
         'metadata' => ['telemetry' => ['durable_ingestion' => true]],
     ]));
     expect((new Fleetbase\FleetOps\Console\Commands\DrainTelematicInbox())->handle())->toBe(0);
+    // The drain only recovers; nothing is expired until the retention sweep runs.
+    expect(DB::table('telematic_deliveries')->count())->toBe(3);
+
+    $prune                     = new PruneTelematicsDataProbe();
+    $prune->options['company'] = 'company-1';
+    $prune->companyRows        = collect([(object) ['id' => 1, 'uuid' => 'company-1', 'public_id' => 'company_1']]);
+    expect($prune->handle())->toBe(0);
     expect(DB::table('telematic_deliveries')->where('uuid', $processed)->exists())->toBeFalse();
     expect(DB::table('telematic_deliveries')->where('uuid', $quarantined)->exists())->toBeTrue();
     expect(DB::table('telematic_deliveries')->where('uuid', $pending)->value('status'))->toBe('pending');
+    expect($prune->messages)->toContain(['info', 'company_1 telematic_deliveries: deleted=1 compacted=0 batches=1']);
 });
 
 test('sensor values use source time and preserve units through partial and older snapshots', function () {

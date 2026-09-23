@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Log;
 class DrainTelematicInbox extends Command
 {
     protected $signature   = 'fleetops:drain-telematic-inbox';
-    protected $description = 'Recover pending telematic deliveries and expire retained payloads.';
+    protected $description = 'Recover pending telematic deliveries and finish interrupted sync runs.';
 
     public function handle(): int
     {
@@ -58,24 +58,14 @@ class DrainTelematicInbox extends Command
             try {
                 Queue::dispatch((new ProcessTelematicDelivery($row->uuid))->onQueue($optionsByConnection[$row->telematic_uuid]['ingestion_queue'] ?? 'default'));
             } catch (\Throwable) {
-                // A broker outage must not prevent retention cleanup; retry the next minute.
+                // A broker outage must not prevent run recovery; retry the next minute.
                 break;
             }
         }
-        // Bound deletes so retention cleanup cannot monopolize the inbox table.
-        foreach (['processed' => now()->subHours(config('telematics.telemetry.processed_retention_hours', 24)), 'quarantined' => now()->subDays(config('telematics.telemetry.quarantine_retention_days', 7))] as $status => $cutoff) {
-            for ($batch = 0; $batch < 20; $batch++) {
-                $ids = DB::table('telematic_deliveries')->where('status', $status)->where('updated_at', '<', $cutoff)->limit(1000)->pluck('uuid');
-                if ($ids->isEmpty()) {
-                    break;
-                }
-                DB::table('telematic_deliveries')->whereIn('uuid', $ids)->delete();
-            }
-        }
+        // Retention for deliveries and sync runs is applied by fleetops:prune-telematics-data.
         DB::table('telematic_sync_runs')->where('status', 'fetching')->where('updated_at', '<', now()->subMinutes(5))
             ->update(['status' => 'incomplete', 'error' => 'Worker interrupted; next scheduled sweep will recover.']);
         DB::table('telematic_sync_runs')->where('status', 'ingesting')->get(['uuid'])->each(fn ($run) => Inbox::finishRun($run->uuid));
-        DB::table('telematic_sync_runs')->where('updated_at', '<', now()->subDays(7))->delete();
 
         return self::SUCCESS;
     }

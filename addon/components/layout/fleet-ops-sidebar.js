@@ -210,6 +210,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             this.createItem('menu.routing', 'route', 'settings.routing', 'fleet-ops view routing-settings', 'fleet-ops see routing-settings'),
             this.createItem('menu.orchestrator', 'circle-nodes', 'settings.orchestrator', 'fleet-ops view routing-settings', 'fleet-ops see routing-settings'),
             this.createItem('menu.scheduling', 'calendar-days', 'settings.scheduling', 'fleet-ops view scheduling-settings', 'fleet-ops see scheduling-settings'),
+            this.createItem('menu.telematics-settings', 'database', 'settings.telematics', 'fleet-ops view telematics-settings', 'fleet-ops see telematics-settings'),
             this.createItem('menu.custom-fields', 'pen-to-square', 'settings.custom-fields', 'fleet-ops view custom-field', 'fleet-ops see custom-field'),
             this.createItem('menu.avatars', 'icons', 'settings.avatars', 'fleet-ops view avatar', 'fleet-ops see avatar'),
         ]);
@@ -387,8 +388,9 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             'settings.routing': 5,
             'settings.orchestrator': 6,
             'settings.scheduling': 7,
-            'settings.custom-fields': 8,
-            'settings.avatars': 9,
+            'settings.telematics': 8,
+            'settings.custom-fields': 9,
+            'settings.avatars': 10,
         };
 
         return priorities[route] ?? 0;
