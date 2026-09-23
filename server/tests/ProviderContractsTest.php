@@ -115,6 +115,13 @@ class FleetOpsProviderContractsScheduledEventFake
         return $this;
     }
 
+    public function everyFifteenMinutes(): self
+    {
+        $this->methods[] = ['everyFifteenMinutes'];
+
+        return $this;
+    }
+
     public function daily(): self
     {
         $this->methods[] = ['daily'];
@@ -277,11 +284,14 @@ test('fleetops service provider executes package registration and boot wiring', 
                 'fleetops:process-operational-alerts',
                 'fleetops:sync-telematics',
                 'fleetops:drain-telematic-inbox',
+                'fleetops:prune-telematics-data',
             ])
             ->and($provider->schedule?->commands['fleetops:dispatch-orders']->methods)->toContain(['everyMinute'], ['withoutOverlapping'], ['storeOutputInDb'])
             ->and($provider->schedule?->commands['fleetops:update-estimations']->methods)->toContain(['everyTenMinutes'], ['withoutOverlapping'])
             ->and($provider->schedule?->commands['fleetops:sync-telematics']->expiresAt)->toBe(2)
             ->and($provider->schedule?->commands['fleetops:drain-telematic-inbox']->expiresAt)->toBe(2)
+            ->and($provider->schedule?->commands['fleetops:prune-telematics-data']->methods)->toContain(['everyFifteenMinutes'], ['withoutOverlapping'], ['storeOutputInDb'])
+            ->and($provider->schedule?->commands['fleetops:prune-telematics-data']->expiresAt)->toBe(14)
             ->and($orchestrationRegistry->has('vroom'))->toBeTrue()
             ->and($orchestrationRegistry->has('greedy'))->toBeTrue()
             ->and($orchestrationRegistry->has('capacity'))->toBeTrue()

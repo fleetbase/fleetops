@@ -2,12 +2,15 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\FleetOps\Jobs\PruneTelematicsDataJob;
+use Fleetbase\FleetOps\Support\Telematics\Retention\RetentionPolicy;
 use Fleetbase\FleetOps\Tracking\TrackingProviderRegistry;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
 use Fleetbase\Support\Auth;
 use Fleetbase\Support\NotificationRegistry;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Class SettingController.
@@ -626,6 +629,202 @@ class SettingController extends Controller
                 'capabilities' => $provider->capabilities()->toArray(),
             ];
         })->values()->all();
+    }
+
+    /**
+     * Retrieve telematics data retention settings for the current company.
+     *
+     * Company values fall back to the system defaults (admin setting over
+     * package config); the response carries both so the UI can show them.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTelematicsSettings()
+    {
+        $defaults = $this->telematicsDefaults();
+        $settings = RetentionPolicy::normalize((array) $this->lookupFromCompanySetting(RetentionPolicy::SETTING_KEY, []), $defaults);
+
+        return response()->json(array_merge($settings, [
+            'defaults' => $defaults,
+            'limits'   => RetentionPolicy::LIMITS,
+        ]));
+    }
+
+    /**
+     * Save telematics data retention settings for the current company.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveTelematicsSettings(Request $request)
+    {
+        $settings = RetentionPolicy::normalize($request->only(RetentionPolicy::keys()), $this->telematicsDefaults());
+        $this->configureCompanySetting(RetentionPolicy::SETTING_KEY, $settings);
+        RetentionPolicy::flush($this->currentCompany()?->uuid);
+
+        return response()->json(array_merge($settings, [
+            'status'  => 'ok',
+            'message' => 'Telematics settings successfully saved.',
+        ]));
+    }
+
+    /**
+     * Retrieve the system-wide telematics retention defaults.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAdminTelematicsSettings()
+    {
+        return response()->json(array_merge($this->telematicsDefaults(), [
+            'limits' => RetentionPolicy::LIMITS,
+        ]));
+    }
+
+    /**
+     * Save the system-wide telematics retention defaults.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveAdminTelematicsSettings(Request $request)
+    {
+        $config   = array_intersect_key((array) config('telematics.telemetry', []), RetentionPolicy::FALLBACKS);
+        $settings = RetentionPolicy::normalize($request->only(RetentionPolicy::keys()), RetentionPolicy::normalize($config, RetentionPolicy::FALLBACKS));
+        $this->configureSetting(RetentionPolicy::SETTING_KEY, $settings);
+        RetentionPolicy::flush();
+
+        return response()->json($this->getAdminTelematicsSettings()->getData(true));
+    }
+
+    /**
+     * Report how much telematics data the current company holds per table.
+     *
+     * Row counts are exact; sizes are estimates from the table's average row
+     * length because InnoDB does not account space per tenant.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTelematicsStorageUsage()
+    {
+        $company = $this->currentCompany();
+        if (!$company) {
+            return response()->error('No company session.', 401);
+        }
+
+        $companyUuid = $company->uuid;
+        $policy      = RetentionPolicy::normalize((array) $this->lookupFromCompanySetting(RetentionPolicy::SETTING_KEY, []), $this->telematicsDefaults());
+        $telematics  = $this->companyTelematicUuids($companyUuid);
+        $byCompany   = fn ($query) => $query->where('company_uuid', $companyUuid);
+        $byInbox     = fn ($query) => $query->whereIn('telematic_uuid', $telematics);
+
+        $tables = [
+            'device_events'        => $this->tableUsage('device_events', $byCompany, 'created_at'),
+            'positions'            => $this->tableUsage('positions', $byCompany, 'created_at'),
+            'telematic_deliveries' => $telematics ? $this->tableUsage('telematic_deliveries', $byInbox, 'received_at') : ['rows' => 0, 'oldest' => null],
+            'telematic_sync_runs'  => $telematics ? $this->tableUsage('telematic_sync_runs', $byInbox, 'created_at') : ['rows' => 0, 'oldest' => null],
+        ];
+
+        // Events still carrying raw provider payloads, and how many of them compaction would strip now.
+        $tables['device_events']['raw_payload_rows'] = $this->tableCount('device_events', fn ($query) => $byCompany($query)->whereNotNull('payload'));
+        $compactAfter                                = (int) $policy['event_compact_after_days'];
+        $tables['device_events']['compactable_rows'] = $compactAfter > 0
+            ? $this->tableCount('device_events', fn ($query) => $byCompany($query)->whereNotNull('payload')->where('created_at', '<', now()->subDays($compactAfter)->toDateTimeString()))
+            : 0;
+
+        foreach ($this->averageRowLengths(array_keys($tables)) as $table => $length) {
+            $tables[$table]['avg_row_bytes']   = $length;
+            $tables[$table]['estimated_bytes'] = (int) ($tables[$table]['rows'] * $length);
+        }
+
+        return response()->json([
+            'tables'       => $tables,
+            'generated_at' => now()->toISOString(),
+        ]);
+    }
+
+    /**
+     * Queue an immediate retention run for the current company.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function runTelematicsRetention()
+    {
+        $company = $this->currentCompany();
+        if (!$company) {
+            return response()->error('No company session.', 401);
+        }
+
+        $this->dispatchTelematicsPrune($company->uuid);
+
+        return response()->json([
+            'status'  => 'queued',
+            'message' => 'Telematics cleanup has been queued.',
+        ], 202);
+    }
+
+    /**
+     * System-wide retention defaults: package config overridden by the admin setting.
+     */
+    protected function telematicsDefaults(): array
+    {
+        $config = array_intersect_key((array) config('telematics.telemetry', []), RetentionPolicy::FALLBACKS);
+
+        return RetentionPolicy::normalize((array) $this->lookupSetting(RetentionPolicy::SETTING_KEY, []), RetentionPolicy::normalize($config, RetentionPolicy::FALLBACKS));
+    }
+
+    protected function tableUsage(string $table, \Closure $scope, string $ageColumn): array
+    {
+        return [
+            'rows'   => $this->tableCount($table, $scope),
+            'oldest' => $this->tableOldest($table, $scope, $ageColumn),
+        ];
+    }
+
+    protected function companyTelematicUuids(string $companyUuid): array
+    {
+        return DB::table('telematics')->where('company_uuid', $companyUuid)->pluck('uuid')->all();
+    }
+
+    protected function tableCount(string $table, \Closure $scope): int
+    {
+        return (int) $scope(DB::table($table))->count();
+    }
+
+    protected function tableOldest(string $table, \Closure $scope, string $column): ?string
+    {
+        $oldest = $scope(DB::table($table))->min($column);
+
+        return $oldest ? (string) $oldest : null;
+    }
+
+    /**
+     * Average row length per table from InnoDB statistics. Empty on other drivers.
+     *
+     * @return array<string, int>
+     */
+    protected function averageRowLengths(array $tables): array
+    {
+        $connection = DB::connection();
+        if ($connection->getDriverName() !== 'mysql') {
+            return [];
+        }
+
+        $prefix       = $connection->getTablePrefix();
+        $placeholders = implode(', ', array_fill(0, count($tables), '?'));
+        $rows         = $connection->select(
+            'SELECT TABLE_NAME AS name, AVG_ROW_LENGTH AS length FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (' . $placeholders . ')',
+            array_map(fn ($table) => $prefix . $table, $tables)
+        );
+
+        $lengths = [];
+        foreach ($rows as $row) {
+            $lengths[substr($row->name, strlen($prefix))] = (int) $row->length;
+        }
+
+        return $lengths;
+    }
+
+    protected function dispatchTelematicsPrune(string $companyUuid): void
+    {
+        PruneTelematicsDataJob::dispatch($companyUuid);
     }
 
     protected function configureSetting(string $key, mixed $value): mixed

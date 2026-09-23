@@ -14,7 +14,7 @@ nothing changes: every job and broadcast stays on the same queue as before.
 | Setting | Default | Work routed |
 | --- | --- | --- |
 | `TELEMATICS_POLL_QUEUE` | `default` | Scheduled and manual polls (`PollTelematicTelemetry`), legacy device discovery (`SyncTelematicDevicesJob`), and queued connection tests (`TestTelematicConnectionJob`). |
-| `TELEMATICS_INGESTION_QUEUE` | `default` | Applying polled or pushed positions (`ProcessTelematicDelivery`), including jobs re-queued by `fleetops:drain-telematic-inbox` and manual replays. |
+| `TELEMATICS_INGESTION_QUEUE` | `default` | Applying polled or pushed positions (`ProcessTelematicDelivery`), including jobs re-queued by `fleetops:drain-telematic-inbox` and manual replays, and on-demand retention runs (`PruneTelematicsDataJob`, queued by "Run cleanup now" in Settings → Telematics Data). |
 | `TELEMATICS_BROADCAST_QUEUE` | unset | Live-map broadcasts created by telematics ingestion: `DeviceTelemetryUpdated`, and `VehicleLocationChanged` / `TrailerLocationChanged` when a device is attached. When unset, broadcasts use the queue connection's default queue. |
 
 `TELEMATICS_BROADCAST_QUEUE` affects only broadcasts that telematics ingestion
