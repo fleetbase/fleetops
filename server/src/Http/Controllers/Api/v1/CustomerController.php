@@ -44,6 +44,8 @@ class CustomerController extends Controller
 {
     use \Fleetbase\FleetOps\Http\Controllers\Concerns\ResolvesReviewAccountBypass;
 
+    public const DEACTIVATED_LOGIN_MESSAGE = 'This customer login has been deactivated.';
+
     /* ============================================================
      | Public auth flows (API credential only, no Customer-Token)
      * ============================================================ */
@@ -345,6 +347,10 @@ class CustomerController extends Controller
             return response()->apiError('Authentication failed using credentials provided.', 401);
         }
 
+        if ($user->status === 'inactive') {
+            return response()->apiError(static::DEACTIVATED_LOGIN_MESSAGE, 403);
+        }
+
         $sessionCompany = $this->sessionCompany();
         if (!$sessionCompany) {
             return response()->apiError('No company resolved from API credential.', 500);
@@ -379,6 +385,10 @@ class CustomerController extends Controller
         $user = $this->findActiveUserByIdentity($phone, 'phone');
         if (!$user) {
             return response()->apiError('No customer with this phone number found.');
+        }
+
+        if ($user->status === 'inactive') {
+            return response()->apiError(static::DEACTIVATED_LOGIN_MESSAGE, 403);
         }
 
         try {
@@ -421,6 +431,10 @@ class CustomerController extends Controller
         $user = $this->findUserForVerification($identity);
         if (!$user) {
             return response()->apiError('Unable to verify code.');
+        }
+
+        if ($user->status === 'inactive') {
+            return response()->apiError(static::DEACTIVATED_LOGIN_MESSAGE, 403);
         }
 
         $verificationCode = $this->verificationCodeExists([

@@ -1,0 +1,3475 @@
+fleet-ops:
+    extension-name: Fleet-Ops
+
+common:
+    last-modified: Останні зміни
+    "yes": "Так"
+    "no": "Ні"
+    proof-of-delivery: Підтвердження доставки
+    ad-hoc: Ad-Hoc (на вимогу)
+    bulk-dispatch: Масова відправка
+    dispatch-orders: Відправити замовлення
+    dispatch-order: Відправити замовлення
+    assign-driver: Призначити водія
+    unassign-driver: Скасувати призначення водія
+    assign-drivers: Призначити водіїв
+    no-driver-assigned: Водія не призначено
+    no-vehicle-assigned: ТЗ не призначено
+    details: Деталі
+    name: Назва
+    title: Заголовок
+    email: Електронна пошта
+    phone: Телефон
+    internal-id: Внутрішній ID
+    type: Тип
+    address: Адреса
+    create-order: Створити замовлення
+    coordinates: Координати
+    city: Місто
+    country: Країна
+    status: Статус
+    upload-new-photo: Завантажити нове фото
+    resource-actions: >-
+        Дії з {resource}
+    resource-location: >-
+        Розташування {resource}
+    search-countries: Пошук країн
+    select-resource-filter-by: Виберіть {resource} для фільтрації
+    table-view: Табличний вигляд
+    grid-view: Сітка
+    calendar-view: Календарний вигляд
+    change-layout: Змінити вигляд
+    livemap: Онлайн-карта
+    tracking: Відстеження
+    activity: Активність
+    eta: Очікуваний час прибуття (ETA)
+    position: Позиція
+    positions: Позиції
+    pos: POS
+    edit-address: Редагувати адресу
+    new-address: Нова адреса
+    select-address: Вибрати адресу
+    save: Зберегти
+    save-changes: Зберегти зміни
+    done: Готово
+    delete: Видалити
+    overview: Огляд
+    notes: Примітки
+    schedule: Розклад
+    optional: Необов'язково
+    unauthorized-access: У вас немає доступу до цього ресурсу.
+    online: В мережі
+    offline: Поза мережею
+    refresh: Оновити
+    loading-route: Завантаження маршруту...
+    hover-to-load-route: Завантаження попереднього перегляду маршруту...
+    unable-to-load-route: Не вдалося завантажити попередній перегляд маршруту.
+
+menu:
+    operations: Операції
+    dashboard: Панель керування
+    radar: Радар
+    orders: Замовлення
+    service-rates: Тарифи на послуги
+    scheduler: Планувальник
+    order-config: Конфігурація замовлень
+    resources: Ресурси
+    drivers: Водії
+    vehicles: Транспортні засоби
+    trailers: Причепи
+    fleets: Автопарки
+    vendors: Постачальники
+    contacts: Контакти
+    places: Місця
+    fuel-reports: Звіти про пальне
+    fuel-transactions: Транзакції пального
+    issues: Проблеми
+    maintenance: Технічне обслуговування
+    schedules: Графіки
+    work-orders: Заявки на роботу
+    inspection-forms: 'Форми інспекції'
+    inspections: 'Інспекції'
+    equipment: Обладнання
+    parts: Запчастини
+    maintenance-history: Історія ТО
+    connectivity: Підключення
+    telematics: Телематика
+    fuel-providers: Інтеграції пального
+    devices: Пристрої
+    sensors: Сенсори
+    events: Події
+    tracking: Відстеження
+    analytics: Аналітика
+    reports: Звіти
+    settings: Налаштування
+    navigator-app: Додаток Navigator
+    payments: Платежі
+    notifications: Сповіщення
+    routing: Маршрутизація
+    map: Карта
+    custom-fields: Настроювані поля
+    order-board: Дошка замовлень
+    avatars: Аватари
+    scheduling: Планування
+    maintenances: Технічні обслуговування
+    orchestrator: Оркестратор
+    orchestrator-settings: Налаштування оркестратора
+
+trailer:
+    navigation-description: Керування буксируваними активами, з'єднаннями, обладнанням та телематикою.
+    sections:
+        details: Деталі
+        identification: Ідентифікація причепа
+        classification: Класифікація та статус
+        registration: Реєстрація
+        location: Розташування
+        dimensions: Габарити та вантажопідйомність
+        measurement: Вимірювання та використання
+        dimensions-fields: "Габарити ({unit})"
+        weight: "Вага ({unit})"
+        running-gear: Осі, гальма та зчіпка
+        refrigeration: Охолодження
+        ownership: Власність та фінанси
+        finance: Фінансові деталі
+        connection: Зчіпний пристрій
+        telemetry: Розташування та телематика
+        notes: Примітки та історія
+    fields:
+        photo: Фото
+        id: ID
+        name: Назва
+        code: Код
+        description: Опис
+        type: Тип причепа
+        body-type: Тип кузова
+        color: Колір
+        status: Статус
+        category: Категорія
+        vin: VIN-код
+        plate-number: Номерний знак
+        serial-number: Серійний номер
+        make: Марка
+        model: Модель
+        year: Рік
+        vendor: Постачальник
+        warranty: Гарантія
+        vehicle: Тягач
+        attachment-state: Стан підключення
+        attached-at: Приєднано з
+        position: Позиція зчіпки
+        source: Джерело
+        connected-at: З'єднано о
+        disconnected-at: Від'єднано о
+        duration: Тривалість
+        connectivity: Підключення
+        last-online: Вересні в мережі
+        last-provider: Провайдер телеметрії
+        last-event-at: Остання подія телеметрії
+        coordinates: Координати
+        speed: Швидкість
+        heading: Курс
+        altitude: Висота
+        devices-count: Приєднані пристрої
+        equipment-count: Приєднане обладнання
+        measurement-system: Система вимірювання
+        odometer: "Одометр / лічильник маточини {unit}"
+        odometer-unit: Одиниця вимірювання одометра
+        length: "Довжина ({unit})"
+        width: "Ширина ({unit})"
+        height: "Висота ({unit})"
+        cargo-volume: "Об'єм вантажу ({unit})"
+        tare-weight: "Маса без навантаження ({unit})"
+        gvwr: "Повна маса ТЗ ({unit})"
+        payload-capacity: "Корисне навантаження ({unit})"
+        axle-count: Осі
+        tire-count: Шини
+        door-count: Двері
+        coupling-type: Тип зчіпки
+        brake-type: Тип гальм
+        abs: ABS
+        ebs: EBS
+        refrigerated: Рефрижератор
+        temperature-min: "Мінімальна температура ({unit})"
+        temperature-max: "Максимальна температура ({unit})"
+        reefer-hours: Мотогодини рефрижератора
+        ownership-type: Форма власності
+        financing-status: Фінансовий статус
+        currency: Валюта
+        acquisition-cost: Вартість придбання
+        current-value: Поточна вартість
+        insurance-value: Страхова вартість
+        depreciation-rate: Норма амортизації (% на рік)
+        purchased-at: Дата купівлі
+        lease-expires-at: Закінчення оренди/лізингу
+        notes: Примітки
+        created-at: Створено
+        updated-at: Оновлено
+    placeholders:
+        filter-vendor: Фільтр за постачальником
+        name: напр. Рефрижератор 12
+        code: Внутрішній код автопарку, напр. TRL-0012
+        description: Для чого використовується цей причіп
+        type: Виберіть тип причепа
+        status: Виберіть статус
+        body-type: напр. Закритий, шторний, платформа
+        color: напр. Білий
+        category: Виберіть категорію (необов'язково)
+        vin: 17-значний VIN-код
+        plate-number: Реєстраційний номер
+        serial-number: Серійний номер виробника
+        make: напр. Utility, Schmitz, Wabash
+        model: напр. 3000R
+        year: напр. 2024
+        vendor: Виберіть постачальника (необов'язково)
+        warranty: Виберіть гарантію (необов'язково)
+        vehicle: Виберіть транспортний засіб
+        trailer: Виберіть причіп
+        equipment: Виберіть обладнання
+        filter-vehicle: Фільтр за тягачем
+        position: "1"
+        measurement-system: Виберіть систему вимірювання
+        odometer-unit: Виберіть одиницю
+        odometer: Поточні показники
+        length: "0.000"
+        width: "0.000"
+        height: "0.000"
+        cargo-volume: "0.000"
+        tare-weight: "0.000"
+        gvwr: "0.000"
+        payload-capacity: "0.000"
+        axle-count: напр. 2
+        tire-count: напр. 8
+        door-count: напр. 2
+        coupling-type: Виберіть тип зчіпки
+        brake-type: Виберіть тип гальм
+        temperature-min: напр. -20
+        temperature-max: naпр. 4
+        reefer-hours: Години роботи рефрижератора
+        ownership-type: Виберіть форму власності
+        financing-status: напр. Виплачено, в лізингу до 2028
+        depreciation-rate: напр. 10
+        date: ДД-ММ-РРРР
+        notes: Внутрішні примітки про цей причіп
+    help:
+        photo: Завантажте фото цього причепа.
+        name: Назва, яка відображається у Fleet-Ops. Обов'язково.
+        code: Ваш власний код автопарку для цього причепа.
+        type: Тип визначає відповідні розділи, наприклад, охолодження для рефрижераторів.
+        status: Статус життєвого циклу. Підключення та зв'язок відстежуються окремо.
+        body-type: Довільний опис кузова для класифікації та пошуку.
+        category: Довільне групування, спільне з іншими ресурсами автопарку.
+        vin: Номер шасі або ідентифікаційний номер ТЗ, вибитий на причепі.
+        coordinates: Останнє відоме або домашнє місцерозташування. Пристрої телематики оновлюють це автоматично.
+        measurement-system: Визначає одиниці вимірювання для габаритів, ваги, об'єму та температури.
+        odometer: Показники одометра або лічильника маточини у вибраних одиницях.
+        cargo-volume: Корисний об'єм вантажного відсіку причепа.
+        tare-weight: Вага порожнього причепа.
+        gvwr: Повна дозволена маса ТЗ з навантаженням.
+        payload-capacity: Максимальна вага вантажу, яку може перевозити причіп.
+        coupling-type: Спосіб зчеплення причепа з тягачем.
+        abs: Встановлено антиблокувальну систему (ABS).
+        ebs: Встановлено електронну систему гальмування (EBS).
+        refrigerated: Увімкніть для причепів з контролем температури для запису налаштувань рефрижератора.
+        temperature: Діапазон робочих температур рефрижератора.
+        reefer-hours: Зафіксовані мотогодини холодильної установки.
+        ownership-type: Форма володіння причепом. Деталі лізингу та фінансування відображаються за потреби.
+        lease-expires-at: Дата закінчення договору оренди, лізингу або фінансування.
+        vendor: Постачальник або орендодавець, у якого було отримано причіп.
+        warranty: Гарантійна політика, що покриває цей причіп.
+        acquisition-cost: Ціна купівлі або капіталізована вартість у вибраній валюті.
+        depreciation-rate: Річна амортизація, що використовується для оцінки поточної вартості.
+        attach-vehicle: Причіп буде з'єднано з вибраним ТЗ. Причіп може бути приєднаний лише до одного ТЗ одночасно.
+        select-trailer: Відображаються лише від'єднані причепи.
+        select-equipment: Відображається лише непідключене обладнання.
+        position: Позиція причепа у зчіпці. Позиція 1 — одразу за тягачем; використовуйте 2 або більше для автопоїздів.
+    units:
+        length-metric: м
+        length-imperial: фути
+        weight-metric: кг
+        weight-imperial: фунти
+        volume-metric: м³
+        volume-imperial: фути³
+        temperature-metric: °C
+        temperature-imperial: °F
+    actions:
+        new: Новий причіп
+        locate: Показати на карті
+        attach-vehicle: Приєднати до ТЗ
+        detach-vehicle: Від'єднати від ТЗ
+        attach-device: Приєднати пристрій
+        attach-equipment: Приєднати обладнання
+        detach-equipment: Від'єднати обладнання
+        schedule-maintenance: Запланувати ТО
+        create-work-order: Створити заявку на роботу
+        log-maintenance: Зареєструвати ТО
+    prompts:
+        attach-vehicle-title: "Приєднати {trailerName} до транспортного засобу"
+        select-vehicle-warning: Виберіть транспортний засіб для приєднання цього причепа.
+        attach-vehicle-success: "{trailerName} приєднано до {vehicleName}."
+        detach-vehicle-title: "Від'єднати {trailerName}?"
+        detach-vehicle-body: "Це завершить поточне з'єднання між {trailerName} та {vehicleName}. З'єднання збережеться в історії причепа."
+        detach-vehicle-success: "{trailerName} від'єднано від {vehicleName}."
+        not-attached-warning: "{trailerName} не приєднано до жодного ТЗ."
+        attach-device-title: "Приєднати пристрій до {trailerName}"
+        select-device-warning: Виберіть пристрій для приєднання до цього причепа.
+        attach-device-success: Пристрій приєднано до {trailerName}.
+        attach-equipment-title: "Приєднати обладнання до {resourceName}"
+        select-equipment-warning: Виберіть обладнання для приєднання.
+        attach-equipment-success: "{equipmentName} приєднано до {resourceName}."
+        detach-equipment-title: "Від'єднати {equipmentName}?"
+        detach-equipment-body: "{equipmentName} більше не буде закріплено за {resourceName}."
+        detach-equipment-success: "{equipmentName} від'єднано від {resourceName}."
+        no-location-warning: "Для {trailerName} ще немає записаного розташування."
+        photo-upload-error: "Не вдалося завантажити фото: {message}"
+    empty:
+        title: Додайте свій перший причіп
+        description: Причепи відстежують зчеплення, приєднані пристрої та обладнання, оперативну телеметрію та ТО для ваших буксируваних активів.
+        filtered-title: Жоден причіп не відповідає вашим фільтрам
+        filtered-description: Змініть параметри пошуку або фільтри, щоб знайти інший причіп.
+        connections: Історія зчеплень відсутня
+        connections-description: Приєднайте цей причіп до транспортного засобу, щоб розпочати запис історії зчеплень.
+        equipment: Немає приєднаного обладнання
+        equipment-description: Приєднайте до цього причепа таке обладнання, як гидроборти, ремені або рефрижератори.
+        schedules: Немає графіків ТО
+        schedules-description: Створіть графік для планування періодичних інспекцій або обслуговування цього причепа.
+        work-orders: Немає заявок на роботу
+        work-orders-description: Створіть заявку на роботу для відстеження ремонту або обслуговування цього причепа.
+        maintenance: Історія ТО відсутня
+        maintenance-description: Зареєстроване технічне обслуговування для цього причепа відображатиметься тут.
+    docs:
+        title: Посібник з причепів
+        link: Відкрити посібник з причепів
+    tabs:
+        overview: Огляд
+        positions: Позиції
+        devices: Пристрої
+        equipment: Обладнання
+        connections: Історія зчеплень
+        schedules: Графіки
+        work-orders: Заявки на роботу
+        maintenance: Технічне обслуговування
+    columns:
+        name: Назва
+        id: ID
+        code: Код
+        type: Тип
+        plate-number: Номерний знак
+        status: Статус
+        vehicle: Тягач
+        attachment-state: Підключення
+        connectivity: Зв'язок
+        last-online: Востаннє в мережі
+        location: Розташування
+        devices: Пристрої
+        equipment: Обладнання
+        vin: VIN-код
+        serial-number: Серійний номер
+        make: Марка
+        model: Модель
+        year: Рік
+        vendor: Постачальник
+        ownership: Власність
+        axles: Осі
+        gvwr: Повна маса ТЗ
+        payload-capacity: Вантажопідйомність
+        length: Довжина
+        refrigerated: Рефрижератор
+        created-at: Створено
+        updated-at: Оновлено
+    filters:
+        created-between: Створено в період
+        updated-between: Оновлено в період
+        last-online-between: Востаннє в мережі в період
+    connections:
+        description: Кожен ТЗ, з яким був з'єднаний цей причіп, починаючи з найновіших.
+        ongoing: Триває
+        connected: З'єднано {date}
+        disconnected: Від'єднано {date}
+        still-attached: Досі приєднано
+    equipment:
+        description: Обладнання, що наразі встановлено на цей причіп.
+    telemetry:
+        no-location: Розташування не записано
+    maintenance:
+        interval: Інтервал
+        next-due: Наступне ТО
+        code: Код
+        subject: Тема
+        priority: Пріоритет
+        due: Термін
+        summary: Сводка
+        odometer: Одометр
+        total-cost: Загальна вартість
+        date: Дата
+    statuses:
+        available: Доступний
+        in_use: В використанні
+        maintenance: На обслуговуванні
+        out_of_service: Не експлуатується
+        retired: Списаний
+    status-descriptions:
+        available: Готовий до відправки або приєднання.
+        in_use: Наразі виконує завдання або приєднаний до ТЗ.
+        maintenance: Проходить обслуговування, інспекцію або ремонт.
+        out_of_service: Непридатний до використання до подальшого повідомлення.
+        retired: Остаточно виведений з активної експлуатації.
+    attachment:
+        attached: Приєднано
+        detached: Від'єднано
+        no-vehicle: Не приєднано до ТЗ
+        towed-by: Буксирується
+        position: Позиція {position}
+    connectivity:
+        online: В мережі
+        recently_offline: Нещодавно поза мережею
+        offline: Поза мережею
+        never_connected: Ніколи не підключався
+    measurement:
+        metric: Метрична
+        imperial: Імперська
+    measurement-descriptions:
+        metric: Метри, кілограми, кубічні метри та градуси Цельсія.
+        imperial: Фути, фунти, кубічні фути та градуси Фаренгейта.
+    odometer-units:
+        km: Кілометри
+        mi: Милі
+    coupling-types:
+        fifth_wheel: Седельно-зчіпний пристрій
+        pintle_hook: Буксирувальний гак
+        ball_hitch: Кульове зчеплення
+        gooseneck: >-
+            "Гусяча шия" (Gooseneck)
+        drawbar: Дишло
+        other: Інше
+    brake-types:
+        air: Пневматичні гальма
+        electric: Електричні гальма
+        hydraulic_surge: Гідравлічні інерційні гальма
+        none: Без гальм
+        other: Інше
+    ownership-types:
+        owned: У власності
+        leased: В лізингу
+        financed: В кредиті
+        rented: В оренді
+    types:
+        dry_van: Сухий фургон
+        reefer: Рефрижератор
+        flatbed: Бортова платформа
+        step_deck: Низькорамний причіп (Step deck)
+        lowboy: Важкий низькорамник (Lowboy)
+        tanker: Цистерна
+        bulk: Самоскид/Самоскидний бункер
+        dump: Самоскид
+        chassis: Контейнеровозне шасі
+        curtain_side: Шторний причіп
+        car_carrier: Автовоз
+        livestock: Худобовоз
+        logging: Лісовоз
+        dolly: Причіп-підкочувальний візок (Dolly)
+        specialty: Спеціалізований
+        other: Інше
+
+resource:
+    asset: Актив
+    assets: Активи
+    trailer: Причіп
+    trailers: Причепи
+    activity: Активність
+    activities: Активності
+    contact: Контакт
+    contacts: Контакти
+    customer-contact: Контакт клієнта
+    customer-contacts: Контакти клієнтів
+    customer-vendor: Постачальник клієнта
+    customer-vendors: Постачальники клієнтів
+    customer: Клієнт
+    customers: Клієнти
+    custom-entity: Настроювана сутність
+    custom-entities: Настроювані сутності
+    device-event: Подія пристрою
+    device-events: Події пристроїв
+    device: Пристрій
+    devices: Пристрої
+    driver: Водій
+    drivers: Водії
+    entity: Сутність
+    entities: Сутності
+    equipment: Обладнання
+    equipments: Обладнання
+    facilitator-contact: Контакт посередника
+    facilitator-contacts: Контакти посередників
+    facilitator-customer: Клієнт посередника
+    facilitator-customers: Клієнти посередників
+    facilitator-integrated-vendor: Інтегрований постачальник посередника
+    facilitator-integrated-vendors: Інтегровані постачальники посередників
+    facilitator-vendor: Постачальник посередника
+    facilitator-vendors: Постачальники посередників
+    facilitator: Посередник
+    facilitators: Посередники
+    fleet-driver: Водій автопарку
+    fleet-drivers: Водії автопарку
+    fleet: Автопарк
+    fleets: Автопарки
+    fuel-report: Звіт про пальне
+    fuel-reports: Звіти про пальне
+    inspection: Інспекція
+    inspections: Інспекції
+    integrated-vendor: Інтегрований постачальник
+    integrated-vendors: Інтегровані постачальники
+    issue: Проблема
+    issues: Проблеми
+    maintenance: Технічне обслуговування
+    maintenances: Технічні обслуговування
+    maintenance-schedule: Графік ТО
+    maintenance-schedules: Графіки ТО
+    order-config: Конфігурація замовлень
+    order-configs: Конфігурації замовлень
+    order: Замовлення
+    orders: Замовлення
+    part: Запчастина
+    parts: Запчастини
+    payload: Вантаж
+    payloads: Вантажі
+    place: Місце
+    places: Місця
+    purchase-rate: Закупівельний тариф
+    purchase-rates: Закупівельні тарифи
+    route: Маршрут
+    routes: Маршрути
+    sensor: Сенсор
+    sensors: Сенсори
+    service-area: Зона обслуговування
+    service-areas: Зони обслуговування
+    service-quote-item: Позиція розрахунку вартості послуги
+    service-quote-items: Позиції розрахунку вартості послуг
+    service-quote: Розрахунок вартості послуги
+    service-quotes: Розрахунки вартості послуг
+    service-rate-fee: Збір за тарифом послуги
+    service-rate-fees: Збори за тарифами послуг
+    service-rate-parcel-fee: Збір за посилку за тарифом
+    service-rate-parcel-fees: Збори за посилки за тарифом
+    service-rate: Тариф послуги
+    service-rates: Тарифи послуг
+    telematic: Телематика
+    telematics: Телематика
+    tracking-number: Номер відстеження
+    tracking-numbers: Номери відстеження
+    tracking-status: Статус відстеження
+    tracking-statuses: Статуси відстеження
+    vehicle-device: Пристрій ТЗ
+    vehicle-devices: Пристрої ТЗ
+    vehicle: Транспортний засіб
+    vehicles: Транспортні засоби
+    vendor: Постачальник
+    vendors: Постачальники
+    warranty: Гарантія
+    warranties: Гарантії
+    waypoint: Точка маршруту
+    waypoints: Точки маршруту
+    work-order: Заявка на роботу
+    work-orders: Заявки на роботу
+    zone: Зона
+    zones: Зони
+
+order-status:
+    created: Створено
+    ready: Готово
+    dispatched: Відправлено
+    started: Розпочато
+    completed: Завершено
+    canceled: Скасовано
+
+column:
+    target: Ціль
+    address: Адреса
+    country: Країна
+    created-at: Створено
+    id: ID
+    internal-id: Внутрішній ID
+    name: Назва
+    phone: Телефон
+    route-type: Тип маршруту
+    status: Статус
+    type: Тип
+    updated-at: Оновлено
+    vehicle: ТЗ
+    vendor: Постачальник
+    created: Створено
+    email: Електронна пошта
+    title: Заголовок
+    updated: Оновлено
+    fleet: Автопарк
+    license: Ліцензія / Посвідчення
+    active-manpower: Активний персонал
+    manpower: Персонал
+    parent-fleet: Батьківський автопарк
+    service-area: Зона обслуговування
+    task: Завдання
+    zone: Зона
+    driver: Водій
+    edit-fuel: Редагувати пальне
+    odometer: Одометр
+    reporter: Заявник
+    view: Перегляд
+    volume: Об'єм
+    assignee: Виконавець
+    category: Категорія
+    priority: Пріоритет
+    city: Місто
+    neighborhood: Район
+    postal-code: Поштовий індекс
+    state: Область / Штат
+    make: Марка
+    model: Модель
+    plate-number: Номерний знак
+    year: Рік
+    website-url: URL-адреса вебсайту
+    created-by: Створив
+    customer: Клієнт
+    driver-assigned: Призначений водій
+    dropoff: Точка розвантаження
+    facilitator: Посередник
+    items: Позиції
+    payload: Вантаж
+    pickup: Точка завантаження
+    scheduled-at: Заплановано на
+    tracking: Відстеження
+    transaction: Транзакція
+    updated-by: Оновив
+    vehicle-assigned: Призначений ТЗ
+    service: Послуга
+    location: Розташування
+    coordinates: Координати
+    current-job: Поточна робота
+    last-seen: Востаннє помічено
+    place: Місце
+    subject: Тема
+    summary: Короткий зміст
+    total-cost: Загальна вартість
+    due-at: Термін виконання
+    serial-number: Серійний номер
+    manufacturer: Виробник
+    part-number: Номер деталі
+    quantity-on-hand: Кількість в наявності
+    quantity: Кількість
+    unit-cost: Вартість за одиницю
+    code: Код
+    interval: Інтервал
+    next-due: Наступний термін
+    asset: Актив
+    performed-by: Виконав
+
+map:
+    visibility-controls:
+        title: Елементи керування видимістю
+        hide-places: Приховати всі місця
+        show-places: Показати всі місця
+        driver-controls: Керування водіями
+        driver-visibility-controls: Керування видимістю водіїв
+        show-drivers: Показати всіх водіїв
+        hide-drivers: Приховати всіх водіїв
+        show-online-drivers: Показати лише водіїв в мережі
+        show-offline-drivers: Показати лише водіїв поза мережею
+        vehicle-controls: Керування ТЗ
+        vehicle-visibility-controls: Керування видимістю ТЗ
+        hide-vehicles: Приховати всі ТЗ
+        show-vehicles: Показати всі ТЗ
+        show-online-vehicles: Показати лише ТЗ в мережі
+        show-offline-vehicles: Показати лише ТЗ поза мережею
+    zones-panel:
+        title: Зони обслуговування
+        create-service: Створити нову зону обслуговування
+        show: Показати всі зони обслуговування
+        hide: Приховати всі зони обслуговування
+        action: Дії
+        focus: Фокус
+        focus-resource: >-
+            Фокус: {resource}
+        blur: Приховати зону обслуговування
+        blur-resource: >-
+            Приховати: {resource}
+        create-zone: Створити зону всередині
+        create-zone-inside: >-
+            Створити зону: {serviceAreaName}
+        edit-resource-boundaries: Редагувати межі {resource}
+        edit-boundaries: >-
+            Редагувати межі: {resource}
+    toolbar:
+        create: Створити замовлення
+        view-order: Переглянути замовлення
+        view-service-area: Переглянути зони обслуговування
+        visibility: Елементи керування видимістю
+        scope: Область видимості
+
+activity:
+    form:
+        code: Код
+        code-help-text: Введіть унікальний ідентифікатор для цієї активності.
+        completes-order: Завершує замовлення
+        details: Деталі
+        details-help-text: "Надайте детальний опис активності для розуміння кінцевим користувачем."
+        key: Ключ
+        key-help-text: '"Введіть ключ, що використовується для програмного прийняття рішень. Цей ключ може представляти одну або кілька активностей з однаковим ідентифікатором. Примітка: Цей ключ не повинен бути унікальним."'
+        pod-method-placeholder: Виберіть метод підтвердження доставки
+        require-pod: Потрібне підтвердження доставки
+        require-pod-help-text: Ця активність вимагає створення підтвердження перед застосуванням до замовлення.
+        select-pod-method: Метод підтвердження доставки
+        status: Статус
+        status-help-text: Вкажіть статус, який відображається кінцевому користувачу при спрацьовуванні цієї активності.
+        logic-builder:
+            activity-logic: Логіка активності
+            activity-logic-help-text: Визначте настроювані логічні умови, які визначають, коли активність стає доступною в робочому процесі. Ця функція дозволяє адаптувати процес на основі конкретних критеріїв.
+            activity-logic-add-logic-help-text: Створіть новий набір умов, які визначатимуть, коли активність повинна бути активована. Натисніть для створення нового логічного правила.
+            activity-logic-select-logic-type-help-text: Виберіть тип логіки для цієї умови. Виберіть 'If' для прямої умови, 'And'/'Or' для складених умов або 'Not' для заперечення умови.
+            activity-logic-add-condition-help-text: Додайте конкретну вимогу, яка має бути виконана в цьому наборі логіки.
+            field: Поле
+            value: Значення
+            add-logic: Додати логіку
+            types:
+                and: >-
+                    Логічне ТА (AND): Істина, якщо всі умови істинні
+                or: >-
+                    Логічне АБО (OR): Істина, якщо хоча б одна умова істинна
+                not: >-
+                    Логічне НІ (NOT): Інвертує значення істинності умови
+                if: >-
+                    Умовна логіка: Виконує наступну дію, якщо умова істинна
+            operators:
+                equal: Перевіряє рівність двох значень
+                not-equal: Перевіряє нерівність двох значень
+                greater-than: Перевіряє, чи значення більше за інше
+                less-than: Перевіряє, чи значення менше за інше
+                greater-than-or-equal: Перевіряє, чи значення більше або дорівнює іншому
+                less-than-or-equal: Перевіряє, чи значення менше або дорівнює іншому
+                exists: Перевіряє існування поля або значення
+                has: Перевіряє, чи має об'єкт певну властивість або чи містить колекція елемент
+                contains: Перевіряє, чи містить рядок інший рядок або чи включає масив елемент
+                begins-with: Перевіряє, чи починається рядок з вказаного підрядка
+                ends-with: Перевіряє, чи закінчується рядок вказаним підрядком
+                in: Перевіряє, чи знаходиться значення в заданій множині або діапазоні
+                not-in: Перевіряє, чи знаходиться значення поза заданою множиною або діапазоном
+                and: Логічне ТА, істина, якщо обидва операнди істинні
+                or: Логічне АБО, істина, якщо хоча б один операнд істинний
+                not: Логічне НІ, інвертує значення істинності
+        event-selector:
+            activity-events: Події активності
+            activity-events-select-to-fire: Виберіть події, які будуть активовані при виконанні цієї активності.
+            activity-events-select-events-info: Виберіть конкретну подію, яку ви хочете запустити у відповідь на цю активність.
+            select-event-to-add: Виберіть подію для додавання...
+            events:
+                order:
+                    dispatched: Спрацьовує при успішній відправці замовлення.
+                    failed: Спрацьовує, якщо замовлення зазнало невдачі через помилку або виключення.
+                    canceled: Спрацьовує при скасуванні замовлення користувачем, водієм або системним процесом.
+                    completed: Спрацьовує при завершенні замовлення водієм або системним процесом.
+
+contact:
+    fields:
+        contact-details: Контактні дані
+        upload-new-photo: Завантажити нове фото
+
+customer:
+    fields:
+        addresses: Адреси
+        no-addresses: У цього клієнта немає збережених адрес.
+        primary-address: Основна
+        customer-details: Деталі клієнта
+        select-address: Вибрати адресу
+        new-address: Нова адреса
+        select-user: Вибрати користувача
+        send-welcome-email: Надіслати вітальний лист клієнтського порталу
+        send-welcome-email-help-text: Згенерувати тимчасовий пароль та надіслати клієнту електронну пошту з посиланням для входу.
+        upload-new-photo: Завантажити нове фото
+        user-account: Обліковий запис користувача
+        user-account-help-text: Кожен профіль клієнта має бути пов'язаний з конкретним обліковим записом користувача для обробки процесів автентифікації.
+
+custom-entity:
+    fields:
+        description: Опис
+        details: Деталі
+        entity-image: Зображення сутності
+        height: Висота
+        height-text: Текст висоти
+        length: Довжина
+        length-text: Текст довжини
+        measurements: Виміри
+        name: Назва
+        type: Тип
+        weight: Вага
+        weight-text: Текст ваги
+        width: Ширина
+        width-text: Текст ширини
+
+driver:
+    fields:
+        avatar: Аватар
+        driver-details: Деталі водія
+        select-user: Вибрати користувача
+        select-vehicle: Вибрати ТЗ
+        upload-new-photo: Завантажити нове фото
+        user-account: Обліковий запис користувача
+        user-account-help-text: Кожен профіль водія має бути пов'язаний з конкретним обліковим записом користувача для забезпечення безпечного доступу та автентифікації.
+        vendor: Постачальник
+        select-vendor: Вибрати постачальника
+        driver-license: Посвідчення водія
+        license-expiry: Термін дії посвідчення
+        no-vehicle-assigned: ТЗ не призначено
+    actions:
+        unassign-orders: Скасувати призначення замовлень
+        unassign-vehicle: Скасувати призначення ТЗ
+        create-issue: Створити проблему
+        assign-order: Призначити замовлення водію
+        assign-vehicle: Призначити ТЗ водію
+        locate-driver: Знайти водія на карті
+
+    prompts:
+        assign-order-title: "Призначити замовлення водію {driverName}"
+        assign-order-success: Замовлення призначено водію {driverName}.
+        select-order-warning: "Виберіть замовлення для призначення."
+        assign-vehicle-title: "Призначити ТЗ водію {driverName}"
+        assign-vehicle-success: "ТЗ призначено водію {driverName}."
+        select-vehicle-warning: Виберіть ТЗ для призначення.
+        no-assigned-orders-warning: Для {driverName} не знайдено призначених замовлень.
+        select-orders-warning: Виберіть щонайменше одне замовлення для скасування призначення.
+        unassign-orders-title: Скасувати призначення замовлень від {driverName}
+        confirm-unassign-orders-title: Скасувати призначення {count} замовлень від {driverName}?
+        confirm-unassign-orders-body: "Це вилучить {driverName} з цих замовлень: {orders}."
+        unassign-orders-success: Скасовано призначення {driverName} з {count} замовлень.
+        no-vehicle-assigned-warning: За {driverName} не закріплено жодного ТЗ.
+        unassign-vehicle-title: Відв'язати {vehicleName} від {driverName}?
+        unassign-vehicle-body: Це відв'яже {driverName} від {vehicleName}. Призначення замовлень не зміняться.
+        unassign-vehicle-success: Відв'язано {vehicleName} від {driverName}.
+        issue-title: Повідомлено про проблему для {driverName}
+device:
+    attachment:
+        title: Приєднаний актив
+        description: Контекст автопарку для телеметрії з цього пристрою.
+        open: Відкрити актив
+        asset: Приєднаний актив
+        synced-device: Синхронізований пристрій
+        asset-type: Тип активу
+        select-asset-type: Виберіть тип активу
+        locate: Знайти
+        change: Змінити актив
+        detach: Від'єднати
+        attached-device: Приєднаний пристрій
+        last-seen: Пристрій востаннє помічено
+        none-title: Немає приєднаного активу
+        none-message: Приєднайте цей пристрій до ТЗ або причепа, щоб телеметрія мала контекст автопарку.
+        latest-positions: Останні позиції
+        positions-description: Останні координати активу, отримані через це прив'язане пристрою.
+        full-history: Повна історія
+        no-positions: Немає останніх позицій
+        no-positions-message: Для цього приєднаного активу ще немає доступної історії останніх позицій.
+        attach-or-change: Приєднати або змінити актив
+        view-attached: Переглянути приєднаний актив
+        locate-attached: Знайти приєднаний актив на карті
+        unknown: Невідомий актив
+    fields:
+        title: Деталі пристрою
+        device-name: Назва пристрою
+        device-name-placeholder: Назва пристрою
+        device-type: Тип пристрою
+        device-type-placeholder: Виберіть тип пристрою
+        device-id: ID пристрою
+        device-id-placeholder: ID пристрою
+        device-provider: Провайдер пристрою
+        device-provider-placeholder: Провайдер пристрою
+        device-model: Модель пристрою
+        device-model-placeholder: Модель пристрою
+        manufacturer: Виробник
+        manufacturer-placeholder: Виробник
+        serial-number: Серійний номер
+        serial-number-placeholder: Серійний номер
+        device-location: Розташування пристрою
+        device-location-placeholder: Розташування пристрою
+        installation-date: Дата встановлення
+        installation-date-placeholder: Виберіть дату встановлення
+        last-maintenance-date: Дата останнього ТО
+        last-maintenance-date-placeholder: Виберіть дату останнього ТО
+        data-frequency: Частота передачі даних
+        data-frequency-placeholder: Частота передачі даних
+        status: Статус
+        status-placeholder: Виберіть статус
+        telematic: Телематика
+        telematic-placeholder: Виберіть телематику
+        warranty: Гарантія
+        warranty-placeholder: Виберіть гарантію
+        notes: Примітки
+        notes-placeholder: Примітки
+
+    actions:
+        attach-device: Приєднати пристрій
+        attach-to-vehicle: Приєднати до ТЗ
+        detach-from-vehicle: Від'єднати від ТЗ
+        attach-to-asset: Приєднати до активу
+    prompts:
+        attach-to-vehicle-title: Приєднати пристрій до ТЗ
+        attach-device-to-vehicle-title: "Приєднати {deviceName} до ТЗ"
+        select-vehicle-warning: Виберіть ТЗ для приєднання цього пристрою.
+        attach-to-vehicle-success: Пристрій приєднано до ТЗ.
+        attach-to-asset-title: Приєднати пристрій до активу
+        select-asset-warning: Виберіть ТЗ або причіп для приєднання цього пристрою.
+        attach-to-asset-success: Пристрій приєднано до активу.
+        detach-from-asset-title: "Від'єднати {deviceName} від активу?"
+        detach-from-asset-body: "Це від'єднає {deviceName} від {assetName} і зупинить оновлення телеметрії активу, доки його не буде приєднано знову."
+        detach-from-asset-success: Пристрій від'єднано від активу.
+        not-attached-warning: "{deviceName} не приєднано до ТЗ."
+        detach-from-vehicle-title: "Від'єднати {deviceName} від ТЗ?"
+        detach-from-vehicle-body: "Це від'єднає {deviceName} від {vehicleName} і зупинить оновлення телеметрії ТЗ, доки його не буде приєднано знову."
+        detach-from-vehicle-success: Пристрій від'єднано від ТЗ.
+        select-device-to-attach-title: "Виберіть пристрій для приєднання до {resourceName}"
+        confirm-attach-device: "Підтвердити та приєднати пристрій"
+        attach-device-success: Пристрій успішно приєднано.
+        detach-from-resource-title: "Від'єднати {deviceName} від {resourceName}?"
+        detach-from-resource-body: "Це від'єднає {deviceName} від {resourceName} і зупинить оновлення телеметрії та подій для цього {resourceType}."
+        detach-from-resource-success: "Від'єднано {deviceName} від {resourceName}."
+        detach-telematic-device-title: "Від'єднати {deviceName} від ТЗ?"
+        detach-telematic-device-body: "{deviceName} залишиться синхронізованим від провайдера, але більше не буде прив'язаний до ТЗ."
+        manager-description: Телематичні пристрої, встановлені на цьому {resourceType}. Приєднайте пристрій, щоб почати отримувати дані про позиції та події.
+        no-devices-attached-title: Немає приєднаних пристроїв
+        no-devices-attached-body: "Натисніть 'Приєднати пристрій' вище, щоб почати отримувати телематичні дані для цього {resourceType}."
+entity:
+    fields:
+        declare: Декларувати
+        declare-text: Текст декларації
+        description: Опис
+        description-text: Текст опису
+        height: Висота
+        height-text: Текст висоти
+        id-text: Текст ID
+        length: Довжина
+        length-text: Текст довжини
+        measurement-title: Назва вимірювання
+        name-text: Текст назви
+        price: Ціна
+        price-text: Текст ціни
+        price-title: Назва ціни
+        sale-price: Акційна ціна
+        sale-price-text: Текст акційної ціни
+        sku: Артикул (SKU)
+        sku-text: Текст артикулу
+        weight: Вага
+        weight-text: Текст ваги
+        width: Ширина
+        width-text: Текст ширини
+
+fleet:
+    fields:
+        fleet-details: Деталі автопарку
+        fleet-name: Назва автопарку
+        parent-fleet: Батьківський автопарк
+        select-parent-fleet: Виберіть батьківський автопарк для призначення
+        select-service: Виберіть зону обслуговування для призначення автопарку
+        select-status: Виберіть статус
+        select-status-fleet: Виберіть статус автопарку.
+        select-vendor: Виберіть постачальника для призначення автопарку
+        select-zone: Виберіть зону для призначення автопарку
+        service-title: Призначити до зони обслуговування
+        task-mission-title: Завдання / Місія
+        task-text: "Надайте опис основного завдання або місії цього автопарку, якщо застосовно."
+        zone-title: Призначити до зони
+        active-manpower: Активний персонал
+        task: Завдання
+    driver-listing:
+        search-driver: Пошук водіїв в автопарку
+        add-driver: Додати водія до автопарку
+        loading-message: Завантаження водіїв автопарку...
+    vehicle-listing:
+        search-vehicle: Пошук ТЗ в автопарку
+        add-vehicle: Додати ТЗ до автопарку
+        loading-message: Завантаження ТЗ автопарку...
+    actions:
+        assign-vehicle: Призначити ТЗ до автопарку
+        assign-driver: Призначити водія до автопарку
+
+    prompts:
+        assign-driver-title: Призначити водія до {fleetName}
+        assign-vehicle-title: Призначити ТЗ до {fleetName}
+        select-driver-warning: Виберіть водія для призначення.
+        select-vehicle-warning: Виберіть ТЗ для призначення.
+        assign-driver-success: Водія призначено до {fleetName}.
+        assign-vehicle-success: ТЗ призначено до {fleetName}.
+fuel-report:
+    fields:
+        details: Деталі звіту про пальне
+        reporter: Заявник
+        select-reporter: Вибрати заявника
+        fuel-cost: Вартість пального
+        odometer: Одометр
+        select-volume-help-text: Виберіть метричну одиницю та об'єм пального для звіту.
+        fuel-volume: Пальне / Об'єм
+
+issue:
+    fields:
+        title: Заголовок
+        add-tags: Додати теги
+        assigned-to: Призначено
+        category: Категорія проблеми
+        issue-report: Звіт про проблему
+        priority: Пріоритет проблеми
+        report: Звіт про проблему
+        reported-by: Повідомив
+        select-assign: Вибрати виконавця
+        select-category: Виберіть категорію проблеми
+        select-priority: Виберіть пріоритет проблеми
+        select-reporter: Виберіть заявника
+        select-status: Виберіть статус проблеми
+        select-type: Виберіть тип проблеми
+        tags: Теги проблеми
+        type: Тип проблеми
+
+order:
+    placeholders:
+        filter-internal-id: Введіть або скануйте внутрішні ID
+    card:
+      linked-order: Пов'язане замовлення
+      unknown-order: Невідоме замовлення
+      no-type: Без типу
+      pickup: Завантаження
+      dropoff: Розвантаження
+      return: Повернення
+      waypoints: Точки маршруту
+      additional-stop: додаткова зупинка
+      additional-stops: додаткові зупинки
+      no-pickup-address: Немає адреси завантаження
+      no-dropoff-address: Немає адреси розвантаження
+      no-route-details: Деталі маршруту недоступні.
+      no-order-linked: Жодне замовлення не пов'язане з цією проблемою.
+    fields:
+        ad-hoc: Ad-Hoc
+        ad-hoc-help-text: Вмикання Ad-Hoc дозволить замовленню інтелектуально надсилати сповіщення водіям поблизу місця завантаження, дозволяючи першому вільному водію прийняти замовлення. Це альтернатива ручному призначенню.
+        add-entity: Додати сутність
+        add-item-button: Додати позицію
+        add-item-order: Додати позицію до замовлення
+        add-waypoint: Додати точку маршруту
+        add-waypoint-help-text: 'Використовуйте кнопку `Додати точку маршруту` для додавання нових зупинок. Маршрутизатор Fleetbase автоматично оптимізує маршрут при додаванні або видаленні зупинок.'
+        adhoc-ping: Відстань сповіщення Ad-Hoc
+        adhoc-ping-help-text: Це налаштування визначає радіус Ad-Hoc сповіщення для цього замовлення. Якщо не заповнено, використовується значення за замовчуванням.
+        adhoc-ping-message: Відстань має бути в метрах
+        apply-service-rate: Застосувати тариф послуги
+        assign-driver: Призначити водія
+        assign-driver-help-text: Призначте водія, якому буде відправлено це замовлення.
+        assign-driver-placeholder: Вибрати водія
+        assign-vehicle: Призначити ТЗ
+        assign-vehicle-help-text: Призначте ТЗ, на якому буде виконано замовлення.
+        assign-vehicle-placeholder: Вибрати ТЗ
+        breakdown: Деталізація
+        customer: Клієнт
+        customer-help-text: "Опціонально призначте клієнта для цього замовлення. Якщо це новий клієнт, скористайтеся кнопкою 'Новий клієнт' вище."
+        customer-placeholder: Вибрати клієнта
+        dispatch: Відправити
+        dispatch-help-text: Увімкнення відправки запустить процес відправки замовлення одразу після створення.
+        documents-panel-title: 'Документи та файли'
+        dropoff: Точка розвантаження
+        edit-address: Редагувати адресу
+        edit-item: Редагувати позицію
+        facilitator: Посередник
+        facilitator-help-text: Опціонально призначте посередника (сторонній субпідрядник або служба).
+        facilitator-placeholder: Вибрати посередника
+        info-text: Виберіть розрахунок вартості послуги в реальному часі для цього замовлення. Після застосування розрахунку він стане придбаним тарифом.
+        internal-id: Внутрішній ID
+        internal-id-help-text: Використовуйте це поле для встановлення власного або внутрішнього ідентифікатора замовлення.
+        invalid-coordinates: 'Недійсні координати!'
+        items-drop: Позиції вивантажуються о
+        loading-message: Завантаження розрахунків вартості...
+        updating-service-quotes-message: Оновлення розрахунків вартості...
+        notes-placeholder: Введіть примітки до замовлення тут....
+        notes-title: Примітки
+        optimize-route: Оптимізувати маршрут
+        optimize-route-help-text: Fleetbase автоматично оптимізує маршрут.
+        order-type: Тип замовлення
+        order-type-help-text: Вибір типу замовлення вкаже Fleetbase, які конфігурації замовлення використовувати.
+        order-type-placeholder: Виберіть тип замовлення
+        payload-entities: Вантаж / Сутності
+        pickup: Точка завантаження
+        proof-delivery: Підтвердження доставки
+        proof-delivery-help-text: Виберіть потрібний тип підтвердження доставки (QR-код або підпис).
+        proof-delivery-placeholder: Виберіть метод підтвердження доставки
+        refresh-button: Оновити
+        require-proof: Вимагати підтвердження доставки
+        require-proof-help-text: Увімкнення цієї опції зобов'яже водія надати підтвердження доставки.
+        return: Повернення
+        route: Маршрут
+        route-error: Помилка оптимізації маршруту. Перевірте введені дані та спробуйте знову.
+        route-label: "Кілька точок розвантаження"
+        schedule: Запланувати
+        schedule-help-text: Дата та час відправки замовлення. Якщо водія не призначено на момент відправки, вона зазнає невдачі.
+        select-destination: Виберіть пункт призначення
+        select-dropoff: Виберіть точку розвантаження
+        select-pickup: Виберіть точку завантаження
+        select-return: Виберіть точку повернення
+        select-waypoint: Виберіть точку маршруту
+        service: Послуга
+        select-service-rate: Виберіть тариф послуги
+        service-help-text: Виберіть визначений тариф для генерації розрахунків вартості в реальному часі.
+        service-quotes-help-text: Виберіть тариф для отримання розрахунків вартості.
+        service-type: Тип послуги
+        service-type-placeholder: Виберіть тип послуги
+        sku: Артикул (SKU)
+        activity: Активність
+        comments-title: Коментарі
+        date-dispatched: Дата відправки
+        date-scheduled: Запланована дата
+        date-started: Дата початку
+        driver: Водій
+        driver-assigned: Призначений водій
+        no-driver-assigned: Водія не призначено
+        get-label: Отримати етикетку
+        order-notes-updated: Примітки до замовлення оновлено.
+        payload: Вантаж
+        proof-of-delivery: Підтвердження доставки
+        purchase-rate-panel-title: Придбаний тариф
+        route-panel-title: Маршрут
+        save-order-note: Зберегти примітку до замовлення
+        tracking: Відстеження
+        tracking-number: Номер відстеження
+        vehicle-assigned: Призначений ТЗ
+        view-activity: Переглянути активність
+        no-order-activity: Немає активності за замовленням
+        waypoint-actions: Дії з точкою маршруту
+        documents-files: Документи та файли
+        order-metadata: Метадані замовлення
+        order-label: Маркування замовлення
+        waypoint-label: Маркування точки маршруту
+        entity-label: Маркування сутності
+        current-eta: Поточний очікуваний час (ETA)
+        ect: Очікуваний час завершення (ECT)
+        current-destination: Поточний пункт призначення
+        no-service-quotes: Немає розрахунків вартості послуг.
+        input-order-routes: Введіть маршрут замовлення для перегляду розрахунків.
+        service-quote-info: Виберіть розрахунок вартості в реальному часі для застосування до замовлення.
+    prompts:
+        update-details-success: 'Деталі замовлення {orderId} оновлено.'
+        route-error: Помилка оптимізації маршруту, перевірте введені дані маршруту та спробуйте знову.
+        route-update-success: 'Деталі маршруту замовлення {orderId} оновлено.'
+        unassign-driver-title: Ви дійсно бажаєте скасувати призначення водія ({driverName}) для цього замовлення?
+        unassign-driver-body: Після скасування призначення водій більше не матиме доступу до деталей цього замовлення.
+        unassign-driver-success: Водія успішно відв'язано від цього замовлення.
+        no-driver-assigned-error: За цим замовленням не закріплено водія.
+        failed-to-load-order-label: Не вдалося завантажити маркування замовлення.
+        failed-to-load-waypoint-label: Не вдалося завантажити маркування точки маршруту.
+        failed-to-load-entity-label: Не вдалося завантажити маркування сутності.
+        unable-to-add-entity: Не вдалося додати нову сутність до замовлення.
+        assign-driver-success: Водія ({driverName}) призначено до замовлення {orderId}.
+        cancel-title: Ви дійсно бажаєте скасувати це замовлення?
+        cancel-body: Після скасування замовлення запис залишиться видимим, але додавати активність до нього буде неможливо.
+        cancel-success: Замовлення {orderId} скасовано.
+        dispatch-title: Ви дійсно бажаєте відправити це замовлення?
+        dispatch-body: Після відправки замовлення призначений водій отримає сповіщення.
+        dispatch-success: Замовлення {orderId} відправлено.
+        order-bulk-search: Введіть ID замовлень або номери відстеження через кому для масового пошуку
+    actions:
+        create-new-customer: Створити нового клієнта
+        create-new-facilitator: Створити нового посередника
+        create-new-place: Створити нове місце
+        change-driver: Змінити водія
+        assign-driver: Призначити водія
+        update-activity: Оновити активність
+        reload-activity: Перезавантажити активність
+        view-activity-as-timeline: Переглянути як часову шкалу
+        view-activity-as-list: Переглянути як список
+        cancel-order: Скасувати замовлення
+        dispatch-order: Відправити замовлення
+        dispatch-orders: Відправити замовлення
+        assign-driver-to-orders: Призначити водія до замовлень
+        edit-order-details: Редагувати деталі замовлення
+        edit-order-route: Редагувати маршрут замовлення
+        edit-order-metadata: Редагувати метадані замовлення
+        update-order-activity: Оновити активність замовлення
+        submit-new-activity: Надіслати нову активність
+        add-entity: Додати сутність
+        unassign-driver-name: >-
+            Скасувати призначення водія: {driverName}
+    schedule-card:
+        destination: Пункт призначення
+        unassign-driver: Скасувати призначення водія?
+        unassign-text: Ви збираєтеся скасувати призначення водія для замовлення {orderId}. Натисніть "Продовжити" для підтвердження.
+        unassign-button: Продовжити та скасувати призначення водія
+        assign-driver: Призначити нового водія?
+        assign-text: Ви збираєтеся призначити нового водія ({driverName}) для замовлення {orderId}. Натисніть "Продовжити" для підтвердження.
+        assign-button: Продовжити та призначити водія
+        date: Запланована дата
+        date-created: Дата створення
+        driver-assigned: Водій
+        vehicle-assigned: Транспортний засіб
+        no-driver: Без водія
+        no-vehicle: Без ТЗ
+        select-driver: Вибрати водія
+        select-vehicle: Вибрати ТЗ
+    kanban:
+        status-updated: Активність замовлення оновлено до статусу {status}.
+        cannot-update-status: Не вдалося перемістити замовлення до статусу {status}.
+
+order-config-manager:
+    title: Конфігурація замовлень
+    message: Конфігурації замовлень дозволяють визначати динамічні параметри, які вказують Fleetbase, як мають виконуватися різні типи замовлень.
+    configuration: Конфігурація
+    new-order-config: Нова конфігурація замовлення
+    select-order-config: Вибрати конфігурацію замовлення
+    create-new-title: Створити нову конфігурацію замовлення
+    create-warning-message: Конфігурація замовлення вимагає назви
+    create-success-message: Нову конфігурацію замовлення успішно створено.
+    no-order-config-selected: Не вибрано конфігурацію замовлення.
+    saved-success-message: 'Конфігурацію {orderConfigName} збережено.'
+    cloned-success-message: Конфігурацію замовлення успішно клоновано.
+    enter-clone-name: Введіть назву клонованої конфігурації
+    no-config-name-warning-message: Назву конфігурації не введено.
+    delete-warning-message: Після видалення цієї конфігурації ви більше не зможете створювати замовлення з її використанням. Ви впевнені?
+    uninstall-order-config: Видалити конфігурацію
+    uninstall-order-config-success-message: Розширення {extensionName} видалено.
+    select-order-config-to-start: Виберіть або створіть конфігурацію замовлення для початку.
+    tabs:
+        details: Деталі
+        custom-fields: Настроювані поля
+        activity-flow: Потік активностей
+        entities: Сутності
+    details:
+        details: Деталі
+        name: Назва
+        description: Опис
+        tags: Теги
+        add-tags: Додати теги
+        key: Ключ
+        version: Версія
+        namespace: Простір імен (Namespace)
+        controls: Елементи керування
+        delete-config: Видалити конфігурацію
+        delete:
+            delete-title: Видалити цю конфігурацію замовлень?
+            delete-body-message: Після видалення цієї конфігурації замовлень її неможливо буде відновити, і всі налаштування будуть втрачені.
+            confirm-delete: Видалити
+    activity-flow:
+        save-activity-flow: Зберегти потік активностей
+        edit-activity-unique-code-warning: Код активності повинен бути унікальним!
+    custom-fields:
+        new-field-group: Нова група полів
+        new-custom-field: Створити нове настроюване поле
+        grid-size: Розмір сітки
+        delete-custom-field-prompt:
+            modal-title: Видалити це настроюване поле?
+            delete-body-message: Після видалення цього поля його відновлення буде неможливим.
+            confirm-delete: Видалити
+        delete-custom-field-group-prompt:
+            modal-title: Видалити цю групу полів?
+            delete-body-message: Після видалення цієї групи полів усі настроювані поля всередині неї будуть втрачені.
+            confirm-delete: Видалити
+    entities:
+        new-custom-entity: Нова настроювана сутність
+        name: Назва
+        description: Опис
+        type: Тип
+        length: Довжина
+        width: Ширина
+        height: Висота
+        weight: Вага
+        delete-custom-entity-title: Видалити цю настроювану сутність?
+        delete-custom-entity-body: Після видалення цієї сутності її відновлення буде неможливим.
+        confirm-delete: Підтвердити
+    types:
+        no-order-installed: Не встановлено жодної конфігурації замовлень!
+        you-have-no-configs: Наразі у вас немає встановлених конфігурацій замовлень. Перевірте розширення, щоб встановити конфігурацію для початку.
+        view-extensions: Переглянути розширення
+
+place:
+    fields:
+        details: Деталі місця
+        building: Будівля / Корпус
+        neighborhood: Район
+        postal-code: Поштовий індекс
+        security-access-code: Код доступу / Охорони
+        city: Місто
+        province: Область / Провінція
+        country: Країна
+        state: Штат / Область
+        street-1: Вулиця (лінія 1)
+        street-2: Вулиця (лінія 2)
+        coordinates: Координати
+        phone: Телефон
+    prompts:
+        vendor-assigned-success: Постачальнику призначено {placeName} як нове розташування.
+    actions:
+        locate-place: Знайти місце на карті
+
+service-area:
+    actions:
+        edit-boundary: Редагувати межу на карті
+    fields:
+        details: Деталі зони обслуговування
+        area-color: Колір заливки
+        area-color-help-text: Налаштуйте колір заливки для цієї зони обслуговування.
+        border-color: Колір межі
+        border-color-help-text: Налаштуйте колір межі для цієї зони обслуговування.
+        country: Країна
+        country-help-text: Опціонально вкажіть країну, у якій розташована або базується ця зона обслуговування.
+        name: Назва
+        name-help-text: Встановіть відображувану назву для зони обслуговування.
+        type: Тип
+        type-help-text: Виберіть визначення типу для цієї зони обслуговування.
+
+service-rate:
+    fields:
+        details: Деталі тарифу послуги
+        terms: Умови
+        add-drop-off-button: Додати діапазон розвантажень
+        additional-fee: Додатковий збір
+        algorithm-help-text: Визначте формулу для розрахунку цього тарифу.
+        algorithm-label: Алгоритм
+        algorithm-placeholder: >-
+            (( '{distance}' / 50 ) * .05 ) + (( '{time}' / 60 ) * .01)
+        base-fee-help-text: Встановіть базовий збір, який представляє мінімальну вартість цієї послуги.
+        base-fee-label: Базовий збір
+        calculation-method-help-text: Метод розрахунку комісії за накладений платіж (COD).
+        calculation-method-label: Метод розрахунку комісії COD
+        calculation-method-placeholder: Виберіть метод розрахунку комісії COD
+        cash-delivery-label: 'Увімкнути додатковий збір для замовлень з накладеним платежем?'
+        cash-delivery-title: Оплата при отриманні (COD)
+        custom-algorithm-info-message: "Ця опція призначена для визначення власного розрахунку збору за послугу зі змінними."
+        custom-algorithm-info-second-message: Зверніть увагу, що змінні повинні бути обгорнуті в поодинокі фігурні дужки.
+        custom-algorithm-title: Власний алгоритм
+        delivery-flat-fee: Фіксований збір за накладений платіж
+        delivery-flat-fee-help-text: Визначає фіксований збір, який додається в години пік.
+        deminsions-unit: Розмірність
+        distance: Відстань
+        distance-continue-message: >-
+            - відстань у метрах від маршруту замовлення.
+        distance-message: відстань
+        distance-unit: Одиниця відстані
+        distance-unit-help-text: Одиниця відстані може бути за кілометр або метр.
+        distance-unit-placeholder: Виберіть одиницю відстані.
+        duration-terms-help-text: Додайте додаткові умови обслуговування щодо тривалості для цього тарифу.
+        duration-terms-label: Умови тривалості
+        duration-terms-placeholder: Умови тривалості, якщо застосовно
+        estimated-days: Очікувані дні доставки
+        estimated-days-help-text: 'Очікувана кількість днів для цієї послуги. Для доставки в той самий день використовуйте `0`.'
+        example: Приклад
+        example-message: Якщо запит на замовлення має відстань 2200 метрів з ETA 30 хвилин.
+        example-second-message: Тоді наступна формула розрахує збір за послугу в розмірі $2.50, який буде додано до базового збору.
+        fee: Збір
+        fee-percentage: Відсоток комісії за накладений платіж
+        fee-percentage-help-text: Визначає відсотковий збір від проміжного підсумку тарифу послуги для накладеного платежу.
+        fixed-meter: Опції фіксованого метражу
+        fixed-meter-example-text: >-
+            Наприклад: За кожен 1 кілометр визначається фіксована плата. Якщо відстань замовлення 3300 метрів, фіксована плата за 3-й кілометр додається до суми базового збору.
+        fixed-meter-text: Ця опція визначає фіксовану плату за кілометр.
+        flat-fee-help-text: Визначає фіксований збір, який додається в години пік.
+        flat-fee-label: Фіксований збір у години пік
+        height-label: Висота
+        height-placeholder: 'Висота в {parcelFeeDimension}'
+        length-label: Довжина
+        length-placeholder: 'Довжина в {parcelFeeDimension}'
+        max: Макс.
+        max-drop: Макс. кількість точок розвантаження
+        maximum-distance: Максимальна відстань
+        maximum-distance-help-text: Максимальна відстань обслуговування.
+        min: Мін.
+        min-drop: Мін. кількість точок розвантаження
+        order-type-placeholder: Заповнювач типу замовлення
+        peak-hours-end-help-text: Визначає час закінчення дії збору за години пік.
+        peak-hours-end-label: Кінці годин пік
+        peak-hours-fee-help-text: Метод, що використовується для розрахунку збору в години пік.
+        peak-hours-fee-label: Метод розрахунку збору в години пік
+        peak-hours-fee-placeholder: Виберіть метод розрахунку збору в години пік
+        peak-hours-label: 'Увімкнути додатковий збір для замовлень, зроблених у визначені "години пік"?'
+        peak-hours-percentage-help-text: Визначає відсотковий збір від суми тарифу в години пік.
+        peak-hours-percentage-label: Відсоток збору в години пік
+        peak-hours-start-help-text: Визначає час початку дії збору за години пік.
+        peak-hours-start-label: Початок годин пік
+        peak-hours-title: Години пік
+        per-drop-off-example-text: >-
+            Наприклад: 1-5 розвантажень у замовленні коштуватимуть $x, 5-10 розвантажень коштуватимуть $x. Це буде додано до суми базового збору.
+        per-drop-off-text: Ця опція визначає фіксований збір за кожну точку розвантаження.
+        per-drop-off-title: Опції за точку розвантаження
+        per-meter: За метр
+        per-meter-example-text: >-
+            Наприклад: '{fee}' * '{distance}' + '{baseFee}'
+        per-meter-rate-fee: Фіксована ставка за метр
+        per-meter-rate-fee-help-text: Єдиний фіксований збір, який помножується на відстань.
+        per-meter-text: Ця опція дозволяє розраховувати послугу за кілометр або метр (фіксований збір множиться на відстань).
+        percel-fee-title: "Збори за посилки"
+        percentage-placeholder: Відсоток
+        rate-calculation-help-text: Метод, який використовується цією послугою для розрахунку тарифів при запиті.
+        rate-calculation-label: Метод розрахунку тарифу
+        rate-calculation-placeholder: Виберіть метод розрахунку тарифу
+        restrict-service-title: Обмежити послугу
+        select-unit-placeholder: Вибрати одиницю
+        select-order-type: Вибрати тип замовлення
+        service-area-help-text: Обмежити цю послугу запитами на замовлення, що надходять із зони обслуговування.
+        service-area-label: Зона обслуговування
+        service-area-placeholder: Обмежити зоною обслуговування
+        service-name: Назва послуги
+        service-name-help-text: Відображувана назва цієї послуги.
+        service-order-help-text: Виберіть конфігурацію замовлення, до якої цей тариф буде застосовуватись виключно.
+        service-order-label: Тип замовлення послуги
+        time-continue-message: >-
+            - очікуваний час прибуття (ETA) за маршрутом у секундах.
+        time-message: час
+        weight-label: Вага
+        weight-unit: Одиниця ваги
+        width-label: Ширина
+        width-placeholder: 'Ширина в {parcelFeeDimension}'
+        zone-help-text: Обмежити цю послугу запитами, що надходять з конкретної зони.
+        zone-label: Зона
+        zone-placeholder: Обмежити зоною
+        cod-fee-label: Ярлик комісії COD
+
+vehicle:
+    placeholders:
+        filter-internal-id: Введіть або скануйте внутрішні ID
+    filters:
+        has-trailer: Приєднано причіп
+        has-driver: Призначено водія
+        has-device: Приєднано пристрій
+        any: Будь-який
+        attached: Приєднано
+        not-attached: Не приєднано
+        assigned: Призначено
+        not-assigned: Не призначено
+    fields:
+        updated-at: Востаннє оновлено
+        avatar: Аватар
+        driver-assigned: Призначений водій
+        make: Марка
+        model: Модель
+        plate-number: Номерний знак
+        select-driver: Вибрати водія
+        upload-new-photo: Завантажити нове фото
+        vehicle-make: Марка ТЗ
+        vehicle-model: Модель ТЗ
+        vehicle-year: Рік випуску ТЗ
+        vin-number: VIN-код
+        year: Рік
+    actions:
+        attach-trailer: Приєднати причіп
+        attach-equipment: Приєднати обладнання
+        detach-equipment: Від'єднати обладнання
+        attach-device: Приєднати пристрій
+        unassign-orders: Скасувати призначення замовлень
+        create-issue: Створити проблему
+        locate-vehicle: Знайти ТЗ на карті
+        schedule-maintenance: Запланувати ТО
+        create-work-order: Створити заявку на роботу
+        log-maintenance: Зареєструвати ТО
+    empty:
+        trailers: Немає приєднаних причепів
+        trailers-description: Приєднайте відчеплений причіп до цього ТЗ, щоб розпочати зчеплення.
+        equipment: Немає приєднаного обладнання
+        equipment-description: Приєднайте до цього ТЗ таке обладнання, як гидроборти, інструменти або засоби безпеки.
+        inspections: Немає поданих інспекцій
+        inspections-description: Інспекції, подані водієм для цього ТЗ, відображатимуться тут.
+    trailers:
+        description: Причепи, наразі зчеплені з цим ТЗ.
+    equipment:
+        description: Обладнання, наразі встановлене на цей ТЗ.
+
+    prompts:
+        attach-trailer-title: Приєднати причіп до {vehicleName}
+        select-trailer-warning: Виберіть причіп для приєднання до цього ТЗ.
+        attach-trailer-success: Приєднано {trailerName} до {vehicleName}.
+        attach-device-title: Приєднати пристрій до {vehicleName}
+        select-device-warning: Виберіть пристрій для приєднання.
+        attach-device-success: Пристрій приєднано до {vehicleName}.
+        no-assigned-orders-warning: Для {vehicleName} не знайдено призначених замовлень.
+        select-orders-warning: Виберіть щонайменше одне замовлення для скасування призначення.
+        unassign-orders-title: Скасувати призначення замовлень від {vehicleName}
+        confirm-unassign-orders-title: Скасувати призначення {count} замовлень від {vehicleName}?
+        confirm-unassign-orders-body: "Це вилучить {vehicleName} з цих замовлень: {orders}."
+        unassign-orders-success: Скасовано призначення {vehicleName} з {count} замовлень.
+        issue-title: Повідомлено про проблему для {vehicleName}
+vendor:
+    fields:
+        setup-vendor: Налаштування постачальника
+        choose-vendor: Виберіть інтегрованого провайдера постачальника
+        email-help-text: Електронна пошта постачальника (може використовуватись для надсилання листів).
+        name-help-text: Назва постачальника (зазвичай назва компанії/бізнесу).
+        phone-text: >-
+            Телефон постачальника (може використовуватись для SMS або повідомлень).
+        website: URL-адреса вебсайту
+        edit-address: Редагувати адресу
+        new-address: Нова адреса
+        select-address: Вибрати адресу
+        select-vendor-status: Виберіть статус постачальника
+        select-vendor-type: Виберіть тип постачальника
+        title: Налаштування
+        vendor-details: Деталі постачальника
+        website-help-text: Вебсайт постачальника (опціонально для довідки).
+
+integrated-vendor:
+    fields:
+        provider: Провайдер
+        credentials: Облікові дані
+        credentials-configure-help-text: Опціонально вкажіть власний {param} для налаштування цього постачальника.
+        options: Опції
+        choose-vendor: Виберіть інтегрованого провайдера постачальника
+        select-integrated: Виберіть інтегрованого провайдера постачальника.
+        advanced-options: Додаткові параметри
+        cancel-credentials: Скасувати скидання облікових даних
+        sensitive-credentials: Чутливі облікові дані можна лише скинути; для оновлення необхідно ввести їх повторно.
+        reset-credentials: Натисніть тут для скидання облікових даних
+        sandbox: Песочниця (Sandbox)
+        webhook: URL-адреса Webhook
+        webhook-help-text: Інтегрованим постачальникам зазвичай це потрібно для отримання оновлень активності замовлення у Fleetbase. Змінюйте лише якщо впевнені в діях!
+        host: Власний хост
+        host-help-text: Опціонально вкажіть власний хост для цієї інтеграції.
+        namespace: Власний простір імен
+        namespace-help-text: Опціонально вкажіть власний простір імен або версію API.
+
+zone:
+    actions:
+        edit-boundary: Редагувати межу на карті
+    fields:
+        details: Деталі зони
+        border-color: Колір межі
+        customize-border: Налаштувати межу
+        customize-fill-color: Налаштувати колір заливки
+        description: Опис
+        name: Назва
+        name-help-text: Введіть назву цієї зони.
+        zone-color: Колір зони
+
+# Рефакторинг застарілих перекладів у процесі
+activity-logic-builder:
+    activity-logic: Логіка активності
+    activity-logic-help-text: Визначте настроювані логічні умови, які визначають доступність активності у робочому процесі.
+    activity-logic-add-logic-help-text: Створіть новий набір умов для активації активності.
+    activity-logic-select-logic-type-help-text: Виберіть тип логіки (If, And/Or, Not).
+    activity-logic-add-condition-help-text: Додайте конкретну вимогу до цього набору логіки.
+    field: Поле
+    value: Значення
+    add-logic: Додати логіку
+
+activity-event-selector:
+    activity-events: Події активності
+    activity-events-select-to-fire: Виберіть події, які запускатимуться при цій активності.
+    activity-events-select-events-info: Виберіть конкретну подію для запуску.
+    select-event-to-add: Виберіть подію для додавання...
+
+custom-field-form-panel:
+    meta-col-span: 'Мета: охоплення колонок (Column-Span)'
+    col-span-size: Розмір охоплення колонок
+    custom-field-title-concat: 'Настроюване поле: '
+    new-custom-field: Нове настроюване поле
+    close-new-custom-field: Скасувати зміни настроюваного поля
+    save-custom-field: Зберегти зміни
+    create-custom-field: Створити нове поле
+    field-name: Назва поля
+    field-label: Ярлик поля
+    field-type: Тип поля
+    select-field-type: Виберіть тип поля...
+    field-description: Опис поля
+    field-help-text: Текст підказки поля
+    field-default-value: Значення поля за замовчуванням
+    field-is-required: Поле є обов'язковим
+    field-is-editable: Поле доступне для редагування
+    field-options: Опції поля
+    field-validation-rules: Правила валідації поля
+    field-model-type: Тип моделі поля
+    field-select-model-type: Виберіть тип моделі
+    add-new-option: Додати нову опцію
+
+activity-form-panel:
+    title-concat: 'Активність: '
+    new-activity-title: Створити нову активність
+    key: Ключ
+    code: Код
+    status: Статус
+    details: Деталі
+    proof-of-delivery: Підтвердження доставки
+    require-pod: Вимагає підтвердження доставки
+    require-pod-help-text: Ця активність вимагає створення підтвердження перед застосуванням.
+    select-pod-method: Метод підтвердження доставки
+    pod-method-placeholder: Виберіть метод підтвердження доставки
+    completes-order: Завершує замовлення
+    complete: Завершити
+    key-help: 'Введіть ключ для програмного прийняття рішень.'
+    code-help: Введіть унікальний ідентифікатор для цієї активності.
+    status-help: Вкажіть статус, що відображається користувачеві.
+    details-help: Надайте детальний опис активності.
+custom-entity-issue-form-panel:
+    new-custom-entity: Нова настроювана сутність
+    name: Назва
+    description: Опис
+    details: Деталі
+    type: Тип
+    length: Довжина
+    width: Ширина
+    height: Висота
+    weight: Вага
+    entity-image: Зображення сутності
+    measurements: Виміри
+
+avatar-picker:
+    avatar: Аватар
+    select-map-avatar: Вибрати аватар для карти
+    select-avatar-rendering: Виберіть аватар для відображення на картах при геолокаційному відстеженні.
+    select-avatar: Вибрати аватар
+    select-for-preview: Вибрати для попереднього перегляду
+
+admin:
+    navigator-app:
+        title: Додаток Navigator
+        name: URL-адреса зв'язування екземпляра
+        message: Використовуйте цю URL-адресу для зв'язування офіційного додатка Navigator з екземпляром {companyName}.
+        settings: Налаштування сутності
+        select-input: Дозволити водієві оновлювати деталі сутності
+        driver-settings: Налаштування водія
+        description: Увімкнути самостійну реєстрацію водія
+        upload-document: Вимагати від водія завантаження документів
+        upload-body: Додати документи
+        document: Документ
+    avatar-management:
+        upload-avatar: Завантажити аватар
+        view-avatar: Переглянути аватар
+        vehicles: Транспортні засоби
+        drivers: Водії
+        places: Місця
+
+entity-field-editing-settings:
+    entitiy-field-editing-settings: Налаштування редагування полів сутності
+    entity-field-editing-settings-help-text: Ці налаштування визначають, які поля сутності водій може редагувати через додаток Navigator
+    select-order-config: Вибрати конфігурацію замовлення
+    select-order-config-help-text: Виберіть конфігурацію замовлення, до якої застосовуватимуться ці налаштування
+    enable-driver-to-edit-entity-fields: Дозволити водієві редагувати деталі сутності
+    enable-driver-to-edit-entity-fields-help-text: Вмикання дозволяє водієві змінювати вибрані нижче поля.
+
+driver-onboard-settings:
+    driver-onboard-settings: Налаштування реєстрації водіїв
+    enable-driver-onboard-from-app: Дозволити реєстрацію водіїв з додатка Navigator
+    enable-driver-onboard-from-app-help-text: Дозволяє водіям самостійно створювати обліковий запис у додатку Navigator.
+    select-onboard-method: Виберіть метод реєстрації водія
+    select-onboard-method-help-text: Визначає спосіб створення облікового запису (Запрошення або Кнопка в додатку).
+    require-driver-to-upload-onboard-documents: Вимагати завантаження документів при реєстрації
+    require-driver-to-upload-onboard-documents-help-text: Зобов'язує надати документи до створення облікового запису.
+    required-onboard-documents: Обов'язкові документи для реєстрації
+    required-onboard-documents-help-text: Введіть усі необхідні документи, використовуючи кнопку "Додати документ для реєстрації".
+    enter-document-name: Введіть назву документа
+    add-onboard-document: Додати документ для реєстрації
+
+cell:
+    driver-name:
+        not-assigned: Водія не призначено
+
+live-map-drawer:
+    driver-listing:
+        location: Розташування
+        current-job: Поточна робота
+        last-seen: Востаннє помічено
+        view-driver: Переглянути деталі водія...
+        edit-driver: Редагувати водія...
+        locate-driver: Знайти водія...
+        delete-driver: Видалити водія...
+        warning-message: Не вдалося знайти водія.
+        message: Фільтр водіїв за ключовим словом...
+    place-listing:
+        location: Розташування
+        place: Місце
+        view-place: Переглянути деталі місця...
+        edit-place: Редагувати місце...
+        locate-place: Знайти місце...
+        delete-place: Видалити місце...
+        warning-message: Не вдалося знайти місце.
+        message: Фільтр місць за ключовим словом...
+    vehicle-listing:
+        location: Розташування
+        last-seen: Востаннє помічено
+        view-vehicle: Переглянути деталі ТЗ...
+        edit-vehicle: Редагувати ТЗ...
+        locate-vehicle: Знайти ТЗ...
+        delete-vehicle: Видалити ТЗ...
+        warning-message: Не вдалося знайти ТЗ.
+        message: Фільтр ТЗ за ключовим словом...
+
+scheduler:
+    success-message: Замовлення {orderId} заплановано на {orderAt}.
+    info-message: Планування замовлення {orderId} скасовано.
+    title: Планувальник
+    unscheduled-orders: Незаплановані замовлення
+    scheduled-orders: Заплановані замовлення
+    unauthorized-to-schedule: У вас немає прав для планування замовлень.
+    scheduling-for: Планування для {orderId}
+    add-shift: Додати зміну
+    create-shift: Створити зміну
+    edit-shift: Редагувати зміну
+    delete-shift: Видалити зміну
+    delete-shift-confirm: Ви дійсно бажаєте видалити цю зміну? Цю дію неможливо скасувати.
+    shift-created: Зміну успішно створено.
+    shift-updated: Зміну успішно оновлено.
+    shift-title: Назва зміни
+    shift-title-placeholder: напр. Ранковий рейс доставки
+    shift-start: Початок зміни
+    shift-end: Кінець зміни
+    shift-notes-placeholder: Додаткові примітки про цю зміну
+    select-start-datetime: Виберіть дату та час початку
+    select-end-datetime: Виберіть дату та час закінчення
+    select-driver: Вибрати водія
+    upcoming-shifts: Майбутні зміни
+    no-upcoming-shifts: Майбутніх змін не заплановано.
+    hours-of-service: Робочий час (Hours of Service)
+    daily-driving-hours: Денний час водіння
+    weekly-hours: Тижневі години
+    compliance-status: Статус відповідності нормам
+    set-availability: Встановити доступність
+    availability-set: Доступність успішно збережено.
+    availability-time-off: Доступність та відпустки/відгули
+    no-availability-restrictions: Обмежень доступності не встановлено.
+    available: Доступний
+    unavailable: Недоступний
+    unavailable-time-off: Недоступний / Відпустка
+    availability-type: Тип доступності
+    request-time-off: Запросити відпустку / відгул
+    submit-request: Надіслати запит
+    time-off-requested: Запит на відгул надіслано.
+    delete-availability: Видалити доступність
+    delete-availability-confirm: Ви дійсно бажаєте вилучити цей запис доступності?
+    availability-deleted: Запис доступності вилучено.
+    start-date: Дата початку
+    end-date: Дата закінчення
+    select-start-date: Виберіть дату початку
+    select-end-date: Виберіть дату закінчення
+    reason: Причина
+    reason-placeholder: напр. Особисті справи
+    notes-placeholder: Додаткові примітки
+    shift: Зміна
+    add-shift-hint: Натисніть "Додати зміну", щоб запланувати нову зміну.
+    time-off-exceptions: Відгули та винятки
+    no-exceptions: Відгулів або винятків не зафіксовано.
+    exception-approved: Виняток схвалено.
+    exception-rejected: Виняток відхилено.
+    exception-deleted: Виняток вилучено.
+    delete-exception: Видалити виняток
+    delete-exception-confirm: Ви дійсно бажаєте вилучити цей виняток?
+    approve: Схвалити
+    reject: Відхилити
+    recurring-schedule-created: Періодичний графік створено, зміни матеріалізовано.
+    recurring-schedule: Періодичний графік
+    is-recurring: Повторюваний
+    recurrence-pattern: Шаблон повторення
+    recurrence-start-date: Починається з
+    recurrence-end-date: Закінчується (опціонально)
+    template-name: Назва шаблону
+    template-name-placeholder: напр. Стандартний тиждень
+    schedule-name: Назва графіка
+    schedule-name-placeholder: напр. Стандартний тиждень
+    one-off-shift: Разова зміна
+    one-off-shift-help: Увімкніть додавання однієї зміни на конкретну дату замість регулярного графіка.
+    template-color: Колір
+    shift-start-time: Час початку зміни
+    shift-end-time: Час закінчення зміни
+    break-start-time: Час початку перерви
+    break-end-time: Час закінчення перерви
+    day-monday: Понеділок
+    day-tuesday: Вівторок
+    day-wednesday: Середа
+    day-thursday: Четвер
+    day-friday: П'ятниця
+    day-saturday: Субота
+    day-sunday: Неділя
+    frequency-daily: Щодня
+    frequency-weekly: Щотижня
+    frequency-monthly: Щомісяця
+    today: Сьогодні
+    orders-tab: Графік замовлень
+    fleet-schedule-tab: Графік автопарку
+    break-start: Початок перерви
+    break-end: Кінець перерви
+    select-break-start: Виберіть час початку перерви
+    select-break-end: Виберіть час закінчення перерви
+    select-date: Виберіть дату
+    working-days: Робочі дні
+    recurrence-start: Починається з
+    recurrence-end: Закінчується
+    recurring-schedule-help: Визначте повторюваний шаблон змін за днями та часом.
+    shift-deleted: Зміну успішно видалено.
+    day-mon: Пн
+    day-tue: Вт
+    day-wed: Ср
+    day-thu: Чт
+    day-fri: Пт
+    day-sat: Сб
+    day-sun: Нд
+    view-day: День
+    view-week: Тиждень
+    undo: Скасувати останню дію
+    redo: Повторити останню дію
+    search-orders: Пошук замовлень...
+    select-all: Вибрати все
+    all-scheduled: Усі замовлення заплановано
+    not-scheduled: Не заплановано
+    expand-sidebar: Розгорнути бічну панель
+    collapse-sidebar: Згорнути бічну панель
+    bulk-assign: Призначити {count} замовлень
+    bulk-assign-title: Масове призначення {count} замовлень
+    bulk-assign-success: Успішно призначено {count} замовлень.
+    bulk-assign-order-count: '{count} замовлень вибрано для призначення'
+    bulk-assign-spacing-hint: Замовлення будуть заплановані послідовно, починаючи з вибраної дати й часу.
+    assign-to-driver: Призначити водію
+    assign-orders: Призначити замовлення
+    orders-to-assign: '{count} замовлень для призначення'
+    scheduled-date: Запланована дата
+    conflict-title: Виявлено конфлікт у графіку
+    conflict-description: '{orderTracking} перетинається з існуючим замовленням водія {driverName}.'
+    conflicting-orders: Конфліктні замовлення
+    conflict-resolution-prompt: Як ви бажаєте вирішити цей конфлікт?
+    auto-adjust: Автокоригування часу
+    assign-anyway: Все одно призначити
+    clear-selection: Очистити вибір
+modals:
+    new-custom-field-group:
+        modal-title: Створити нову групу настроюваних полів
+        group-name: Назва групи
+
+    assign-driver:
+        select-driver: Вибрати водія
+        select-assign: Вибрати водія для призначення
+
+    clone-config-form:
+        name: Назва конфігурації
+        description: Опис конфігурації
+
+    driver-assign-order:
+        order: Вибрати замовлення
+        assign-order: Вибрати замовлення для призначення
+
+    driver-assign-vehicle:
+        vehicle: Вибрати ТЗ
+        assign-vehicle: Вибрати ТЗ для призначення
+
+    driver-assign-vendor:
+        vendor: Вибрати постачальника
+
+    driver-details:
+        job: Поточна робота
+        view: Переглянути на карті
+
+    driver-form:
+        select-vendor: Вибрати постачальника
+        select-vehicle: Вибрати ТЗ
+
+    edit-meta-form:
+        add: Додати метаполе
+
+    entity-form:
+        name-text: Назва позиції або сутності.
+        id-text: Використовуйте це поле для власного або внутрішнього ідентифікатора.
+        sku: Артикул (SKU)
+        sku-text: Номер облікової одиниці (за наявності).
+        description: Опис
+        description-text: Додатковий опис сутності.
+        price-title: Ціноутворення та вартість
+        price: Ціна
+        price-text: Ціна сутності.
+        sale-price: Акційна ціна
+        sale-price-text: Знижена або акційна ціна сутності.
+        declare: Декларована вартість
+        declare-text: Декларована вартість сутності (корисно для страхування).
+        measurement-title: Габарити та вага
+        length: Довжина
+        length-text: Довжина сутності.
+        width: Ширина
+        width-text: Ширина сутності.
+        height: Висота
+        height-text: Висота сутності.
+        weight: Вага
+        weight-text: Вага сутності.
+
+    entity-meta-field-prompt:
+        name: Ключ метаполя
+
+    fleet-form:
+        title: Назва автопарку
+        assign: Призначити до зони обслуговування
+        assign-text: Виберіть зону обслуговування для призначення автопарку
+        zone: Призначити до зони
+        zone-text: Виберіть зону для призначення автопарку
+        task: Завдання / Місія
+        task-text: Опишіть основне завдання або місію цього автопарку.
+        select-task: Вибрати завдання
+        status-text: Виберіть статус автопарку.
+        select-status: Вибрати статус
+
+    fuel-report-details:
+        fuel: Пальне / Об'єм
+
+    fuel-report-form:
+        select-driver: Вибрати водія
+        select-vehicle: Вибрати ТЗ
+        volume: Об'єм
+        volume-text: Виберіть метричну одиницю та об'єм пального.
+
+    group-details:
+        name: Назва групи
+        member: Учасники
+        address: Адреса
+
+    group-form:
+        title: Назва групи
+        users-add: Вибрати користувачів для додавання до групи
+        search: Пошук та вибір користувачів для додавання до цієї групи.
+        select-user: Вибрати користувача для додавання
+        no-users: До групи не додано жодного користувача
+
+    install-prompt:
+        message: Ви намагаєтеся встановити розширення {extensionName}. Бажаєте продовжити?
+        sub-message: Деякі розширення вимагають доступу до ваших ресурсів.
+
+    issue-details:
+        assigned: Призначено
+        type: Тип проблеми
+        category: Категорія проблеми
+
+    issue-form:
+        reported: Повідомив
+        select-reporter: Вибрати заявника
+        assigned: Призначено
+        select-assignee: Вибрати виконавця
+        select-driver: Вибрати водія
+        select-vehicle: Вибрати ТЗ
+        select-type: Вибрати тип
+        select-category: Вибрати категорію
+        type: Тип проблеми
+        type-text: Виберіть тип проблеми
+        category: Категорія проблеми
+        category-text: Виберіть категорію проблеми
+        report: Звіт про проблему
+        tags: Теги проблеми
+        add-tags: Додати теги
+        select-status: Виберіть статус проблеми
+
+    map-layer-form:
+        layer-type: Тип шару
+        layer-type-text: Виберіть тип шару, який ви хочете створити.
+        select-layer-type: Виберіть тип шару...
+        service-area: Зона обслуговування
+        service-area-text: Виберіть зону обслуговування, до якої належить ця зона.
+        select-service-area: Виберіть зону обслуговування для призначення
+        set-name: Встановіть відображувану назву для {options}.
+        service-type: Тип зони обслуговування
+        service-type-text: Виберіть визначення типу для цієї зони обслуговування.
+        select-service-type: Виберіть тип зони обслуговування...
+        customize-border: Налаштуйте колір межі для цього {options}.
+        customize-fill-color: Налаштуйте колір заливки для цього {options}.
+        service-area-country: Країна зони обслуговування
+        service-area-country-text: Опціонально вкажіть країну розташування.
+
+    new-order-config:
+        name: Назва конфігурації
+        description: Опис конфігурації
+        tags: Теги конфігурації
+        add-tags: Додати теги
+
+    order-assign-driver:
+        select-driver: Вибрати водія
+        select-assign: Вибрати водія для призначення
+
+    order-config-new-status:
+        new-status: Новий статус
+        status-text: Введіть новий статус активності для додавання до потоку
+
+    order-event:
+        schedule: Запланувати
+        unschedule: Скасувати планування
+
+    order-form:
+        id-text: Використовуйте це поле для власного або внутрішнього ідентифікатора замовлення.
+        schedule-text: Дата та час відправки замовлення.
+        customer: Клієнт
+        customer-text: Опціонально призначте клієнта замовлення.
+        select-customer: Вибрати клієнта
+        facilitator: Посередник
+        facilitator-text: Опціонально призначте посередника.
+        select-facilitator: Вибрати посередника
+        assign-driver: Призначити водія
+        assign-driver-text: Призначте водія для виконання замовлення.
+        select-driver: Вибрати водія
+        assign-vehicle: Призначити ТЗ
+        assign-vehicle-text: Призначте ТЗ для виконання замовлення.
+        select-vehicle: Вибрати ТЗ
+
+    order-import:
+        loading-message: Обробка імпорту...
+        drop-upload: Перетягніть для завантаження
+        invalid: Недійсний
+        ready-upload: готово до завантаження.
+        upload-spreadsheets: Завантажити електронні таблиці
+        drag-drop: Перетягніть файли таблиць у цю область
+        button-text: або виберіть електронні таблиці для завантаження
+        spreadsheets: електронні таблиці
+        upload-queue: Черга завантаження
+
+    order-label:
+        loading: Завантаження маркування...
+
+    order-new-activity:
+        select-message: Виберіть статус активності для оновлення відстеження або введіть власний статус.
+        order-currently-message: Це замовлення наразі в статусі {options}, додаткова активність перезапише цей статус.
+        not-recommend-message: Fleetbase не рекомендує це робити, якщо ви не впевнені у своїх діях.
+        activity-options: Параметри активності
+        activity: активність
+        dispatch: Це запустить процес відправки замовлення.
+        status: Власний статус активності
+        details: Власні деталі активності
+        code: Власний код активності
+        fleetbase-message: Fleetbase не рекомендує це робити, якщо ви повністю не розумієте наслідки.
+
+    order-route-form:
+        toggle: Переключити декілька точок розвантаження
+        optimize: Оптимізувати маршрут
+        optimize-text: Fleetbase автоматично оптимізує маршрут.
+        add: Додати точку маршруту
+        add-text: Скористайтеся кнопкою `Додати точку маршруту` для створення нових зупинок.
+        select-waypoint: Вибрати точку маршруту
+        pickup: Точка завантаження
+        edit-address: Редагувати адресу
+        select-pickup: Вибрати точку завантаження
+        invalid: Недійсні координати!
+        dropoff: Точка розвантаження
+        select-dropoff: Вибрати точку розвантаження
+        return: Точка повернення
+        select-return: Вибрати точку повернення
+
+    place-assign-vendor:
+        select-vendor: Вибрати постачальника
+
+    place-details:
+        view: Переглянути на карті
+
+    policy-form:
+        name: Назва політики
+        name-text: Введіть назву для вашої політики
+        description: Опис політики
+        description-text: Введіть опис для вашої політики
+        permissions: Вибрати дозволи
+
+    role-form:
+        name: Назва ролі
+        name-text: Введіть назву для цієї ролі
+        permissions: Вибрати дозволи
+
+    select-payment-method:
+        card-ending: Картка, що закінчується на {method}
+
+    service-area-form:
+        name: Назва зони обслуговування
+        name-text: Встановіть відображувану назву для зони обслуговування.
+        type: Тип зони обслуговування
+        type-text: Виберіть тип зони обслуговування.
+        select-type: Виберіть тип зони обслуговування...
+        border-color: Колір межі зони обслуговування
+        customize-border-color: Налаштуйте колір межі.
+        area-color: Колір зони обслуговування
+        customize-area-color: Налаштуйте колір заливки.
+        country: Країна зони обслуговування
+        country-text: Опціонально вкажіть країну.
+
+    set-password:
+        message: Ласкаво просимо до Fleetbase! Встановіть новий пароль для продовження.
+        new-password: Новий пароль
+        confirm-password: Підтвердьте пароль
+        help-text: Введіть пароль довжиною не менше 8 символів.
+
+    uninstall-prompt:
+        message: Ви намагаєтеся видалити розширення "{options}". Бажаєте продовжити?
+        sub-message: Усі конфігурації та персональні налаштування будуть втрачені.
+
+    vehicle-details:
+        make: Марка
+        model: Модель
+        year: Рік
+        driver-assigned: Призначений водій
+        no-driver-assigned: Водія не призначено
+        vehicle-assigned: Призначений ТЗ
+        no-vehicle-assigned: ТЗ не призначено
+        avatar: Аватар
+        model-information: Інформація про модель
+        acceleration: Розгін 0-100 км/год
+        body: Кузов
+        doors: Двері
+        length: Довжина (мм)
+        seats: Місць
+        top-speed: Максимальна швидкість (км/год)
+        transmission: Тип трансмісії
+        weight: Вага (кг)
+        wheelbase: Колісна база (мм)
+        width: Ширина (мм)
+        engine-information: Інформація про двигун
+        engine-bore: Діаметр циліндра (мм)
+        cc: Об'єм (см³)
+        compression: Ступінь стиснення
+        cylinder: Циліндри
+        position: Розташування
+        power-ps: Потужність (к.с. / ps)
+        power-rpm: Потужність (об/хв)
+        stroke: Хід поршня (мм)
+        torque-nm: Крутний момент (Нм)
+        torque-rpm: Крутний момент (об/хв)
+        valves: Клапанів на циліндр
+        fuel-information: Інформація про пальне
+        fuel: Пальне
+        fuel-cap: Об'єм бака (л)
+        liters-city: Витрата на 100 км (місто)
+        liters-highway: Витрата на 100 км (траса)
+        liters-mixed: Витрата на 100 км (змішаний)
+    vehicle-form:
+        map-avatar: Вибрати аватар для карти
+        map-avatar-text: Виберіть аватар для відображення на картах при відстеженні.
+        select-avatar: Вибрати аватар
+        make: Марка ТЗ
+        model: Модель ТЗ
+        year: Рік випуску ТЗ
+        select-driver: Вибрати водія
+        body: Тип кузова ТЗ
+        doors: Кількість дверей
+        type: Тип приводу ТЗ
+        length: Довжина ТЗ (мм)
+        seats: Кількість місць
+        top-speed: Максимальна швидкість ТЗ (км/год)
+        transmission: Тип трансмісії ТЗ
+        weight: Вага ТЗ (кг)
+        wheelbase: Колісна база ТЗ (мм)
+        width: Ширина ТЗ (мм)
+        engine-bore: Діаметр циліндра (мм)
+        cc: Об'єм (см³)
+        compression: Ступінь стиснення двигуна
+        cylinder: Циліндри двигуна
+        position: Розташування двигуна
+        power-ps: Потужність двигуна (к.с.)
+        power-rpm: Потужність двигуна (об/хв)
+        stroke: Хід поршня (мм)
+        torque-nm: Крутний момент двигуна (Нм)
+        torque-rpm: Крутний момент двигуна (об/хв)
+        fuel-type: Тип пального
+        fuel-cap: Об'єм паливного бака (л)
+
+    vendor-details:
+        sandbox: Песочниця (Sandbox)
+        host: Хост
+        namespace: Простір імен
+
+    vendor-form:
+        choose-vendor: Вибрати інтегрованого постачальника
+        create-vendor: Створити власного постачальника
+        credentials: Облікові дані
+        options: Параметри
+        hide-advanced: Приховати додаткові
+        show-advanced: Показати додаткові
+        custom-host: Власний хост
+        host-text: Опціонально вкажіть власний хост.
+        custom-namespace: Власний простір імен
+        namespace-text: Опціонально вкажіть власний простір імен або версію API.
+        webhook: URL-адреса Webhook
+        webhook-text: Необхідно для отримання оновлень активності. Змінюйте обережно!
+        cancel-credentials: Скасувати скидання облікових даних
+        reset-message: Чутливі дані можна лише скинути шляхом повторного введення.
+        optionally: Опціонально вкажіть власний
+        configure-vendor: для налаштування цього постачальника.
+        select: Вибрати
+        sandbox: Песочниця (Sandbox)
+        name-text: Назва постачальника (зазвичай назва компанії).
+        email-text: Електронна пошта постачальника.
+        phone-text: Телефон постачальника.
+        website-text: Вебсайт постачальника.
+        select-address: Вибрати адресу
+
+    zone-form:
+        name: Назва зони
+        name-text: Встановіть відображувану назву зони.
+        border-color: Колір межі зони
+        customize-border: Налаштуйте колір межі.
+        zone-color: Колір зони
+        customize-fill-color: Налаштуйте колір заливки.
+        optionally: Опціонально додайте опис зони.
+        description-zone: Опис зони
+
+radar:
+    title: Радар
+    eyebrow: Ресурси
+    subtitle: Усе за ресурсами, обслуговуванням, інспекціями та персоналом, що потребує рішення — по одному рядку на запис.
+    summary: "{open} відкрито · {snoozed} відкладено · остання синхронізація {time}"
+    search-placeholder: Фільтрувати елементи
+    reload: Перезавантажити
+    new-notice: Нове сповіщення
+    showing: "Відображається {count} з {total} · згруповано за терміном"
+    sources-warning: "Не вдалося завантажити деякі джерела: {sources}"
+    briefing:
+        title: Ранковий брифінг
+        score: Оцінка здоров'я автопарку
+        of-100: "/ 100"
+        vs-yesterday: "{delta} порівняно з вчора"
+        no-history: перше зчитування
+        generated: "Згенеровано {time} · джерела пов'язані"
+        yesterday: "Вчора: закрито {closed} прогалин, перенесено {rolled}"
+        decisions: Рішення, що чекають на вас
+        decisions-count: "{shown} з {total}"
+        nothing-to-decide: Немає рішень для прийняття.
+        confirm: Підтвердити
+        not-now: Не зараз
+        undo: Скасувати дію
+        wake-now: Відновити зараз
+        confirmed: "Підтверджено {time}"
+        snoozed-until: "Відкладено до {time}"
+        filter: Фільтр
+        collapse: Згорнути брифінг
+        expand: Показати брифінг
+        open-record: Відкрити запис
+        working: Обробка…
+    views:
+        list: Список
+        agenda: Порядок денний
+    agenda:
+        window-24h: Наступні 24 год
+        window-7d: 7 днів
+        overdue: Прострочено
+        later: Пізніше
+        anytime: Будь-коли
+        anytime-count: "{count} без дати"
+        no-events: Немає подій у цьому часовому вікні.
+        drag-hint: Перетягніть елемент на доріжку, щоб призначити йому час.
+        print: Друк передавальної відомості
+        see-all: "Переглянути всі {count} →"
+        planned: Заплановано
+        now: зараз
+        lanes:
+            shifts: Зміни
+            maintenance: Обслуговування
+            expiries: Завершення термінів
+            notices: Сповіщення
+        shift-states:
+            on_shift: на зміні
+            not_online: поза мережею
+            upcoming: майбутні
+            ended: завершено
+        summary: "{shifts} змін у вікні · {overdue} прострочено · {anytime} без дати"
+    handover:
+        title: Завершення зміни
+        ends-in: "через {minutes}"
+        orders-on-driver: "{count} активних замовлень все ще на водієві {name}"
+        finishes-after: завершується після закінчення зміни
+        suggested: Пропонована передача
+        on-shift-till: "на зміні до {time}"
+        away: "{distance} км звідси"
+        reassign: "Перепризначити {count} замовлень на водія {name}"
+        extend: Продовжити зміну на 1 год
+        snooze: Відкласти на 1 год
+        no-cover: Немає нікого на зміні для підміни; продовжте зміну або перепризначте вручну.
+        reassigned: "Замовлення переміщено до {name}."
+        extended: Зміну продовжено на одну годину.
+        loading: Пошук підміни…
+    tabs:
+        open: Відкриті
+        snoozed: Відкладені
+        resolved: Вирішені
+    pills:
+        overdue: Прострочено
+        due_week: Термін цього тижня
+        unassigned: Не призначено
+        issues: Відкриті проблеми
+        inspections: Інспекції
+        shifts: Зміни графіку
+        expiring: Загасає через 30д
+        low_stock: Низький запас
+        fuel: Незідставлене пальне
+        notices: Сповіщення
+    groups:
+        overdue: Прострочено
+        today: Сьогодні
+        week: Цього тижня
+        later: Пізніше
+        none: Без дати
+    rules:
+        maintenance_overdue: ТО
+        maintenance_due_soon: ТО
+        inspection_due: Інспекція
+        inspection_failed: Інспекція
+        inspection_unresolved: Інспекція
+        inspection_draft: Інспекція
+        inspection_link_pending: Інспекція
+        vehicle_inspection_failed: Інспекція
+        work_order_overdue: Заявка на роботу
+        work_order_blocked: Заявка на роботу
+        issue_open: Проблема
+        shift_late_start: Зміна
+        shift_no_vehicle: Зміна
+        shift_handover: Передача зміни
+        driver_without_vehicle: Не призначено
+        vehicle_without_driver: Простоює
+        vehicle_without_device: Пристрій
+        device_unattached: Пристрій
+        license_expiring: Посвідчення
+        lease_expiring: Лізинг
+        fuel_unmatched: Пальне
+        part_low_stock: Запчастини
+        notice: Сповіщення
+    actions:
+        acknowledge: Підтвердити
+        snooze: Відкласти
+        wake: Відновити зараз
+        assign: Призначити
+        unassign: Очистити власника
+        plan: Призначити час
+        unplan: Очистити час
+        resolve: Вирішити
+        open-record: Відкрити запис
+        assign-vehicle: Призначити ТЗ
+        assign-driver: Призначити водія
+        create-work-order: Створити заявку на роботу
+        create-issue: Створити проблему
+        mark-resolved: Позначити як вирішене
+        send-pin: Надіслати PIN
+        revoke-link: Відкликати посилання
+        revoke-links: "Відкликати {count, plural, one {# посилання} few {# посилання} other {# посилань}}"
+        match-vehicle: Зіставити з ТЗ
+        ignore: Ігнорувати
+        attach: Приєднати до ТЗ
+        call: Зателефонувати
+        cover-shift: Підмінити зміну
+        reassign: Перепризначити замовлення
+        extend-shift: Продовжити зміну на 1 год
+        select: Вибрати
+        deselect: Скасувати вибір
+        more: Більше
+    snooze:
+        1h: 1 година
+        4h: 4 години
+        tomorrow: Завтра вранці
+        next-week: Наступного тижня
+        pick: Вибрати дату…
+        pick-title: Відкласти до
+        pick-label: Відновити
+    state:
+        acknowledged-by: "Підтверджено {name} о {time}"
+        acknowledged: Підтверджено
+        snoozed-until: "Відкладено до {time}"
+        assigned-to: "Призначено {name}"
+        unassigned: Не призначено
+        planned-for: "Заплановано на {time}"
+        resolved-by: "Вирішено {name} о {time}"
+        resolved-auto: Закрито в записі
+    bulk:
+        selected: "Вибрано {count}"
+        clear: Очистити
+        summary: "{count} елементів"
+    keys:
+        move: перемістити
+        select: вибрати
+        acknowledge: підтвердити
+        snooze: відкласти
+        assign: призначити
+        open: відкрити запис
+        close: закрити
+    empty:
+        title: Нічого не потребує рішення.
+        snoozed-hint: "{count} відкладених елементів відновляться цього тижня."
+        nothing-snoozed: Нічого не відкладено.
+        wakes: "відновиться о {time}"
+        filtered-title: Нічого не відповідає цим фільтрам.
+        filtered-hint: Очистіть фільтр або пошук для перегляду деталей.
+        snoozed-title: Нічого не відкладено.
+        snoozed-tab-hint: Відкладені елементи повернуться до списку після закінчення заданого часу.
+        resolved-title: Нічого не вирішено за останні 7 днів.
+        resolved-hint: Елементи закриваються тут, коли змінюється запис або вирішується сповіщення.
+    saved-views:
+        title: Вигляди
+        save-current: Зберегти поточний
+        name-prompt: Назвіть цей вигляд
+        name-placeholder: напр. Термін цього тижня
+        saved: Вигляд збережено.
+        delete: Видалити вигляд
+        deleted: Вигляд вилучено.
+        defaults:
+            my-assignments: Мої призначення
+            shift-changes: Зміни графіку
+            due-this-week: Термін цього тижня
+            unmatched-fuel: Незіставине пальне
+    notice:
+        title: Нове сповіщення
+        message: Повідомлення
+        message-placeholder: Територія закрита в суботу на ремонт — перемістіть причепи до Пт 18:00
+        severity: Рівень важливості
+        due: Граничний термін
+        scope: Застосовується до
+        scope-placeholder: Двір 3 · весь автопарк
+        create: Опублікувати сповіщення
+        created: Сповіщення опубліковано.
+        delete: Видалити сповіщення
+        deleted: Сповіщення видалено.
+        severities:
+            info: Інформація
+            warning: Попередження
+            critical: Критично
+    drawer:
+        failed-items: Елементи з помилками
+        state: Стан
+        subject: Запис
+        due: Термін
+        window: Зміна
+        details: Деталі
+    prompts:
+        select-vehicle: Виберіть ТЗ
+        select-user: Виберіть особу
+        assign-vehicle-title: "Призначити ТЗ для {name}"
+        assign-driver-title: "Призначити водія для {name}"
+        match-vehicle-title: Зіставити цю транзакцію з ТЗ
+        create-work-order-title: Створити заявку на роботу з цього графіка?
+        create-work-order-body: Заявка на роботу відкривається з параметрами за замовчуванням та датою виконання з графіка.
+        ignore-title: Ігнорувати цю транзакцію?
+        ignore-body: Вона залишить чергу незіставлених і не буде прив'язана до ТЗ.
+        attach-device-title: Приєднати цей пристрій до ТЗ
+        revoke-link-title: Відкликати це посилання інспекції?
+        send-pin-title: Надіслати PIN інспекції
+        send-pin-to: "Як {name} має отримати посилання та PIN?"
+        send-pin-body: Як надіслати посилання та PIN?
+        send-pin-unavailable: У отримувача посилання немає адреси електронної пошти або номера телефону.
+        revoke-link-body: Посилання негайно припинить працювати.
+        bulk-revoke-link-title: "Відкликати {count, plural, one {# посилання інспекції} few {# посилання інспекції} other {# посилань інспекції}}?"
+        bulk-revoke-link-body: Посилання негайно припинять працювати.
+        assign-user-title: "Хто власник цього?"
+        assign-user-help: Власник відображається в рядку та у вигляді 'Мої призначення'.
+        no-selection: Спочатку виберіть елемент.
+    toasts:
+        acknowledged: Підтверджено.
+        snoozed: "Відкладено до {time}."
+        woken: Повернуто до списку.
+        assigned: "Призначено {name}."
+        unassigned: Власника очищено.
+        planned: Час встановлено.
+        resolved: Вирішено.
+        work-order-created: Заявку на роботу створено.
+        vehicle-assigned: ТЗ призначено.
+        driver-assigned: Водія призначено.
+        matched: Транзакцію зіставлено.
+        ignored: Транзакцію проігноровано.
+        device-attached: Пристрій приєднано.
+        pin-sent: PIN надіслано.
+        link-revoked: Посилання відкликано.
+        links-revoked: "{count, plural, one {# посилання відкликано} few {# посилання відкликано} other {# посилань відкликано}}."
+        links-revoke-failed: "{count, plural, one {# посилання не вдалося відкликати} few {# посилання не вдалося відкликати} other {# посилань не вдалося відкликати}}."
+        bulk-done: "Оновлено елементів: {count}."
+widget:
+    refresh: Оновити
+    radar:
+        title: Радар
+        description: Що потребує рішення в автопарку прямо зараз.
+        open: відкрито
+        overdue: прострочено
+        snoozed: відкладено
+        open-radar: Відкрити Радар
+    kpi-earnings:
+        title: Доходи
+    kpi-distance:
+        title: Пройдена відстань
+    kpi-aov:
+        title: Середній чек замовлення
+    kpi-active-orders:
+        title: Активні замовлення
+    kpi-drivers-online:
+        title: Водії в мережі
+    kpi-open-issues:
+        title: Відкриті проблеми
+    operations-pulse:
+        title: Пульс операцій
+    revenue-trend:
+        title: Тренди доходів
+    orders-by-status:
+        title: Обсяг замовлень за статусом
+    on-time-delivery:
+        title: Доставка вчасно
+    top-drivers:
+        title: Кращі водії
+    fuel-efficiency:
+        title: Вартість пального та ефективність
+    issues-insights:
+        title: Аналітика проблем
+    maintenance-overview:
+        title: Огляд технічного обслуговування
+    geofence-violations:
+        title: Порушення геозон
+    live-fleet:
+        title: Карта автопарку в реальному часі
+    get-started:
+        title: Початок роботи з Fleet-Ops
+        subtitle: Налаштуйте основні параметри та виконайте перший процес відправки.
+        completed: завершено
+        preview-title: Робочий процесс першого замовлення
+    recommended-features:
+        title: Рекомендовані функції для вас
+        subtitle: Досліджуйте інструменти, які допомагають новим операційним командам працювати ефективніше.
+        learn-more: Дiзнатися більше
+    fleet-ops-quickstart:
+        message: Давайте подивимося, що можна зробити для швидкого запуску операцій...
+        start-task: Розпочати завдання
+    key-metrics:
+        title: Метрики Fleet-Ops
+        earnings: Доходи
+        fuel-expenses: Витрати на пальне
+        traveled: Пройдена відстань
+        total-time: Загальний час
+        order-scheduled: Заплановані замовлення
+        order-completed: Завершені замовлення
+        order-progress: Замовлення в процесі
+        order-canceled: Скасовані замовлення
+        driver-online: Водії в мережі
+        customers: Клієнти
+        open-issue: Відкриті проблеми
+        closed-issues: Закриті проблеми
+    live-order-map:
+        loading: Завантаження замовлень у процесі виконання...
+        assigned: Призначено водія
+        no-order: Немає замовлень у процесі
+        message: Коли замовлення виконуються, вони відображаються у цьому віджеті з активністю в реальному часі.
+    recent-orders:
+        title: Останні замовлення
+        loading: Завантаження останніх замовлень...
+        no-orders: Немає замовлень на цьому тижні
+        message-part-1: На цьому тижні замовлень не було, розпочніть рух шляхом
+        message-part-2: створення нового замовлення
+        message-part-3: або дозвольте вашим клієнтам надсилати замовлення через API.
+    transactions:
+        title: Останні транзакції
+        loading: Завантаження останніх транзакцій...
+        no-transactions: Немає транзакцій на цьому тижні
+        message: Коли замовлення проходять із тарифами на послуги, Fleetbase відстежує транзакції автоматично.
+
+display-panel:
+    no-address: Немає адреси {type}!
+    no-address-message: Адреса відсутня!
+
+driver-card:
+    no-fleets: Немає автопарків
+
+global-search:
+    search: Пошук за ключовим словом...
+
+integrated-order-details:
+    order-id: ID замовлення
+    quotation-id: ID розрахунку
+    driver-id: ID водія
+    link: Посилання для поширення
+    price-breakdown: Деталізація ціни
+    metadata: Метадані
+
+geofence:
+    prompts:
+        use-draw-controls-create-service-area: Використовуйте елементи малювання праворуч для створення зони обслуговування. З'єднайте точки для збереження.
+        use-draw-controls-create-zone: Використовуйте елементи малювання праворуч для створення зони всередині зони обслуговування. З'єднайте точки для збереження.
+        no-layer-found-for-resource: Не знайдено шар для цього {resource}.
+        editing-enabled: Редагування увімкнено — відкоригуйте вершини та натисніть галочку редагування для застосування.
+        resource-boundaries-updated: >-
+            Межі {resource} успішно оновлено.
+        edit-canceled: Редагування скасовано.
+        failed-to-update-resource: Не вдалося оновлення {resource}.
+
+live-map:
+    show-coordinates: Показати координати
+    center-map: Центрувати карту тут
+    zoom-in: Наблизити
+    zoom-out: Віддалити
+    toggle-draw-controls: Переключити елементи малювання
+    hide-draw: Приховати елементи малювання
+    enable-draw: Увімкнути елементи малювання
+    create-new-service: Створити нову зону обслуговування
+    focus-service: 'Фокус на зоні обслуговування: {serviceName}'
+    view-driver: 'Переглянути водія: {driverName}'
+    edit-driver: 'Редагувати водія: {driverName}'
+    delete-driver: 'Видалити водія: {driverName}'
+    view-vehicle-for: 'Переглянути ТЗ для: {driverName}'
+    view-vehicle: 'Переглянути ТЗ: {vehicleName}'
+    edit-vehicle: 'Редагувати ТЗ: {vehicleName}'
+    delete-vehicle: 'Видалити ТЗ: {vehicleName}'
+    edit-zone: 'Редагувати зону: {zoneName}'
+    delete-zone: 'Видалити зону: {zoneName}'
+    assign-zone: 'Призначити автопарк до зони: {zoneName}'
+    blur-service: 'Приховати зону обслуговування: {serviceName}'
+    create-zone: 'Створити зону всередині: {serviceName}'
+    assign-fleet: 'Призначити автопарк до зони обслуговування: {serviceName}'
+    edit-service: 'Редагувати зону обслуговування: {serviceName}'
+    delete-service: 'Видалити зону обслуговування: {serviceName}'
+    service-area: Зона обслуговування
+    edit-boundaries: 'Редагувати межі: {resource}'
+    zone: Зона
+
+order-config:
+    create-new-title: Створити нову конфігурацію замовлень
+    warning-message: Конфігурація замовлень вимагає назви
+    success-message: Нову конфігурацію замовлення успішно створено.
+    no-order-warning: Не вибрано конфігурацію замовлень.
+    saved-success: 'Конфігурацію замовлення {orderName} збережено.'
+    enter-name-title: Введіть назву клонованої конфігурації
+    no-config-warning: Назву конфігурації не введено.
+    cloned-success: Конфігурацію замовлення успішно клоновано.
+    body: Після видалення цієї конфігурації замовлень ви більше не зможете створювати замовлення з її використанням. Ви впевнені?
+    uninstall-title: Видалити конфігурацію
+    uninstall-success: Розширення {extensionName} видалено.
+    activity-flow-editor:
+        add-status: Додати новий статус до потоку
+        no-status: Статус не введено.
+        overwrite: Це перезапише існуючий статус!
+        overwrite-text: Статус {statusName} вже існує в цьому потоці. Бажаєте перезаписати попередній статус {statusName}?
+        overwrite-button: Так, перезаписати!
+        remove: Видалити статус
+        remove-text: Ви дійсно бажаєте видалити цей статус? Усі пов'язані активності та логіку буде видалено разом зі статусом.
+        delete-button: Так, видалити
+        unable-warning: Статус {status} має бути в такій послідовності, зсув неможливий.
+        order-warning: Створений статус завжди має бути першим у послідовності потоку замовлення.
+        title: Потік активностей
+        message: Конфігурація потоку активностей дозволяє визначати різні типи статусів відстеження для цього типу замовлення. Також можна налаштувати логіку.
+        order-flow: Потік замовлення
+        waypoint-flow: Потік точок маршруту
+        new-activity: Нова активність
+        activity-details: Деталі активності
+        logic-stack: Стек логіки
+        add-logic: Додати логічну умову
+        select-field: Вибрати поле
+        select-operator: Вибрати оператор
+        enter-value: Введіть значення для порівняння
+        no-logic: Логічні умови не застосовані
+    details-editor:
+        success: Встановлено
+        key-text: Передайте цей ключ у тип замовлення для його конфігурації.
+        namespace-text: Унікальний простір імен для цього розширення.
+        id: ID розширення
+        id-text: Унікальний ID для цього розширення.
+        version: Версія розширення
+        version-text: Версія цього розширення.
+        clone: Клонувати конфігурацію
+        uninstall: Видалити розширення
+        delete: Видалити конфігурацію
+    entities-editor:
+        warning-message: Не введено назву ключа метаполя.
+        title: Сутності
+        message: Конфігурація сутностей дозволяє визначати типи сутностей, які мають бути доступні для вибору в цьому типі замовлення (використовуються як шаблони).
+        type: Тип сутності
+        add-meta: Додати метаполе
+    fields-editor:
+        text-field: Текстове поле
+        boolean: Логічне значення (Boolean)
+        boolean-text: Дозволяє користувачеві перемикати значення прапорцем (True/False)
+        dropdown: Выпадаючий список
+        dropdown-text: Дозволяє вибрати опцію з випадного списку
+        datetime: Вибір дати та часу
+        datetime-text: Дозволяє вибрати дату та час
+        port: Вибір порту
+        port-text: Дозволяє користувачеві вибрати порт
+        vessel: Вибір судна
+        vessel-text: Дозволяє користувачеві вибрати судно
+        warning-message: Назву групи не введено.
+        field-title: Метаполя
+        new-field: Нове налаштовуване поле
+        new-custom-field: Нова група налаштовуваних полів
+        field-text: Налаштування метаполів дозволить вам визначати власні поля вводу, які застосовуватимуться до замовлень.
+        custom-field-group: Група налаштовуваних полів
+        default-field: Поля за замовчуванням
+        custom-field: Налаштовуване поле
+        type: Тип поля
+        select-type: Оберіть тип поля
+        add-option: Додати варіант
+    select-message: Оберіть конфігурацію замовлення для зміни або натисніть "Нова конфігурація", щоб створити нову.
+    new-config: Нова конфігурація
+    loading-configuration: Завантаження ваших конфігурацій замовлень...
+    select-order: Оберіть конфігурацію замовлення
+    save-changes: Зберегти зміни
+    details: Деталі
+    fields: Налаштовувані поля
+    flow: Потік активності
+    entities: Сутності
+
+order-list-overlay:
+    search: Пошук замовлень...
+    selected: Обрано
+    assign: Призначити водієві...
+    cancel: Скасувати замовлення...
+    delete: Видалити замовлення...
+    dispatch: Диспетчеризувати замовлення...
+    actions: Дії
+    create-order: Створити нове замовлення...
+    create-fleet: Створити новий автопарк...
+    active-orders: Активні замовлення
+    unassigned-orders: Непризначені замовлення
+
+route-list:
+    expand: Натисніть, щоб розгорнути
+    collapse: Натисніть, щоб згорнути
+    more-waypoints: ще маршрутних точок
+
+settings:
+    avatar-management: Управління аватарками
+    custom-fields: Налаштовувані поля
+    notifications:
+        fleet-ops-notification-settings: Налаштування сповіщень Fleet-Ops
+        fleet-ops-notifications: Сповіщення Fleet-Ops
+        configure-notifications: Налаштувати сповіщення
+        select-notifiables: Оберіть отримувачів сповіщень
+    routing:
+        fleet-ops-routing-settings: Налаштування маршрутизації Fleet-Ops
+        fleet-ops-routing: Маршрутизація Fleet-Ops
+        configure-routing: Налаштувати маршрутизацію
+        select-routing-service: Оберіть сервіс маршрутизації
+        routing-service: Сервіс маршрутизації
+        routing-service-help-text: Оберіть сервіс, який відповідає за розрахунок і побудову маршрутів на карті.
+        select-routing-distance-unit: Оберіть одиницю вимірювання відстані
+        routing-distance-unit: Одиниця вимірювання відстані
+        routing-distance-unit-help-text: Одиниця, що використовується для розрахунку відстані та маршрутів.
+    map:
+        fleet-ops-map-settings: Налаштування карти Fleet-Ops
+        fleet-ops-map: Карта Fleet-Ops
+        configure-map: Налаштувати карту
+        map-provider: Провайдер карти
+        map-provider-help-text: Оберіть движок карти для відображення інтерактивної операційної карти. Leaflet використовує тайли OpenStreetMap і не потребує ключа API. Google Maps потребує дійсного ключа API Google Maps JavaScript.
+        select-map-provider: Оберіть провайдера карти
+        leaflet-tile-url: URL провайдера тайлів Leaflet
+        leaflet-tile-url-help-text: Необов'язковий шаблон URL для власних XYZ-тайлів Leaflet. Залиште порожнім для використання стандартних тайлів OpenStreetMap, які не потребують API-ключа.
+        leaflet-dark-tile-url: URL тайлів Leaflet для темного режиму
+        leaflet-dark-tile-url-help-text: Необов'язковий URL провайдера тайлів для темної теми консолі. Залиште порожнім для використання основної теми або стандартних тайлів OpenStreetMap.
+        google-maps-map-type: Тип карти
+        google-maps-map-type-help-text: Стиль карти за замовчуванням при активних Google Maps.
+        select-map-type: Оберіть тип карти
+        show-traffic-layer: Показувати шар трафіку
+        show-traffic-layer-help-text: Накладати актуальну інформацію про дорожній рух на карту Google Maps.
+        show-transit-layer: Показувати шар громадського транспорту
+        show-transit-layer-help-text: Накладати маршрути громадського транспорту на карту Google Maps.
+        settings-saved: Налаштування карти успішно збережено.
+        settings-save-failed: Не вдалося зберегти налаштування карти. Будь ласка, спробуйте ще раз.
+    navigator-app:
+        navigator-app-settings: Налаштування застосунку Навігатора
+    payments:
+        payments: Платежі
+        payment-settings: Налаштування платежів
+        account-not-setup-for-payments: Ваш обліковий запис ще не налаштовано для прийому платежів.
+        to-accept-payments: Щоб приймати та обробляти платежі, ви повинні пройти процес реєстрації через Stripe.
+        system-stripe-not-setup: Наразі система не може приймати або обробляти платежі. Зверніться до адміністратора.
+        loading-settings: Завантаження налаштувань платежів...
+        onboard:
+            header-title: Підключення платежів
+            title-completed: Реєстрацію успішно завершено!
+            title-incomplete: Пройдіть процес реєстрації, щоб приймати платежі.
+            subtitle-completed: Реєстрацію успішно завершено, тепер ви можете отримувати платежі від клієнтів та третіх сторін.
+            subtitle-incomplete: Цей процес необхідно пройти для можливості прийому оплати за замовлення.
+            button-continue: Продовжити
+            button-start: Розпочати реєстрацію зараз
+            button-in-progress: Реєстрація в процесі
+    scheduling:
+        scheduling-settings: Налаштування розкладу
+        materialisation: Матеріалізація
+        horizon-days: Горизонт розкладу (днів)
+        horizon-days-help: На скільки днів наперед генерувати зміни при застосуванні шаблону розкладу.
+        default-shift-duration: Тривалість зміни за замовчуванням (годин)
+        default-shift-duration-help: Тривалість зміни за замовчуванням, якщо час закінчення не вказано.
+        hours-of-service: Обмеження часу роботи (HOS)
+        hos-daily-limit: Денний ліміт водіння (годин)
+        hos-daily-limit-help: Максимальна кількість годин, яку водій може керувати авто за один день.
+        hos-weekly-limit: Тижневий ліміт водіння (годин)
+        hos-weekly-limit-help: Максимальна кількість годин водіння за ковзний 7-денний період.
+        behaviour: Поведінка
+        auto-activate-schedule: Автоактивація розкладу
+        auto-activate-schedule-help: Автоматично переводити розклад із стану Чернетка в Активний при створенні першої зміни.
+        notify-drivers: Сповіщати водіїв про зміни в розкладі
+        notify-drivers-help: Надсилати push-сповіщення водіям при створенні, оновленні або видаленні їхніх змін.
+        schedule-templates: Багаторазові шаблони розкладу
+        no-templates: Багаторазових шаблонів ще не створено.
+        new-template: Новий шаблон
+        edit-template: Редагувати шаблон
+        delete-template: Видалити шаблон
+        delete-template-confirm: Ви впевнені, що хочете видалити шаблон "{name}"? Це не вплине на існуючі розклади.
+        template-deleted: Шаблон успішно видалено.
+        settings-saved: Налаштування розкладу збережено.
+maintenance-schedule:
+    actions:
+        trigger-now: Запустити робоче завдання зараз
+        pause: Призупинити розклад
+        resume: Відновити розклад
+work-order:
+    actions:
+        view: Переглянути робоче завдання
+        edit: Редагувати робоче завдання
+        delete: Видалити робоче завдання
+maintenance:
+    actions:
+        view: Переглянути запис техобслуговування
+        edit: Редагувати запис техобслуговування
+        delete: Видалити запис техобслуговування
+equipment:
+    actions:
+        view: Переглянути обладнання
+        edit: Редагувати обладнання
+        delete: Видалити обладнання
+part:
+    actions:
+        view: Переглянути деталь
+        edit: Редагувати деталь
+        delete: Видалити деталь
+
+orchestrator:
+    settings-title: Налаштування Оркестратора
+    engine-settings: Движок розподілу
+    active-engine: Активний движок розподілу
+    active-engine-help: Оберіть движок для призначення замовлень водіям та транспортним засобам.
+    auto-allocate-on-create: Авторозподіл при створенні замовлення
+    auto-allocate-on-create-label: Автоматично запускати розподіл при створенні нового замовлення.
+    auto-reallocate-on-complete: Автоповторний розподіл при завершенні доставки
+    auto-reallocate-on-complete-label: Повторно запускати розподіл після виконання доставки для заповнення вивільнених потужностей.
+    constraint-settings: Обмеження розподілу
+    max-travel-time: Макс. час у дорозі (секунди)
+    max-travel-time-help: Максимальний час у дорозі в секундах, який може бути призначений водієві. Вкажіть 0 для скасування обмеження.
+    balance-workload: Балансування навантаження
+    balance-workload-label: Рівномірно розподіляти замовлення між доступними водіями та ТЗ.
+    settings-saved: Налаштування Оркестратора збережено.
+    workbench-title: Робоча область Оркестратора
+    unassigned-orders: Непризначені замовлення
+    no-unassigned-orders: Непризначених замовлень немає — усе виконано!
+    run-allocation: Запустити Оркестратор
+    running: Виконується…
+    plan-ready: План готовий — перевірте та підтвердьте.
+    commit-plan: Застосувати план
+    discard-plan: Відхилити
+    committed: 'Оркестрацію застосовано — призначено {count} замовлень.'
+    committed-badge: План застосовано
+    overridden: Перевизначено
+    on-shift: На зміні
+    empty-state-title: План оркестрації ще відсутній
+    empty-state-body: Натисніть "Запустити Оркестратор", щоб згенерувати оптимізований план призначення для непризначених замовлень.
+    unassigned-warning: Деякі замовлення не вдалося призначити — недостатньо місткості ТЗ або немає водіїв на зміні.
+    # Панель інструментів та опції
+    run-orchestration: Запустити Оркестратор
+    options: Опції
+    mode: Режим
+    mode-allocate: Розподілити замовлення
+    mode-optimize: Оптимізувати маршрути
+    engine: Движок
+    allocation-strategy: Стратегія розподілу
+    allocation-strategy-route-aware: Маршрут + Місткість
+    allocation-strategy-capacity-only: Тільки місткість
+    vehicle-packing: Завантаження ТЗ
+    vehicle-packing-minimize-vehicles: Мінімізувати кількість ТЗ
+    vehicle-packing-balanced: Збалансоване
+    respect-skills: Враховувати навички
+    respect-capacity: Враховувати місткість
+    return-to-depot: Повернення в депо
+    # Стан плану
+    unassigned-count: 'Непризначено:'
+    clear: Очистити
+    # Пул замовлень
+    search-orders: Пошук замовлень…
+    filter-all: Усі
+    filter-scheduled: Заплановані
+    filter-urgent: Термінові
+    filter-today: На сьогодні
+    filter-unassigned: Непризначені
+    filter-imported: Імпортовані
+    advanced-filters: Розширені фільтри
+    filter-country: Країна
+    filter-type: Тип замовлення
+    filter-status: Статус
+    filter-date: Запланована дата
+    filter-country-placeholder: Усі країни
+    filter-type-placeholder: Усі типи
+    filter-status-placeholder: Усі статуси
+    filter-date-placeholder: Будь-яка дата
+    clear-filters: Очистити фільтри
+    no-address: Без адреси
+    selected: обрано
+    clear-selection: Очистити
+    # Перемикачі панелей
+    show-orders: Показати пул замовлень
+    hide-orders: Сховати пул замовлень
+    show-drivers: Показати ресурси
+    hide-drivers: Сховати ресурси
+    # Панель водіїв / ресурсів
+    available-drivers: Доступні водії
+    available-vehicles: Доступні ТЗ
+    no-available-drivers: Наразі немає доступних водіїв.
+    no-available-vehicles: Наразі немає доступних ТЗ.
+    no-search-results: За вашим запитом нічого не знайдено.
+    search-drivers: Пошук водіїв...
+    search-vehicles: Пошук ТЗ...
+    no-position: Без геопозиції
+    filter-online: Онлайн
+    filter-offline: Офлайн
+    filter-on-shift: На завданні
+    filter-on-job: На завданні
+    filter-active: Активні
+    filter-no-driver: Без водія
+    proposed-routes: Запропоновані маршрути
+    stops: зупинок
+    route: Маршрут
+    drivers-selected: обрано водіїв
+    vehicles-selected: обрано ТЗ
+    drop-orders-here: Перетягніть замовлення сюди
+    # Модальне вікно імпорту
+    import-orders: Імпорт замовлень
+    import-step-upload: Завантаження
+    import-step-map: Зіставлення колонок
+    import-step-preview: Попередній перегляд та імпорт
+    drop-file-here: Перетягніть ваш CSV або Excel файл сюди
+    or: або
+    browse-file: Оглянути файл
+    accepted-formats: 'Підтримуються: .csv, .xlsx, .xls'
+    remove-file: Видалити файл
+    download-template: Завантажити шаблон імпорту
+    download-template-desc: Використовуйте наш шаблон для коректного імпорту даних.
+    download: Завантажити
+    next: Далі
+    back: Назад
+    map-columns-title: Зіставлення колонок
+    map-columns-desc: 'Зіставте колонки у вашій таблиці'
+    col-target-field: Цільове поле
+    col-your-spreadsheet: Ваша таблиця
+    mapped: зіставлено
+    mapping-required-hint: 'Поле "Вулиця розвантаження 1" є обов’язковим для продовження.'
+    select-column: '— пропустити —'
+    data-preview: 'Перегляд перших 3 замовлень:'
+    preview-import: Попередній перегляд імпорту
+    preview-desc: '{count} замовлень готово до імпорту'
+    errors: помилок
+    all-rows-valid: Усі рядки коректні
+    validation-warning: '{count} замовлень мають помилки і будуть пропущені.'
+    import-confirm: Підтвердити імпорт
+    importing: 'Імпортування…'
+    col-pickup: Завантаження
+    col-dropoff: Розвантаження
+    col-scheduled: Заплановано
+    col-weight: Вага
+    col-customer: Клієнт
+    col-status: Статус
+    col-preview-ref: № / ID
+    col-preview-type: Тип
+    col-preview-facilitator: Посередник / Експедитор
+    col-preview-vehicle: ТЗ
+    col-preview-driver: Водій
+    col-preview-entities: Товари
+    col-preview-multi-stop: '{count} зупинок'
+    col-preview-pickup-dropoff: Завантаження та розвантаження
+    col-preview-pickup-dropoff-stops: 'Завантаження і розвантаження + {count} зупинок'
+    error: Помилка
+    valid: Коректно
+    import-success: Успішно імпортовано {count} замовлень.
+    no-valid-rows: Немає коректних замовлень для імпорту.
+    invalid-file-type: 'Будь ласка, завантажте файл у форматі .csv, .xlsx або .xls.'
+    parse-error: Не вдалося розібрати файл. Перевірте його формат.
+    read-error: Не вдалося прочитати файл.
+    empty-file: Файл порожній.
+    missing-dropoff: Поле "Вулиця розвантаження 1" є обов’язковим.
+    stops-count: '{count} зупинок'
+    # Поля картки замовлення
+    pickup: Завантаження
+    dropoff: Розвантаження
+    scheduled: Заплановано
+    customer: Клієнт
+    driver-assigned: Водія призначено
+    vehicle-assigned: ТЗ призначено
+    no-vehicle-assigned: ТЗ не призначено
+    no-driver-assigned: Водія не призначено
+    created: Створено
+    # Конструктор фаз
+    phases: Фази
+    phases-description: Складіть багатокроковий прогон оркестрації. Кожна фаза послідовно запускає певний режим.
+    add-phase: Додати фазу
+    no-phases: Фази не налаштовані. Додайте фазу, щоб розпочати.
+    phase-n: 'Фаза {n}'
+    phase-label: Назва фази
+    save-phase: Зберегти фазу
+    select-phase-to-edit: Оберіть фазу для редагування її налаштувань.
+    run-phases: 'Запустити {count} фаз(и)'
+    include-order-statuses: Включити статуси замовлень
+    constraints: Обмеження
+    auto-commit: Автоматично застосовувати після фази
+    # Режими розподілу
+    mode-assign-vehicles: Призначити ТЗ
+    mode-assign-drivers: Призначити водіїв
+    mode-optimize-routes: Оптимізувати маршрути
+    # Статуси замовлень для фільтра фаз
+    status-created: Створено
+    status-dispatched: Диспетчеризовано
+    status-started: Розпочато
+    # Налаштування полів карток
+    card-fields: Поля карток
+    card-fields-description: Налаштуйте, які поля відображатимуться на картках замовлень у робочій області. Поля згруповані за конфігурацією замовлень.
+    card-fields-saved: Поля карток замовлень збережено.
+    save-card-fields: Зберегти поля карток
+    standard-fields: Стандартні поля
+    standard-fields-description: Ці поля відображаються на кожній картці замовлення незалежно від його типу.
+    config-fields-description: 'Налаштовувані поля для замовлень типу {name}.'
+    meta-fields: Метаполя
+    meta-fields-description: Довільні ключі метаданих, що передаються інтеграціями.
+    no-custom-fields: Для цієї конфігурації замовлень не визначено налаштовуваних полів.
+    field-tracking: Трек-номер
+    field-status: Статус
+    field-scheduled-at: Заплановано на
+    field-customer: Клієнт
+    field-type: Тип
+    field-notes: Примітки
+    field-priority: Пріоритет
+    field-dropoff: Адреса розвантаження
+    field-pickup: Адреса завантаження
+    # Фільтри панелі ресурсів
+    filter-available: Доступні
+    # Переглядач плану
+    vehicle: ТЗ
+    expand-all: Розгорнути все
+    tab-routes: Маршрути
+    tab-timeline: Хронологія
+    collapse-all: Згорнути все
+    collapse-route: Згорнути маршрут
+    expand-route: Розгорнути маршрут
+    no-plan: Запустити оркестратор, щоб побачити запропонований план.
+    unassigned-description: Ці замовлення не вдалося призначити. Вони залишаться в черзі для повторного розподілу.
+    unassigned: непризначені
+    # Загальні доповнення
+    vehicles: Транспортні засоби
+    drivers: Водії
+    orders: Замовлення
+    cancel: Скасувати
+    no-vehicles: ТЗ не знайдено.
+    no-drivers: Водіїв не знайдено.
+    no-orders: Замовлень не знайдено.
+    expand-panel: Розгорнути панель
+    collapse-panel: Згорнути панель
+    # Стан помилки виконання
+    run-failed-title: Призначень не повернуто
+    try-again: Спробувати знову
+    change-resources: Змінити ресурси
+    no-assignments-returned: Оркестратор не зміг призначити жодного замовлення. Перевірте місткість ТЗ та наявність водіїв на зміні.
+    # Ярлики списку зупинок
+    stop-type-pickup: Завантаження
+    stop-type-dropoff: Розвантаження
+    pod-required: Потрібне підтвердження доставки (POD)
+    no-pod: Без POD
+
+inspection:
+    form:
+        overview: Огляд
+        submissions: Подані інспекції
+        no-vehicle: Без ТЗ
+        no-submissions: Ще нічого не подано
+        no-submissions-description: Інспекції, пройдені за цією формою, з'являться тут.
+        details: Деталі форми
+        name: Назва
+        name-placeholder: Щоденний огляд ТЗ
+        type: Тип
+        status: Статус
+        description: Опис
+        description-placeholder: Що охоплює ця інспекція
+        builder: Конструктор форм
+        fields: Поля
+        published: Опубліковано
+        structure: Структура форми
+        loading-structure: Завантаження структури форми...
+        no-structure: Ця форма ще не має груп полів.
+        settings: Налаштування
+        type-placeholder: Оберіть тип інспекції
+        status-placeholder: Оберіть статус
+        setting-create-issue: Створювати запис про несправність при виявленні дефекту
+        setting-create-issue-help: Непройдена інспекція реєструє несправність для ТЗ.
+        setting-create-work-order: Відкривати робоче завдання при виявленні дефекту
+        setting-create-work-order-help: Непройдені пункти стають чеклістом робочого завдання для майстерні. Потрібно увімкнути модуль майстерень.
+        setting-require-signature: Вимагати підпис водія
+        setting-require-signature-help: Застосунок водія не відправить форму без підпису.
+        legacy-checklist: Застарілий чекліст
+        legacy-checklist-help: Початковий чекліст, збережений тільки для читання.
+        create: Створити форму інспекції
+        created: Форму інспекції створено.
+        updated: Форму інспекції оновлено.
+    builder:
+        help: Згрупуйте елементи перевірки, потім додайте поле для кожного з них.
+        loading: Завантаження конструктора форм...
+        new-group: Нова група полів
+        new-field: Нове поле
+        edit-field: 'Редагувати поле: {label}'
+        save-field: Зберегти поле
+        untitled-group: Група без назви
+        untitled-field: Поле без назви
+        group-name: Назва групи
+        group-name-placeholder: Зовнішній огляд
+        group-description: Опис групи
+        group-description-placeholder: Що перевіряється в цій групі
+        grid-size: Колонки
+        move-up: Перемістити вгору
+        move-down: Перемістити вниз
+        no-fields: У цій групі ще немає полів.
+        empty-title: Немає груп полів
+        empty-description: Додайте першу групу полів, щоб розпочати створення форми.
+        delete: Видалити
+        delete-group-title: Видалити цю групу полів?
+        delete-group-body: Видалення цієї групи видалить усі поля всередині неї. Це дію неможливо скасувати після збереження форми.
+        delete-field-title: Видалити це поле?
+        delete-field-body: Видалення цього поля також видалить усі відповіді, зареєстровані за ним.
+    field:
+        label: Ярлик поля
+        label-placeholder: Стоп-сигнали
+        name: Системне ім'я поля
+        name-help: Системне ім'я, за яким інспекція посилається на це поле.
+        name-placeholder: brake-lights
+        type: Тип поля
+        description: Опис поля
+        description-placeholder: Що перевіряти і як виглядає успішна перевірка
+        help-text: Текст підказки
+        help-text-placeholder: Відображається поруч із полем під час заповнення
+        required: Поле є обов'язковим
+        editable: Поле можна редагувати
+        options: Варіанти відповідей
+        no-options: Варіантів ще немає.
+        option-placeholder: Додати варіант
+        add-option: Додати
+        unit: Одиниця вимірювання
+        unit-help: Відображається поруч із числом, наприклад, км або годин.
+        unit-placeholder: км
+        odometer-role: Це показник одометра
+        odometer-role-help: Відповідь копіюється в колонку одометра самої інспекції.
+        on-fail: При невідповідності (помилці)
+        on-fail-help: Що означає негативна відповідь і що повинен надати інспектор.
+        default-severity: Критичність за замовчуванням
+        require-photo-on-fail: Вимагати фото при помилці
+        require-comment-on-fail: Вимагати коментар при помилці
+        unsafe-on-fail: Позначати ТЗ як небезпечний для експлуатації при помилці
+        unsafe-on-fail-help: Помилкова відповідь за замовчуванням позначається як небезпечна.
+        instructions: Інструкції
+        instructions-placeholder: Як це перевірити (інструкція для водія)
+        column-span: Ширина колонки
+    field-type:
+        pass-fail: Пройдено / Не пройдено
+        input: Текст
+        textarea: Багаторядковий текст
+        number: Число
+        select: Вибір зі списку
+        radio-button: Перемикачі (Radio)
+        boolean: Так / Ні
+        date-picker: Дата
+        date-time-input: Дата та час
+        file-upload: Фото або файл
+        signature: Підпис
+    severity:
+        low: Низька
+        medium: Середня
+        high: Висока
+        critical: Критична
+    answer:
+        pass: Пройдено
+        fail: Не пройдено
+        not-applicable: Н/З (Не застосовується)
+        unanswered: Без відповіді
+        severity: Критичність
+        unsafe: Небезпечно для експлуатації
+        comments: Коментарі
+        comments-placeholder: Що не так і що потрібно зробити
+        photos: Фотографії
+        add-photo: Додати фото
+        upload-photo: Завантажити фото
+        no-photo: Фото не прикріплено.
+        upload-signature: Завантажити підпис
+        no-signature: Підпис відсутній.
+        select-placeholder: Оберіть відповідь
+        note-placeholder: Додати примітку
+        text-placeholder: Введіть відповідь
+        no-options: У цьому полі немає варіантів для вибору.
+        uploads-unavailable: Можна додати з веб-консолі або застосунку водія.
+        comments-required: Опишіть несправність та необхідні дії
+        comment-required: Коментар обов'язковий при помилці
+        photo-required: Фото обов'язкове при помилці
+        comment-and-photo-required: Коментар + фото обов'язкові при помилці
+    record:
+        overview: Огляд
+        inspection: Інспекція
+        details: Деталі інспекції
+        form: Форма
+        select-form: Оберіть форму інспекції
+        status: Статус
+        result: Результат
+        vehicle: ТЗ
+        select-vehicle: Оберіть ТЗ
+        driver: Водій
+        select-driver: Оберіть водія
+        odometer: Одометр
+        odometer-placeholder: Поточний одометр
+        engine-hours: Мотогодини
+        engine-hours-placeholder: Поточні мотогодини
+        answers: Відповіді
+        loading-form: Завантаження форми інспекції...
+        loading-answers: Завантаження відповідей...
+        form-has-no-fields: Ця форма ще не має полів.
+        summary: Підсумок
+        failed-of: '{failed} не пройдено з {total} перевірок'
+        metadata: Метадані
+        submitted: Подано
+        submitted-by: Подано користувачем
+        submission-title: "Результат інспекції: {form}"
+        due: Термін виконання
+        create-issue: Створити запис про несправність
+        create-work-order: Створити робоче завдання
+        resolve: Вирішити (закрити)
+        via-link: Через публічне посилання
+        via-link-pin: Через публічне посилання з PIN-підтвердженням
+        signed-as: 'Підписано як "{name}"'
+        name-unverified: Ім'я введено вручну (неавторизований обліковий запис)
+        resolved: Вирішено
+        item-results: Результати за пунктами
+        no-item-results: Результатів за пунктами не записано.
+        follow-up: Подальші дії
+        open-form: Відкрити цю форму інспекції
+        failed: Не пройдено
+        failed-count: "{count, plural, one {# не пройдено} few {# не пройдено} many {# не пройдено} other {# не пройдено}}"
+        linked-inspections: "{count, plural, one {Пов'язана інспекція} few {Пов'язані інспекції} many {Пов'язаних інспекцій} other {Пов'язані інспекції}}"
+        linked-issue: Пов'язана несправність
+        linked-work-order: Пов'язане робоче завдання
+        photos: Фотографії
+        loading-photos: Завантаження фотографій...
+        audit: Аудит
+        create: Створити інспекцію
+        saved: Інспекцію збережено.
+        updated: Інспекцію оновлено.
+        form-help: Опублікована форма, на основі якої заповнюється ця інспекція.
+        choose-a-form: Оберіть форму інспекції, щоб розпочати.
+        group-has-no-fields: У цьому розділі немає пунктів перевірки.
+        outstanding: залишилося відповісти
+        section-outstanding: "{count, plural, one {# залишилося} few {# залишилося} many {# залишилося} other {# залишилося}}"
+        outstanding-field: "Поле {label} є обов’язковим для заповнення перед відправкою"
+        review: "Перегляд →"
+        jump-to: "Перейти до →"
+    follow-up:
+        create-issue-title: Створити запис про несправність на основі цієї інспекції?
+        create-issue-summary: Запис про несправність створюється для ТЗ та водія зі списком непройдених перевірок та найвищим рівнем критичності серед них.
+        create-issue-accept: Створити запис про несправність
+        create-work-order-title: Відкрити робоче завдання на основі цієї інспекції?
+        create-work-order-summary: Робоче завдання відкривається для ТЗ із чеклістом із непройдених перевірок.
+        create-work-order-accept: Створити робоче завдання
+        resolve-title: Закрити (вирішити) цю інспекцію?
+        resolve-summary: Інспекція позначається як вирішена із фіксацією часу. Створені несправності або робочі завдання залишаться відкритими.
+        resolve-accept: Вирішити інспекцію
+        from-these: "{count, plural, one {З цієї непройденої перевірки} few {З цих # непройдених перевірок} many {З цих # непройдених перевірок} other {З цих # непройдених перевірок}}"
+        unsafe-note: "{count, plural, one {# перевірку позначено як небезпечну для експлуатації} few {# перевірки позначено як небезпечні для експлуатації} many {# перевірок позначено як небезпечні для експлуатації} other {# перевірок позначено як небезпечні для експлуатації}}"
+        due-note: "Термін: {due}, на основі найвищого рівня критичності."
+        nothing-failed: У цій інспекції немає помилок, тому немає підстав для створення завдань.
+        submit-title: Відправити цю інспекцію?
+        submit-summary: Це реєструє інспекцію, фіксує час подачі та підраховує підсумки. Дію неможливо скасувати.
+        submit-accept: Відправити інспекцію
+        cancel: Скасувати
+    link:
+        public-links: Публічні посилання
+        existing: Згенеровані посилання
+        modal-help: "Згенерувати одноразове посилання для форми {form}. Той, хто відкриє його, вводить PIN-код і заповнює форму без входу в систему."
+        loading: Завантаження посилань...
+        none: Для цієї форми ще не генерувалися посилання.
+        load-failed: Не вдалося завантажити ці посилання.
+        copy: Копіювати
+        copied: Посилання на інспекцію скопійовано.
+        revoke: Відкликати
+        revoked: Посилання на інспекцію відкликано.
+        generated: Згенеровано
+        generated-toast: Посилання на інспекцію згенеровано.
+        publish-first: Опублікуйте форму інспекції перед генерацією публічного посилання.
+        expires: Закінчується
+        no-expiry: Без терміну дії
+        used: Використано
+        viewed: Востаннє відкрито
+        never-opened: Ніколи не відкривалося
+        unassigned: Будь-хто з посиланням та PIN-кодом
+        url-not-kept: Це посилання було створено до впровадження збереження URL, тому його адресу неможливо відобразити знову.
+        state-active: Активне
+        state-expired: Прострочене
+        state-used: Використано
+        state-revoked: Відкликано
+        state-locked: Заблоковано
+        expires-at: Дійсне до
+        expires-help: Посилання дійсні протягом 72 годин після створення, якщо не вказано інший час.
+        assign-to: Призначити
+        assign-to-help: Необов'язково. Будь-хто у вашій організації може пройти інспекцію; подана інспекція буде зарахована йому.
+        select-assignee: Оберіть користувача
+        pin: PIN-код
+        pin-delivery: Надіслати посилання та PIN-код
+        pin-delivery-none: Не надсилати, я поділюся сам(а)
+        pin-delivery-email: Електронною поштою
+        pin-delivery-sms: SMS-повідомленням
+        pin-delivery-help: "Надіслано користувачеві {name} із посиланням для відкриття та PIN-кодом."
+        pin-delivery-no-recipient: Призначте посилання комусь або оберіть водія, щоб надіслати. В іншому разі поділіться посиланням та PIN-кодом самостійно.
+        generated-title: Посилання згенеровано
+        generated-help: Посилання скопійовано в буфер обміну. Для доступу також знадобиться PIN-код.
+        copied-pin: PIN-код скопійовано.
+        email-pin: Надіслати посилання на Email
+        text-pin: Надіслати посилання через SMS
+        pin-sent-email: "Посилання та PIN-код надіслано на email {to}."
+        pin-sent-sms: "Посилання та PIN-код надіслано через SMS на номер {to}."
+        pin-not-sent: "Посилання та PIN-код не надіслано: {reason}"
+        pin-sent-by: "{via, select, email {Надіслано на email} sms {Надіслано через SMS} other {Надіслано}}"
+        wrong-pins: "{count, plural, one {# невірна спроба PIN} few {# невірні спроби PIN} many {# невірних спроб PIN} other {# невірних спроб PIN}}"
+        no-pin: Без PIN-коду. Це посилання було згенеровано до введення PIN-кодів.
+    public:
+        submitted-title: Інспекцію відправлено
+        submitted-body: Дякуємо. Цю інспекцію зареєстровано, а посилання тепер закрите.
+        unavailable-title: Ця інспекція недоступна
+        sign-off: Підписати
+        your-name: Ваше ім'я
+        your-name-help: Записується в цій інспекції як ім'я особи, що її заповнила.
+        your-name-placeholder: Повне ім'я
+        for: Для
+        pin-title: Введіть ваш PIN-код
+        pin-help: Введіть 6-значний PIN-код, який ви отримали для цієї інспекції.
+        pin-label: PIN-код
+        pin-continue: Продовжити
+        pin-wrong: "Невірний PIN-код. Залишилося спроб: {count} до блокування посилання."
+        submit: Відправити інспекцію
+        blocked-required: "{count, plural, one {Відсутня # обов'язкова відповідь} few {Відсутні # обов'язкові відповіді} many {Відсутня # обов'язкових відповідей} other {Відсутні обов'язкові відповіді}}"
+        blocked-defects: "{count, plural, one {# дефект потребує коментаря або фото} few {# дефекти потребують коментаря або фото} many {# дефектів потребують коментаря або фото} other {# дефектів потребують коментаря або фото}}"
+    flyout:
+        title: "Дефект: {label}"
+        done: Готово
+        close: Закрити
+    defect:
+        edit: Редагувати дефект
+        photos: "{count, plural, one {# фотографія} few {# фотографії} many {# фотографій} other {# фотографій}}"
+        comment: Коментар
+        needs-comment: Потрібен коментар
+        needs-photo: Потрібне фото
+        needs-both: Потрібні коментар та фото
+        no-evidence: Коментарі та фото відсутні
+    tray:
+        title: Дефекти
+        review: Переглянути
+select-option:
+    vehicle:
+        vin: VIN-код
+        serial_number: Серійний номер
+        call_sign: Позивний
+resource-summary:
+    facts:
+        address: Адреса
+        altitude: Висота
+        amount: Сума / Кількість
+        arrived: Прибув
+        assignee: Виконавець / Призначена особа
+        attached-to: Прикріплено до
+        attachment: Вкладення
+        axles: Осі
+        base-fee: Базовий тариф
+        body-coupling: Кузов / Зчіпка
+        calculation: Розрахунок
+        category: Категорія
+        cod: Оплата при доставці (COD)
+        code: Код
+        comments: Коментарі
+        completion: Завершення
+        connected: Підключено
+        coordinates: Координати
+        core-service: Основна послуга
+        countries: Країни
+        country: Країна
+        coverage: Покриття
+        created: Створено
+        customer: Клієнт
+        declared-value: Оголошена вартість
+        description: Опис
+        destination: Пункт призначення
+        details: Деталі
+        device: Пристрій
+        dimensions: Габарити
+        disconnected: Відключено
+        distance: Відстань
+        driver: Водій
+        drivers: Водії
+        dropoff: Розвантаження
+        due: Термін
+        dwell: Час простою
+        email: Email
+        entities: Сутності / Товари
+        environment: Середовище
+        equipped-to: Оснащено для
+        eta: Розрахунковий час прибуття (ETA)
+        event-type: Тип події
+        expires: Закінчується
+        failed-items: Невдалі пункти
+        fallback: Резервний варіант
+        fee: Збір / Комісія
+        fees: Збори / Комісії
+        firmware: Прошивка
+        fitted-to: Встановлено на
+        fleet: Автопарк
+        form: Форма
+        fuel-report: Звіт по пальному
+        heading: Напрямок руху (курс)
+        host: Хост
+        imei: IMEI
+        installed: Встановлено
+        interval: Інтервал
+        items: Позиції / Товари
+        key: Ключ
+        last-error: Остання помилка
+        last-online: Востаннє в мережі
+        last-reading: Останній показник
+        last-seen: Востаннє помічено
+        last-status: Останній статус
+        last-synced: Востаннє синхронізовано
+        last-value: Останнє значення
+        licence: Ліцензія / Посвідчення
+        location: Локація
+        maintainable: Підлягає обслуговуванню
+        make-model: Марка / модель
+        model: Модель
+        namespace: Простір імен
+        next-due: Наступний термін
+        next-occurrence: Наступне настання
+        occurred: Сталося
+        odometer: Одометр
+        order: Замовлення
+        order-config: Конфігурація замовлення
+        performed-by: Виконано
+        period: Період
+        phone: Телефон
+        pickup: Завантаження
+        place: Місце
+        plate: Номерний знак / VIN
+        policy: Політика
+        priority: Пріоритет
+        progress: Прогрес
+        provider: Провайдер
+        published: Опубліковано
+        purchase-price: Ціна покупки
+        quantity: Кількість
+        reason: Причина
+        recorded: Записано
+        region: Регіон
+        relationship: Зв'язок / Відносини
+        reporter: Хто повідомив
+        request: Запит
+        route: Маршрут
+        sandbox: Пісочниця (Sandbox)
+        schedule: Розклад
+        scheduled: Заплановано
+        sequence: Послідовність
+        serial: Серійний номер
+        service-area: Зона обслуговування
+        service-quote: Розрахунок вартості послуги
+        service-rate: Тариф послуги
+        service-types: Типи послуг
+        severity: Критичність
+        sku: Артикул (SKU)
+        speed: Швидкість
+        speed-limit: Обмеження швидкості
+        station: Станція
+        status: Статус
+        subject: Тема
+        submitted: Подано
+        submitted-by: Подано користувачем
+        target: Ціль
+        task: Завдання
+        telematic: Телематика
+        threshold: Поріг
+        timezone: Часовий пояс
+        title: Заголовок
+        total-cost: Загальна вартість
+        tracking: Відстеження
+        trailer: Причіп
+        transaction-at: Транзакція о
+        triggers: Тригери
+        type: Тип
+        unit-cost: Вартість за одиницю
+        user: Користувач
+        vehicle: Транспортний засіб
+        vehicles: Транспортні засоби
+        vendor: Постачальник
+        version: Версія
+        volume: Об'єм
+        warranty: Гарантія
+        waypoints: Маршрутні точки
+        website: Вебсайт
+        weight: Вага
+        window: Вікно (часове)
+        work-order: Робоче завдання
+        zone: Зона
+        zones: Зони

@@ -98,11 +98,16 @@ test('driver observer seams unassign orders and resolve the driver user', functi
         ->and($connection->table('orders')->where('uuid', 'order-seam-1')->value('driver_assigned_uuid'))->toBeNull()
         ->and($connection->table('orders')->where('uuid', 'order-seam-2')->value('driver_assigned_uuid'))->toBe('driver-other');
 
-    // The linked account resolves only when it is still a plain user
+    // The linked account resolves whatever its type: releaseForProfile decides
+    // whether a managed account is deleted and leaves a team member alone
     expect(fleetopsObserverSeamInvoke(Fleetbase\FleetOps\Observers\DriverObserver::class, 'findDriverUser', [$driver])?->uuid)->toBe('user-seam-1');
 
+    $managedDriver = new Driver();
+    $managedDriver->setRawAttributes(['uuid' => 'driver-seam-2', 'user_uuid' => 'user-seam-2'], true);
+    expect(fleetopsObserverSeamInvoke(Fleetbase\FleetOps\Observers\DriverObserver::class, 'findDriverUser', [$managedDriver])?->uuid)->toBe('user-seam-2');
+
     $driverWithoutUser = new Driver();
-    $driverWithoutUser->setRawAttributes(['uuid' => 'driver-seam-2', 'user_uuid' => 'user-seam-2'], true);
+    $driverWithoutUser->setRawAttributes(['uuid' => 'driver-seam-3', 'user_uuid' => null], true);
     expect(fleetopsObserverSeamInvoke(Fleetbase\FleetOps\Observers\DriverObserver::class, 'findDriverUser', [$driverWithoutUser]))->toBeNull();
 });
 

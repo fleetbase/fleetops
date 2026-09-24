@@ -11,6 +11,17 @@ use Illuminate\Support\Str;
 
 abstract class AbstractFleetOpsAICapability extends AbstractAICapability implements AIContextCapabilityInterface
 {
+    /**
+     * Words that never identify a record and must not be used as search terms.
+     */
+    protected const SEARCH_STOPWORDS = [
+        'the', 'and', 'for', 'with', 'from', 'this', 'that', 'what', 'where', 'when', 'which', 'who', 'how', 'many', 'much',
+        'can', 'could', 'would', 'should', 'please', 'help', 'want', 'need', 'show', 'find', 'open', 'look', 'tell', 'about',
+        'status', 'order', 'orders', 'vehicle', 'vehicles', 'driver', 'drivers', 'device', 'devices', 'sensor', 'sensors',
+        'telematic', 'telematics', 'maintenance', 'maintenances', 'work', 'fleet', 'fleets', 'ops', 'create', 'new', 'all',
+        'today', 'yesterday', 'tomorrow', 'week', 'month', 'fleetbase', 'import', 'template', 'download', 'dummy', 'test',
+    ];
+
     public function module(): string
     {
         return 'fleet-ops';
@@ -50,6 +61,18 @@ abstract class AbstractFleetOpsAICapability extends AbstractAICapability impleme
         return Auth::can($permission);
     }
 
+    /**
+     * Applies the current user's IAM directives (record-level scoping) for a permission to a query.
+     */
+    protected function scopeToPermission($query, string $permission)
+    {
+        if ($query instanceof Builder && Builder::hasGlobalMacro('applyDirectivesForPermissions')) {
+            return $query->applyDirectivesForPermissions($permission);
+        }
+
+        return $query;
+    }
+
     protected function canAll(array $permissions): bool
     {
         foreach ($permissions as $permission) {
@@ -61,18 +84,52 @@ abstract class AbstractFleetOpsAICapability extends AbstractAICapability impleme
         return true;
     }
 
+    /**
+     * Extracts record-reference-like search terms from a prompt.
+     *
+     * Only terms that plausibly identify a record are kept: quoted phrases, tokens containing a digit
+     * (public ids, plates, tracking numbers), emails and other delimited identifiers, and capitalized
+     * names that are not the first word. Ordinary words are never used as LIKE terms, and an empty
+     * array is returned when the prompt does not reference a specific record.
+     */
     protected function searchTerms(string $prompt): array
     {
-        preg_match_all('/[A-Z]{2,}[-_][A-Z0-9-_]+|[A-Za-z0-9][A-Za-z0-9-_]{2,}/', (string) $prompt, $matches);
+        $prompt = trim($prompt);
+        $terms  = [];
 
-        $terms = collect($matches[0] ?? [])
-            ->reject(fn ($term) => in_array(Str::lower($term), ['find', 'show', 'open', 'order', 'orders', 'vehicle', 'vehicles', 'driver', 'drivers', 'work', 'status', 'about', 'fleet', 'ops'], true))
-            ->unique()
+        preg_match_all('/"([^"]{2,64})"|\'([^\']{2,64})\'/u', $prompt, $quoted);
+        foreach (array_merge($quoted[1] ?? [], $quoted[2] ?? []) as $phrase) {
+            if (trim($phrase) !== '') {
+                $terms[] = trim($phrase);
+            }
+        }
+
+        preg_match_all('/[\p{L}\p{N}][\p{L}\p{N}@._\-]*[\p{L}\p{N}]/u', $prompt, $matches, PREG_OFFSET_CAPTURE);
+        foreach ($matches[0] ?? [] as [$token, $offset]) {
+            if ($this->isReferenceTerm($token, $offset === 0)) {
+                $terms[] = $token;
+            }
+        }
+
+        return collect($terms)
+            ->unique(fn ($term) => Str::lower($term))
             ->take(6)
             ->values()
             ->all();
+    }
 
-        return empty($terms) ? [trim((string) $prompt)] : $terms;
+    protected function isReferenceTerm(string $token, bool $isFirstWord = false): bool
+    {
+        if (mb_strlen($token) < 3 || in_array(Str::lower($token), static::SEARCH_STOPWORDS, true)) {
+            return false;
+        }
+
+        // Public ids, plates, tracking numbers, emails, and upper-case codes such as ORDER-ABC.
+        if (preg_match('/\p{N}|[@_]/u', $token) || preg_match('/^[\p{Lu}\p{N}]+(?:-[\p{Lu}\p{N}]+)+$/u', $token)) {
+            return true;
+        }
+
+        return !$isFirstWord && preg_match('/^\p{Lu}\p{Ll}+$/u', $token) === 1;
     }
 
     protected function whereLikeAny(Builder $builder, array $columns, array $terms): void

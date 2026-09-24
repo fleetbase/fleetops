@@ -23,22 +23,17 @@ class CreateDriverRequest extends CreateDriverApiRequest
      */
     public function rules(): array
     {
-        $isCreating                   = $this->isMethod('POST');
-        $isCreatingWithUser           = $this->filled('driver.user_uuid');
-        $shouldValidateUserAttributes = $isCreating && !$isCreatingWithUser;
+        $isCreating = $this->isMethod('POST');
 
         return [
-            // Required fields for driver creation
-            'name'                   => [Rule::requiredIf($shouldValidateUserAttributes), 'nullable', 'string', 'max:255'],
-            'email'                  => [
-                Rule::requiredIf($shouldValidateUserAttributes),
-                Rule::when($this->filled('email'), ['email']),
-                Rule::when($shouldValidateUserAttributes, [Rule::unique('users')->whereNull('deleted_at')]),
-            ],
-            'phone'                  => [
-                Rule::requiredIf($shouldValidateUserAttributes),
-                Rule::when($shouldValidateUserAttributes, [Rule::unique('users')->whereNull('deleted_at')]),
-            ],
+            // The driver profile manages its login account: name, email and phone
+            // are proxied to it. Email/phone availability is checked against the
+            // account the profile resolves to (see ProfileAccountManager), because a
+            // team member of the organization with the same email or phone is linked
+            // rather than rejected as a duplicate.
+            'name'                   => [Rule::requiredIf($isCreating), 'nullable', 'string', 'max:255'],
+            'email'                  => ['nullable', Rule::when($this->filled('email'), ['email'])],
+            'phone'                  => ['nullable', 'string'],
 
             // Optional fields
             'password'               => 'nullable|string|min:8',
@@ -84,11 +79,7 @@ class CreateDriverRequest extends CreateDriverApiRequest
     {
         return [
             'name.required'  => 'Driver name is required.',
-            'email.required' => 'Email address is required.',
             'email.email'    => 'Please provide a valid email address.',
-            'email.unique'   => 'This email address is already registered.',
-            'phone.required' => 'Phone number is required.',
-            'phone.unique'   => 'This phone number is already registered.',
             'password.min'   => 'Password must be at least 8 characters.',
         ];
     }

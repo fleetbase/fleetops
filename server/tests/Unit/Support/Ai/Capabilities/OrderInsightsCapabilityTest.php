@@ -123,6 +123,11 @@ class FleetOpsOrderInsightsCapabilityFake extends OrderInsightsCapability
         return $this->allowed && $permission === 'fleet-ops see order';
     }
 
+    protected function currency(): string
+    {
+        return 'USD';
+    }
+
     protected function orderQuery(?string $companyUuid): mixed
     {
         $this->companies[] = $companyUuid;
@@ -183,6 +188,7 @@ test('order insights resolve returns bounded aggregate order metrics', function 
         'authorized'       => true,
         'metric'           => 'orders',
         'amount_threshold' => 125.50,
+        'amount_currency'  => 'USD',
         'count'            => 7,
         'counts_by_status' => ['completed' => 5, 'active' => 2],
         'sample_order_ids' => ['order_1', 'order_2'],
@@ -196,7 +202,7 @@ test('order insights resolve returns bounded aggregate order metrics', function 
         ->and($capability->companies)->toBe(['company-123'])
         ->and($capability->query->recordedCalls())->toContain(
             ['whereBetween', 'created_at', [$start, $end]],
-            ['whereHas', 'transaction', [['where', 'amount', '>', 125.50]]],
+            ['whereHas', 'transaction', [['where', 'amount', '>', 12550.0]]],
             ['count'],
             ['selectRaw', 'status, count(*) as aggregate'],
             ['groupBy', 'status'],
@@ -223,4 +229,16 @@ test('order insights resolve omits optional filters when prompt has no date or a
         ->and($capability->companies)->toBe(['company-456'])
         ->and($capability->query->recordedCalls())->not->toContain(['whereBetween'])
         ->and($capability->query->recordedCalls())->not->toContain(['whereHas']);
+});
+
+test('order insights converts major-unit thresholds using the currency exponent', function () {
+    $capability = new FleetOpsOrderInsightsCapabilityFake();
+    $method     = new ReflectionMethod(OrderInsightsCapability::class, 'toMinorUnits');
+    $method->setAccessible(true);
+
+    expect($method->invoke($capability, 500.0, 'USD'))->toBe(50000)
+        ->and($method->invoke($capability, 125.5, 'usd'))->toBe(12550)
+        ->and($method->invoke($capability, 1000.0, 'JPY'))->toBe(1000)
+        ->and($method->invoke($capability, 1.5, 'BHD'))->toBe(1500)
+        ->and($method->invoke($capability, 10.0, 'NOT-A-CURRENCY'))->toBe(1000);
 });

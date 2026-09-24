@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\ProfileAccountManager;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Http\Resources\User;
@@ -40,6 +41,8 @@ class Contact extends FleetbaseResource
             'places'                        => $this->whenLoaded('places', fn () => Place::collection($this->places)->without('owner')),
             'user'                          => $this->when(Http::isInternalRequest(), fn () => new User($this->user), fn () => $this->user ? $this->user->public_id : null),
             'address'                       => $this->when(Http::isInternalRequest(), data_get($this, 'place.address')),
+            'is_staff_linked'               => $this->when(Http::isInternalRequest(), fn () => ProfileAccountManager::isStaffAccount($this->user)),
+            'login_status'                  => $this->when(Http::isInternalRequest(), fn () => data_get($this, 'user.status')),
             'address_street'                => $this->when(Http::isInternalRequest(), data_get($this, 'place.street1')),
             'type'                          => $this->type ?? null,
             'customer_type'                 => $this->when(isset($this->customer_type), Utils::toEmberResourceType($this->customer_type)),

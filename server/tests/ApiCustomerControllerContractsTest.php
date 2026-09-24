@@ -800,6 +800,27 @@ test('api customer controller authenticates and verifies customer codes', functi
         ]))))->toBe(['error' => 'Invalid verification code.']);
 });
 
+test('api customer controller refuses deactivated customer logins', function () {
+    $controller = fleetopsApiCustomerController();
+    foreach (['activeUser', 'loginUser', 'verificationUser'] as $property) {
+        $controller->{$property}->setAttribute('status', 'inactive');
+    }
+
+    $responses = [
+        $controller->login(Request::create('/v1/customers/login', 'POST', ['identity' => 'jane@example.test', 'password' => 'password-secret'])),
+        $controller->loginWithPhone(Request::create('/v1/customers/login/phone', 'POST', ['phone' => '15551234567'])),
+        $controller->verifyCode(Request::create('/v1/customers/verify', 'POST', ['identity' => 'jane@example.test', 'code' => '123456'])),
+    ];
+
+    foreach ($responses as $response) {
+        expect($response->getStatusCode())->toBe(403)
+            ->and(fleetopsApiCustomerJson($response))->toBe(['error' => 'This customer login has been deactivated.']);
+    }
+
+    // No verification code is sent
+    expect($controller->smsVerifications)->toBe([]);
+});
+
 test('api customer controller resets forgotten passwords', function () {
     $controller = fleetopsApiCustomerController();
     $forgot     = $controller->forgotPassword(Request::create('/v1/customers/forgot-password', 'POST', [

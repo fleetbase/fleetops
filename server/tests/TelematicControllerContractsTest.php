@@ -159,6 +159,7 @@ test('internal customer controller serializes portal login payloads', function (
     $customer->setRelation('user', (object) [
         'uuid'           => 'user-uuid',
         'public_id'      => 'user-public',
+        'type'           => 'customer',
         'name'           => 'Ada Customer',
         'email'          => 'ada@example.test',
         'phone'          => '+15551234567',
@@ -168,10 +169,12 @@ test('internal customer controller serializes portal login payloads', function (
     ]);
 
     expect($controller->callHelper('customerPayload', $customer))->toBe([
-        'id'        => 'customer-public',
-        'uuid'      => 'customer-uuid',
-        'user_uuid' => 'user-uuid',
-        'user'      => [
+        'id'              => 'customer-public',
+        'uuid'            => 'customer-uuid',
+        'user_uuid'       => 'user-uuid',
+        'is_staff_linked' => false,
+        'login_status'    => 'active',
+        'user'            => [
             'id'             => 'user-public',
             'uuid'           => 'user-uuid',
             'name'           => 'Ada Customer',
@@ -182,4 +185,19 @@ test('internal customer controller serializes portal login payloads', function (
             'avatar_url'     => 'https://example.test/avatar.png',
         ],
     ]);
+
+    // A customer linked to a team member's account is reported as staff-linked
+    $customer->setRelation('user', (object) ['uuid' => 'staff-uuid', 'public_id' => 'staff-public', 'type' => 'user', 'status' => 'inactive']);
+    $staffPayload = $controller->callHelper('customerPayload', $customer);
+
+    expect($staffPayload['is_staff_linked'])->toBeTrue()
+        ->and($staffPayload['login_status'])->toBe('inactive');
+
+    // A customer without a login account is neither
+    $customer->setRelation('user', null);
+    $emptyPayload = $controller->callHelper('customerPayload', $customer);
+
+    expect($emptyPayload['is_staff_linked'])->toBeFalse()
+        ->and($emptyPayload['login_status'])->toBeNull()
+        ->and($emptyPayload['user'])->toBeNull();
 });

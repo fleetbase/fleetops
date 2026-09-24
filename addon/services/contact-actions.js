@@ -1,9 +1,8 @@
 import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
 import { inject as service } from '@ember/service';
-import { action, get } from '@ember/object';
+import { action } from '@ember/object';
 import { PANEL_DEFAULTS, closePanelsThen, registeredPanelTabs } from '../utils/context-panel';
-
-const INTERNAL_NAMESPACE = 'int/v1';
+import { confirmLoginAction, hasInactiveLogin, hasLinkedUser, hasManagedLogin, linkedUserStatus, updateProfileFromResponse } from '../utils/profile-login-actions';
 
 export default class ContactActionsService extends ResourceActionService {
     @service fetch;
@@ -124,17 +123,23 @@ export default class ContactActionsService extends ResourceActionService {
     }
 
     hasLinkedUser(contact) {
-        const user = contact?.user;
-        return Boolean(contact?.user_uuid || (user && (get(user, 'id') || get(user, 'uuid'))));
+        return hasLinkedUser(contact);
+    }
+
+    /**
+     * True when the contact has a login account managed from Fleet-Ops. A
+     * contact owned by a staff member is managed from IAM instead.
+     */
+    hasManagedLogin(contact) {
+        return hasManagedLogin(contact);
     }
 
     linkedUserStatus(contact) {
-        const user = contact?.user;
-        return (user ? (get(user, 'status') ?? get(user, 'session_status')) : null) ?? 'active';
+        return linkedUserStatus(contact);
     }
 
     hasInactiveLogin(contact) {
-        return ['inactive', 'disabled', 'suspended'].includes(this.linkedUserStatus(contact));
+        return hasInactiveLogin(contact);
     }
 
     isCustomerPortalInstalled() {
@@ -156,7 +161,7 @@ export default class ContactActionsService extends ResourceActionService {
     }
 
     accountActionButton(contact, options = {}) {
-        if (!this.hasLinkedUser(contact)) {
+        if (!this.hasManagedLogin(contact)) {
             return null;
         }
 
@@ -171,23 +176,23 @@ export default class ContactActionsService extends ResourceActionService {
     accountActionItems(contact, options = {}) {
         const actions = [
             {
-                text: 'Reset Password',
+                text: this.intl.t('profile-account.actions.reset-password'),
                 icon: 'key',
                 fn: () => this.openResetPasswordModal(contact),
             },
             {
-                text: 'Send Credentials',
+                text: this.intl.t('profile-account.actions.send-credentials'),
                 icon: 'paper-plane',
                 fn: () => this.confirmSendCredentials(contact),
             },
             this.hasInactiveLogin(contact)
                 ? {
-                      text: 'Reactivate Login',
+                      text: this.intl.t('profile-account.actions.reactivate-login'),
                       icon: 'unlock',
                       fn: () => this.confirmReactivatePortalLogin(contact),
                   }
                 : {
-                      text: 'Deactivate Login',
+                      text: this.intl.t('profile-account.actions.deactivate-login'),
                       icon: 'lock',
                       fn: () => this.confirmDeactivatePortalLogin(contact),
                       class: 'text-red-500 hover:text-red-600',
@@ -200,7 +205,7 @@ export default class ContactActionsService extends ResourceActionService {
                     separator: true,
                 },
                 {
-                    text: 'Convert to Vendor',
+                    text: this.intl.t('profile-account.actions.convert-to-vendor'),
                     icon: 'building',
                     fn: () => this.openConvertToVendorModal(contact, options),
                 }
@@ -212,42 +217,42 @@ export default class ContactActionsService extends ResourceActionService {
 
     accountRowActionItems(options = {}) {
         const hasCustomerPortal = this.isCustomerPortalInstalled();
-        const hasLinkedUser = (contact) => this.hasLinkedUser(contact);
+        const hasManagedLogin = (contact) => this.hasManagedLogin(contact);
 
         const actions = [
             {
-                label: 'Reset Password',
+                label: this.intl.t('profile-account.actions.reset-password'),
                 icon: 'key',
                 fn: (contact) => this.openResetPasswordModal(contact),
-                isVisible: hasLinkedUser,
+                isVisible: hasManagedLogin,
             },
             {
-                label: 'Send Credentials',
+                label: this.intl.t('profile-account.actions.send-credentials'),
                 icon: 'paper-plane',
                 fn: (contact) => this.confirmSendCredentials(contact),
-                isVisible: hasLinkedUser,
+                isVisible: hasManagedLogin,
             },
             {
-                label: 'Deactivate Login',
+                label: this.intl.t('profile-account.actions.deactivate-login'),
                 icon: 'lock',
                 class: 'text-red-500 hover:text-red-600',
                 fn: (contact) => this.confirmDeactivatePortalLogin(contact),
-                isVisible: (contact) => hasLinkedUser(contact) && !this.hasInactiveLogin(contact),
+                isVisible: (contact) => hasManagedLogin(contact) && !this.hasInactiveLogin(contact),
             },
             {
-                label: 'Reactivate Login',
+                label: this.intl.t('profile-account.actions.reactivate-login'),
                 icon: 'unlock',
                 fn: (contact) => this.confirmReactivatePortalLogin(contact),
-                isVisible: (contact) => hasLinkedUser(contact) && this.hasInactiveLogin(contact),
+                isVisible: (contact) => hasManagedLogin(contact) && this.hasInactiveLogin(contact),
             },
         ];
 
         if (hasCustomerPortal) {
             actions.push({
-                label: 'Convert to Vendor',
+                label: this.intl.t('profile-account.actions.convert-to-vendor'),
                 icon: 'building',
                 fn: (contact) => this.openConvertToVendorModal(contact, options),
-                isVisible: hasLinkedUser,
+                isVisible: hasManagedLogin,
             });
         }
 
@@ -255,8 +260,10 @@ export default class ContactActionsService extends ResourceActionService {
     }
 
     openResetPasswordModal(contact) {
-        this.modalsManager.show('modals/reset-customer-credentials', {
-            customer: contact,
+        this.modalsManager.show('modals/reset-profile-credentials', {
+            profile: contact,
+            endpoint: 'customers/reset-credentials',
+            payload: (profile) => ({ customer: profile?.id }),
         });
     }
 
@@ -278,86 +285,40 @@ export default class ContactActionsService extends ResourceActionService {
 
     confirmSendCredentials(contact) {
         this.confirmLoginAction(contact, {
-            title: 'Send Portal Credentials',
-            body: 'Generate a new temporary password and email this contact their portal credentials.',
-            acceptButtonText: 'Send Credentials',
+            title: this.intl.t('profile-account.prompts.send-portal-credentials-title'),
+            body: this.intl.t('profile-account.prompts.send-portal-credentials-body'),
+            acceptButtonText: this.intl.t('profile-account.actions.send-credentials'),
             endpoint: 'customers/send-credentials',
-            successMessage: 'Portal credentials sent.',
+            successMessage: this.intl.t('profile-account.prompts.send-portal-credentials-success'),
         });
     }
 
     confirmDeactivatePortalLogin(contact) {
         this.confirmLoginAction(contact, {
-            title: 'Deactivate Login',
-            body: 'Deactivate portal access for this contact. Their profile and history will be preserved.',
-            acceptButtonText: 'Deactivate Login',
+            title: this.intl.t('profile-account.actions.deactivate-login'),
+            body: this.intl.t('profile-account.prompts.deactivate-portal-login-body'),
+            acceptButtonText: this.intl.t('profile-account.actions.deactivate-login'),
             acceptButtonScheme: 'danger',
             endpoint: 'customers/deactivate-portal-login',
-            successMessage: 'Portal login deactivated.',
+            successMessage: this.intl.t('profile-account.prompts.deactivate-portal-login-success'),
         });
     }
 
     confirmReactivatePortalLogin(contact) {
         this.confirmLoginAction(contact, {
-            title: 'Reactivate Login',
-            body: 'Reactivate portal access for this contact.',
-            acceptButtonText: 'Reactivate Login',
+            title: this.intl.t('profile-account.actions.reactivate-login'),
+            body: this.intl.t('profile-account.prompts.reactivate-portal-login-body'),
+            acceptButtonText: this.intl.t('profile-account.actions.reactivate-login'),
             endpoint: 'customers/reactivate-portal-login',
-            successMessage: 'Portal login reactivated.',
+            successMessage: this.intl.t('profile-account.prompts.reactivate-portal-login-success'),
         });
     }
 
-    confirmLoginAction(contact, { title, body, acceptButtonText, acceptButtonScheme, endpoint, successMessage }) {
-        this.modalsManager.confirm({
-            title,
-            body,
-            acceptButtonText,
-            acceptButtonScheme,
-            confirm: async (modal) => {
-                modal.startLoading();
-
-                try {
-                    const response = await this.fetch.post(endpoint, { customer: contact?.id }, { namespace: INTERNAL_NAMESPACE });
-                    await this.updateContactFromResponse(contact, response);
-                    this.notifications.success(successMessage);
-                    modal.done();
-                } catch (error) {
-                    this.notifications.serverError(error);
-                    modal.stopLoading();
-                }
-            },
-        });
+    confirmLoginAction(contact, options = {}) {
+        return confirmLoginAction(this, contact, { payload: { customer: contact?.id }, ...options });
     }
 
-    async updateContactFromResponse(contact, response) {
-        const payload = response.customer ?? response.contact;
-
-        if (!payload || typeof contact?.setProperties !== 'function') {
-            return;
-        }
-
-        contact.setProperties(
-            this.withoutIdentityFields({
-                user_uuid: payload.user_uuid,
-            })
-        );
-
-        if (payload.user) {
-            const user = await contact.user;
-
-            if (typeof user?.setProperties === 'function') {
-                user.setProperties(this.withoutIdentityFields(payload.user));
-            }
-        }
-    }
-
-    withoutIdentityFields(payload = {}) {
-        const attributes = { ...payload };
-
-        delete attributes.id;
-        delete attributes.uuid;
-        delete attributes.public_id;
-
-        return attributes;
+    updateContactFromResponse(contact, response) {
+        return updateProfileFromResponse(contact, response);
     }
 }

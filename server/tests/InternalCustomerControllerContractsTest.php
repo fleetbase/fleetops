@@ -122,11 +122,12 @@ function fleetopsInternalCustomer(): FleetOpsInternalCustomerContactFake
     return $customer;
 }
 
-function fleetopsInternalCustomerUser(string $status = 'active'): FleetOpsInternalCustomerUserFake
+function fleetopsInternalCustomerUser(string $status = 'active', string $type = 'customer'): FleetOpsInternalCustomerUserFake
 {
     $user = new FleetOpsInternalCustomerUserFake();
     $user->setRawAttributes([
         'uuid'           => 'user-uuid',
+        'type'           => $type,
         'public_id'      => 'user_public',
         'name'           => 'Ada Customer',
         'email'          => 'ada@example.test',
@@ -235,4 +236,34 @@ test('internal customer controller validates reset credential error branches', f
             'password'              => 'one',
             'password_confirmation' => 'one',
         ])))['error'])->toBe('Unable to reset customer credentials');
+});
+
+test('internal customer controller refuses login management for staff-linked customers', function () {
+    $staff      = fleetopsInternalCustomerUser('active', 'user');
+    $controller = fleetopsInternalCustomerController($staff);
+    $message    = 'This customer signs in with a team member account. Manage this login in IAM.';
+    $request    = new Request(['customer' => 'customer_public']);
+
+    $responses = [
+        $controller->createPortalLogin($request),
+        $controller->sendCredentials($request),
+        $controller->deactivatePortalLogin($request),
+        $controller->reactivatePortalLogin($request),
+        $controller->resetCredentials(new Request([
+            'customer'              => 'customer_public',
+            'password'              => 'chosen-secret',
+            'password_confirmation' => 'chosen-secret',
+        ])),
+    ];
+
+    foreach ($responses as $response) {
+        expect($response->getStatusCode())->toBe(422)
+            ->and(fleetopsInternalCustomerJson($response)['error'])->toBe($message);
+    }
+
+    // The team member's account is never touched
+    expect($staff->passwords)->toBe([])
+        ->and($staff->activations)->toBe(0)
+        ->and($staff->deactivations)->toBe(0)
+        ->and($controller->sentCredentials)->toBe([]);
 });

@@ -6,27 +6,15 @@ use Illuminate\Http\Request;
 /**
  * Covers the not-found branch of Internal\v1\OrderController::nextActivity().
  *
- * ---------------------------------------------------------------------------
- * THIS FILE IS EXPECTED TO FAIL until fleetbase/core-api 1.6.55 is released and
- * pulled into server_vendor. Do not "fix" it by weakening the assertion.
- * ---------------------------------------------------------------------------
+ * This branch used to depend on upstream behaviour that never fired: the
+ * controller wrapped `Order::findByIdOrFail($id)` in a
+ * `catch (ModelNotFoundException)`, but core-api's findByIdOrFail() raised a
+ * BadMethodCallException that escaped the catch and surfaced as a 500.
  *
- * The controller wraps `Order::findByIdOrFail($id)` in a
- * `catch (ModelNotFoundException)` that returns 'No order found.'. Today that
- * catch never fires: core-api's Model::findByIdOrFail() calls a
- * getModelNotFoundException() method that does not exist on Eloquent's builder,
- * so a missing order raises BadMethodCallException, escapes the catch, and
- * surfaces as a 500 instead of the intended error response.
- *
- * core-api#231 (branch dev-v1.6.55) replaces that with
- * `throw (new ModelNotFoundException())->setModel(static::class, [$identifier]);`
- * which makes this branch live. The assertion below states the post-fix
- * contract deliberately — asserting today's BadMethodCallException would
- * codify the defect instead of the intent.
- *
- * If CI must be green before that release lands, neutralise this file with a
- * single `->skip('pending fleetbase/core-api 1.6.55')` on the test below rather
- * than changing what it asserts.
+ * nextActivity() now resolves the order through the controller's own
+ * company-scoped `findOrderById()` and returns the error response on a null
+ * result, so the branch is live here regardless of the upstream release: an
+ * unknown id and an id belonging to another company are reported identically.
  */
 function fleetopsUpstreamNotFoundBoot(): Illuminate\Database\SQLiteConnection
 {

@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\Exceptions\FleetbaseRequestValidationException;
+use Fleetbase\FleetOps\Exceptions\ProfileIdentityConflictException;
 use Fleetbase\FleetOps\Exports\DriverExport;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\DriverController as ApiDriverController;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
@@ -13,11 +14,11 @@ use Fleetbase\FleetOps\Imports\DriverImport;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\ProfileAccountManager;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
-use Fleetbase\Models\Invite;
 use Fleetbase\Models\User;
 use Fleetbase\Models\VerificationCode;
 use Fleetbase\Support\Auth;
@@ -58,72 +59,6 @@ class DriverController extends FleetOpsController
         $validator = Validator::make($input, $rules);
 
         if ($validator->fails()) {
-            // here if the user exists already
-            // within organization: offer to create driver record
-            // outside organization: invite to join organization AS DRIVER
-            if ($validator->errors()->hasAny(['phone', 'email'])) {
-                // get existing user
-                $existingUser = null;
-
-                // if values provided for user lookup
-                if (!empty($input['phone']) || !empty($input['email'])) {
-                    $existingUserQuery = User::query();
-
-                    if (!empty($input['phone']) && is_string($input['phone'])) {
-                        $existingUserQuery->orWhere(function ($q) use ($input) {
-                            $q->where('phone', $input['phone'])->whereNotNull('phone');
-                        });
-                    }
-
-                    if (!empty($input['email']) && is_string($input['email'])) {
-                        $existingUserQuery->orWhere(function ($q) use ($input) {
-                            $q->where('email', $input['email'])->whereNotNull('email');
-                        });
-                    }
-
-                    $existingUser = $existingUserQuery->first();
-                }
-
-                if ($existingUser) {
-                    // if exists in organization create driver profile for user
-                    $isOrganizationMember = $existingUser->companies()->where('companies.uuid', session('company'))->exists();
-
-                    // Check if driver profile also already exists
-                    $existingDriverProfile = Driver::where(['company_uuid' => session('company'), 'user_uuid' => $existingUser->uuid])->first();
-                    if ($existingDriverProfile) {
-                        return ['driver' => new $this->resource($existingDriverProfile)];
-                    }
-
-                    // create driver profile for user
-                    $input = collect($input)
-                        ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid', 'status'])
-                        ->filter()
-                        ->toArray();
-
-                    // Get current session company
-                    $company               = Auth::getCompany();
-                    $input['company_uuid'] = session('company', $company->uuid);
-                    $input['user_uuid']    = $existingUser->uuid;
-                    $input['slug']         = $existingUser->slug;
-
-                    // If no location provided set
-                    if (empty($input['location'])) {
-                        $input['location'] = new Point(0, 0);
-                    }
-
-                    // create the profile
-                    $driverProfile = Driver::create($input);
-
-                    // If not already a member of the company assign them to the company and send the user an invite
-                    if (!$isOrganizationMember && $company) {
-                        $existingUser->assignCompany($company);
-                    }
-
-                    return ['driver' => new $this->resource($driverProfile)];
-                }
-            }
-
-            // check from validator object if phone or email is not unique
             return $createDriverRequest->responseWithErrors($validator);
         }
 
@@ -134,104 +69,36 @@ class DriverController extends FleetOpsController
                     $input = collect($input);
 
                     // Get current session company
-                    $company                   = Auth::getCompany();
+                    $company = Auth::getCompany();
                     if (!$company) {
                         throw new \Exception('Unable to create driver.');
                     }
 
-                    if ($input->has('user_uuid')) {
-                        $user = User::where('uuid', $input->get('user_uuid'))->first();
-
-                        // Check if a driver profile already exists for this user in the current company
-                        if ($user) {
-                            $existingDriver = Driver::where(['user_uuid' => $user->uuid, 'company_uuid' => session('company')])->first();
-                            if ($existingDriver) {
-                                throw new \Exception('This user account already belongs to a driver.');
-                            }
-                        }
-
-                        // If user doesn't exist with provided UUID, create new user
-                        if (!$user) {
-                            $userInput = $input
-                                ->only(['name', 'password', 'email', 'phone', 'status', 'avatar_uuid'])
-                                ->filter()
-                                ->toArray();
-
-                            // handle `photo_uuid`
-                            if (isset($input['photo_uuid']) && Str::isUuid($input['photo_uuid'])) {
-                                $userInput['avatar_uuid'] = $input['photo_uuid'];
-                            }
-
-                            // Make sure password is set
-                            if (empty($userInput['password'])) {
-                                $userInput['password'] = Str::random(14);
-                            }
-
-                            // Set user company
-                            $userInput['company_uuid'] = session('company', $company->uuid);
-
-                            // Apply user infos
-                            $userInput = User::applyUserInfoFromRequest($request, $userInput);
-
-                            // Create user account
-                            $user = User::create($userInput);
-
-                            // Set the user type to driver
-                            $user->setType('driver');
-                        } elseif ($input->has('photo_uuid')) {
-                            // Update existing user's avatar if photo provided
-                            $user->update(['avatar_uuid' => $input->get('photo_uuid')]);
-                        }
-                    } else {
-                        $userInput = $input
-                            ->only(['name', 'password', 'email', 'phone', 'status', 'avatar_uuid'])
-                            ->filter()
-                            ->toArray();
-
-                        // handle `photo_uuid`
-                        if (isset($input['photo_uuid']) && Str::isUuid($input['photo_uuid'])) {
-                            $userInput['avatar_uuid'] = $input['photo_uuid'];
-                        }
-
-                        // Make sure password is set
-                        if (empty($userInput['password'])) {
-                            $userInput['password'] = Str::random(14);
-                        }
-
-                        // Set user company
-                        $userInput['company_uuid'] = session('company', $company->uuid);
-
-                        // Apply user infos
-                        $userInput = User::applyUserInfoFromRequest($request, $userInput);
-
-                        // Create user account
-                        $user = User::create($userInput);
-
-                        // Set the user type to driver
-                        $user->setType('driver');
-                    }
-
-                    // if exists in organization create driver profile for user
-                    $isOrganizationMember = $user->companies()->where('companies.uuid', session('company'))->exists();
+                    // The login account is managed by the driver profile: a team member
+                    // with the email/phone is linked, otherwise a driver account is created.
+                    $avatarUuid = Str::isUuid($input->get('photo_uuid')) ? $input->get('photo_uuid') : $input->get('avatar_uuid');
+                    $user       = ProfileAccountManager::resolveForProfile(
+                        $company->uuid,
+                        'driver',
+                        $input->get('name'),
+                        $input->get('email'),
+                        $input->get('phone'),
+                        User::applyUserInfoFromRequest($request, array_filter([
+                            'password'    => $input->get('password'),
+                            'status'      => 'active',
+                            'avatar_uuid' => $avatarUuid,
+                        ]))
+                    );
 
                     // Prepare input
                     $input = $input
-                            ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid', 'status'])
+                            ->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid', 'status', 'user_uuid', 'user'])
                             ->filter()
                             ->toArray();
 
-                    // Assign user to company and send invite
-                    if (!$isOrganizationMember && $company) {
-                        $user->assignCompany($company);
-                    }
-
-                    // Set user type as driver and set role to driver
-                    if ($user->type === 'driver') {
-                        $user->assignSingleRole('Driver');
-                    }
-
-                    $input['user_uuid'] = $user->uuid;
-                    $input['slug']      = $user->slug;
+                    $input['company_uuid'] = $company->uuid;
+                    $input['user_uuid']    = $user->uuid;
+                    $input['slug']         = $user->slug;
 
                     // If no location provided set
                     if (empty($input['location'])) {
@@ -248,6 +115,8 @@ class DriverController extends FleetOpsController
             );
 
             return ['driver' => new $this->resource($record)];
+        } catch (ProfileIdentityConflictException $e) {
+            return response()->error($e->getMessage(), 422, ['field' => $e->getField()]);
         } catch (QueryException $e) {
             return response()->error(env('DEBUG') ? $e->getMessage() : 'Error occurred while trying to create a ' . $this->resourceSingularlName);
         } catch (FleetbaseRequestValidationException $e) {
@@ -287,18 +156,15 @@ class DriverController extends FleetOpsController
                 function (&$request, &$driver, &$input) {
                     $driver->load(['user'])->guard(['user_uuid']);
                     $input     = collect($input);
-                    $userInput = $input->only(['name', 'password', 'email', 'phone', 'avatar_uuid'])->reject(fn ($value) => $value === null)->toArray();
+                    $userInput = $input->only(['name', 'password', 'email', 'phone', 'avatar_uuid'])->reject(fn ($value, $key) => $value === null && !in_array($key, ['email', 'phone'], true))->toArray();
                     // handle `photo_uuid`
                     if (isset($input['photo_uuid']) && Str::isUuid($input['photo_uuid'])) {
                         $userInput['avatar_uuid'] = $input['photo_uuid'];
                     }
-                    $input     = $input->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid'])->toArray();
+                    $input     = $input->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid', 'user_uuid', 'user'])->toArray();
 
-                    // Update driver user details
-                    $driverUser = $driver->getUser();
-                    if ($driverUser && !empty($userInput)) {
-                        $driverUser->update($userInput);
-                    }
+                    // Update the driver's login account through its proxy fields
+                    ProfileAccountManager::syncProxyFields($driver->getUser(), $userInput);
 
                     // Flush cache
                     $driver->flushAttributesCache();
@@ -318,6 +184,8 @@ class DriverController extends FleetOpsController
             );
 
             return ['driver' => new $this->resource($record)];
+        } catch (ProfileIdentityConflictException $e) {
+            return response()->error($e->getMessage(), 422, ['field' => $e->getField()]);
         } catch (QueryException $e) {
             return response()->error(env('DEBUG') ? $e->getMessage() : 'Error occurred while trying to update a ' . $this->resourceSingularlName);
         } catch (FleetbaseRequestValidationException $e) {
@@ -325,6 +193,150 @@ class DriverController extends FleetOpsController
         } catch (\Exception $e) {
             return response()->error($e->getMessage());
         }
+    }
+
+    /**
+     * Generate a new password for the driver's login and send it to them.
+     *
+     * @return JsonResponse
+     */
+    public function sendCredentials(string $id)
+    {
+        [$driver, $user, $error] = $this->resolveDriverLogin($id);
+        if ($error) {
+            return $error;
+        }
+
+        try {
+            $sentVia = ProfileAccountManager::sendCredentials($driver, $user);
+        } catch (\Exception $e) {
+            return response()->error($e->getMessage());
+        }
+
+        return response()->json(['status' => 'ok', 'sent_via' => $sentVia, 'driver' => $this->driverLoginPayload($driver)]);
+    }
+
+    /**
+     * Set a new password for the driver's login, optionally sending it to them.
+     *
+     * @return JsonResponse
+     */
+    public function resetCredentials(Request $request, string $id)
+    {
+        $password = $request->input('password');
+        if (!is_string($password) || strlen($password) < 8) {
+            return response()->error('Password must be at least 8 characters.');
+        }
+
+        if ($password !== $request->input('password_confirmation')) {
+            return response()->error('Passwords do not match.');
+        }
+
+        [$driver, $user, $error] = $this->resolveDriverLogin($id);
+        if ($error) {
+            return $error;
+        }
+
+        $user->changePassword($password);
+
+        try {
+            if ($request->boolean('send_credentials')) {
+                ProfileAccountManager::deliverCredentials($driver, $user, $password);
+            }
+        } catch (\Exception $e) {
+            return response()->error($e->getMessage());
+        }
+
+        return response()->json(['status' => 'ok', 'driver' => $this->driverLoginPayload($driver)]);
+    }
+
+    /**
+     * Stop the driver from signing in to the driver app.
+     *
+     * @return JsonResponse
+     */
+    public function deactivateLogin(string $id)
+    {
+        [$driver, $user, $error] = $this->resolveDriverLogin($id);
+        if ($error) {
+            return $error;
+        }
+
+        $user->deactivate();
+
+        // Sign the driver out of the driver app
+        $user->tokens()->delete();
+
+        return response()->json(['status' => 'ok', 'driver' => $this->driverLoginPayload($driver)]);
+    }
+
+    /**
+     * Allow the driver to sign in to the driver app again.
+     *
+     * @return JsonResponse
+     */
+    public function reactivateLogin(string $id)
+    {
+        [$driver, $user, $error] = $this->resolveDriverLogin($id);
+        if ($error) {
+            return $error;
+        }
+
+        $user->activate();
+
+        return response()->json(['status' => 'ok', 'driver' => $this->driverLoginPayload($driver)]);
+    }
+
+    /**
+     * Find the driver and its managed login account. A driver linked to a team
+     * member's account has its login managed in IAM.
+     *
+     * @return array{0: ?Driver, 1: ?User, 2: ?JsonResponse}
+     */
+    protected function resolveDriverLogin(string $id): array
+    {
+        $driver = Driver::where('company_uuid', session('company'))
+            ->where(function ($query) use ($id) {
+                $query->where('uuid', $id)->orWhere('public_id', $id);
+            })
+            ->first();
+
+        if (!$driver) {
+            return [null, null, response()->error('Driver not found.', 404)];
+        }
+
+        $user = $driver->user_uuid ? User::where('uuid', $driver->user_uuid)->first() : null;
+        if (!$user) {
+            return [$driver, null, response()->error('This driver has no login account.')];
+        }
+
+        if (ProfileAccountManager::isStaffAccount($user)) {
+            return [$driver, $user, response()->error('This driver signs in with a team member account. Manage this login in IAM.', 422)];
+        }
+
+        return [$driver, $user, null];
+    }
+
+    protected function driverLoginPayload(Driver $driver): array
+    {
+        $user = User::where('uuid', $driver->user_uuid)->first();
+
+        return [
+            'id'              => $driver->public_id,
+            'uuid'            => $driver->uuid,
+            'user_uuid'       => $driver->user_uuid,
+            'is_staff_linked' => ProfileAccountManager::isStaffAccount($user),
+            'login_status'    => $user?->status,
+            'user'            => $user ? [
+                'id'             => $user->public_id,
+                'uuid'           => $user->uuid,
+                'name'           => $user->name,
+                'email'          => $user->email,
+                'phone'          => $user->phone,
+                'status'         => $user->status,
+                'session_status' => $user->session_status,
+            ] : null,
+        ];
     }
 
     /**
@@ -635,6 +647,10 @@ class DriverController extends FleetOpsController
             return response()->error('No driver with this phone # found.');
         }
 
+        if (ApiDriverController::isLoginDeactivated($user)) {
+            return response()->error(ApiDriverController::DEACTIVATED_LOGIN_MESSAGE, 403);
+        }
+
         // Generate verification token
         static::generateDriverLoginVerification($user);
 
@@ -661,6 +677,10 @@ class DriverController extends FleetOpsController
         $user = static::findVerificationUser($identity);
         if (!$user) {
             return response()->error('Unable to verify code.');
+        }
+
+        if (ApiDriverController::isLoginDeactivated($user)) {
+            return response()->error(ApiDriverController::DEACTIVATED_LOGIN_MESSAGE, 403);
         }
 
         // Find and verify code

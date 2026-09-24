@@ -444,6 +444,10 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->post('{id}/unassign-order', $controller('unassignOrder'));
                                 $router->post('{id}/assign-vehicle', $controller('assignVehicle'));
                                 $router->post('{id}/unassign-vehicle', $controller('unassignVehicle'));
+                                $router->post('{id}/send-credentials', $controller('sendCredentials'));
+                                $router->post('{id}/reset-credentials', $controller('resetCredentials'));
+                                $router->post('{id}/deactivate-login', $controller('deactivateLogin'));
+                                $router->post('{id}/reactivate-login', $controller('reactivateLogin'));
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->post('import', $controller('import'));
                                 // Driver scheduling endpoints
@@ -764,6 +768,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                     function ($router) {
                                         $router->get('customers', 'FleetOpsLookupController@polymorphs');
                                         $router->get('facilitators', 'FleetOpsLookupController@polymorphs');
+                                        $router->get('profile-identity', 'FleetOpsLookupController@profileIdentity');
                                     }
                                 );
                                 $router->group(
