@@ -68,7 +68,7 @@ class FleetOpsReportSchema implements ReportSchema
             ->cacheTtl(3600)
             ->columns([
                 Column::make('public_id', 'string')
-                    ->label('Order ID')
+                    ->label('ID')
                     ->description('Public order identifier')
                     ->searchable()
                     ->filterable()
@@ -102,7 +102,7 @@ class FleetOpsReportSchema implements ReportSchema
                     }),
 
                 Column::make('type', 'string')
-                    ->label('Order Type')
+                    ->label('Type')
                     ->description('Type of order service, e.g. transport or storefront')
                     ->filterable()
                     ->sortable()
@@ -306,7 +306,7 @@ class FleetOpsReportSchema implements ReportSchema
                             ->localKey('status_uuid')
                             ->foreignKey('uuid')
                             ->columns([
-                                Column::make('status', 'string')->label('Status'),
+                                Column::make('status', 'string')->label('Tracking Status'),
                                 Column::make('code', 'string')->label('Code'),
                                 Column::make('details', 'string')->label('Details'),
                                 Column::make('complete', 'boolean')->label('Complete'),
@@ -499,7 +499,7 @@ class FleetOpsReportSchema implements ReportSchema
                     ])
                     ->with([
                         Relationship::hasAutoJoin('service_quote', 'service_quotes')
-                            ->label('Quote')
+                            ->label('Service Quote')
                             ->localKey('service_quote_uuid')
                             ->foreignKey('uuid')
                             ->columns([
@@ -522,7 +522,7 @@ class FleetOpsReportSchema implements ReportSchema
                             ->sortable(),
 
                         Column::make('gateway_transaction_id', 'string')
-                            ->label('Gateway Transaction ID')
+                            ->label('Gateway ID')
                             ->description('Transaction ID from payment gateway')
                             ->searchable()
                             ->filterable()
@@ -615,47 +615,47 @@ class FleetOpsReportSchema implements ReportSchema
                     ->with([
                         // Nested relationship for transaction items
                         $this->softDeletes(Relationship::hasAutoJoin('items', 'transaction_items'))
-                            ->label('Transaction Items')
+                            ->label('Transaction Item')
                             ->localKey('uuid')
                             ->foreignKey('transaction_uuid')
                             ->columns([
                                 Column::make('description', 'string')
-                                    ->label('Item Description')
+                                    ->label('Description')
                                     ->description('Line item description')
                                     ->searchable()
                                     ->filterable(),
 
                                 Column::make('quantity', 'integer')
-                                    ->label('Item Quantity')
+                                    ->label('Quantity')
                                     ->description('Line item quantity')
                                     ->aggregatable()
                                     ->sortable(),
 
                                 Column::make('unit_price', 'integer')
-                                    ->label('Item Unit Price (minor units)')
+                                    ->label('Unit Price (minor units)')
                                     ->description('Line item unit price')
                                     ->aggregatable()
                                     ->sortable(),
 
                                 Column::make('amount', 'integer')
-                                    ->label('Item Amount (minor units)')
+                                    ->label('Amount (minor units)')
                                     ->description('Line item amount')
                                     ->aggregatable()
                                     ->sortable(),
 
                                 Column::make('currency', 'string')
-                                    ->label('Item Currency')
+                                    ->label('Currency')
                                     ->description('Line item currency code')
                                     ->filterable(),
 
                                 Column::make('details', 'string')
-                                    ->label('Item Details')
+                                    ->label('Details')
                                     ->description('Detailed description of the line item')
                                     ->searchable()
                                     ->filterable(),
 
                                 Column::make('code', 'string')
-                                    ->label('Item Code')
+                                    ->label('Code')
                                     ->description('Item or SKU code')
                                     ->searchable()
                                     ->filterable()
@@ -679,7 +679,7 @@ class FleetOpsReportSchema implements ReportSchema
             ->maxRows(10000)
             ->columns([
                 Column::make('public_id', 'string')
-                    ->label('Driver ID')
+                    ->label('ID')
                     ->description('Public driver identifier')
                     ->searchable()
                     ->filterable()
@@ -789,7 +789,7 @@ class FleetOpsReportSchema implements ReportSchema
             ->maxRows(10000)
             ->columns([
                 Column::make('public_id', 'string')
-                    ->label('Vehicle ID')
+                    ->label('ID')
                     ->description('Public vehicle identifier')
                     ->searchable()
                     ->filterable()
@@ -911,7 +911,7 @@ class FleetOpsReportSchema implements ReportSchema
             ->excludeColumns(['uuid', 'company_uuid', 'deleted_at', 'meta', 'attributes'])
             ->maxRows(10000)
             ->columns([
-                Column::make('public_id', 'string')->label('Asset ID')->searchable()->filterable()->sortable(),
+                Column::make('public_id', 'string')->label('ID')->searchable()->filterable()->sortable(),
                 Column::make('asset_class', 'string')->label('Asset Class')->filterable()->aggregatable(),
                 Column::make('name', 'string')->label('Name')->searchable()->filterable()->sortable(),
                 Column::make('code', 'string')->label('Code')->searchable()->filterable()->sortable(),
@@ -947,7 +947,7 @@ class FleetOpsReportSchema implements ReportSchema
             ->maxRows(100000)
             ->columns([
                 Column::make('public_id', 'string')
-                    ->label('Place ID')
+                    ->label('ID')
                     ->description('Public place identifier')
                     ->searchable()
                     ->filterable()
@@ -1013,7 +1013,7 @@ class FleetOpsReportSchema implements ReportSchema
             ->maxRows(50000)
             ->columns([
                 Column::make('public_id', 'string')
-                    ->label('Contact ID')
+                    ->label('ID')
                     ->description('Public contact identifier')
                     ->searchable()
                     ->filterable()
@@ -1069,7 +1069,7 @@ class FleetOpsReportSchema implements ReportSchema
             ->maxRows(10000)
             ->columns([
                 Column::make('public_id', 'string')
-                    ->label('Vendor ID')
+                    ->label('ID')
                     ->description('Public vendor identifier')
                     ->searchable()
                     ->filterable()
@@ -1125,7 +1125,7 @@ class FleetOpsReportSchema implements ReportSchema
             ->maxRows(100000)
             ->columns([
                 Column::make('public_id', 'string')
-                    ->label('Report ID')
+                    ->label('ID')
                     ->description('Public fuel report identifier')
                     ->searchable()
                     ->filterable()
@@ -1236,7 +1236,7 @@ class FleetOpsReportSchema implements ReportSchema
             ->excludeColumns(['uuid', 'deleted_at', 'meta', 'checklist', 'cost_breakdown'])
             ->maxRows(100000)
             ->columns([
-                Column::make('public_id', 'string')->label('Work Order ID')->searchable()->filterable()->sortable(),
+                Column::make('public_id', 'string')->label('ID')->searchable()->filterable()->sortable(),
                 Column::make('code', 'string')->label('Code')->searchable()->filterable()->sortable(),
                 Column::make('subject', 'string')->label('Subject')->searchable()->filterable()->sortable(),
                 Column::make('status', 'string')->label('Status')->filterable()->sortable()->aggregatable(),
@@ -1263,7 +1263,7 @@ class FleetOpsReportSchema implements ReportSchema
                     ->localKey('target_uuid')
                     ->foreignKey('uuid')
                     ->columns([
-                        Column::make('public_id', 'string')->label('Vehicle ID'),
+                        Column::make('public_id', 'string')->label('ID'),
                         Column::make('plate_number', 'string')->label('Plate Number'),
                         Column::make('make', 'string')->label('Make'),
                         Column::make('model', 'string')->label('Model'),
@@ -1285,7 +1285,7 @@ class FleetOpsReportSchema implements ReportSchema
             ->excludeColumns(['uuid', 'deleted_at', 'meta', 'line_items', 'attachments'])
             ->maxRows(100000)
             ->columns([
-                Column::make('public_id', 'string')->label('Maintenance ID')->searchable()->filterable()->sortable(),
+                Column::make('public_id', 'string')->label('ID')->searchable()->filterable()->sortable(),
                 Column::make('type', 'string')->label('Type')->filterable()->sortable()->aggregatable(),
                 Column::make('status', 'string')->label('Status')->filterable()->sortable()->aggregatable(),
                 Column::make('priority', 'string')->label('Priority')->filterable()->sortable()->aggregatable(),
@@ -1346,7 +1346,7 @@ class FleetOpsReportSchema implements ReportSchema
             ->excludeColumns(['uuid', 'deleted_at', 'meta', 'location', 'signature', 'attachments'])
             ->maxRows(100000)
             ->columns([
-                Column::make('public_id', 'string')->label('Inspection ID')->searchable()->filterable()->sortable(),
+                Column::make('public_id', 'string')->label('ID')->searchable()->filterable()->sortable(),
                 Column::make('type', 'string')->label('Type')->filterable()->sortable()->aggregatable(),
                 Column::make('status', 'string')->label('Status')->filterable()->sortable()->aggregatable(),
                 Column::make('result', 'string')->label('Result')->filterable()->sortable()->aggregatable(),
@@ -1371,8 +1371,8 @@ class FleetOpsReportSchema implements ReportSchema
                     ->localKey('inspection_form_uuid')
                     ->foreignKey('uuid')
                     ->columns([
-                        Column::make('name', 'string')->label('Form Name'),
-                        Column::make('type', 'string')->label('Form Type'),
+                        Column::make('name', 'string')->label('Name'),
+                        Column::make('type', 'string')->label('Type'),
                     ]),
                 Relationship::hasAutoJoin('vehicle', 'vehicles')
                     ->label('Vehicle')

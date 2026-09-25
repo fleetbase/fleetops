@@ -319,6 +319,11 @@ test('fleetops order report schema exposes identifiers tracking and items withou
         'meta',
     );
 
+    // Columns of the table itself are not prefixed with the table's name ("Order ID" → "ID").
+    $label = fn (Column $column) => fleetOpsReportCallOrProperty($column, 'getLabel', 'label');
+    expect($label(fleetOpsReportColumn($orders, 'public_id')))->toBe('ID')
+        ->and($label(fleetOpsReportColumn($orders, 'type')))->toBe('Type');
+
     expect(fleetOpsReportComputation(fleetOpsReportColumn($orders, 'total_orders')))->toBe('COUNT(DISTINCT id)')
         ->and(fleetOpsReportComputation(fleetOpsReportColumn($orders, 'completed_orders')))->toBe("COUNT(DISTINCT CASE WHEN status = 'completed' THEN id END)")
         ->and(fleetOpsReportComputation(fleetOpsReportColumn($orders, 'total_transaction_amount')))->toBe('SUM(transaction.amount)');
