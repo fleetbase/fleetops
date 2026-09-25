@@ -48,9 +48,10 @@ class FleetOpsReportSchema implements ReportSchema
     /**
      * Create the Orders table definition.
      *
-     * Money in orders is stored in the currency's smallest unit (e.g. cents): storefront orders
-     * keep their totals in `meta` (`subtotal`, `delivery_fee`, `tip`, `total`) and each line
-     * item is an entity of the order's payload with `meta.quantity` and `meta.subtotal`.
+     * Money is stored in the currency's smallest unit (e.g. cents). `meta` has no fixed shape
+     * (it holds whatever users, integrations and extensions put there), so no column assumes a
+     * key in it; read one with a computed column, e.g.
+     * `CAST(JSON_UNQUOTE(JSON_EXTRACT(meta, '$.total')) AS DECIMAL(15,2))`.
      *
      * Selecting line item columns (Payload Items) returns one row per item, so order-level
      * sums over item rows repeat each order; count orders with Total Orders (a distinct count).
@@ -242,46 +243,9 @@ class FleetOpsReportSchema implements ReportSchema
 
                 Column::make('meta', 'json')
                     ->label('Metadata')
-                    ->description('Order metadata and custom fields; read a key with JSON_UNQUOTE(JSON_EXTRACT(meta, \'$.key\'))')
+                    ->description('Order metadata and custom fields; its keys vary by order, so read one with a computed column, e.g. JSON_UNQUOTE(JSON_EXTRACT(meta, \'$.key\'))')
                     ->searchable()
                     ->filterable(),
-
-                // Storefront orders keep their checkout totals in meta, in the currency's smallest unit.
-                $this->expression('storefront', "JSON_UNQUOTE(JSON_EXTRACT(meta, '$.storefront'))", 'string')
-                    ->label('Storefront')
-                    ->description('Name of the storefront the order was placed in')
-                    ->filterable()
-                    ->sortable(),
-
-                $this->expression('order_currency', "JSON_UNQUOTE(JSON_EXTRACT(meta, '$.currency'))", 'string')
-                    ->label('Order Currency')
-                    ->description('Currency of the storefront order totals')
-                    ->filterable()
-                    ->sortable(),
-
-                $this->expression('order_subtotal', $this->jsonAmount('meta', 'subtotal'), 'decimal')
-                    ->label('Order Subtotal (minor units)')
-                    ->description('Storefront order subtotal in the currency\'s smallest unit (e.g. cents)')
-                    ->filterable()
-                    ->sortable(),
-
-                $this->expression('order_delivery_fee', $this->jsonAmount('meta', 'delivery_fee'), 'decimal')
-                    ->label('Delivery Fee (minor units)')
-                    ->description('Storefront delivery fee in the currency\'s smallest unit (e.g. cents)')
-                    ->filterable()
-                    ->sortable(),
-
-                $this->expression('order_tip', $this->jsonAmount('meta', 'tip'), 'decimal')
-                    ->label('Tip (minor units)')
-                    ->description('Storefront tip in the currency\'s smallest unit (e.g. cents)')
-                    ->filterable()
-                    ->sortable(),
-
-                $this->expression('order_total', $this->jsonAmount('meta', 'total'), 'decimal')
-                    ->label('Order Total (minor units)')
-                    ->description('Storefront order total in the currency\'s smallest unit (e.g. cents)')
-                    ->filterable()
-                    ->sortable(),
             ])
             ->computedColumns([
                 // Distinct, so the count stays right when payload items are selected too.
@@ -312,22 +276,6 @@ class FleetOpsReportSchema implements ReportSchema
                 Column::avg('average_time', 'time')
                     ->label('Average Duration (s)')
                     ->description('Average duration per order'),
-
-                Column::sum('total_order_amount', 'order_total')
-                    ->label('Order Total Sum (minor units)')
-                    ->description('Sum of storefront order totals'),
-
-                Column::avg('average_order_amount', 'order_total')
-                    ->label('Average Order Total (minor units)')
-                    ->description('Average storefront order total'),
-
-                Column::sum('total_delivery_fees', 'order_delivery_fee')
-                    ->label('Delivery Fees Sum (minor units)')
-                    ->description('Sum of storefront delivery fees'),
-
-                Column::sum('total_tips', 'order_tip')
-                    ->label('Tips Sum (minor units)')
-                    ->description('Sum of storefront tips'),
 
                 Column::sum('total_transaction_amount', 'transaction.amount')
                     ->label('Transaction Amount Sum (minor units)')
@@ -436,17 +384,8 @@ class FleetOpsReportSchema implements ReportSchema
                                 Column::make('height', 'decimal')->label('Height'),
                                 Column::make('dimensions_unit', 'string')->label('Dimensions Unit'),
                                 Column::make('barcode', 'string')->label('Barcode'),
-                                Column::make('meta', 'json')->label('Metadata'),
+                                Column::make('meta', 'json')->label('Metadata')->description('Item metadata; read a key with a computed column, e.g. JSON_EXTRACT(payload.entities.meta, \'$.quantity\')'),
                                 Column::make('created_at', 'datetime')->label('Created At'),
-                                $this->expression('product_id', "JSON_UNQUOTE(JSON_EXTRACT(meta, '$.product_id'))", 'string')
-                                    ->label('Product ID')
-                                    ->description('Storefront product the item was ordered as'),
-                                $this->expression('quantity', "COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(meta, '$.quantity')) AS DECIMAL(15,2)), 1)", 'decimal')
-                                    ->label('Quantity')
-                                    ->description('Quantity ordered; 1 when the item records none'),
-                                $this->expression('line_total', $this->jsonAmount('meta', 'subtotal'), 'decimal')
-                                    ->label('Line Total (minor units)')
-                                    ->description('Storefront line subtotal (price x quantity, with variants and add-ons) in the currency\'s smallest unit'),
                             ])
                             ->with([
                                 Relationship::hasAutoJoin('destination', 'places')
@@ -1476,26 +1415,6 @@ class FleetOpsReportSchema implements ReportSchema
             Column::make('latitude', 'decimal')->label('Latitude'),
             Column::make('longitude', 'decimal')->label('Longitude'),
         ];
-    }
-
-    /**
-     * SQL reading a numeric amount stored under a key of a JSON column.
-     */
-    protected function jsonAmount(string $column, string $key): string
-    {
-        return "CAST(JSON_UNQUOTE(JSON_EXTRACT({$column}, '$.{$key}')) AS DECIMAL(15,2))";
-    }
-
-    /**
-     * A row-level expression column, such as a value read out of a JSON column.
-     *
-     * Core API releases before expression columns only know computed columns; there the
-     * column is still declared, it just cannot be selected on its own.
-     */
-    protected function expression(string $name, string $sql, string $type): Column
-    {
-        // One line: whichever branch runs depends on the installed Core API, not on the test.
-        return method_exists(Column::class, 'expression') ? Column::expression($name, $sql, $type) : Column::computed($name, $sql, $type);
     }
 
     /**

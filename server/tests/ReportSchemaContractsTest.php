@@ -298,7 +298,7 @@ function fleetOpsReportComputation(Column $column): ?string
     return fleetOpsReportCallOrProperty($column, 'getComputation', 'computation');
 }
 
-test('fleetops order report schema exposes identifiers tracking items and storefront totals', function () {
+test('fleetops order report schema exposes identifiers tracking and items without assuming a meta shape', function () {
     $registry = new ReportSchemaRegistry();
 
     (new FleetOpsReportSchema())->registerReportSchema($registry);
@@ -316,21 +316,21 @@ test('fleetops order report schema exposes identifiers tracking items and storef
         'pod_method',
         'notes',
         'created_at',
-        'order_total',
-        'order_subtotal',
-        'order_delivery_fee',
-        'order_tip',
-        'order_currency',
-        'storefront',
+        'meta',
     );
 
-    // Storefront totals are read out of the order meta, in the currency's smallest unit.
-    expect(fleetOpsReportComputation(fleetOpsReportColumn($orders, 'order_total')))->toBe("CAST(JSON_UNQUOTE(JSON_EXTRACT(meta, '$.total')) AS DECIMAL(15,2))")
-        ->and(fleetOpsReportComputation(fleetOpsReportColumn($orders, 'storefront')))->toBe("JSON_UNQUOTE(JSON_EXTRACT(meta, '$.storefront'))")
-        ->and(fleetOpsReportComputation(fleetOpsReportColumn($orders, 'total_orders')))->toBe('COUNT(DISTINCT id)')
+    expect(fleetOpsReportComputation(fleetOpsReportColumn($orders, 'total_orders')))->toBe('COUNT(DISTINCT id)')
         ->and(fleetOpsReportComputation(fleetOpsReportColumn($orders, 'completed_orders')))->toBe("COUNT(DISTINCT CASE WHEN status = 'completed' THEN id END)")
-        ->and(fleetOpsReportComputation(fleetOpsReportColumn($orders, 'total_order_amount')))->toBe('SUM(order_total)')
         ->and(fleetOpsReportComputation(fleetOpsReportColumn($orders, 'total_transaction_amount')))->toBe('SUM(transaction.amount)');
+
+    // meta has no fixed shape, so no declared column may read a key out of it; users read
+    // keys with computed columns instead.
+    $computations = array_map(fn (Column $column) => (string) fleetOpsReportComputation($column), [
+        ...fleetOpsReportColumns($orders),
+        ...fleetOpsReportComputedColumns($orders),
+        ...fleetOpsReportColumnsFromRelationships(fleetOpsReportRelationships($orders)),
+    ]);
+    expect(array_filter($computations, fn (string $computation) => str_contains($computation, 'JSON_') || str_contains($computation, 'meta')))->toBe([]);
 
     $tracking = fleetOpsReportRelationship($orders, 'tracking_number');
     expect(fleetOpsReportTableName($tracking))->toBe('tracking_numbers')
@@ -350,9 +350,8 @@ test('fleetops order report schema exposes identifiers tracking items and storef
     expect(fleetOpsReportTableName($items))->toBe('entities')
         ->and(fleetOpsReportCallOrProperty($items, 'getLocalKey', 'localKey'))->toBe('uuid')
         ->and(fleetOpsReportCallOrProperty($items, 'getForeignKey', 'foreignKey'))->toBe('payload_uuid')
-        ->and(fleetOpsReportColumnNames($items))->toContain('public_id', 'internal_id', 'name', 'sku', 'price', 'product_id', 'quantity', 'line_total')
-        ->and(fleetOpsReportComputation(fleetOpsReportColumn($items, 'quantity')))->toBe("COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(meta, '$.quantity')) AS DECIMAL(15,2)), 1)")
-        ->and(fleetOpsReportComputation(fleetOpsReportColumn($items, 'line_total')))->toBe("CAST(JSON_UNQUOTE(JSON_EXTRACT(meta, '$.subtotal')) AS DECIMAL(15,2))")
+        ->and(fleetOpsReportColumnNames($items))->toContain('public_id', 'internal_id', 'name', 'sku', 'price', 'sale_price', 'meta')
+        ->and(fleetOpsReportColumnNames($items))->not->toContain('quantity', 'line_total', 'product_id')
         ->and(fleetOpsReportTableName(fleetOpsReportRelationship($items, 'destination')))->toBe('places');
 
     // Relationship identifiers
@@ -395,6 +394,5 @@ test('fleetops report schema leaves soft deleted rows out where the core api sup
     expect($orders->usesSoftDeletes())->toBeTrue()
         ->and($items->usesSoftDeletes())->toBeTrue()
         ->and(fleetOpsReportRelationship($orders, 'customer')->usesSoftDeletes())->toBeFalse()
-        ->and(fleetOpsReportColumn($orders, 'order_total')->isExpression())->toBeTrue()
         ->and(fleetOpsReportColumn($orders, 'total_orders')->isAggregate())->toBeTrue();
 });
