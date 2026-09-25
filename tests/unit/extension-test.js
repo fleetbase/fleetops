@@ -89,4 +89,40 @@ module('Unit | FleetOps extension', function () {
             'default analytics widgets are available'
         );
     });
+
+    test('it lays out the default dashboard: KPI row, full-width map, then three panels', function (assert) {
+        let registered = [];
+        extension.registerWidgets({
+            registerDashboard() {},
+            registerWidgets(id, widgets) {
+                if (id === 'dashboard') registered = widgets.map((widget) => widget.toObject());
+            },
+            registerDefaultWidgets() {},
+        });
+
+        const byId = Object.fromEntries(registered.map((widget) => [widget.id, widget]));
+        const defaults = registered.filter((widget) => widget.default === true).sort((a, b) => a.order - b.order);
+
+        assert.deepEqual(
+            defaults.map((widget) => [widget.id, widget.order]),
+            [
+                ['fleet-ops-radar-widget', 10],
+                ['fleet-ops-kpi-active-orders-widget', 30],
+                ['fleet-ops-kpi-drivers-online-widget', 40],
+                ['fleet-ops-live-fleet-widget', 50],
+                ['fleet-ops-revenue-trend-widget', 60],
+                ['fleet-ops-top-drivers-widget', 70],
+                ['fleet-ops-maintenance-overview-widget', 80],
+            ],
+            'every default widget has a place, leaving 20 for the ledger Revenue tile'
+        );
+        assert.strictEqual(byId['fleet-ops-live-fleet-widget'].grid_options.w, 12, 'the map spans the full width');
+        assert.deepEqual(
+            ['fleet-ops-revenue-trend-widget', 'fleet-ops-top-drivers-widget', 'fleet-ops-maintenance-overview-widget'].map((id) => byId[id].grid_options.w),
+            [4, 4, 4],
+            'the panels share a row'
+        );
+        assert.false(byId['fleet-ops-kpi-earnings-widget'].default, 'Earnings is no longer a default');
+        assert.false(byId['fleet-ops-kpi-aov-widget'].default, 'Avg Order Value is no longer a default');
+    });
 });

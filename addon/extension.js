@@ -161,6 +161,14 @@ export default {
     },
 
     registerWidgets(widgetService) {
+        // `order` places a default widget on the default dashboard, which mixes widgets from
+        // every extension; the grid fills rows first-fit, lowest order first (widgets without
+        // one follow). The default layout is:
+        //   10-40    KPI row: Radar, Revenue (ledger, 20), Active Orders, Drivers Online
+        //   41-44    Ledger KPI row: Expenses, Net Income, Outstanding AR, Overdue AR
+        //   50       Live Fleet Map, full width
+        //   60-80    Revenue Trend, Top Drivers, Maintenance Overview, a third of the width each
+        //   150-170  Ledger Recent Financial Activity + Cash Flow Summary | console Blog + GitHub
         const widgets = [
             // Legacy monolithic 13-tile widget — kept registered for one release as
             // users have it pinned to existing dashboards. The new KPI tile widgets
@@ -186,7 +194,7 @@ export default {
                 component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/kpi-earnings'),
                 grid_options: { w: 3, h: 4, minW: 3, minH: 4 },
                 category: 'KPI Tiles',
-                default: true,
+                default: false,
             }),
             new Widget({
                 id: 'fleet-ops-kpi-aov-widget',
@@ -196,7 +204,7 @@ export default {
                 component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/kpi-aov'),
                 grid_options: { w: 3, h: 4, minW: 3, minH: 4 },
                 category: 'KPI Tiles',
-                default: true,
+                default: false,
             }),
             new Widget({
                 id: 'fleet-ops-kpi-distance-widget',
@@ -216,6 +224,7 @@ export default {
                 component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/kpi-active-orders'),
                 grid_options: { w: 3, h: 4, minW: 3, minH: 4 },
                 category: 'KPI Tiles',
+                order: 30,
                 default: true,
             }),
             new Widget({
@@ -226,6 +235,7 @@ export default {
                 component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/kpi-drivers-online'),
                 grid_options: { w: 3, h: 4, minW: 3, minH: 4 },
                 category: 'KPI Tiles',
+                order: 40,
                 default: true,
             }),
             new Widget({
@@ -236,6 +246,7 @@ export default {
                 component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/radar'),
                 grid_options: { w: 3, h: 4, minW: 3, minH: 4 },
                 category: 'KPI Tiles',
+                order: 10,
                 default: true,
             }),
             new Widget({
@@ -266,8 +277,9 @@ export default {
                 description: 'Real-time driver positions and active routes.',
                 icon: 'map-location-dot',
                 component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/live-fleet'),
-                grid_options: { w: 8, h: 11, minW: 8, minH: 8 },
+                grid_options: { w: 12, h: 12, minW: 8, minH: 8 },
                 category: 'Maps',
+                order: 50,
                 default: true,
             }),
             new Widget({
@@ -276,8 +288,9 @@ export default {
                 description: 'Revenue over time with period comparison.',
                 icon: 'chart-line',
                 component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/revenue-trend'),
-                grid_options: { w: 4, h: 11, minW: 4, minH: 8 },
+                grid_options: { w: 4, h: 9, minW: 4, minH: 7 },
                 category: 'Analytics',
+                order: 60,
                 default: true,
             }),
             new Widget({
@@ -306,8 +319,9 @@ export default {
                 description: 'Driver leaderboard sortable by orders, on-time %, or distance.',
                 icon: 'medal',
                 component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/top-drivers'),
-                grid_options: { w: 6, h: 6, minW: 5, minH: 5 },
+                grid_options: { w: 4, h: 9, minW: 4, minH: 6 },
                 category: 'Analytics',
+                order: 70,
                 default: true,
             }),
             new Widget({
@@ -346,8 +360,9 @@ export default {
                 description: 'Overdue, scheduled, and YTD maintenance spend.',
                 icon: 'wrench',
                 component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/maintenance-overview'),
-                grid_options: { w: 6, h: 6, minW: 5, minH: 5 },
+                grid_options: { w: 4, h: 9, minW: 4, minH: 6 },
                 category: 'Analytics',
+                order: 80,
                 default: true,
             }),
             new Widget({

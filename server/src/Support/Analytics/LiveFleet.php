@@ -2,10 +2,13 @@
 
 namespace Fleetbase\FleetOps\Support\Analytics;
 
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Driver as DriverIndexResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Vehicle as VehicleIndexResource;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\Metrics\OrdersInProgressMetric;
+use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * Real-time fleet snapshot used as the initial-state payload for Live Fleet Map.
@@ -23,7 +26,8 @@ class LiveFleet extends AbstractAnalytics
 
         // Driver.name is a virtual attribute backed by users.name — eager-load the
         // user so the accessor resolves cleanly without a per-record query.
-        $drivers = Driver::with(['user:uuid,name,avatar_uuid'])
+        // The user and vehicle also feed each marker's card (see card()).
+        $drivers = Driver::with(['user', 'vehicle'])
             ->where('drivers.company_uuid', $companyUuid)
             ->whereNotNull('drivers.location')
             ->where(function ($q) {
@@ -33,7 +37,8 @@ class LiveFleet extends AbstractAnalytics
 
         // Vehicles tracked independently of drivers (telematics-connected rigs may
         // report position without an active driver session).
-        $vehicles = Vehicle::where('company_uuid', $companyUuid)
+        $vehicles = Vehicle::with(['devices', 'driver', 'currentTrailers'])
+            ->where('company_uuid', $companyUuid)
             ->whereNotNull('location')
             ->get();
 
@@ -79,6 +84,7 @@ class LiveFleet extends AbstractAnalytics
             'lat'                => $lat,
             'lng'                => $lng,
             'updated_at'         => $d->last_location_update_at,
+            'card'               => $this->card(new DriverIndexResource($d)),
         ];
     }
 
@@ -98,7 +104,17 @@ class LiveFleet extends AbstractAnalytics
             'heading'      => (float) ($v->heading ?? 0),
             'lat'          => $lat,
             'lng'          => $lng,
+            'card'         => $this->card(new VehicleIndexResource($v)),
         ];
+    }
+
+    /**
+     * What the operational live map shows in a marker's popup and tooltip: the same index
+     * resource its live endpoints return, so the dashboard widget renders identical cards.
+     */
+    private function card(JsonResource $resource): array
+    {
+        return $resource->resolve(request());
     }
 
     /**

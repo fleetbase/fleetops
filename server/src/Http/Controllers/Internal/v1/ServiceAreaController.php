@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\ServiceArea;
 use Fleetbase\Http\Requests\ExportRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -21,11 +22,16 @@ class ServiceAreaController extends FleetOpsController
 
     /**
      * Handle post save transactions.
+     *
+     * Reads the custom field values from the payload the base controller already extracted
+     * rather than from the raw request: Ember Data sends the resource under a camelCase root
+     * (`serviceArea`), so `$request->array('service_area.custom_field_values')` was always empty and no
+     * custom field value was ever persisted for this resource.
      */
-    public function afterSave(Request $request, ServiceArea $serviceArea)
+    public function afterSave(Request $request, ServiceArea $serviceArea, array $input = [])
     {
-        $customFieldValues = $request->array('service_area.custom_field_values');
-        if ($customFieldValues) {
+        $customFieldValues = Arr::get($input, 'custom_field_values');
+        if (is_array($customFieldValues) && $customFieldValues) {
             $serviceArea->syncCustomFieldValues($customFieldValues);
         }
     }
