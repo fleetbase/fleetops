@@ -9,6 +9,7 @@ use Fleetbase\FleetOps\Models\FuelReport;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -23,11 +24,16 @@ class FuelReportController extends FleetOpsController
 
     /**
      * Handle post save transactions.
+     *
+     * Reads the custom field values from the payload the base controller already extracted
+     * rather than from the raw request: Ember Data sends the resource under a camelCase root
+     * (`fuelReport`), so `$request->array('fuel_report.custom_field_values')` was always empty and no
+     * custom field value was ever persisted for this resource.
      */
-    public function afterSave(Request $request, FuelReport $fuelReport)
+    public function afterSave(Request $request, FuelReport $fuelReport, array $input = [])
     {
-        $customFieldValues = $request->array('fuel_report.custom_field_values');
-        if ($customFieldValues) {
+        $customFieldValues = Arr::get($input, 'custom_field_values');
+        if (is_array($customFieldValues) && $customFieldValues) {
             $fuelReport->syncCustomFieldValues($customFieldValues);
         }
     }

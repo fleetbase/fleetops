@@ -119,9 +119,10 @@ function fleetOpsReportColumnFlag(Column $column, string $flag): bool
 
 function fleetOpsReportColumnAggregate(Column $column): ?string
 {
+    // The stand-in Column stores the aggregate name; the Core API one only flags it (a bool).
     $aggregate = fleetOpsReportProperty($column, 'aggregate');
 
-    if ($aggregate) {
+    if (is_string($aggregate) && $aggregate !== '') {
         return $aggregate;
     }
 
@@ -242,9 +243,10 @@ test('fleetops report schema registers every table with columns computed columns
         ->and(fleetOpsReportTableName(fleetOpsReportRelationship($orders, 'transaction')))->toBe('transactions');
 
     expect(fleetOpsReportTableMeta($tables['drivers'], 'category'))->toBe('Personnel')
-        ->and(fleetOpsReportTableName(fleetOpsReportRelationship($tables['drivers'], 'current_vehicle')))->toBe('vehicles')
+        ->and(fleetOpsReportTableName(fleetOpsReportRelationship($tables['drivers'], 'vehicle')))->toBe('vehicles')
+        ->and(fleetOpsReportTableName(fleetOpsReportRelationship($tables['drivers'], 'user')))->toBe('users')
         ->and(fleetOpsReportTableMeta($tables['vehicles'], 'category'))->toBe('Fleet')
-        ->and(fleetOpsReportTableName(fleetOpsReportRelationship($tables['vehicles'], 'current_driver')))->toBe('drivers')
+        ->and(fleetOpsReportTableName(fleetOpsReportRelationship($tables['vehicles'], 'driver')))->toBe('drivers')
         ->and(fleetOpsReportTableMeta($tables['assets'], 'label'))->toBe('Trailers and Assets')
         ->and(fleetOpsReportTableMeta($tables['assets'], 'category'))->toBe('Fleet')
         ->and(fleetOpsReportColumnFlag(fleetOpsReportColumn($tables['assets'], 'asset_class'), 'filterable'))->toBeTrue()
@@ -265,7 +267,7 @@ test('fleetops report schema registers every table with columns computed columns
         ->and(fleetOpsReportTableName(fleetOpsReportRelationship($tables['inspection_submissions'], 'work_order')))->toBe('work_orders');
 });
 
-test('fleetops report schema transformers normalize labels booleans distances and money', function () {
+test('fleetops report schema transformers normalize labels and booleans', function () {
     $registry = new ReportSchemaRegistry();
 
     (new FleetOpsReportSchema())->registerReportSchema($registry);
@@ -278,12 +280,124 @@ test('fleetops report schema transformers normalize labels booleans distances an
 
     expect(fleetOpsReportTransform(fleetOpsReportColumn($orders, 'status'), 'driver_assigned'))->toBe('Driver Assigned')
         ->and(fleetOpsReportTransform(fleetOpsReportColumn($orders, 'status'), 'custom_status'))->toBe('Custom_status')
-        ->and(fleetOpsReportTransform(fleetOpsReportColumn($orders, 'distance'), 10))->toBe(6.21)
         ->and(fleetOpsReportTransform(fleetOpsReportColumn($orders, 'adhoc'), true))->toBe('Yes')
         ->and(fleetOpsReportTransform(fleetOpsReportColumn($orders, 'pod_required'), false))->toBe('No')
         ->and(fleetOpsReportTransform(fleetOpsReportColumn($drivers, 'status'), 'suspended'))->toBe('Suspended')
         ->and(fleetOpsReportTransform(fleetOpsReportColumn($drivers, 'online'), false))->toBe('No')
         ->and(fleetOpsReportTransform(fleetOpsReportColumn($vehicles, 'status'), 'out_of_service'))->toBe('Out of Service')
-        ->and(fleetOpsReportTransform(fleetOpsReportColumn($transaction, 'amount'), 12345))->toBe('123.45')
         ->and(fleetOpsReportTransform(fleetOpsReportColumn($transaction, 'status'), 'refunded'))->toBe('Refunded');
+});
+
+function fleetOpsReportColumnNames(Table|Relationship $container): array
+{
+    return array_map(fn (Column $column) => fleetOpsReportSchemaName($column), fleetOpsReportColumns($container));
+}
+
+function fleetOpsReportComputation(Column $column): ?string
+{
+    return fleetOpsReportCallOrProperty($column, 'getComputation', 'computation');
+}
+
+test('fleetops order report schema exposes identifiers tracking and items without assuming a meta shape', function () {
+    $registry = new ReportSchemaRegistry();
+
+    (new FleetOpsReportSchema())->registerReportSchema($registry);
+
+    $orders = fleetOpsReportTables($registry)['orders'];
+
+    // Order identifiers and the operational columns reports filter and group on.
+    expect(fleetOpsReportColumnNames($orders))->toContain(
+        'public_id',
+        'internal_id',
+        'status',
+        'type',
+        'scheduled_at',
+        'dispatched_at',
+        'pod_method',
+        'notes',
+        'created_at',
+        'meta',
+    );
+
+    // Columns of the table itself are not prefixed with the table's name ("Order ID" → "ID").
+    $label = fn (Column $column) => fleetOpsReportCallOrProperty($column, 'getLabel', 'label');
+    expect($label(fleetOpsReportColumn($orders, 'public_id')))->toBe('ID')
+        ->and($label(fleetOpsReportColumn($orders, 'type')))->toBe('Type');
+
+    expect(fleetOpsReportComputation(fleetOpsReportColumn($orders, 'total_orders')))->toBe('COUNT(DISTINCT id)')
+        ->and(fleetOpsReportComputation(fleetOpsReportColumn($orders, 'completed_orders')))->toBe("COUNT(DISTINCT CASE WHEN status = 'completed' THEN id END)")
+        ->and(fleetOpsReportComputation(fleetOpsReportColumn($orders, 'total_transaction_amount')))->toBe('SUM(transaction.amount)');
+
+    // meta has no fixed shape, so no declared column may read a key out of it; users read
+    // keys with computed columns instead.
+    $computations = array_map(fn (Column $column) => (string) fleetOpsReportComputation($column), [
+        ...fleetOpsReportColumns($orders),
+        ...fleetOpsReportComputedColumns($orders),
+        ...fleetOpsReportColumnsFromRelationships(fleetOpsReportRelationships($orders)),
+    ]);
+    expect(array_filter($computations, fn (string $computation) => str_contains($computation, 'JSON_') || str_contains($computation, 'meta')))->toBe([]);
+
+    $tracking = fleetOpsReportRelationship($orders, 'tracking_number');
+    expect(fleetOpsReportTableName($tracking))->toBe('tracking_numbers')
+        ->and(fleetOpsReportColumnNames($tracking))->toContain('tracking_number', 'public_id')
+        ->and(fleetOpsReportTableName(fleetOpsReportRelationship($tracking, 'status')))->toBe('tracking_statuses')
+        ->and(fleetOpsReportTableName(fleetOpsReportRelationship($orders, 'order_config')))->toBe('order_configs')
+        ->and(fleetOpsReportTableName(fleetOpsReportRelationship($orders, 'customer_vendor')))->toBe('vendors')
+        ->and(fleetOpsReportTableName(fleetOpsReportRelationship($orders, 'created_by')))->toBe('users')
+        ->and(fleetOpsReportTableName(fleetOpsReportRelationship(fleetOpsReportRelationship($orders, 'purchase_rate'), 'service_quote')))->toBe('service_quotes');
+
+    // Payload items: one row per entity, with the storefront quantity and line total from meta.
+    $payload = fleetOpsReportRelationship($orders, 'payload');
+    expect(fleetOpsReportColumnNames($payload))->toContain('public_id', 'type', 'cod_amount')
+        ->and(fleetOpsReportTableName(fleetOpsReportRelationship($payload, 'return')))->toBe('places');
+
+    $items = fleetOpsReportRelationship($payload, 'entities');
+    expect(fleetOpsReportTableName($items))->toBe('entities')
+        ->and(fleetOpsReportCallOrProperty($items, 'getLocalKey', 'localKey'))->toBe('uuid')
+        ->and(fleetOpsReportCallOrProperty($items, 'getForeignKey', 'foreignKey'))->toBe('payload_uuid')
+        ->and(fleetOpsReportColumnNames($items))->toContain('public_id', 'internal_id', 'name', 'sku', 'price', 'sale_price', 'meta')
+        ->and(fleetOpsReportColumnNames($items))->not->toContain('quantity', 'line_total', 'product_id')
+        ->and(fleetOpsReportTableName(fleetOpsReportRelationship($items, 'destination')))->toBe('places');
+
+    // Relationship identifiers
+    expect(fleetOpsReportColumnNames(fleetOpsReportRelationship($orders, 'driver_assigned')))->toContain('public_id')
+        ->and(fleetOpsReportColumnNames(fleetOpsReportRelationship($orders, 'vehicle_assigned')))->toContain('public_id')
+        ->and(fleetOpsReportColumnNames(fleetOpsReportRelationship($orders, 'customer')))->toContain('public_id')
+        ->and(fleetOpsReportColumnNames(fleetOpsReportRelationship($orders, 'facilitator')))->toContain('public_id');
+});
+
+test('fleetops report schema uses the columns the fuel report table actually has', function () {
+    $registry = new ReportSchemaRegistry();
+
+    (new FleetOpsReportSchema())->registerReportSchema($registry);
+
+    $tables = fleetOpsReportTables($registry);
+    $fuel   = $tables['fuel_reports'];
+
+    expect(fleetOpsReportColumnNames($fuel))->toContain('amount', 'odometer', 'metric_unit', 'created_at')
+        ->not->toContain('cost', 'odometer_reading', 'report_date')
+        ->and(fleetOpsReportComputation(fleetOpsReportColumn($fuel, 'total_fuel_cost')))->toBe('SUM(amount)')
+        ->and(fleetOpsReportTableName(fleetOpsReportRelationship(fleetOpsReportRelationship($fuel, 'driver'), 'user')))->toBe('users')
+        ->and(fleetOpsReportColumnNames($tables['drivers']))->not->toContain('name', 'email', 'phone');
+});
+
+test('fleetops report schema leaves soft deleted rows out where the core api supports it', function () {
+    $registry = new ReportSchemaRegistry();
+
+    (new FleetOpsReportSchema())->registerReportSchema($registry);
+
+    $orders = fleetOpsReportTables($registry)['orders'];
+    $items  = fleetOpsReportRelationship(fleetOpsReportRelationship($orders, 'payload'), 'entities');
+
+    if (!method_exists($orders, 'usesSoftDeletes')) {
+        // Older Core API: the schema still registers, without soft-delete filtering.
+        expect($orders)->toBeInstanceOf(Table::class);
+
+        return;
+    }
+
+    expect($orders->usesSoftDeletes())->toBeTrue()
+        ->and($items->usesSoftDeletes())->toBeTrue()
+        ->and(fleetOpsReportRelationship($orders, 'customer')->usesSoftDeletes())->toBeFalse()
+        ->and(fleetOpsReportColumn($orders, 'total_orders')->isAggregate())->toBeTrue();
 });

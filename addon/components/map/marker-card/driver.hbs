@@ -1,0 +1,57 @@
+{{!
+    The driver card the fleet-ops live map shows in a marker's popup and hover tooltip.
+    Shared with the dashboard's Live Fleet widget so both look the same. @driver is a driver
+    model or its index resource payload (the same attributes, plain JSON).
+    @variant: "popup" (default, a dark panel) or "tooltip" (inherits the tooltip's panel).
+}}
+<div class="w-[280px] max-w-[calc(100vw-2rem)] {{unless (eq @variant 'tooltip') 'rounded-lg bg-gray-900 shadow-lg p-1.5 text-white'}}" ...attributes>
+    <div class="flex items-center gap-1.5 text-xs font-semibold mb-1.5">
+        <span class="inline-block w-2 h-2 rounded-full {{if @driver.online 'bg-green-400' 'bg-red-500'}}"></span>
+        <span>{{@driver.name}}</span>
+        <div
+            class="status-badge
+                {{if @driver.status (dasherize @driver.status) 'default'}}-status-badge status-badge-{{if @driver.status (dasherize @driver.status) 'default'}}
+                shadow-none ml-auto"
+        >
+            <span class="rounded-full text-[9px] px-1.5 py-0.5">{{n-a @driver.meta.status_label (smart-humanize @driver.status)}}</span>
+        </div>
+    </div>
+    <div class="grid grid-cols-2 gap-1">
+        <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+            <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">ID</div>
+            <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a @driver.public_id @driver.id}}</div>
+        </div>
+        <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+            <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Phone</div>
+            <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a @driver.phone}}</div>
+        </div>
+        <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+            <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Vehicle</div>
+            <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a @driver.vehicle_name}}</div>
+        </div>
+        <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+            <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Email</div>
+            <div class="text-[11px] text-white leading-tight truncate min-w-0 w-full">{{n-a @driver.email}}</div>
+        </div>
+        <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+            <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Order</div>
+            <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a @driver.meta.current_order_reference}}</div>
+        </div>
+        <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+            <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Speed</div>
+            <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a @driver.meta.speed_label}}</div>
+        </div>
+        <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+            <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Heading</div>
+            <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a @driver.meta.heading_label}}</div>
+        </div>
+        <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+            <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Location</div>
+            <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a
+                    @driver.meta.location_coordinates
+                    (point-coordinates @driver.location)
+                }}</div>
+        </div>
+    </div>
+</div>
+
