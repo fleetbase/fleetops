@@ -47,12 +47,19 @@ class FleetOpsReportSchema implements ReportSchema
 
     /**
      * Create the Orders table definition.
+     *
+     * Money in orders is stored in the currency's smallest unit (e.g. cents): storefront orders
+     * keep their totals in `meta` (`subtotal`, `delivery_fee`, `tip`, `total`) and each line
+     * item is an entity of the order's payload with `meta.quantity` and `meta.subtotal`.
+     *
+     * Selecting line item columns (Payload Items) returns one row per item, so order-level
+     * sums over item rows repeat each order; count orders with Total Orders (a distinct count).
      */
     protected function createOrdersTable(): Table
     {
-        return Table::make('orders')
+        return $this->softDeletes(Table::make('orders'))
             ->label('Orders')
-            ->description('Delivery and service orders')
+            ->description('Delivery and service orders, with their payload items, tracking, assignment and payment')
             ->category('Operations')
             ->extension('fleet-ops')
             ->excludeColumns(['uuid', 'deleted_at']) // Hide foreign keys and system columns
@@ -95,7 +102,20 @@ class FleetOpsReportSchema implements ReportSchema
 
                 Column::make('type', 'string')
                     ->label('Order Type')
-                    ->description('Type of order service')
+                    ->description('Type of order service, e.g. transport or storefront')
+                    ->filterable()
+                    ->sortable()
+                    ->aggregatable(),
+
+                Column::make('customer_type', 'string')
+                    ->label('Customer Kind')
+                    ->description('Whether the customer is a contact or a vendor')
+                    ->filterable()
+                    ->aggregatable(),
+
+                Column::make('facilitator_type', 'string')
+                    ->label('Facilitator Kind')
+                    ->description('Whether the facilitator is a vendor or an integrated vendor')
                     ->filterable()
                     ->aggregatable(),
 
@@ -106,11 +126,23 @@ class FleetOpsReportSchema implements ReportSchema
                     ->sortable()
                     ->aggregatable(),
 
+                Column::make('dispatched', 'boolean')
+                    ->label('Dispatched')
+                    ->description('Whether the order has been dispatched')
+                    ->filterable()
+                    ->aggregatable(),
+
                 Column::make('dispatched_at', 'datetime')
                     ->label('Dispatched At')
                     ->description('When the order was dispatched')
                     ->filterable()
                     ->sortable()
+                    ->aggregatable(),
+
+                Column::make('started', 'boolean')
+                    ->label('Started')
+                    ->description('Whether the order has been started')
+                    ->filterable()
                     ->aggregatable(),
 
                 Column::make('started_at', 'datetime')
@@ -120,18 +152,29 @@ class FleetOpsReportSchema implements ReportSchema
                     ->sortable()
                     ->aggregatable(),
 
+                Column::make('time_window_start', 'datetime')
+                    ->label('Time Window Start')
+                    ->description('Earliest time the order may be serviced')
+                    ->filterable()
+                    ->sortable(),
+
+                Column::make('time_window_end', 'datetime')
+                    ->label('Time Window End')
+                    ->description('Latest time the order may be serviced')
+                    ->filterable()
+                    ->sortable(),
+
                 Column::make('distance', 'integer')
-                    ->label('Distance (km)')
-                    ->description('Total distance for the order')
+                    ->label('Distance (m)')
+                    ->description('Route distance for the order in meters')
+                    ->filterable()
                     ->aggregatable()
-                    ->sortable()
-                    ->transformer(function ($value) {
-                        return round($value * 0.621371, 2); // Convert km to miles
-                    }),
+                    ->sortable(),
 
                 Column::make('time', 'integer')
-                    ->label('Duration (minutes)')
-                    ->description('Estimated duration in minutes')
+                    ->label('Duration (s)')
+                    ->description('Estimated route duration in seconds')
+                    ->filterable()
                     ->aggregatable()
                     ->sortable(),
 
@@ -144,6 +187,12 @@ class FleetOpsReportSchema implements ReportSchema
                         return $value ? 'Yes' : 'No';
                     }),
 
+                Column::make('adhoc_distance', 'integer')
+                    ->label('Ad Hoc Distance (m)')
+                    ->description('Radius in meters used to offer an ad hoc order to drivers')
+                    ->filterable()
+                    ->sortable(),
+
                 Column::make('pod_required', 'boolean')
                     ->label('POD Required')
                     ->description('Whether proof of delivery is required')
@@ -152,6 +201,31 @@ class FleetOpsReportSchema implements ReportSchema
                     ->transformer(function ($value) {
                         return $value ? 'Yes' : 'No';
                     }),
+
+                Column::make('pod_method', 'string')
+                    ->label('POD Method')
+                    ->description('Proof of delivery method, e.g. scan, signature or photo')
+                    ->filterable()
+                    ->aggregatable(),
+
+                Column::make('is_route_optimized', 'boolean')
+                    ->label('Route Optimized')
+                    ->description('Whether the route was optimized')
+                    ->filterable()
+                    ->aggregatable(),
+
+                Column::make('orchestrator_priority', 'integer')
+                    ->label('Priority')
+                    ->description('Dispatch priority used by the orchestrator')
+                    ->filterable()
+                    ->sortable()
+                    ->aggregatable(),
+
+                Column::make('notes', 'string')
+                    ->label('Notes')
+                    ->description('Order notes')
+                    ->searchable()
+                    ->filterable(),
 
                 Column::make('created_at', 'datetime')
                     ->label('Created At')
@@ -168,76 +242,218 @@ class FleetOpsReportSchema implements ReportSchema
 
                 Column::make('meta', 'json')
                     ->label('Metadata')
-                    ->description('Order metadata and custom fields')
+                    ->description('Order metadata and custom fields; read a key with JSON_UNQUOTE(JSON_EXTRACT(meta, \'$.key\'))')
                     ->searchable()
                     ->filterable(),
+
+                // Storefront orders keep their checkout totals in meta, in the currency's smallest unit.
+                $this->expression('storefront', "JSON_UNQUOTE(JSON_EXTRACT(meta, '$.storefront'))", 'string')
+                    ->label('Storefront')
+                    ->description('Name of the storefront the order was placed in')
+                    ->filterable()
+                    ->sortable(),
+
+                $this->expression('order_currency', "JSON_UNQUOTE(JSON_EXTRACT(meta, '$.currency'))", 'string')
+                    ->label('Order Currency')
+                    ->description('Currency of the storefront order totals')
+                    ->filterable()
+                    ->sortable(),
+
+                $this->expression('order_subtotal', $this->jsonAmount('meta', 'subtotal'), 'decimal')
+                    ->label('Order Subtotal (minor units)')
+                    ->description('Storefront order subtotal in the currency\'s smallest unit (e.g. cents)')
+                    ->filterable()
+                    ->sortable(),
+
+                $this->expression('order_delivery_fee', $this->jsonAmount('meta', 'delivery_fee'), 'decimal')
+                    ->label('Delivery Fee (minor units)')
+                    ->description('Storefront delivery fee in the currency\'s smallest unit (e.g. cents)')
+                    ->filterable()
+                    ->sortable(),
+
+                $this->expression('order_tip', $this->jsonAmount('meta', 'tip'), 'decimal')
+                    ->label('Tip (minor units)')
+                    ->description('Storefront tip in the currency\'s smallest unit (e.g. cents)')
+                    ->filterable()
+                    ->sortable(),
+
+                $this->expression('order_total', $this->jsonAmount('meta', 'total'), 'decimal')
+                    ->label('Order Total (minor units)')
+                    ->description('Storefront order total in the currency\'s smallest unit (e.g. cents)')
+                    ->filterable()
+                    ->sortable(),
             ])
             ->computedColumns([
-                Column::count('total_orders', 'id')
+                // Distinct, so the count stays right when payload items are selected too.
+                Column::count('total_orders', 'DISTINCT id')
                     ->label('Total Orders')
-                    ->description('Count of orders'),
+                    ->description('Number of orders'),
+
+                Column::computed('completed_orders', "COUNT(DISTINCT CASE WHEN status = 'completed' THEN id END)", 'integer')
+                    ->label('Completed Orders')
+                    ->description('Number of completed orders'),
+
+                Column::computed('canceled_orders', "COUNT(DISTINCT CASE WHEN status = 'canceled' THEN id END)", 'integer')
+                    ->label('Canceled Orders')
+                    ->description('Number of canceled orders'),
 
                 Column::sum('total_distance', 'distance')
-                    ->label('Total Distance')
+                    ->label('Total Distance (m)')
                     ->description('Sum of all order distances'),
 
                 Column::avg('average_distance', 'distance')
-                    ->label('Average Distance')
+                    ->label('Average Distance (m)')
                     ->description('Average distance per order'),
 
                 Column::sum('total_time', 'time')
-                    ->label('Total Time')
+                    ->label('Total Duration (s)')
                     ->description('Sum of all order durations'),
 
                 Column::avg('average_time', 'time')
-                    ->label('Average Time')
+                    ->label('Average Duration (s)')
                     ->description('Average duration per order'),
 
-                Column::sum('total_transaction_amount', 'amount')
-                    ->label('Total Transaction Amount')
-                    ->description('Sum of all transaction amounts'),
+                Column::sum('total_order_amount', 'order_total')
+                    ->label('Order Total Sum (minor units)')
+                    ->description('Sum of storefront order totals'),
 
-                Column::avg('average_transaction_amount', 'amount')
-                    ->label('Average Transaction Amount')
+                Column::avg('average_order_amount', 'order_total')
+                    ->label('Average Order Total (minor units)')
+                    ->description('Average storefront order total'),
+
+                Column::sum('total_delivery_fees', 'order_delivery_fee')
+                    ->label('Delivery Fees Sum (minor units)')
+                    ->description('Sum of storefront delivery fees'),
+
+                Column::sum('total_tips', 'order_tip')
+                    ->label('Tips Sum (minor units)')
+                    ->description('Sum of storefront tips'),
+
+                Column::sum('total_transaction_amount', 'transaction.amount')
+                    ->label('Transaction Amount Sum (minor units)')
+                    ->description('Sum of the orders\' transaction amounts'),
+
+                Column::avg('average_transaction_amount', 'transaction.amount')
+                    ->label('Average Transaction Amount (minor units)')
                     ->description('Average transaction amount per order'),
 
-                Column::count('orders_with_transactions', 'transaction_uuid')
+                Column::count('orders_with_transactions', 'DISTINCT transaction_uuid')
                     ->label('Orders with Transactions')
-                    ->description('Count of orders that have transactions'),
+                    ->description('Number of orders that have a transaction'),
             ])
             ->relationships([
-                // Auto-join relationships for seamless access
+                Relationship::hasAutoJoin('tracking_number', 'tracking_numbers')
+                    ->label('Tracking')
+                    ->description('The order\'s tracking number and its latest tracking status')
+                    ->localKey('tracking_number_uuid')
+                    ->foreignKey('uuid')
+                    ->columns([
+                        Column::make('tracking_number', 'string')->label('Number')->description('Tracking number'),
+                        Column::make('public_id', 'string')->label('ID')->description('Tracking number record identifier'),
+                        Column::make('region', 'string')->label('Region'),
+                    ])
+                    ->with([
+                        Relationship::hasAutoJoin('status', 'tracking_statuses')
+                            ->label('Tracking Status')
+                            ->localKey('status_uuid')
+                            ->foreignKey('uuid')
+                            ->columns([
+                                Column::make('status', 'string')->label('Status'),
+                                Column::make('code', 'string')->label('Code'),
+                                Column::make('details', 'string')->label('Details'),
+                                Column::make('complete', 'boolean')->label('Complete'),
+                                Column::make('city', 'string')->label('City'),
+                                Column::make('province', 'string')->label('Province'),
+                                Column::make('country', 'string')->label('Country'),
+                                Column::make('created_at', 'datetime')->label('Updated At'),
+                            ]),
+                    ]),
+
+                Relationship::hasAutoJoin('order_config', 'order_configs')
+                    ->label('Order Config')
+                    ->description('The order configuration (order type) the order follows')
+                    ->localKey('order_config_uuid')
+                    ->foreignKey('uuid')
+                    ->columns([
+                        Column::make('name', 'string')->label('Name'),
+                        Column::make('key', 'string')->label('Key'),
+                        Column::make('namespace', 'string')->label('Namespace'),
+                    ]),
+
                 Relationship::hasAutoJoin('payload', 'payloads')
                     ->label('Payload')
                     ->localKey('payload_uuid')
                     ->foreignKey('uuid')
+                    ->columns([
+                        Column::make('public_id', 'string')->label('ID')->description('Payload identifier'),
+                        Column::make('type', 'string')->label('Type'),
+                        Column::make('payment_method', 'string')->label('Payment Method'),
+                        Column::make('cod_amount', 'integer')->label('COD Amount (minor units)')->description('Cash on delivery amount in the currency\'s smallest unit'),
+                        Column::make('cod_currency', 'string')->label('COD Currency'),
+                        Column::make('cod_payment_method', 'string')->label('COD Payment Method'),
+                        Column::make('provider', 'string')->label('Provider'),
+                    ])
                     ->with([
                         Relationship::hasAutoJoin('pickup', 'places')
                             ->label('Pickup')
                             ->localKey('pickup_uuid')
                             ->foreignKey('uuid')
-                            ->columns([
-                                Column::make('name', 'string')->label('Name'),
-                                Column::make('street1', 'string')->label('Street'),
-                                Column::make('street2', 'string')->label('Street 2'),
-                                Column::make('city', 'string')->label('City'),
-                                Column::make('province', 'string')->label('Province'),
-                                Column::make('postal_code', 'string')->label('Postal Code'),
-                                Column::make('country', 'string')->label('Country'),
-                            ]),
+                            ->columns($this->placeColumns()),
 
                         Relationship::hasAutoJoin('dropoff', 'places')
                             ->label('Dropoff')
                             ->localKey('dropoff_uuid')
                             ->foreignKey('uuid')
+                            ->columns($this->placeColumns()),
+
+                        Relationship::hasAutoJoin('return', 'places')
+                            ->label('Return')
+                            ->localKey('return_uuid')
+                            ->foreignKey('uuid')
+                            ->columns($this->placeColumns()),
+
+                        // One row per item: the goods, parcels or storefront products in the order.
+                        $this->softDeletes(Relationship::hasAutoJoin('entities', 'entities'))
+                            ->label('Item')
+                            ->description('Items carried by the order (storefront products, parcels, goods); one row per item')
+                            ->localKey('uuid')
+                            ->foreignKey('payload_uuid')
                             ->columns([
-                                Column::make('name', 'string')->label('Name'),
-                                Column::make('street1', 'string')->label('Street'),
-                                Column::make('street2', 'string')->label('Street 2'),
-                                Column::make('city', 'string')->label('City'),
-                                Column::make('province', 'string')->label('Province'),
-                                Column::make('postal_code', 'string')->label('Postal Code'),
-                                Column::make('country', 'string')->label('Country'),
+                                Column::make('public_id', 'string')->label('ID')->description('Item identifier'),
+                                Column::make('internal_id', 'string')->label('Internal ID')->description('Internal reference; the product ID for storefront items'),
+                                Column::make('name', 'string')->label('Name')->aggregatable(),
+                                Column::make('type', 'string')->label('Type')->aggregatable(),
+                                Column::make('description', 'string')->label('Description'),
+                                Column::make('sku', 'string')->label('SKU')->aggregatable(),
+                                Column::make('currency', 'string')->label('Currency'),
+                                Column::make('price', 'decimal')->label('Price (minor units)')->description('Unit price in the currency\'s smallest unit'),
+                                Column::make('sale_price', 'decimal')->label('Sale Price (minor units)')->description('Unit sale price in the currency\'s smallest unit'),
+                                Column::make('declared_value', 'integer')->label('Declared Value (minor units)'),
+                                Column::make('weight', 'decimal')->label('Weight'),
+                                Column::make('weight_unit', 'string')->label('Weight Unit'),
+                                Column::make('length', 'decimal')->label('Length'),
+                                Column::make('width', 'decimal')->label('Width'),
+                                Column::make('height', 'decimal')->label('Height'),
+                                Column::make('dimensions_unit', 'string')->label('Dimensions Unit'),
+                                Column::make('barcode', 'string')->label('Barcode'),
+                                Column::make('meta', 'json')->label('Metadata'),
+                                Column::make('created_at', 'datetime')->label('Created At'),
+                                $this->expression('product_id', "JSON_UNQUOTE(JSON_EXTRACT(meta, '$.product_id'))", 'string')
+                                    ->label('Product ID')
+                                    ->description('Storefront product the item was ordered as'),
+                                $this->expression('quantity', "COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(meta, '$.quantity')) AS DECIMAL(15,2)), 1)", 'decimal')
+                                    ->label('Quantity')
+                                    ->description('Quantity ordered; 1 when the item records none'),
+                                $this->expression('line_total', $this->jsonAmount('meta', 'subtotal'), 'decimal')
+                                    ->label('Line Total (minor units)')
+                                    ->description('Storefront line subtotal (price x quantity, with variants and add-ons) in the currency\'s smallest unit'),
+                            ])
+                            ->with([
+                                Relationship::hasAutoJoin('destination', 'places')
+                                    ->label('Destination')
+                                    ->localKey('destination_uuid')
+                                    ->foreignKey('uuid')
+                                    ->columns($this->placeColumns()),
                             ]),
                     ]),
 
@@ -246,6 +462,8 @@ class FleetOpsReportSchema implements ReportSchema
                     ->localKey('driver_assigned_uuid')
                     ->foreignKey('uuid')
                     ->columns([
+                        Column::make('public_id', 'string')->label('ID')->description('Driver identifier'),
+                        Column::make('internal_id', 'string')->label('Internal ID'),
                         Column::make('drivers_license_number', 'string')->label('License Number'),
                         Column::make('country', 'string')->label('Country'),
                         Column::make('city', 'string')->label('City'),
@@ -268,6 +486,9 @@ class FleetOpsReportSchema implements ReportSchema
                     ->localKey('vehicle_assigned_uuid')
                     ->foreignKey('uuid')
                     ->columns([
+                        Column::make('public_id', 'string')->label('ID')->description('Vehicle identifier'),
+                        Column::make('internal_id', 'string')->label('Internal ID'),
+                        Column::make('name', 'string')->label('Name'),
                         Column::make('make', 'string')->label('Make'),
                         Column::make('model', 'string')->label('Model'),
                         Column::make('year', 'integer')->label('Year'),
@@ -279,9 +500,27 @@ class FleetOpsReportSchema implements ReportSchema
 
                 Relationship::hasAutoJoin('customer', 'contacts')
                     ->label('Customer')
+                    ->description('The customer when it is a contact')
                     ->localKey('customer_uuid')
                     ->foreignKey('uuid')
                     ->columns([
+                        Column::make('public_id', 'string')->label('ID')->description('Customer identifier'),
+                        Column::make('internal_id', 'string')->label('Internal ID'),
+                        Column::make('name', 'string')->label('Name'),
+                        Column::make('title', 'string')->label('Title'),
+                        Column::make('email', 'string')->label('Email'),
+                        Column::make('phone', 'string')->label('Phone'),
+                        Column::make('type', 'string')->label('Type'),
+                    ]),
+
+                Relationship::hasAutoJoin('customer_vendor', 'vendors')
+                    ->label('Customer Vendor')
+                    ->description('The customer when it is a vendor')
+                    ->localKey('customer_uuid')
+                    ->foreignKey('uuid')
+                    ->columns([
+                        Column::make('public_id', 'string')->label('ID')->description('Vendor identifier'),
+                        Column::make('internal_id', 'string')->label('Internal ID'),
                         Column::make('name', 'string')->label('Name'),
                         Column::make('email', 'string')->label('Email'),
                         Column::make('phone', 'string')->label('Phone'),
@@ -289,14 +528,46 @@ class FleetOpsReportSchema implements ReportSchema
                     ]),
 
                 Relationship::hasAutoJoin('facilitator', 'vendors')
-                    ->label('Faciliator')
+                    ->label('Facilitator')
                     ->localKey('facilitator_uuid')
                     ->foreignKey('uuid')
                     ->columns([
+                        Column::make('public_id', 'string')->label('ID')->description('Facilitator identifier'),
+                        Column::make('internal_id', 'string')->label('Internal ID'),
                         Column::make('name', 'string')->label('Name'),
                         Column::make('email', 'string')->label('Email'),
                         Column::make('phone', 'string')->label('Phone'),
                         Column::make('type', 'string')->label('Type'),
+                    ]),
+
+                Relationship::hasAutoJoin('created_by', 'users')
+                    ->label('Created By')
+                    ->localKey('created_by_uuid')
+                    ->foreignKey('uuid')
+                    ->columns([
+                        Column::make('name', 'string')->label('Name'),
+                        Column::make('email', 'string')->label('Email'),
+                    ]),
+
+                Relationship::hasAutoJoin('purchase_rate', 'purchase_rates')
+                    ->label('Purchase Rate')
+                    ->description('The service quote purchased for the order')
+                    ->localKey('purchase_rate_uuid')
+                    ->foreignKey('uuid')
+                    ->columns([
+                        Column::make('public_id', 'string')->label('ID')->description('Purchase rate identifier'),
+                        Column::make('status', 'string')->label('Status'),
+                    ])
+                    ->with([
+                        Relationship::hasAutoJoin('service_quote', 'service_quotes')
+                            ->label('Quote')
+                            ->localKey('service_quote_uuid')
+                            ->foreignKey('uuid')
+                            ->columns([
+                                Column::make('public_id', 'string')->label('ID')->description('Service quote identifier'),
+                                Column::make('amount', 'integer')->label('Amount (minor units)')->description('Quoted delivery price in the currency\'s smallest unit'),
+                                Column::make('currency', 'string')->label('Currency'),
+                            ]),
                     ]),
 
                 Relationship::hasAutoJoin('transaction', 'transactions')
@@ -324,15 +595,35 @@ class FleetOpsReportSchema implements ReportSchema
                             ->filterable()
                             ->aggregatable(),
 
+                        Column::make('payment_method', 'string')
+                            ->label('Payment Method')
+                            ->description('Payment method used, e.g. card or cash')
+                            ->filterable()
+                            ->aggregatable(),
+
                         Column::make('amount', 'integer')
-                            ->label('Amount')
-                            ->description('Transaction amount (in cents)')
+                            ->label('Amount (minor units)')
+                            ->description('Transaction amount in the currency\'s smallest unit (e.g. cents)')
                             ->aggregatable()
-                            ->sortable()
-                            ->transformer(function ($value) {
-                                // Convert cents to dollars with 2 decimal places
-                                return number_format($value / 100, 2);
-                            }),
+                            ->sortable(),
+
+                        Column::make('fee_amount', 'integer')
+                            ->label('Fee Amount (minor units)')
+                            ->description('Gateway fee in the currency\'s smallest unit')
+                            ->aggregatable()
+                            ->sortable(),
+
+                        Column::make('tax_amount', 'integer')
+                            ->label('Tax Amount (minor units)')
+                            ->description('Tax in the currency\'s smallest unit')
+                            ->aggregatable()
+                            ->sortable(),
+
+                        Column::make('net_amount', 'integer')
+                            ->label('Net Amount (minor units)')
+                            ->description('Amount after fees in the currency\'s smallest unit')
+                            ->aggregatable()
+                            ->sortable(),
 
                         Column::make('currency', 'string')
                             ->label('Currency')
@@ -369,6 +660,12 @@ class FleetOpsReportSchema implements ReportSchema
                                 return $labels[$value] ?? ucfirst($value);
                             }),
 
+                        Column::make('settlement_status', 'string')
+                            ->label('Settlement Status')
+                            ->description('Whether the transaction has settled')
+                            ->filterable()
+                            ->aggregatable(),
+
                         Column::make('created_at', 'datetime')
                             ->label('Transaction Date')
                             ->description('When the transaction was created')
@@ -378,13 +675,31 @@ class FleetOpsReportSchema implements ReportSchema
                     ])
                     ->with([
                         // Nested relationship for transaction items
-                        Relationship::hasAutoJoin('items', 'transaction_items')
+                        $this->softDeletes(Relationship::hasAutoJoin('items', 'transaction_items'))
                             ->label('Transaction Items')
                             ->localKey('uuid')
                             ->foreignKey('transaction_uuid')
                             ->columns([
-                                Column::make('amount', 'string')
-                                    ->label('Item Amount')
+                                Column::make('description', 'string')
+                                    ->label('Item Description')
+                                    ->description('Line item description')
+                                    ->searchable()
+                                    ->filterable(),
+
+                                Column::make('quantity', 'integer')
+                                    ->label('Item Quantity')
+                                    ->description('Line item quantity')
+                                    ->aggregatable()
+                                    ->sortable(),
+
+                                Column::make('unit_price', 'integer')
+                                    ->label('Item Unit Price (minor units)')
+                                    ->description('Line item unit price')
+                                    ->aggregatable()
+                                    ->sortable(),
+
+                                Column::make('amount', 'integer')
+                                    ->label('Item Amount (minor units)')
                                     ->description('Line item amount')
                                     ->aggregatable()
                                     ->sortable(),
@@ -416,7 +731,7 @@ class FleetOpsReportSchema implements ReportSchema
      */
     protected function createDriversTable(): Table
     {
-        return Table::make('drivers')
+        return $this->softDeletes(Table::make('drivers'))
             ->label('Drivers')
             ->description('Fleet drivers and personnel')
             ->category('Personnel')
@@ -431,24 +746,22 @@ class FleetOpsReportSchema implements ReportSchema
                     ->filterable()
                     ->sortable(),
 
-                Column::make('name', 'string')
-                    ->label('Name')
-                    ->description('Driver full name')
+                Column::make('internal_id', 'string')
+                    ->label('Internal ID')
+                    ->description('Internal driver reference')
                     ->searchable()
                     ->filterable()
                     ->sortable(),
 
-                Column::make('email', 'string')
-                    ->label('Email')
-                    ->description('Driver email address')
+                Column::make('drivers_license_number', 'string')
+                    ->label('License Number')
+                    ->description('Driver license number')
                     ->searchable()
-                    ->filterable()
-                    ->sortable(),
+                    ->filterable(),
 
-                Column::make('phone', 'string')
-                    ->label('Phone')
-                    ->description('Driver phone number')
-                    ->searchable()
+                Column::make('license_expiry', 'date')
+                    ->label('License Expiry')
+                    ->description('When the driver license expires')
                     ->filterable()
                     ->sortable(),
 
@@ -477,24 +790,45 @@ class FleetOpsReportSchema implements ReportSchema
                         return $value ? 'Yes' : 'No';
                     }),
 
+                Column::make('city', 'string')
+                    ->label('City')
+                    ->filterable()
+                    ->aggregatable(),
+
+                Column::make('country', 'string')
+                    ->label('Country')
+                    ->filterable()
+                    ->aggregatable(),
+
                 Column::make('created_at', 'datetime')
                     ->label('Hired Date')
-                    ->description('When the driver was hired')
+                    ->description('When the driver was added')
                     ->filterable()
                     ->sortable()
                     ->aggregatable(),
             ])
             ->computedColumns([
-                Column::count('total_drivers', 'id')
+                Column::count('total_drivers', 'DISTINCT id')
                     ->label('Total Drivers')
                     ->description('Count of drivers'),
             ])
             ->relationships([
-                Relationship::hasAutoJoin('current_vehicle', 'vehicles')
-                    ->label('Vehicle')
-                    ->localKey('current_vehicle_uuid')
+                Relationship::hasAutoJoin('user', 'users')
+                    ->label('Driver')
+                    ->localKey('user_uuid')
                     ->foreignKey('uuid')
                     ->columns([
+                        Column::make('name', 'string')->label('Name'),
+                        Column::make('email', 'string')->label('Email'),
+                        Column::make('phone', 'string')->label('Phone'),
+                    ]),
+
+                Relationship::hasAutoJoin('vehicle', 'vehicles')
+                    ->label('Vehicle')
+                    ->localKey('vehicle_uuid')
+                    ->foreignKey('uuid')
+                    ->columns([
+                        Column::make('public_id', 'string')->label('Vehicle ID'),
                         Column::make('make', 'string')->label('Vehicle Make'),
                         Column::make('model', 'string')->label('Vehicle Model'),
                         Column::make('plate_number', 'string')->label('Plate Number'),
@@ -507,7 +841,7 @@ class FleetOpsReportSchema implements ReportSchema
      */
     protected function createVehiclesTable(): Table
     {
-        return Table::make('vehicles')
+        return $this->softDeletes(Table::make('vehicles'))
             ->label('Vehicles')
             ->description('Fleet vehicles and assets')
             ->category('Fleet')
@@ -518,6 +852,20 @@ class FleetOpsReportSchema implements ReportSchema
                 Column::make('public_id', 'string')
                     ->label('Vehicle ID')
                     ->description('Public vehicle identifier')
+                    ->searchable()
+                    ->filterable()
+                    ->sortable(),
+
+                Column::make('internal_id', 'string')
+                    ->label('Internal ID')
+                    ->description('Internal vehicle reference')
+                    ->searchable()
+                    ->filterable()
+                    ->sortable(),
+
+                Column::make('name', 'string')
+                    ->label('Name')
+                    ->description('Vehicle name')
                     ->searchable()
                     ->filterable()
                     ->sortable(),
@@ -583,19 +931,30 @@ class FleetOpsReportSchema implements ReportSchema
                     ->aggregatable(),
             ])
             ->computedColumns([
-                Column::count('total_vehicles', 'id')
+                Column::count('total_vehicles', 'DISTINCT id')
                     ->label('Total Vehicles')
                     ->description('Count of vehicles'),
             ])
             ->relationships([
-                Relationship::hasAutoJoin('current_driver', 'drivers')
+                // A driver points at the vehicle they drive (drivers.vehicle_uuid).
+                $this->softDeletes(Relationship::hasAutoJoin('driver', 'drivers'))
                     ->label('Driver')
-                    ->localKey('current_driver_uuid')
-                    ->foreignKey('uuid')
+                    ->localKey('uuid')
+                    ->foreignKey('vehicle_uuid')
                     ->columns([
-                        Column::make('name', 'string')->label('Driver Name'),
-                        Column::make('email', 'string')->label('Driver Email'),
-                        Column::make('phone', 'string')->label('Driver Phone'),
+                        Column::make('public_id', 'string')->label('Driver ID'),
+                        Column::make('status', 'string')->label('Driver Status'),
+                    ])
+                    ->with([
+                        Relationship::hasAutoJoin('user', 'users')
+                            ->label('Driver')
+                            ->localKey('user_uuid')
+                            ->foreignKey('uuid')
+                            ->columns([
+                                Column::make('name', 'string')->label('Name'),
+                                Column::make('email', 'string')->label('Email'),
+                                Column::make('phone', 'string')->label('Phone'),
+                            ]),
                     ]),
             ]);
     }
@@ -605,7 +964,7 @@ class FleetOpsReportSchema implements ReportSchema
      */
     protected function createAssetsTable(): Table
     {
-        return Table::make('assets')
+        return $this->softDeletes(Table::make('assets'))
             ->label('Trailers and Assets')
             ->description('Independently managed fleet assets; Trailer rows use asset_class trailer')
             ->category('Fleet')
@@ -640,7 +999,7 @@ class FleetOpsReportSchema implements ReportSchema
      */
     protected function createPlacesTable(): Table
     {
-        return Table::make('places')
+        return $this->softDeletes(Table::make('places'))
             ->label('Places')
             ->description('Locations and addresses')
             ->category('Geography')
@@ -706,7 +1065,7 @@ class FleetOpsReportSchema implements ReportSchema
      */
     protected function createContactsTable(): Table
     {
-        return Table::make('contacts')
+        return $this->softDeletes(Table::make('contacts'))
             ->label('Contacts')
             ->description('Customer and vendor contacts')
             ->category('CRM')
@@ -762,7 +1121,7 @@ class FleetOpsReportSchema implements ReportSchema
      */
     protected function createVendorsTable(): Table
     {
-        return Table::make('vendors')
+        return $this->softDeletes(Table::make('vendors'))
             ->label('Vendors')
             ->description('Service providers and vendors')
             ->category('CRM')
@@ -818,7 +1177,7 @@ class FleetOpsReportSchema implements ReportSchema
      */
     protected function createFuelReportsTable(): Table
     {
-        return Table::make('fuel_reports')
+        return $this->softDeletes(Table::make('fuel_reports'))
             ->label('Fuel Reports')
             ->description('Vehicle fuel consumption reports')
             ->category('Operations')
@@ -834,17 +1193,23 @@ class FleetOpsReportSchema implements ReportSchema
                     ->sortable(),
 
                 Column::make('volume', 'decimal')
-                    ->label('Volume (L)')
-                    ->description('Fuel volume in liters')
+                    ->label('Volume')
+                    ->description('Fuel volume, in the report\'s metric unit')
                     ->aggregatable()
                     ->sortable(),
 
-                Column::make('odometer_reading', 'integer')
+                Column::make('metric_unit', 'string')
+                    ->label('Volume Unit')
+                    ->description('Unit of the fuel volume')
+                    ->filterable()
+                    ->aggregatable(),
+
+                Column::make('odometer', 'integer')
                     ->label('Odometer Reading')
                     ->description('Vehicle odometer reading')
                     ->sortable(),
 
-                Column::make('cost', 'decimal')
+                Column::make('amount', 'decimal')
                     ->label('Cost')
                     ->description('Fuel cost amount')
                     ->aggregatable()
@@ -856,15 +1221,26 @@ class FleetOpsReportSchema implements ReportSchema
                     ->filterable()
                     ->aggregatable(),
 
-                Column::make('report_date', 'date')
+                Column::make('status', 'string')
+                    ->label('Status')
+                    ->filterable()
+                    ->aggregatable(),
+
+                Column::make('report', 'string')
+                    ->label('Report')
+                    ->description('Report notes')
+                    ->searchable()
+                    ->filterable(),
+
+                Column::make('created_at', 'datetime')
                     ->label('Report Date')
-                    ->description('Date of fuel report')
+                    ->description('When the fuel report was recorded')
                     ->filterable()
                     ->sortable()
                     ->aggregatable(),
             ])
             ->computedColumns([
-                Column::sum('total_fuel_cost', 'cost')
+                Column::sum('total_fuel_cost', 'amount')
                     ->label('Total Fuel Cost')
                     ->description('Sum of all fuel costs'),
 
@@ -872,7 +1248,7 @@ class FleetOpsReportSchema implements ReportSchema
                     ->label('Total Fuel Volume')
                     ->description('Sum of all fuel volumes'),
 
-                Column::avg('average_fuel_cost', 'cost')
+                Column::avg('average_fuel_cost', 'amount')
                     ->label('Average Fuel Cost')
                     ->description('Average fuel cost per report'),
             ])
@@ -882,6 +1258,7 @@ class FleetOpsReportSchema implements ReportSchema
                     ->localKey('vehicle_uuid')
                     ->foreignKey('uuid')
                     ->columns([
+                        Column::make('public_id', 'string')->label('Vehicle ID'),
                         Column::make('make', 'string')->label('Vehicle Make'),
                         Column::make('model', 'string')->label('Vehicle Model'),
                         Column::make('plate_number', 'string')->label('Plate Number'),
@@ -892,8 +1269,17 @@ class FleetOpsReportSchema implements ReportSchema
                     ->localKey('driver_uuid')
                     ->foreignKey('uuid')
                     ->columns([
-                        Column::make('name', 'string')->label('Driver Name'),
-                        Column::make('email', 'string')->label('Driver Email'),
+                        Column::make('public_id', 'string')->label('Driver ID'),
+                    ])
+                    ->with([
+                        Relationship::hasAutoJoin('user', 'users')
+                            ->label('Driver')
+                            ->localKey('user_uuid')
+                            ->foreignKey('uuid')
+                            ->columns([
+                                Column::make('name', 'string')->label('Name'),
+                                Column::make('email', 'string')->label('Email'),
+                            ]),
                     ]),
             ]);
     }
@@ -903,7 +1289,7 @@ class FleetOpsReportSchema implements ReportSchema
      */
     protected function createWorkOrdersTable(): Table
     {
-        return Table::make('work_orders')
+        return $this->softDeletes(Table::make('work_orders'))
             ->label('Work Orders')
             ->description('Maintenance work orders, assignments, budgets, and lifecycle status')
             ->category('Maintenance')
@@ -952,7 +1338,7 @@ class FleetOpsReportSchema implements ReportSchema
      */
     protected function createMaintenancesTable(): Table
     {
-        return Table::make('maintenances')
+        return $this->softDeletes(Table::make('maintenances'))
             ->label('Maintenance History')
             ->description('Completed and scheduled maintenance records with labor, parts, tax, and total cost')
             ->category('Maintenance')
@@ -1013,7 +1399,7 @@ class FleetOpsReportSchema implements ReportSchema
      */
     protected function createInspectionSubmissionsTable(): Table
     {
-        return Table::make('inspection_submissions')
+        return $this->softDeletes(Table::make('inspection_submissions'))
             ->label('Inspections')
             ->description('DVIR and inspection submissions, pass/fail status, and linked maintenance follow-up')
             ->category('Maintenance')
@@ -1069,5 +1455,60 @@ class FleetOpsReportSchema implements ReportSchema
                         Column::make('actual_cost', 'integer')->label('Work Order Actual Cost'),
                     ]),
             ]);
+    }
+
+    /**
+     * Columns reported for a place (pickup, dropoff, return or item destination).
+     */
+    protected function placeColumns(): array
+    {
+        return [
+            Column::make('public_id', 'string')->label('ID'),
+            Column::make('name', 'string')->label('Name'),
+            Column::make('street1', 'string')->label('Street'),
+            Column::make('street2', 'string')->label('Street 2'),
+            Column::make('neighborhood', 'string')->label('Neighborhood'),
+            Column::make('district', 'string')->label('District'),
+            Column::make('city', 'string')->label('City'),
+            Column::make('province', 'string')->label('Province'),
+            Column::make('postal_code', 'string')->label('Postal Code'),
+            Column::make('country', 'string')->label('Country'),
+            Column::make('latitude', 'decimal')->label('Latitude'),
+            Column::make('longitude', 'decimal')->label('Longitude'),
+        ];
+    }
+
+    /**
+     * SQL reading a numeric amount stored under a key of a JSON column.
+     */
+    protected function jsonAmount(string $column, string $key): string
+    {
+        return "CAST(JSON_UNQUOTE(JSON_EXTRACT({$column}, '$.{$key}')) AS DECIMAL(15,2))";
+    }
+
+    /**
+     * A row-level expression column, such as a value read out of a JSON column.
+     *
+     * Core API releases before expression columns only know computed columns; there the
+     * column is still declared, it just cannot be selected on its own.
+     */
+    protected function expression(string $name, string $sql, string $type): Column
+    {
+        // One line: whichever branch runs depends on the installed Core API, not on the test.
+        return method_exists(Column::class, 'expression') ? Column::expression($name, $sql, $type) : Column::computed($name, $sql, $type);
+    }
+
+    /**
+     * Leave soft-deleted rows out of a table or joined relationship, on Core API releases that support it.
+     *
+     * @template T of Table|Relationship
+     *
+     * @param T $schema
+     *
+     * @return T
+     */
+    protected function softDeletes(Table|Relationship $schema): Table|Relationship
+    {
+        return method_exists($schema, 'softDeletes') ? $schema->softDeletes() : $schema;
     }
 }
