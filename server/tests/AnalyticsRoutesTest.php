@@ -17,6 +17,9 @@ use Fleetbase\FleetOps\Support\Analytics\RevenueTrend;
 use Fleetbase\FleetOps\Support\Analytics\TopDrivers;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Company;
+use Illuminate\Database\ConnectionResolver;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
+use Illuminate\Database\SQLiteConnection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -273,6 +276,16 @@ test('analytics base applies company currency and explicit date ranges', functio
 });
 
 test('live fleet analytics serializes driver and vehicle map payloads', function () {
+    // The markers' cards look up the current order and last known position.
+    $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
+    $connection->statement('create table orders (uuid varchar(64) primary key, public_id varchar(64) null, company_uuid varchar(64) null, driver_assigned_uuid varchar(64) null, vehicle_assigned_uuid varchar(64) null, tracking_number_uuid varchar(64) null, status varchar(64) null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
+    $connection->statement('create table drivers (uuid varchar(64) primary key, public_id varchar(64) null, company_uuid varchar(64) null, user_uuid varchar(64) null, vehicle_uuid varchar(64) null, current_job_uuid varchar(64) null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
+    $connection->statement('create table users (uuid varchar(64) primary key, company_uuid varchar(64) null, name varchar(255) null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
+    $connection->statement('create table positions (uuid varchar(64) primary key, company_uuid varchar(64) null, subject_uuid varchar(64) null, subject_type varchar(255) null, order_uuid varchar(64) null, speed numeric null, heading numeric null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
+    $resolver = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    EloquentModel::setConnectionResolver($resolver);
+
     $analytics = new LiveFleet();
 
     $driver                 = new TestFleetOpsLiveFleetDriver();
@@ -308,7 +321,21 @@ test('live fleet analytics serializes driver and vehicle map payloads', function
     $driverPayload->setAccessible(true);
     $vehiclePayload->setAccessible(true);
 
-    expect($driverPayload->invoke($analytics, $driver))->toBe([
+    $driverResult  = $driverPayload->invoke($analytics, $driver);
+    $vehicleResult = $vehiclePayload->invoke($analytics, $vehicle);
+
+    // Each marker carries the live map's card: the same index resource the live endpoints return.
+    expect($driverResult['card'])->toBeArray()
+        ->and($driverResult['card'])->toHaveKeys(['name', 'status', 'phone', 'email', 'online', 'meta'])
+        ->and($driverResult['card']['meta'])->toHaveKeys(['status_label', 'speed_label', 'heading_label', 'location_coordinates', 'current_order_reference'])
+        ->and($driverResult['card']['name'])->toBe('Ada Driver')
+        ->and($vehicleResult['card'])->toHaveKeys(['display_name', 'driver_name', 'plate_number', 'online', 'meta'])
+        ->and($vehicleResult['card']['display_name'])->toBe('Van 7')
+        ->and($vehicleResult['card']['meta'])->toHaveKeys(['status_label', 'speed_label', 'heading_label', 'location_coordinates', 'current_order_reference']);
+
+    unset($driverResult['card'], $vehicleResult['card']);
+
+    expect($driverResult)->toBe([
         'uuid'               => 'driver-uuid',
         'public_id'          => 'driver-public',
         'name'               => 'Ada Driver',
@@ -320,7 +347,7 @@ test('live fleet analytics serializes driver and vehicle map payloads', function
         'lat'                => 1.30,
         'lng'                => 103.80,
         'updated_at'         => '2026-01-01 10:00:00',
-    ])->and($vehiclePayload->invoke($analytics, $vehicle))->toBe([
+    ])->and($vehicleResult)->toBe([
         'uuid'         => 'vehicle-uuid',
         'public_id'    => 'vehicle-public',
         'name'         => 'Van 7',
