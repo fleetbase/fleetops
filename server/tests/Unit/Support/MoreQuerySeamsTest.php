@@ -384,13 +384,22 @@ test('index driver resource counts assigned orders and names the current one', f
 });
 
 test('shift change listener reads company scheduling settings', function () {
-    fleetopsMoreSeamBoot();
+    $connection = fleetopsMoreSeamBoot();
 
     $class    = Fleetbase\FleetOps\Listeners\NotifyDriverOnShiftChange::class;
     $listener = (new ReflectionClass($class))->newInstanceWithoutConstructor();
 
     // With nothing stored the lookup falls back to the empty default
-    expect(fleetopsMoreSeamInvoke($listener, $class, 'getSchedulingSettings'))->toBe([]);
+    expect(fleetopsMoreSeamInvoke($listener, $class, 'getSchedulingSettings', ['company-seam-2']))->toBe([]);
+
+    // Queued listeners have no company session, so the schedule's company is used
+    $connection->table('settings')->insert(['key' => 'company.company-seam-3.fleet-ops.scheduling-settings', 'value' => json_encode(['notify_drivers_on_shift_change' => true])]);
+    session(['company' => null]);
+    $settings = fleetopsMoreSeamInvoke($listener, $class, 'getSchedulingSettings', ['company-seam-3']);
+    session(['company' => 'company-seam-2']);
+
+    expect($settings)->toBe(['notify_drivers_on_shift_change' => true])
+        ->and(fleetopsMoreSeamInvoke($listener, $class, 'getSchedulingSettings', [null]))->toBe([]);
 });
 
 test('order insights capability builds its own company-scoped order query', function () {
