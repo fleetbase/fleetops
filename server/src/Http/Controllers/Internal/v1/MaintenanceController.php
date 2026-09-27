@@ -7,7 +7,6 @@ use Fleetbase\FleetOps\Exports\MaintenanceExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Imports\MaintenanceImport;
 use Fleetbase\FleetOps\Models\Maintenance;
-use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Http\JsonResponse;
@@ -17,6 +16,17 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class MaintenanceController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'addLineItem'    => 'update maintenance',
+        'updateLineItem' => 'update maintenance',
+        'removeLineItem' => 'update maintenance',
+    ];
+
     /**
      * The resource to query.
      *
@@ -72,8 +82,6 @@ class MaintenanceController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function addLineItem(string $id, Request $request): JsonResponse
     {
-        Authorization::authorize('update maintenance');
-
         $maintenance = $this->findMaintenanceForLineItem($id);
 
         $validated = $request->validate([
@@ -97,8 +105,6 @@ class MaintenanceController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function updateLineItem(string $id, int $index, Request $request): JsonResponse
     {
-        Authorization::authorize('update maintenance');
-
         $maintenance = $this->findMaintenanceForLineItem($id);
 
         $validated = $request->validate([
@@ -132,8 +138,6 @@ class MaintenanceController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function removeLineItem(string $id, int $index): JsonResponse
     {
-        Authorization::authorize('update maintenance');
-
         $maintenance = $this->findMaintenanceForLineItem($id);
 
         if (!$maintenance->removeLineItem($index)) {

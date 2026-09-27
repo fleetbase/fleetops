@@ -8,7 +8,6 @@ use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Imports\WorkOrderImport;
 use Fleetbase\FleetOps\Mail\WorkOrderDispatched;
 use Fleetbase\FleetOps\Models\WorkOrder;
-use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Http\JsonResponse;
@@ -18,6 +17,15 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class WorkOrderController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'sendEmail' => 'update work-order',
+    ];
+
     /**
      * The resource to query.
      *
@@ -85,8 +93,6 @@ class WorkOrderController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function sendEmail(string $id): JsonResponse
     {
-        Authorization::authorize('update work-order');
-
         $workOrder = $this->workOrderForEmail($id);
 
         // Resolve recipient email from the assignee (vendor or contact)

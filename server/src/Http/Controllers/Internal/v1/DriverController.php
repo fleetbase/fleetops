@@ -15,7 +15,6 @@ use Fleetbase\FleetOps\Imports\DriverImport;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
-use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\ProfileAccountManager;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
@@ -35,6 +34,20 @@ use Maatwebsite\Excel\Facades\Excel;
 class DriverController extends FleetOpsController
 {
     use Traits\DriverSchedulingTrait;
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'sendCredentials'  => 'update-user-for driver',
+        'resetCredentials' => 'update-user-for driver',
+        'deactivateLogin'  => 'update-user-for driver',
+        'reactivateLogin'  => 'update-user-for driver',
+        'unassignOrders'   => 'assign-order-for driver',
+        'unassignOrder'    => 'assign-order-for driver',
+        'unassignVehicle'  => 'assign-vehicle-for driver',
+    ];
     /**
      * The resource to query.
      *
@@ -205,8 +218,6 @@ class DriverController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function sendCredentials(string $id)
     {
-        Authorization::authorize('update-user-for driver');
-
         [$driver, $user, $error] = $this->resolveDriverLogin($id);
         if ($error) {
             return $error;
@@ -229,8 +240,6 @@ class DriverController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function resetCredentials(Request $request, string $id)
     {
-        Authorization::authorize('update-user-for driver');
-
         $password = $request->input('password');
         if (!is_string($password) || strlen($password) < 8) {
             return response()->error('Password must be at least 8 characters.');
@@ -266,8 +275,6 @@ class DriverController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function deactivateLogin(string $id)
     {
-        Authorization::authorize('update-user-for driver');
-
         [$driver, $user, $error] = $this->resolveDriverLogin($id);
         if ($error) {
             return $error;
@@ -289,8 +296,6 @@ class DriverController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function reactivateLogin(string $id)
     {
-        Authorization::authorize('update-user-for driver');
-
         [$driver, $user, $error] = $this->resolveDriverLogin($id);
         if ($error) {
             return $error;
@@ -447,8 +452,6 @@ class DriverController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function unassignOrders(Request $request, string $id): JsonResponse
     {
-        Authorization::authorize('assign-order-for driver');
-
         $request->validate([
             'orders'   => 'required|array|min:1',
             'orders.*' => 'required|string',
@@ -482,8 +485,6 @@ class DriverController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function unassignOrder(string $id): JsonResponse
     {
-        Authorization::authorize('assign-order-for driver');
-
         $driver = $this->findDriver($id);
         $order  = $this->currentAssignedOrderForDriver($driver) ?? $driver->getCurrentOrder();
 
@@ -521,8 +522,6 @@ class DriverController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function unassignVehicle(string $id): JsonResponse
     {
-        Authorization::authorize('assign-vehicle-for driver');
-
         $driver  = $this->findDriver($id);
         $vehicle = $driver->vehicle;
 

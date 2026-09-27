@@ -15,10 +15,10 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Route;
 use Fleetbase\FleetOps\Models\Vehicle;
-use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\LiveCacheService;
 use Fleetbase\FleetOps\Support\LiveOrderQuery;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
@@ -27,6 +27,21 @@ use Illuminate\Http\Request;
  */
 class LiveController extends Controller
 {
+    use AuthorizesMethods;
+
+    public function __construct()
+    {
+        $this->authorizeMethods([
+            'coordinates'           => 'list order',
+            'routes'                => 'list order',
+            'orders'                => 'list order',
+            'drivers'               => 'list driver',
+            'vehicles'              => 'list vehicle',
+            'operationsMonitor'     => 'list order',
+            'places'                => 'list place',
+        ]);
+    }
+
     protected const DEFAULT_VIEWPORT_LIMIT    = 500;
     protected const MAX_VIEWPORT_LIMIT        = 1000;
     protected const VIEWPORT_BOUNDS_PRECISION = 4;
@@ -38,8 +53,6 @@ class LiveController extends Controller
      */
     public function coordinates()
     {
-        Authorization::authorize('list order');
-
         return LiveCacheService::remember('coordinates', [], function () {
             $coordinates = [];
 
@@ -73,8 +86,6 @@ class LiveController extends Controller
      */
     public function routes()
     {
-        Authorization::authorize('list order');
-
         return LiveCacheService::remember('routes', [], function () {
             // Fetch routes that are not canceled or completed and have an assigned driver
             $routes = Route::where('company_uuid', session('company'))
@@ -112,8 +123,6 @@ class LiveController extends Controller
      */
     public function orders(Request $request)
     {
-        Authorization::authorize('list order');
-
         $exclude     = $request->array('exclude');
         $active      = $request->boolean('active');
         $unassigned  = $request->boolean('unassigned');
@@ -149,8 +158,6 @@ class LiveController extends Controller
      */
     public function drivers(Request $request)
     {
-        Authorization::authorize('list driver');
-
         $bounds      = $this->normalizeLiveBounds($request);
         $limit       = $this->normalizeLiveLimit($request);
         $cacheParams = ['bounds' => $bounds, 'limit' => $limit];
@@ -178,8 +185,6 @@ class LiveController extends Controller
      */
     public function vehicles(Request $request)
     {
-        Authorization::authorize('list vehicle');
-
         $bounds      = $this->normalizeLiveBounds($request);
         $limit       = $this->normalizeLiveLimit($request);
         $cacheParams = ['bounds' => $bounds, 'limit' => $limit];
@@ -208,8 +213,6 @@ class LiveController extends Controller
      */
     public function operationsMonitor()
     {
-        Authorization::authorize('list order');
-
         return LiveCacheService::remember('operations-monitor', [], function () {
             $drivers = Driver::where(['company_uuid' => session('company')])
                 ->with(['user', 'vehicle'])
@@ -383,8 +386,6 @@ class LiveController extends Controller
      */
     public function places(Request $request)
     {
-        Authorization::authorize('list place');
-
         $bounds = $this->normalizeLiveBounds($request);
         $limit  = $this->normalizeLiveLimit($request);
 

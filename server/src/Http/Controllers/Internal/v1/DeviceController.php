@@ -8,7 +8,6 @@ use Fleetbase\FleetOps\Exports\DeviceExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Vehicle;
-use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +18,16 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class DeviceController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'attach' => 'update device',
+        'detach' => 'update device',
+    ];
+
     /**
      * The resource to query.
      *
@@ -115,8 +124,6 @@ class DeviceController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function attach(Request $request, string $id): JsonResponse
     {
-        Authorization::authorize('update device');
-
         $request->validate([
             'vehicle' => 'required_without:attachable_uuid|nullable|string',
         ]);
@@ -160,8 +167,6 @@ class DeviceController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function detach(string $id): JsonResponse
     {
-        Authorization::authorize('update device');
-
         $device = $this->resolveDevice($id);
 
         if (!$device) {

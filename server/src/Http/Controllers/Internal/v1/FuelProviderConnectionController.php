@@ -6,7 +6,6 @@ use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Jobs\SyncFuelProviderTransactionsJob;
 use Fleetbase\FleetOps\Models\FuelProviderConnection;
-use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\FuelProviders\FuelProviderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +14,16 @@ use Illuminate\Validation\ValidationException;
 
 class FuelProviderConnectionController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'testCredentials' => 'create fuel-provider-connection',
+        'testConnection'  => 'update fuel-provider-connection',
+    ];
+
     public $resource = 'fuel_provider_connection';
 
     public function __construct(protected FuelProviderService $fuelProviderService)
@@ -43,8 +52,6 @@ class FuelProviderConnectionController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function testCredentials(Request $request, string $provider): JsonResponse
     {
-        Authorization::authorize('create fuel-provider-connection');
-
         $request->validate([
             'credentials' => 'required|array',
             'environment' => 'nullable|string|in:production,sandbox',
@@ -62,8 +69,6 @@ class FuelProviderConnectionController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function testConnection(Request $request, string $id): JsonResponse
     {
-        Authorization::authorize('update fuel-provider-connection');
-
         $connection = $this->findConnection($id);
         $result     = $this->fuelProviderService->testConnection($connection);
 

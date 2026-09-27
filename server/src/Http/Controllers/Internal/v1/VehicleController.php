@@ -13,7 +13,6 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Equipment;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
-use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\Support\Resolve;
@@ -27,6 +26,20 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class VehicleController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'unassignDriver'  => 'assign-driver-for vehicle',
+        'unassignOrders'  => 'update vehicle',
+        'attachDevice'    => 'update vehicle',
+        'detachDevice'    => 'update vehicle',
+        'attachEquipment' => 'update vehicle',
+        'detachEquipment' => 'update vehicle',
+    ];
+
     /**
      * The resource to query.
      *
@@ -116,8 +129,6 @@ class VehicleController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function unassignDriver(string $id): JsonResponse
     {
-        Authorization::authorize('assign-driver-for vehicle');
-
         $vehicle = $this->findVehicle($id);
         $vehicle->unassignDriver();
         $vehicle->load(['driver', 'devices']);
@@ -151,8 +162,6 @@ class VehicleController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function unassignOrders(Request $request, string $id): JsonResponse
     {
-        Authorization::authorize('update vehicle');
-
         $request->validate([
             'orders'   => 'required|array|min:1',
             'orders.*' => 'required|string',
@@ -190,8 +199,6 @@ class VehicleController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function attachDevice(Request $request, string $id): JsonResponse
     {
-        Authorization::authorize('update vehicle');
-
         $request->validate(['device' => 'required|string']);
 
         $deviceId = $request->input('device');
@@ -233,8 +240,6 @@ class VehicleController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function detachDevice(Request $request, string $id): JsonResponse
     {
-        Authorization::authorize('update vehicle');
-
         $request->validate(['device' => 'required|string']);
 
         $deviceId = $request->input('device');
@@ -282,8 +287,6 @@ class VehicleController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function attachEquipment(Request $request, string $id): JsonResponse
     {
-        Authorization::authorize('update vehicle');
-
         $request->validate(['equipment' => 'required|string']);
 
         $vehicle   = $this->resolveVehicle($id);
@@ -312,8 +315,6 @@ class VehicleController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function detachEquipment(Request $request, string $id): JsonResponse
     {
-        Authorization::authorize('update vehicle');
-
         $request->validate(['equipment' => 'required|string']);
 
         $vehicle   = $this->resolveVehicle($id);

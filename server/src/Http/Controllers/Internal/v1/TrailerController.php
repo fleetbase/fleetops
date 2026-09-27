@@ -14,7 +14,6 @@ use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Equipment;
 use Fleetbase\FleetOps\Models\Trailer;
 use Fleetbase\FleetOps\Models\Vehicle;
-use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\Support\Resolve;
@@ -25,6 +24,20 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class TrailerController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'attach'          => 'attach-vehicle-for trailer',
+        'detach'          => 'detach-vehicle-for trailer',
+        'attachDevice'    => 'attach-device-for trailer',
+        'detachDevice'    => 'detach-device-for trailer',
+        'attachEquipment' => 'attach-equipment-for trailer',
+        'detachEquipment' => 'detach-equipment-for trailer',
+    ];
+
     /**
      * The resource to query.
      *
@@ -74,8 +87,6 @@ class TrailerController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function attach(Request $request, string $id)
     {
-        Authorization::authorize('attach-vehicle-for trailer');
-
         $request->validate(['vehicle' => ['required', 'string'], 'position' => ['nullable', 'integer', 'min:1']]);
 
         $trailer = $this->resolveTrailer($id);
@@ -142,8 +153,6 @@ class TrailerController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function detach(string $id)
     {
-        Authorization::authorize('detach-vehicle-for trailer');
-
         $trailer = $this->resolveTrailer($id);
 
         if (!$trailer) {
@@ -168,8 +177,6 @@ class TrailerController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function attachDevice(Request $request, string $id)
     {
-        Authorization::authorize('attach-device-for trailer');
-
         $request->validate(['device' => ['required', 'string']]);
 
         $trailer = $this->resolveTrailer($id);
@@ -200,8 +207,6 @@ class TrailerController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function detachDevice(Request $request, string $id)
     {
-        Authorization::authorize('detach-device-for trailer');
-
         $request->validate(['device' => ['required', 'string']]);
 
         $trailer = $this->resolveTrailer($id);
@@ -232,8 +237,6 @@ class TrailerController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function attachEquipment(Request $request, string $id)
     {
-        Authorization::authorize('attach-equipment-for trailer');
-
         $request->validate(['equipment' => ['required', 'string']]);
 
         $trailer   = $this->resolveTrailer($id);
@@ -262,8 +265,6 @@ class TrailerController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function detachEquipment(Request $request, string $id)
     {
-        Authorization::authorize('detach-equipment-for trailer');
-
         $request->validate(['equipment' => ['required', 'string']]);
 
         $trailer   = $this->resolveTrailer($id);

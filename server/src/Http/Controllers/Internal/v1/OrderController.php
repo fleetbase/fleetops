@@ -33,7 +33,6 @@ use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Notifications\OrderPing;
-use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
@@ -55,6 +54,20 @@ use Maatwebsite\Excel\Facades\Excel;
 class OrderController extends FleetOpsController
 {
     use ResolvesOrderServiceStops;
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'editOrderRoute'   => 'update-route-for order',
+        'importFromFiles'  => 'import order',
+        'bulkCancel'       => 'cancel order',
+        'bulkDispatch'     => 'dispatch order',
+        'bulkAssignDriver' => 'assign-driver-for order',
+        'dispatchOrder'    => 'dispatch order',
+        'scheduleOrder'    => 'schedule order',
+    ];
 
     /**
      * The resource to query.
@@ -272,8 +285,6 @@ class OrderController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function editOrderRoute(string $id, Request $request)
     {
-        Authorization::authorize('update-route-for order');
-
         $pickup            = $request->input('pickup');
         $dropoff           = $request->input('dropoff');
         $return            = $request->input('return');
@@ -345,8 +356,6 @@ class OrderController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function importFromFiles(Request $request)
     {
-        Authorization::authorize('import order');
-
         $info    = Utils::lookupIp();
         $disk    = $request->input('disk', config('filesystems.default'));
         $files   = $request->input('files');
@@ -420,8 +429,6 @@ class OrderController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function bulkCancel(Request $request)
     {
-        Authorization::authorize('cancel order');
-
         $request->validate([
             'ids' => ['required', 'array'],
         ]);
@@ -468,8 +475,6 @@ class OrderController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function bulkDispatch(BulkDispatchRequest $request)
     {
-        Authorization::authorize('dispatch order');
-
         /** @var Order */
         $orders = $this->ordersByUuid($request->input('ids'));
 
@@ -519,8 +524,6 @@ class OrderController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function bulkAssignDriver(Request $request)
     {
-        Authorization::authorize('assign-driver-for order');
-
         // Validate Inputs
         $data = $this->validateBulkAssignDriverRequest($request);
 
@@ -598,8 +601,6 @@ class OrderController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function dispatchOrder(Request $request)
     {
-        Authorization::authorize('dispatch order');
-
         /**
          * @var Order
          */
@@ -1929,8 +1930,6 @@ class OrderController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function scheduleOrder(Request $request)
     {
-        Authorization::authorize('schedule order');
-
         $orderId     = $request->input('order');
         $scheduledAt = $request->input('scheduled_at');
         $driverId    = $request->input('driver_id');

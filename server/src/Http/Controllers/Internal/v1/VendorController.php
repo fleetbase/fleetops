@@ -11,7 +11,6 @@ use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\VendorPersonnel;
-use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Http\Request;
@@ -21,6 +20,18 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class VendorController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'assignDriver'          => 'update vendor',
+        'removeDriver'          => 'update vendor',
+        'addVendorPersonnel'    => 'update vendor',
+        'removeVendorPersonnel' => 'update vendor',
+    ];
+
     /**
      * The resource to query.
      *
@@ -133,8 +144,6 @@ class VendorController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function assignDriver(string $id, Request $request)
     {
-        Authorization::authorize('update vendor');
-
         // Validate only param
         if (!$request->isUuid('driver')) {
             return response()->error('No driver selected to assign to vendor.');
@@ -168,8 +177,6 @@ class VendorController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function removeDriver(string $id, Request $request)
     {
-        Authorization::authorize('update vendor');
-
         // Validate only param
         if (!$request->isUuid('driver')) {
             return response()->error('No driver selected to remove from vendor.');
@@ -208,8 +215,6 @@ class VendorController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function addVendorPersonnel(Request $request, string $vendorId)
     {
-        Authorization::authorize('update vendor');
-
         $vendor  = $this->findVendorByIdOrFail($vendorId);
         $contact = $this->resolveOrCreatePersonnelContact($request);
 
@@ -234,8 +239,6 @@ class VendorController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function removeVendorPersonnel(string $vendorId, string $contactId)
     {
-        Authorization::authorize('update vendor');
-
         $vendor  = $this->findVendorByIdOrFail($vendorId);
         $contact = $this->findContactByIdOrFail($contactId);
 

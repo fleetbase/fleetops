@@ -9,7 +9,6 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\InspectionForm;
 use Fleetbase\FleetOps\Models\InspectionLink;
 use Fleetbase\FleetOps\Models\Vehicle;
-use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\InspectionFormSync;
 use Fleetbase\FleetOps\Support\InspectionLinkPin;
 use Fleetbase\Models\User;
@@ -18,6 +17,17 @@ use Illuminate\Http\Request;
 
 class InspectionFormController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'generateLink' => 'publish inspection-form',
+        'revokeLink'   => 'publish inspection-form',
+        'sendPin'      => 'publish inspection-form',
+    ];
+
     /**
      * The resource to query.
      *
@@ -112,8 +122,6 @@ class InspectionFormController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function generateLink(Request $request, string $id): JsonResponse
     {
-        Authorization::authorize('publish inspection-form');
-
         $form = $this->resolveForm($id)
             ->firstOrFail();
 
@@ -223,8 +231,6 @@ class InspectionFormController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function revokeLink(Request $request, string $id, string $linkId): JsonResponse
     {
-        Authorization::authorize('publish inspection-form');
-
         $form = $this->resolveForm($id)->firstOrFail();
 
         $link = InspectionLink::where('inspection_form_uuid', $form->uuid)
@@ -254,8 +260,6 @@ class InspectionFormController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function sendPin(Request $request, string $id, string $linkId): JsonResponse
     {
-        Authorization::authorize('publish inspection-form');
-
         $form      = $this->resolveForm($id)->firstOrFail();
         $validated = $request->validate(['via' => 'required|in:email,sms']);
 

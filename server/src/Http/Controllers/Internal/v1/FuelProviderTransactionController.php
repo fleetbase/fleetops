@@ -5,13 +5,23 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\FuelProviderTransaction;
-use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\FuelProviders\FuelProviderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class FuelProviderTransactionController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'matchVehicle' => 'update fuel-provider-transaction',
+        'matchOrder'   => 'update fuel-provider-transaction',
+        'reprocess'    => 'update fuel-provider-transaction',
+    ];
+
     public $resource = 'fuel_provider_transaction';
 
     public function __construct(protected FuelProviderService $fuelProviderService)
@@ -27,8 +37,6 @@ class FuelProviderTransactionController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function matchVehicle(Request $request, string $id): JsonResponse
     {
-        Authorization::authorize('update fuel-provider-transaction');
-
         $request->validate(['vehicle' => 'required|string']);
         $transaction = $this->findTransaction($id);
 
@@ -41,8 +49,6 @@ class FuelProviderTransactionController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function matchOrder(Request $request, string $id): JsonResponse
     {
-        Authorization::authorize('update fuel-provider-transaction');
-
         $request->validate(['order' => 'required|string']);
         $transaction = $this->findTransaction($id);
 
@@ -55,8 +61,6 @@ class FuelProviderTransactionController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function reprocess(Request $request, string $id): JsonResponse
     {
-        Authorization::authorize('update fuel-provider-transaction');
-
         $transaction = $this->findTransaction($id);
 
         return response()->json([

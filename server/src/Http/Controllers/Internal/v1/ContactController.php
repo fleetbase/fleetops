@@ -15,7 +15,6 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\PurchaseRate;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\VendorPersonnel;
-use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
@@ -28,6 +27,15 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ContactController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'convertToVendor' => 'create vendor',
+    ];
+
     /**
      * The resource to query.
      *
@@ -113,8 +121,6 @@ class ContactController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function convertToVendor(Request $request, string $id)
     {
-        Authorization::authorize('create vendor');
-
         $contact = $this->contactForVendorConversion($id);
 
         $vendor = $this->runContactConversionTransaction(function () use ($contact, $request) {

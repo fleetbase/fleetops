@@ -4,8 +4,8 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Mail\CustomerCredentialsMail;
 use Fleetbase\FleetOps\Models\Contact;
-use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\ProfileAccountManager;
+use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\User;
 use Illuminate\Http\Request;
@@ -14,10 +14,21 @@ use Illuminate\Support\Str;
 
 class CustomerController extends Controller
 {
+    use AuthorizesMethods;
+
+    public function __construct()
+    {
+        $this->authorizeMethods([
+            'createPortalLogin'     => 'reset-credentials-for customer',
+            'sendCredentials'       => 'reset-credentials-for customer',
+            'deactivatePortalLogin' => 'reset-credentials-for customer',
+            'reactivatePortalLogin' => 'reset-credentials-for customer',
+            'resetCredentials'      => 'reset-credentials-for customer',
+        ]);
+    }
+
     public function createPortalLogin(Request $request)
     {
-        Authorization::authorize('reset-credentials-for customer');
-
         $customer = $this->resolveCustomer($request);
         $user     = $this->resolveCustomerUser($customer);
 
@@ -40,8 +51,6 @@ class CustomerController extends Controller
 
     public function sendCredentials(Request $request)
     {
-        Authorization::authorize('reset-credentials-for customer');
-
         $customer = $this->resolveCustomer($request);
         $user     = $this->resolveCustomerUser($customer);
 
@@ -64,8 +73,6 @@ class CustomerController extends Controller
 
     public function deactivatePortalLogin(Request $request)
     {
-        Authorization::authorize('reset-credentials-for customer');
-
         $customer = $this->resolveCustomer($request);
         $user     = $customer->user_uuid ? $this->findUser($customer->user_uuid) : null;
 
@@ -86,8 +93,6 @@ class CustomerController extends Controller
 
     public function reactivatePortalLogin(Request $request)
     {
-        Authorization::authorize('reset-credentials-for customer');
-
         $customer = $this->resolveCustomer($request);
         $user     = $customer->user_uuid ? $this->findUser($customer->user_uuid) : null;
 
@@ -154,8 +159,6 @@ class CustomerController extends Controller
      */
     public function resetCredentials(Request $request)
     {
-        Authorization::authorize('reset-credentials-for customer');
-
         $customerId      = $request->input('customer');
         $password        = $request->input('password');
         $confirmPassword = $request->input('password_confirmation');

@@ -8,7 +8,6 @@ use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Imports\MaintenanceScheduleImport;
 use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Fleetbase\FleetOps\Models\WorkOrder;
-use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +23,17 @@ use Spatie\IcalendarGenerator\ValueObjects\RRule;
 
 class MaintenanceScheduleController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'pause'   => 'update maintenance-schedule',
+        'resume'  => 'update maintenance-schedule',
+        'trigger' => 'update maintenance-schedule',
+    ];
+
     /**
      * The resource to query.
      *
@@ -76,8 +86,6 @@ class MaintenanceScheduleController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function pause(string $id): JsonResponse
     {
-        Authorization::authorize('update maintenance-schedule');
-
         $schedule = $this->findSchedule($id);
 
         $schedule->pause();
@@ -96,8 +104,6 @@ class MaintenanceScheduleController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function resume(string $id): JsonResponse
     {
-        Authorization::authorize('update maintenance-schedule');
-
         $schedule = $this->findSchedule($id);
 
         $schedule->resume();
@@ -116,8 +122,6 @@ class MaintenanceScheduleController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function trigger(string $id, Request $request): JsonResponse
     {
-        Authorization::authorize('update maintenance-schedule');
-
         $schedule  = $this->findSchedule($id);
         $workOrder = $this->createWorkOrderFromSchedule($schedule);
 
