@@ -83,12 +83,14 @@ export default class ManagementVendorsIndexController extends Controller {
                 type: 'primary',
                 icon: 'plus',
                 onClick: this.vendorActions.transition.create,
+                permission: 'fleet-ops create vendor',
             },
             {
                 text: this.intl.t('common.import'),
                 type: 'magic',
                 icon: 'upload',
                 onClick: this.vendorActions.import,
+                permission: 'fleet-ops import vendor',
             },
             {
                 text: this.intl.t('common.export'),
@@ -96,6 +98,7 @@ export default class ManagementVendorsIndexController extends Controller {
                 iconClass: 'rotate-icon-45',
                 wrapperClass: 'hidden md:flex',
                 onClick: this.vendorActions.export,
+                permission: 'fleet-ops export vendor',
             },
         ];
     }
@@ -109,6 +112,7 @@ export default class ManagementVendorsIndexController extends Controller {
                 label: this.intl.t('common.delete-selected-count', { count: selected.length }),
                 class: 'text-red-500',
                 fn: this.vendorActions.bulkDelete,
+                permission: 'fleet-ops delete vendor',
             },
         ];
     }

@@ -6,6 +6,15 @@ export default class MaintenanceInspectionSubmissionsIndexDetailsRoute extends R
     @service store;
     @service hostRouter;
     @service notifications;
+    @service abilities;
+    @service intl;
+
+    beforeModel() {
+        if (this.abilities.cannot('fleet-ops view inspection-submission')) {
+            this.notifications.warning(this.intl.t('common.unauthorized-access'));
+            return this.hostRouter.transitionTo('console.fleet-ops.maintenance.inspection-submissions.index');
+        }
+    }
 
     model({ public_id }) {
         return this.store.findRecord('inspection-submission', public_id);
@@ -13,6 +22,6 @@ export default class MaintenanceInspectionSubmissionsIndexDetailsRoute extends R
 
     @action error(error) {
         this.notifications.serverError(error);
-        return this.hostRouter.transitionTo('maintenance.inspection-submissions.index');
+        return this.hostRouter.transitionTo('console.fleet-ops.maintenance.inspection-submissions.index');
     }
 }

@@ -92,12 +92,14 @@ export default class ConnectivitySensorsIndexController extends Controller {
             type: 'primary',
             icon: 'plus',
             onClick: this.sensorActions.transition.create,
+            permission: 'fleet-ops create sensor',
         },
         {
             text: this.intl.t('common.import'),
             type: 'magic',
             icon: 'upload',
             onClick: this.sensorActions.import,
+            permission: 'fleet-ops import sensor',
         },
         {
             text: this.intl.t('common.export'),
@@ -105,6 +107,7 @@ export default class ConnectivitySensorsIndexController extends Controller {
             iconClass: 'rotate-icon-45',
             wrapperClass: 'hidden md:flex',
             onClick: this.sensorActions.export,
+            permission: 'fleet-ops export sensor',
         },
     ];
 
@@ -114,6 +117,7 @@ export default class ConnectivitySensorsIndexController extends Controller {
             label: 'Delete selected...',
             class: 'text-red-500',
             fn: this.sensorActions.bulkDelete,
+            permission: 'fleet-ops delete sensor',
         },
     ];
 

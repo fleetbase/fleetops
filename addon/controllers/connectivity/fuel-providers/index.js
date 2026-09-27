@@ -40,6 +40,7 @@ export default class ConnectivityFuelProvidersIndexController extends Controller
                 text: 'Connect Integration',
                 type: 'primary',
                 onClick: () => this.fuelIntegrationActions.transition.create(),
+                permission: 'fleet-ops create fuel-provider-connection',
             },
         ];
     }
@@ -51,6 +52,7 @@ export default class ConnectivityFuelProvidersIndexController extends Controller
             {
                 label: `Sync ${selected.length} selected`,
                 fn: () => selected.forEach((connection) => this.syncConnection(connection)),
+                permission: 'fleet-ops sync fuel-provider-connection',
             },
         ];
     }
@@ -125,11 +127,11 @@ export default class ConnectivityFuelProvidersIndexController extends Controller
                 sticky: 'right',
                 width: 60,
                 actions: [
-                    { label: 'Open Integration', fn: this.openConnection },
-                    { label: 'Edit Settings', fn: this.editConnection },
+                    { label: 'Open Integration', fn: this.openConnection, permission: 'fleet-ops view fuel-provider-connection' },
+                    { label: 'Edit Settings', fn: this.editConnection, permission: 'fleet-ops update fuel-provider-connection' },
                     { separator: true },
-                    { label: 'Test Connection', fn: this.testConnection },
-                    { label: 'Sync Transactions', fn: this.syncConnection },
+                    { label: 'Test Connection', fn: this.testConnection, permission: 'fleet-ops update fuel-provider-connection' },
+                    { label: 'Sync Transactions', fn: this.syncConnection, permission: 'fleet-ops sync fuel-provider-connection' },
                 ],
                 sortable: false,
                 filterable: false,

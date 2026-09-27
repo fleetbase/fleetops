@@ -29,6 +29,7 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 type: 'primary',
                 icon: 'plus',
                 onClick: this.serviceRateActions.transition.create,
+                permission: 'fleet-ops create service-rate',
             },
             {
                 text: this.intl.t('common.export'),
@@ -36,6 +37,7 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 iconClass: 'rotate-icon-45',
                 wrapperClass: 'hidden md:flex',
                 onClick: this.serviceRateActions.export,
+                permission: 'fleet-ops export service-rate',
             },
         ];
     }
@@ -47,6 +49,7 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 label: 'Delete selected...',
                 class: 'text-red-500',
                 fn: this.serviceRateActions.bulkDelete,
+                permission: 'fleet-ops delete service-rate',
             },
         ];
     }

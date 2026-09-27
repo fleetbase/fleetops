@@ -46,14 +46,21 @@ export default class MaintenanceEquipmentIndexController extends Controller {
                 helpText: 'Change the layout',
             },
             { icon: 'refresh', onClick: this.equipmentActions.refresh, helpText: this.intl.t('common.refresh') },
-            { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.equipmentActions.transition.create },
-            { text: this.intl.t('common.import'), type: 'magic', icon: 'upload', onClick: this.equipmentActions.import },
-            { text: this.intl.t('common.export'), icon: 'long-arrow-up', iconClass: 'rotate-icon-45', wrapperClass: 'hidden md:flex', onClick: this.equipmentActions.export },
+            { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.equipmentActions.transition.create, permission: 'fleet-ops create equipment' },
+            { text: this.intl.t('common.import'), type: 'magic', icon: 'upload', onClick: this.equipmentActions.import, permission: 'fleet-ops import equipment' },
+            {
+                text: this.intl.t('common.export'),
+                icon: 'long-arrow-up',
+                iconClass: 'rotate-icon-45',
+                wrapperClass: 'hidden md:flex',
+                onClick: this.equipmentActions.export,
+                permission: 'fleet-ops export equipment',
+            },
         ];
     }
 
     get bulkActions() {
-        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.equipmentActions.bulkDelete }];
+        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.equipmentActions.bulkDelete, permission: 'fleet-ops delete equipment' }];
     }
 
     get columns() {

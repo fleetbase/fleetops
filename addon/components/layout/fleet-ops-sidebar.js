@@ -151,14 +151,14 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             this.createItem('menu.contacts', 'address-book', 'management.contacts', 'fleet-ops list contact', 'fleet-ops see contact'),
             this.createItem('menu.places', 'location-dot', 'management.places', 'fleet-ops list place', 'fleet-ops see place'),
             this.createItem('menu.fuel-reports', 'gas-pump', 'management.fuel-reports', 'fleet-ops list fuel-report', 'fleet-ops see fuel-report'),
-            this.createItem('menu.fuel-transactions', 'credit-card', 'management.fuel-transactions', 'fleet-ops list fuel-report', 'fleet-ops see fuel-report'),
+            this.createItem('menu.fuel-transactions', 'credit-card', 'management.fuel-transactions', 'fleet-ops list fuel-provider-transaction', 'fleet-ops see fuel-provider-transaction'),
             this.createItem('menu.issues', 'triangle-exclamation', 'management.issues', 'fleet-ops list issue', 'fleet-ops see issue'),
         ]);
     }
 
     get maintenanceItems() {
         return this.withRegistryItems('maintenance', [
-            this.createHubItem('Maintenance Hub', 'wrench', 'maintenance.index', 'fleet-ops list maintenance-schedule', 'fleet-ops see maintenance-schedule', [
+            this.createHubItem('Maintenance Hub', 'wrench', 'maintenance.index', 'fleet-ops list work-order', 'fleet-ops see work-order', [
                 'maintenance hub',
                 'service readiness',
                 'maintenance control panel',
@@ -182,7 +182,9 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
     get connectivityItems() {
         return this.withRegistryItems('connectivity', [
             this.createHubItem(this.intl.t('menu.telematics'), 'satellite-dish', 'connectivity.telematics', 'fleet-ops list telematic', 'fleet-ops see telematic', ['connectivity hub']),
-            this.createItem('menu.fuel-providers', 'gas-pump', 'connectivity.fuel-providers', 'fleet-ops list fuel-report', 'fleet-ops see fuel-report', ['fuel integrations']),
+            this.createItem('menu.fuel-providers', 'gas-pump', 'connectivity.fuel-providers', 'fleet-ops list fuel-provider-connection', 'fleet-ops see fuel-provider-connection', [
+                'fuel integrations',
+            ]),
             this.createItem('menu.devices', 'hard-drive', 'connectivity.devices', 'fleet-ops list device', 'fleet-ops see device'),
             this.createItem('menu.sensors', 'temperature-full', 'connectivity.sensors', 'fleet-ops list sensor', 'fleet-ops see sensor'),
             this.createItem('menu.events', 'stream', 'connectivity.events', 'fleet-ops list device-event', 'fleet-ops see device-event'),
@@ -191,18 +193,14 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
     get analyticsItems() {
         return this.withRegistryItems('analytics', [
-            this.createHubItem('Dashboard', 'chart-line', 'analytics.index', 'iam list report', 'fleet-ops see report', ['dashboard', 'fleetops dashboard', 'metrics']),
-            this.createItem('menu.reports', 'file-import', 'analytics.reports', 'iam list report', 'fleet-ops see report'),
+            this.createHubItem('Dashboard', 'chart-line', 'analytics.index', 'fleet-ops view analytics', 'fleet-ops see analytics', ['dashboard', 'fleetops dashboard', 'metrics']),
+            this.createItem('menu.reports', 'file-import', 'analytics.reports', 'iam list report', 'iam see report'),
         ]);
     }
 
     get settingsItems() {
         return this.withRegistryItems('settings', [
-            this.createHubItem('Settings Hub', 'sliders', 'settings.index', 'fleet-ops view navigator-settings', 'fleet-ops see navigator-settings', [
-                'settings hub',
-                'configuration dashboard',
-                'setup focus',
-            ]),
+            this.createHubItem('Settings Hub', 'sliders', 'settings.index', null, null, ['settings hub', 'configuration dashboard', 'setup focus']),
             this.createItem('menu.navigator-app', 'location-arrow', 'settings.navigator-app', 'fleet-ops view navigator-settings', 'fleet-ops see navigator-settings'),
             this.createItem('menu.map', 'map', 'settings.map', 'fleet-ops view map-settings', 'fleet-ops see map-settings'),
             this.createItem('menu.payments', 'cash-register', 'settings.payments', 'fleet-ops view payments', 'fleet-ops see payments'),
@@ -210,8 +208,8 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             this.createItem('menu.routing', 'route', 'settings.routing', 'fleet-ops view routing-settings', 'fleet-ops see routing-settings'),
             this.createItem('menu.orchestrator', 'circle-nodes', 'settings.orchestrator', 'fleet-ops view routing-settings', 'fleet-ops see routing-settings'),
             this.createItem('menu.scheduling', 'calendar-days', 'settings.scheduling', 'fleet-ops view scheduling-settings', 'fleet-ops see scheduling-settings'),
-            this.createItem('menu.custom-fields', 'pen-to-square', 'settings.custom-fields', 'fleet-ops view custom-field', 'fleet-ops see custom-field'),
-            this.createItem('menu.avatars', 'icons', 'settings.avatars', 'fleet-ops view avatar', 'fleet-ops see avatar'),
+            this.createItem('menu.custom-fields', 'pen-to-square', 'settings.custom-fields', 'fleet-ops list custom-field', 'fleet-ops see custom-field'),
+            this.createItem('menu.avatars', 'icons', 'settings.avatars', 'fleet-ops list avatar', 'fleet-ops see avatar'),
         ]);
     }
 
@@ -265,16 +263,34 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
     }
 
     createBranch({ id, label, icon, route, defaultRoute, requiresVisibleChildren = false, children, keywords = [] }) {
+        const visibleChildren = children.filter((item) => item.visible !== false);
+
         return {
             id,
             label,
             icon,
             route: this.fullRoute(route),
-            defaultRoute: this.fullRoute(defaultRoute),
+            defaultRoute: this.resolveDefaultRoute(this.fullRoute(defaultRoute), visibleChildren),
             requiresVisibleChildren,
-            children: children.filter((item) => item.visible !== false),
+            children: visibleChildren,
             keywords,
         };
+    }
+
+    /**
+     * Keep the branch's default route when the user may open it; otherwise fall back to the
+     * first child route they are permitted to open, so clicking the branch does not land on a
+     * route guard that bounces them back out.
+     */
+    resolveDefaultRoute(defaultRoute, children = []) {
+        const permitted = (item) => [item.visiblePermission, item.permission].every((permission) => !permission || this.abilities.can(permission));
+        const defaultChild = children.find((item) => item.route === defaultRoute);
+
+        if (!defaultChild || permitted(defaultChild)) {
+            return defaultRoute;
+        }
+
+        return children.find((item) => item.route && permitted(item))?.route ?? defaultRoute;
     }
 
     createItem(intl, icon, route, permission, ability, keywords = []) {
@@ -290,7 +306,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
         };
     }
 
-    createHubItem(label, icon, route, _permission, _ability, keywords = []) {
+    createHubItem(label, icon, route, permission, ability, keywords = []) {
         return {
             pinnedFirst: true,
             priority: this.defaultPriorityForRoute(route),
@@ -298,6 +314,8 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             description: label,
             icon,
             route: this.fullRoute(route),
+            permission,
+            visiblePermission: ability,
             isNavigationHub: true,
             keywords: [label, route, ...keywords].filter(Boolean),
         };

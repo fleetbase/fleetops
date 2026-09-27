@@ -86,6 +86,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 type: 'primary',
                 icon: 'plus',
                 onClick: this.orderActions.transition.create,
+                permission: 'fleet-ops create order',
             },
             {
                 text: this.intl.t('common.export'),
@@ -93,12 +94,14 @@ export default class OperationsOrdersIndexController extends Controller {
                 iconClass: 'rotate-icon-45',
                 wrapperClass: 'hidden md:flex',
                 onClick: this.orderActions.export,
+                permission: 'fleet-ops export order',
             },
             {
                 text: this.intl.t('common.import'),
                 icon: 'file-import',
                 wrapperClass: 'hidden md:flex',
                 onClick: () => this.orderActions.importOrders({ onImportComplete: this.orderActions.refresh }),
+                permission: 'fleet-ops import order',
             },
         ];
     }
@@ -110,23 +113,27 @@ export default class OperationsOrdersIndexController extends Controller {
                 label: this.intl.t('common.cancel-resource', { resource: this.intl.t('resource.orders') }),
                 icon: 'ban',
                 fn: this.orderActions.bulkCancel,
+                permission: 'fleet-ops cancel order',
             },
             {
                 label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.orders') }),
                 icon: 'trash',
                 class: 'text-red-500',
                 fn: this.orderActions.bulkDelete,
+                permission: 'fleet-ops delete order',
             },
             { separator: true },
             {
                 label: this.intl.t('common.dispatch-orders'),
                 icon: 'rocket',
                 fn: this.orderActions.bulkDispatch,
+                permission: 'fleet-ops dispatch order',
             },
             {
                 label: this.intl.t('common.assign-drivers'),
                 icon: 'user-plus',
                 fn: this.orderActions.bulkAssignDriver,
+                permission: 'fleet-ops assign-driver-for order',
             },
         ];
     }

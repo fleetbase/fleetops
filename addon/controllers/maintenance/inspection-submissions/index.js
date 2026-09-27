@@ -23,12 +23,18 @@ export default class MaintenanceInspectionSubmissionsIndexController extends Con
     get actionButtons() {
         return [
             { icon: 'refresh', onClick: this.inspectionSubmissionActions.refresh, helpText: this.intl.t('common.refresh') },
-            { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.inspectionSubmissionActions.transition.create },
+            {
+                text: this.intl.t('common.new'),
+                type: 'primary',
+                icon: 'plus',
+                onClick: this.inspectionSubmissionActions.transition.create,
+                permission: 'fleet-ops create inspection-submission',
+            },
         ];
     }
 
     get bulkActions() {
-        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.inspectionSubmissionActions.bulkDelete }];
+        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.inspectionSubmissionActions.bulkDelete, permission: 'fleet-ops delete inspection-submission' }];
     }
 
     get columns() {
