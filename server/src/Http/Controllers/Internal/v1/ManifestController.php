@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Models\Manifest;
 use Fleetbase\FleetOps\Models\ManifestStop;
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,6 +32,8 @@ class ManifestController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        Authorization::authorize('list order');
+
         $companyUuid = session('company');
         $query       = $this->manifestQueryForCompany($companyUuid);
 
@@ -59,6 +62,8 @@ class ManifestController extends Controller
      */
     public function show(string $id): JsonResponse
     {
+        Authorization::authorize('view order');
+
         $manifest = $this->manifestQueryByPublicId($id)
             ->with($this->manifestShowRelations())
             ->firstOrFail();
@@ -73,6 +78,8 @@ class ManifestController extends Controller
      */
     public function cancel(string $id): JsonResponse
     {
+        Authorization::authorize('cancel order');
+
         $manifest = $this->manifestQueryByPublicId($id)->firstOrFail();
         $manifest->cancel();
 
@@ -86,6 +93,8 @@ class ManifestController extends Controller
      */
     public function destroy(string $id): JsonResponse
     {
+        Authorization::authorize('delete order');
+
         $manifest = $this->manifestQueryByPublicId($id)->firstOrFail();
         $manifest->delete();
 
@@ -99,6 +108,8 @@ class ManifestController extends Controller
      */
     public function showStop(string $id): JsonResponse
     {
+        Authorization::authorize('view order');
+
         $stop = $this->manifestStopQueryByPublicId($id)
             ->with(['place', 'order.trackingNumber', 'order.payload.dropoff', 'waypoint'])
             ->firstOrFail();
@@ -115,6 +126,8 @@ class ManifestController extends Controller
      */
     public function updateStop(Request $request, string $id): JsonResponse
     {
+        Authorization::authorize('update order');
+
         $stop = $this->manifestStopQueryByPublicId($id)->firstOrFail();
 
         $allowed = ['status', 'sequence', 'actual_arrival', 'meta'];

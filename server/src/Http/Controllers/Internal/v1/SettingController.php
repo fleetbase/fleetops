@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Tracking\TrackingProviderRegistry;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
@@ -21,37 +22,56 @@ class SettingController extends Controller
      */
     public function saveEntityEditingSettings(Request $request)
     {
-        $entityEditingSettings  = $request->input('entityEditingSettings', []);
+        Authorization::authorize('update navigator-settings');
 
-        // Save entity editing settings
-        $this->configureSetting('fleet-ops.entity-editing-settings', $entityEditingSettings);
+        // The setting is one platform-wide map keyed by order config id. Only this
+        // company's order configs may be written, and other companies' entries are kept.
+        $ownKeys  = $this->companyOrderConfigKeys();
+        $incoming = array_intersect_key((array) $request->input('entityEditingSettings', []), array_flip($ownKeys));
+        $existing = (array) ($this->settingValue('fleet-ops.entity-editing-settings') ?? []);
+        $merged   = array_merge(array_diff_key($existing, array_flip($ownKeys)), $incoming);
 
-        return response()->json(['entityEditingSettings' => $entityEditingSettings]);
+        $this->configureSetting('fleet-ops.entity-editing-settings', $merged);
+
+        return response()->json(['entityEditingSettings' => $incoming]);
     }
 
     /**
-     * Retrieve entity editing settings.
+     * Retrieve entity editing settings for this company's order configs.
      *
      * @return \Illuminate\Http\JsonResponse
      */
     public function getEntityEditingSettings()
     {
-        $entityEditingSettings  = $this->settingValue('fleet-ops.entity-editing-settings');
-        if (!$entityEditingSettings) {
-            $entityEditingSettings = [];
-        }
+        $entityEditingSettings = (array) ($this->settingValue('fleet-ops.entity-editing-settings') ?? []);
+        $entityEditingSettings = array_intersect_key($entityEditingSettings, array_flip($this->companyOrderConfigKeys()));
 
         return response()->json(['entityEditingSettings' => $entityEditingSettings]);
     }
 
     /**
-     * Retrieve driver onboard settings.
+     * Ids (uuid and public id) of the session company's order configs.
+     */
+    protected function companyOrderConfigKeys(): array
+    {
+        return \Fleetbase\FleetOps\Models\OrderConfig::where('company_uuid', session('company'))
+            ->get(['uuid', 'public_id'])
+            ->flatMap(fn ($config) => array_filter([$config->uuid, $config->public_id]))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Retrieve driver onboard settings for the session company.
+     *
+     * The route still carries a company id for backwards compatibility, but only
+     * the session company's settings are ever returned.
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getDriverOnboardSettings($companyId)
+    public function getDriverOnboardSettings($companyId = null)
     {
-        $driverOnboardSettings  = $this->settingValue('fleet-ops.driver-onboard-settings.' . $companyId);
+        $driverOnboardSettings  = $this->settingValue('fleet-ops.driver-onboard-settings.' . session('company'));
         if (!$driverOnboardSettings) {
             $driverOnboardSettings = [];
         }
@@ -66,9 +86,12 @@ class SettingController extends Controller
      */
     public function savedDriverOnboardSettings(Request $request)
     {
-        $driverOnboardSettings = $request->array('driverOnboardSettings', []);
+        Authorization::authorize('update navigator-settings');
 
-        if ($driverOnboardSettings['enableDriverOnboardFromApp'] == false) {
+        $driverOnboardSettings              = $request->array('driverOnboardSettings', []);
+        $driverOnboardSettings['companyId'] = session('company');
+
+        if (empty($driverOnboardSettings['enableDriverOnboardFromApp'])) {
             $driverOnboardSettings['driverMustProvideOnboardDoucments'] = false;
             $driverOnboardSettings['requiredOnboardDocuments']          = [];
             $driverOnboardSettings['driverOnboardAppMethod']            = '';
@@ -82,6 +105,8 @@ class SettingController extends Controller
 
     public function saveCustomerEnabledOrderConfigs(Request $request)
     {
+        Authorization::authorize('update order-config');
+
         $enabledOrderConfigs = array_values($request->array('enabledOrderConfigs'));
         $this->configureCompanySetting('fleet-ops.customer-enabled-order-configs', $enabledOrderConfigs);
 
@@ -97,6 +122,8 @@ class SettingController extends Controller
 
     public function saveCustomerPortalPaymentConfig(Request $request)
     {
+        Authorization::authorize('update payments');
+
         $paymentsConfig = $request->array('paymentsConfig');
         $this->configureCompanySetting('fleet-ops.customer-payments-configs', $paymentsConfig);
 
@@ -147,6 +174,8 @@ class SettingController extends Controller
      */
     public function saveNotificationSettings(Request $request)
     {
+        Authorization::authorize('update notification-settings');
+
         $notificationSettings = $request->input('notificationSettings');
         if (!is_array($notificationSettings)) {
             throw new \Exception('Invalid notification settings data.');
@@ -185,6 +214,8 @@ class SettingController extends Controller
      */
     public function saveRoutingSettings(Request $request)
     {
+        Authorization::authorize('update routing-settings');
+
         $displayEngine      = $request->input('display_engine', $request->input('router', 'osrm'));
         $optimizationEngine = $request->input('optimization_engine', $displayEngine);
         $unit               = $request->input('unit', 'km');
@@ -237,6 +268,8 @@ class SettingController extends Controller
      */
     public function saveTrackingSettings(Request $request)
     {
+        Authorization::authorize('update tracking-settings');
+
         $config    = $this->trackingDefaults();
         $fallbacks = $request->input('fallbacks', data_get($config, 'fallbacks', ['osrm', 'calculated']));
         if (is_string($fallbacks)) {
@@ -286,6 +319,8 @@ class SettingController extends Controller
 
     public function getAdminTrackingSettings()
     {
+        Authorization::authorizeAdmin();
+
         return response()->json(array_merge($this->trackingDefaults(), [
             'providers' => $this->trackingProviderOptions(),
         ]));
@@ -293,6 +328,8 @@ class SettingController extends Controller
 
     public function saveAdminTrackingSettings(Request $request)
     {
+        Authorization::authorizeAdmin();
+
         $config    = config('fleetops.tracking', []);
         $fallbacks = $request->input('fallbacks', data_get($config, 'fallbacks', ['osrm', 'calculated']));
         if (is_string($fallbacks)) {
@@ -361,6 +398,8 @@ class SettingController extends Controller
      */
     public function saveMapSettings(Request $request)
     {
+        Authorization::authorize('update map-settings');
+
         $settings = $request->input('settings', []);
 
         // The API key is managed at the system level via core-api — strip it
@@ -377,6 +416,8 @@ class SettingController extends Controller
 
     public function getAdminMapSettings()
     {
+        Authorization::authorizeAdmin();
+
         $defaults = [
             'mapProvider'     => 'leaflet',
             'googleMapsMapId' => '',
@@ -387,6 +428,8 @@ class SettingController extends Controller
 
     public function saveAdminMapSettings(Request $request)
     {
+        Authorization::authorizeAdmin();
+
         $allowedProviders = ['leaflet', 'google'];
         $mapProvider      = $request->input('mapProvider', 'leaflet');
         if (!in_array($mapProvider, $allowedProviders)) {
@@ -473,6 +516,8 @@ class SettingController extends Controller
      */
     public function saveSchedulingSettings(Request $request)
     {
+        Authorization::authorize('update scheduling-settings');
+
         $settings = [
             'horizon_days'                   => (int) $request->input('horizon_days', 60),
             'default_shift_duration'         => (int) $request->input('default_shift_duration', 8),
@@ -512,6 +557,8 @@ class SettingController extends Controller
      */
     public function saveOrchestratorSettings(Request $request)
     {
+        Authorization::authorize('update routing-settings');
+
         $settings = [
             'allocation_engine'           => $request->input('allocation_engine', 'vroom'),
             'auto_allocate_on_create'     => (bool) $request->input('auto_allocate_on_create', false),
@@ -548,6 +595,8 @@ class SettingController extends Controller
      */
     public function saveOrchestratorCardFields(Request $request)
     {
+        Authorization::authorize('update routing-settings');
+
         $settings = $request->input('settings', []);
 
         $normalized = [

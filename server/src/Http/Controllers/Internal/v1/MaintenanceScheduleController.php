@@ -2,11 +2,13 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Exports\MaintenanceScheduleExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Imports\MaintenanceScheduleImport;
 use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Fleetbase\FleetOps\Models\WorkOrder;
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Http\JsonResponse;
@@ -71,8 +73,11 @@ class MaintenanceScheduleController extends FleetOpsController
      * Pause a maintenance schedule.
      * POST /maintenance-schedules/{id}/pause.
      */
+    #[SkipAuthorizationCheck]
     public function pause(string $id): JsonResponse
     {
+        Authorization::authorize('update maintenance-schedule');
+
         $schedule = $this->findSchedule($id);
 
         $schedule->pause();
@@ -88,8 +93,11 @@ class MaintenanceScheduleController extends FleetOpsController
      * Resume a paused maintenance schedule.
      * POST /maintenance-schedules/{id}/resume.
      */
+    #[SkipAuthorizationCheck]
     public function resume(string $id): JsonResponse
     {
+        Authorization::authorize('update maintenance-schedule');
+
         $schedule = $this->findSchedule($id);
 
         $schedule->resume();
@@ -105,8 +113,11 @@ class MaintenanceScheduleController extends FleetOpsController
      * Manually trigger a work order from a schedule.
      * POST /maintenance-schedules/{id}/trigger.
      */
+    #[SkipAuthorizationCheck]
     public function trigger(string $id, Request $request): JsonResponse
     {
+        Authorization::authorize('update maintenance-schedule');
+
         $schedule  = $this->findSchedule($id);
         $workOrder = $this->createWorkOrderFromSchedule($schedule);
 

@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Http\Resources\Organization;
@@ -11,6 +12,7 @@ use Fleetbase\Models\Setting;
 use Fleetbase\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 class NavigatorController extends Controller
@@ -23,6 +25,12 @@ class NavigatorController extends Controller
      */
     public function linkApp(Request $request)
     {
+        // This route is opened from a phone without a console session, so it is
+        // authorised by the short-lived signature issued by getLinkAppUrl().
+        if (!$request->hasValidRelativeSignature()) {
+            return response()->error('This Navigator link is invalid or has expired. Generate a new one from the console.', 403);
+        }
+
         $adminUser = $this->findAdminUser();
 
         if (!$adminUser || !$adminUser->company) {
@@ -67,8 +75,12 @@ class NavigatorController extends Controller
      */
     public function getLinkAppUrl()
     {
+        Authorization::authorizeAdmin();
+
+        $path = URL::temporarySignedRoute('fleetops.navigator.link-app', now()->addMinutes(30), [], false);
+
         return response()->json([
-            'linkUrl' => url('int/v1/fleet-ops/navigator/link-app'),
+            'linkUrl' => url($path),
         ]);
     }
 

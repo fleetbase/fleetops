@@ -2,12 +2,14 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Resources\v1\InspectionLink as InspectionLinkResource;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\InspectionForm;
 use Fleetbase\FleetOps\Models\InspectionLink;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\InspectionFormSync;
 use Fleetbase\FleetOps\Support\InspectionLinkPin;
 use Fleetbase\Models\User;
@@ -107,8 +109,11 @@ class InspectionFormController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function generateLink(Request $request, string $id): JsonResponse
     {
+        Authorization::authorize('publish inspection-form');
+
         $form = $this->resolveForm($id)
             ->firstOrFail();
 
@@ -215,8 +220,11 @@ class InspectionFormController extends FleetOpsController
     }
 
     /** Take a link out of use, leaving the record of it in the list. */
+    #[SkipAuthorizationCheck]
     public function revokeLink(Request $request, string $id, string $linkId): JsonResponse
     {
+        Authorization::authorize('publish inspection-form');
+
         $form = $this->resolveForm($id)->firstOrFail();
 
         $link = InspectionLink::where('inspection_form_uuid', $form->uuid)
@@ -243,8 +251,11 @@ class InspectionFormController extends FleetOpsController
      * A failed delivery answers 200 with `pin_delivery.sent` false and why, so
      * the console shows it as a warning rather than an error.
      */
+    #[SkipAuthorizationCheck]
     public function sendPin(Request $request, string $id, string $linkId): JsonResponse
     {
+        Authorization::authorize('publish inspection-form');
+
         $form      = $this->resolveForm($id)->firstOrFail();
         $validated = $request->validate(['via' => 'required|in:email,sms']);
 

@@ -14,6 +14,7 @@ use Fleetbase\FleetOps\Models\Part;
 use Fleetbase\FleetOps\Models\Trailer;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\WorkOrder;
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\LiveOrderQuery;
 use Fleetbase\FleetOps\Support\Radar\RadarAgenda;
 use Fleetbase\FleetOps\Support\Radar\RadarBriefing;
@@ -182,6 +183,8 @@ class RadarController extends Controller
      */
     public function extendShift(Request $request, string $id): JsonResponse
     {
+        Authorization::authorize('update driver', 'update vehicle');
+
         $minutes = (int) $request->input('minutes', 60);
         if ($minutes < 1 || $minutes > 24 * 60) {
             return response()->json(['error' => 'minutes must be between 1 and 1440.'], 422);
@@ -211,6 +214,8 @@ class RadarController extends Controller
 
     public function acknowledge(Request $request, string $key): JsonResponse
     {
+        Authorization::authorize('update driver', 'update vehicle');
+
         return $this->act($request, $key, function (Alert $row) use ($request) {
             RadarItemState::acknowledge($row, $this->actor($request));
         });
@@ -218,6 +223,8 @@ class RadarController extends Controller
 
     public function snooze(Request $request, string $key): JsonResponse
     {
+        Authorization::authorize('update driver', 'update vehicle');
+
         $minutes = $this->snoozeMinutes($request);
         if ($minutes === null) {
             return response()->json(['error' => 'Pass minutes (1 to ' . (self::SNOOZE_MAX_DAYS * 1440) . ') or a future until date.'], 422);
@@ -230,6 +237,8 @@ class RadarController extends Controller
 
     public function wake(Request $request, string $key): JsonResponse
     {
+        Authorization::authorize('update driver', 'update vehicle');
+
         return $this->act($request, $key, function (Alert $row) {
             RadarItemState::wake($row);
         }, false);
@@ -237,6 +246,8 @@ class RadarController extends Controller
 
     public function assign(Request $request, string $key): JsonResponse
     {
+        Authorization::authorize('update driver', 'update vehicle');
+
         $company  = $this->companyUuid($request);
         $assignee = null;
 
@@ -254,6 +265,8 @@ class RadarController extends Controller
 
     public function plan(Request $request, string $key): JsonResponse
     {
+        Authorization::authorize('update driver', 'update vehicle');
+
         $plannedAt = null;
         if ($request->filled('planned_at')) {
             $plannedAt = RadarRules::carbon($request->input('planned_at'));
@@ -273,6 +286,8 @@ class RadarController extends Controller
      */
     public function resolve(Request $request, string $key): JsonResponse
     {
+        Authorization::authorize('update driver', 'update vehicle');
+
         $parsed = RadarRules::parseKey($key);
         if (!$parsed || $parsed[0] !== 'notice') {
             return response()->json(['error' => 'Only notices resolve by hand; other items close when their record changes.'], 422);
@@ -288,6 +303,8 @@ class RadarController extends Controller
      */
     public function bulk(Request $request): JsonResponse
     {
+        Authorization::authorize('update driver', 'update vehicle');
+
         $keys   = array_values(array_filter((array) $request->input('keys', []), 'is_string'));
         $action = (string) $request->input('action');
 
@@ -350,6 +367,8 @@ class RadarController extends Controller
      */
     public function storeNotice(Request $request): JsonResponse
     {
+        Authorization::authorize('update driver', 'update vehicle');
+
         $message  = trim((string) $request->input('message'));
         $severity = in_array($request->input('severity'), [RadarRules::SEVERITY_CRITICAL, RadarRules::SEVERITY_WARNING, RadarRules::SEVERITY_INFO], true) ? $request->input('severity') : RadarRules::SEVERITY_INFO;
         $dueAt    = $request->filled('due_at') ? RadarRules::carbon($request->input('due_at')) : null;
@@ -392,6 +411,8 @@ class RadarController extends Controller
 
     public function destroyNotice(Request $request, string $id): JsonResponse
     {
+        Authorization::authorize('update driver', 'update vehicle');
+
         $company = $this->companyUuid($request);
         $alert   = $this->findNotice($company, $id);
 

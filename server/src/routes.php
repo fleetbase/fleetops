@@ -405,8 +405,10 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->group(
                     ['prefix' => 'v1/fleet-ops/navigator', 'namespace' => 'v1'],
                     function ($router) {
-                        $router->get('get-link-app', 'NavigatorController@getLinkAppUrl');
-                        $router->get('link-app', 'NavigatorController@linkApp');
+                        // Opened from the Navigator app's QR scan without a session;
+                        // NavigatorController::linkApp() requires a valid signature.
+                        $router->get('link-app', 'NavigatorController@linkApp')->name('fleetops.navigator.link-app');
+                        $router->get('get-link-app', 'NavigatorController@getLinkAppUrl')->middleware(['fleetbase.protected']);
                     }
                 );
 

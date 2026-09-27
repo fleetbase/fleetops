@@ -2,8 +2,10 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\DeviceEvent;
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Http\JsonResponse;
 
@@ -51,8 +53,11 @@ class DeviceEventController extends FleetOpsController
         }
     }
 
+    #[SkipAuthorizationCheck]
     public function markProcessed(string $id): JsonResponse
     {
+        Authorization::authorize('update device-event');
+
         $deviceEvent = DeviceEvent::where('company_uuid', session('company'))
             ->where(function ($query) use ($id) {
                 $query->where('uuid', $id)->orWhere('public_id', $id);

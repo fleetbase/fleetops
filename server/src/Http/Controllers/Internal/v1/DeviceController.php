@@ -2,11 +2,13 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Exceptions\DeviceAlreadyAttachedException;
 use Fleetbase\FleetOps\Exports\DeviceExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
 use Illuminate\Http\JsonResponse;
@@ -110,8 +112,11 @@ class DeviceController extends FleetOpsController
     /**
      * Attach a device to a supported FleetOps resource.
      */
+    #[SkipAuthorizationCheck]
     public function attach(Request $request, string $id): JsonResponse
     {
+        Authorization::authorize('update device');
+
         $request->validate([
             'vehicle' => 'required_without:attachable_uuid|nullable|string',
         ]);
@@ -152,8 +157,11 @@ class DeviceController extends FleetOpsController
     /**
      * Detach a device from its current FleetOps resource.
      */
+    #[SkipAuthorizationCheck]
     public function detach(string $id): JsonResponse
     {
+        Authorization::authorize('update device');
+
         $device = $this->resolveDevice($id);
 
         if (!$device) {

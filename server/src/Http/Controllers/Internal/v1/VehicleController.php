@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Exceptions\DeviceAlreadyAttachedException;
 use Fleetbase\FleetOps\Exports\VehicleExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
@@ -12,6 +13,7 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Equipment;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\Support\Resolve;
@@ -111,8 +113,11 @@ class VehicleController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function unassignDriver(string $id): JsonResponse
     {
+        Authorization::authorize('assign-driver-for vehicle');
+
         $vehicle = $this->findVehicle($id);
         $vehicle->unassignDriver();
         $vehicle->load(['driver', 'devices']);
@@ -143,8 +148,11 @@ class VehicleController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function unassignOrders(Request $request, string $id): JsonResponse
     {
+        Authorization::authorize('update vehicle');
+
         $request->validate([
             'orders'   => 'required|array|min:1',
             'orders.*' => 'required|string',
@@ -179,8 +187,11 @@ class VehicleController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function attachDevice(Request $request, string $id): JsonResponse
     {
+        Authorization::authorize('update vehicle');
+
         $request->validate(['device' => 'required|string']);
 
         $deviceId = $request->input('device');
@@ -219,8 +230,11 @@ class VehicleController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function detachDevice(Request $request, string $id): JsonResponse
     {
+        Authorization::authorize('update vehicle');
+
         $request->validate(['device' => 'required|string']);
 
         $deviceId = $request->input('device');
@@ -265,8 +279,11 @@ class VehicleController extends FleetOpsController
      * Attach equipment to the vehicle. Equipment can only be equipped to one asset at a
      * time, so attaching moves it from any previous vehicle or trailer.
      */
+    #[SkipAuthorizationCheck]
     public function attachEquipment(Request $request, string $id): JsonResponse
     {
+        Authorization::authorize('update vehicle');
+
         $request->validate(['equipment' => 'required|string']);
 
         $vehicle   = $this->resolveVehicle($id);
@@ -292,8 +309,11 @@ class VehicleController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function detachEquipment(Request $request, string $id): JsonResponse
     {
+        Authorization::authorize('update vehicle');
+
         $request->validate(['equipment' => 'required|string']);
 
         $vehicle   = $this->resolveVehicle($id);

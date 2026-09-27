@@ -2,9 +2,11 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Jobs\SyncFuelProviderTransactionsJob;
 use Fleetbase\FleetOps\Models\FuelProviderConnection;
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\FuelProviders\FuelProviderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -38,8 +40,11 @@ class FuelProviderConnectionController extends FleetOpsController
         $this->normalizeConnectionInput($input, $connection);
     }
 
+    #[SkipAuthorizationCheck]
     public function testCredentials(Request $request, string $provider): JsonResponse
     {
+        Authorization::authorize('create fuel-provider-connection');
+
         $request->validate([
             'credentials' => 'required|array',
             'environment' => 'nullable|string|in:production,sandbox',
@@ -54,8 +59,11 @@ class FuelProviderConnectionController extends FleetOpsController
         return response()->json($result, data_get($result, 'success') ? 200 : 422);
     }
 
+    #[SkipAuthorizationCheck]
     public function testConnection(Request $request, string $id): JsonResponse
     {
+        Authorization::authorize('update fuel-provider-connection');
+
         $connection = $this->findConnection($id);
         $result     = $this->fuelProviderService->testConnection($connection);
 

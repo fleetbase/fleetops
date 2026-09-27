@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Exports\ContactExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Resources\v1\Vendor as VendorResource;
@@ -14,6 +15,7 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\PurchaseRate;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\VendorPersonnel;
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
@@ -108,8 +110,11 @@ class ContactController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function convertToVendor(Request $request, string $id)
     {
+        Authorization::authorize('create vendor');
+
         $contact = $this->contactForVendorConversion($id);
 
         $vendor = $this->runContactConversionTransaction(function () use ($contact, $request) {

@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Models\PurchaseRate;
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\Payment;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Http\Resources\FleetbaseResource;
@@ -21,6 +22,8 @@ class PaymentController extends Controller
      */
     public function hasStripeConnectAccount()
     {
+        Authorization::authorize('view payments');
+
         $company = $this->getCompany();
         if ($company) {
             return $this->jsonResponse([
@@ -43,6 +46,8 @@ class PaymentController extends Controller
      */
     public function getStripeAccount()
     {
+        Authorization::authorize('onboard payments');
+
         $stripe = $this->stripeClient();
 
         try {
@@ -84,6 +89,8 @@ class PaymentController extends Controller
      */
     public function getStripeAccountSession(Request $request)
     {
+        Authorization::authorize('onboard payments');
+
         $stripe  = $this->stripeClient();
         $company = $this->getCompany();
 
@@ -112,6 +119,8 @@ class PaymentController extends Controller
      */
     public function getCompanyReceivedPayments(Request $request)
     {
+        Authorization::authorize('view payments');
+
         $limit     = $request->input('limit', 30);
         $query     = PurchaseRate::select(
             [

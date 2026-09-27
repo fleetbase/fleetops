@@ -2,11 +2,13 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Exports\WorkOrderExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Imports\WorkOrderImport;
 use Fleetbase\FleetOps\Mail\WorkOrderDispatched;
 use Fleetbase\FleetOps\Models\WorkOrder;
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Http\JsonResponse;
@@ -80,8 +82,11 @@ class WorkOrderController extends FleetOpsController
      * Send a work order email to the assigned vendor.
      * POST /work-orders/{id}/send.
      */
+    #[SkipAuthorizationCheck]
     public function sendEmail(string $id): JsonResponse
     {
+        Authorization::authorize('update work-order');
+
         $workOrder = $this->workOrderForEmail($id);
 
         // Resolve recipient email from the assignee (vendor or contact)

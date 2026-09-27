@@ -16,6 +16,7 @@ use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Orchestration\Engines\DriverAssignmentEngine;
 use Fleetbase\FleetOps\Orchestration\Engines\RouteSequencingEngine;
 use Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry;
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
 use Illuminate\Http\JsonResponse;
@@ -54,6 +55,8 @@ class OrchestrationController extends Controller
      */
     public function orders(Request $request): JsonResponse
     {
+        Authorization::authorize('list order');
+
         $companyUuid = $this->companyUuid();
 
         $query = $this->orchestratorOrdersQuery($companyUuid);
@@ -118,6 +121,8 @@ class OrchestrationController extends Controller
      */
     public function run(Request $request): JsonResponse
     {
+        Authorization::authorize('optimize order');
+
         $companyUuid       = $this->companyUuid();
         $mode              = $request->input('mode', 'assign_vehicles');
         $orderIds          = $request->input('order_ids', []);
@@ -323,6 +328,8 @@ class OrchestrationController extends Controller
      */
     public function preview(Request $request): JsonResponse
     {
+        Authorization::authorize('list order');
+
         return $this->run($request);
     }
 
@@ -395,6 +402,8 @@ class OrchestrationController extends Controller
      */
     public function commit(Request $request): JsonResponse
     {
+        Authorization::authorize('assign-driver-for order');
+
         $assignments   = $request->input('assignments', []);
         $scheduledDate = $request->input('scheduled_date', now()->toDateString());
         $companyUuid   = session('company');
@@ -578,6 +587,8 @@ class OrchestrationController extends Controller
      */
     public function engines(): JsonResponse
     {
+        Authorization::authorize('list order');
+
         return response()->json([
             'engines' => $this->registry->available(),
         ]);
@@ -591,6 +602,8 @@ class OrchestrationController extends Controller
      */
     public function orderConfigFields(): JsonResponse
     {
+        Authorization::authorize('list order');
+
         $companyUuid = session('company');
 
         $configs = $this->getOrderConfigFieldConfigs($companyUuid)
@@ -648,6 +661,8 @@ class OrchestrationController extends Controller
      */
     public function importOrders(Request $request): JsonResponse
     {
+        Authorization::authorize('import order');
+
         $rows        = $request->input('rows', []);
         $companyUuid = session('company');
 

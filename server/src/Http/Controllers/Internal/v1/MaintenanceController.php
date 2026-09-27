@@ -2,10 +2,12 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Exports\MaintenanceExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Imports\MaintenanceImport;
 use Fleetbase\FleetOps\Models\Maintenance;
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Http\JsonResponse;
@@ -67,8 +69,11 @@ class MaintenanceController extends FleetOpsController
      * Add a cost line item to a maintenance record.
      * POST /maintenances/{id}/line-items.
      */
+    #[SkipAuthorizationCheck]
     public function addLineItem(string $id, Request $request): JsonResponse
     {
+        Authorization::authorize('update maintenance');
+
         $maintenance = $this->findMaintenanceForLineItem($id);
 
         $validated = $request->validate([
@@ -89,8 +94,11 @@ class MaintenanceController extends FleetOpsController
      * Update a cost line item on a maintenance record.
      * PUT /maintenances/{id}/line-items/{index}.
      */
+    #[SkipAuthorizationCheck]
     public function updateLineItem(string $id, int $index, Request $request): JsonResponse
     {
+        Authorization::authorize('update maintenance');
+
         $maintenance = $this->findMaintenanceForLineItem($id);
 
         $validated = $request->validate([
@@ -121,8 +129,11 @@ class MaintenanceController extends FleetOpsController
      * Remove a cost line item from a maintenance record.
      * DELETE /maintenances/{id}/line-items/{index}.
      */
+    #[SkipAuthorizationCheck]
     public function removeLineItem(string $id, int $index): JsonResponse
     {
+        Authorization::authorize('update maintenance');
+
         $maintenance = $this->findMaintenanceForLineItem($id);
 
         if (!$maintenance->removeLineItem($index)) {

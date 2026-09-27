@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Exports\VendorExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Resources\v1\Contact as ContactResource;
@@ -10,6 +11,7 @@ use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\VendorPersonnel;
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Http\Request;
@@ -128,8 +130,11 @@ class VendorController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response
      */
+    #[SkipAuthorizationCheck]
     public function assignDriver(string $id, Request $request)
     {
+        Authorization::authorize('update vendor');
+
         // Validate only param
         if (!$request->isUuid('driver')) {
             return response()->error('No driver selected to assign to vendor.');
@@ -160,8 +165,11 @@ class VendorController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response
      */
+    #[SkipAuthorizationCheck]
     public function removeDriver(string $id, Request $request)
     {
+        Authorization::authorize('update vendor');
+
         // Validate only param
         if (!$request->isUuid('driver')) {
             return response()->error('No driver selected to remove from vendor.');
@@ -197,8 +205,11 @@ class VendorController extends FleetOpsController
         return response()->json(['personnels' => $personnels->values()]);
     }
 
+    #[SkipAuthorizationCheck]
     public function addVendorPersonnel(Request $request, string $vendorId)
     {
+        Authorization::authorize('update vendor');
+
         $vendor  = $this->findVendorByIdOrFail($vendorId);
         $contact = $this->resolveOrCreatePersonnelContact($request);
 
@@ -220,8 +231,11 @@ class VendorController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function removeVendorPersonnel(string $vendorId, string $contactId)
     {
+        Authorization::authorize('update vendor');
+
         $vendor  = $this->findVendorByIdOrFail($vendorId);
         $contact = $this->findContactByIdOrFail($contactId);
 
