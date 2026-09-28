@@ -34,12 +34,14 @@ export default class ManagementPlacesIndexController extends Controller {
                 type: 'primary',
                 icon: 'plus',
                 onClick: this.placeActions.transition.create,
+                permission: 'fleet-ops create place',
             },
             {
                 text: this.intl.t('common.import'),
                 type: 'magic',
                 icon: 'upload',
                 onClick: this.placeActions.import,
+                permission: 'fleet-ops import place',
             },
             {
                 text: this.intl.t('common.export'),
@@ -47,6 +49,7 @@ export default class ManagementPlacesIndexController extends Controller {
                 iconClass: 'rotate-icon-45',
                 wrapperClass: 'hidden md:flex',
                 onClick: this.placeActions.export,
+                permission: 'fleet-ops export place',
             },
         ];
     }
@@ -60,6 +63,7 @@ export default class ManagementPlacesIndexController extends Controller {
                 label: this.intl.t('common.delete-selected-count', { count: selected.length }),
                 class: 'text-red-500',
                 fn: this.placeActions.bulkDelete,
+                permission: 'fleet-ops delete place',
             },
         ];
     }

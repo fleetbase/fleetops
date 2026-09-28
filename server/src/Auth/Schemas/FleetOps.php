@@ -43,7 +43,7 @@ class FleetOps
         ],
         [
             'name'    => 'service-rate',
-            'actions' => ['import'],
+            'actions' => ['import', 'export'],
         ],
         [
             'name'    => 'zone',
@@ -142,6 +142,51 @@ class FleetOps
             'actions' => ['export', 'import'],
         ],
         [
+            'name'    => 'maintenance-schedule',
+            'actions' => ['export', 'import'],
+        ],
+        [
+            'name'    => 'warranty',
+            'actions' => [],
+        ],
+        [
+            'name'    => 'device',
+            'actions' => ['export', 'import'],
+        ],
+        [
+            'name'    => 'sensor',
+            'actions' => ['export', 'import'],
+        ],
+        [
+            'name'    => 'device-event',
+            'actions' => ['export'],
+        ],
+        [
+            'name'    => 'telematic',
+            'actions' => ['export', 'import'],
+        ],
+        [
+            'name'    => 'fuel-provider-connection',
+            'actions' => ['sync'],
+        ],
+        [
+            'name'    => 'fuel-provider-transaction',
+            'actions' => ['review'],
+        ],
+        [
+            'name'    => 'fuel-provider-sync-run',
+            'actions' => [],
+        ],
+        [
+            'name'    => 'purchase-rate',
+            'actions' => [],
+        ],
+        [
+            'name'           => 'analytics', // dashboards, KPI metrics and the live fleet summary
+            'actions'        => [],
+            'remove_actions' => ['create', 'update', 'delete', 'export'],
+        ],
+        [
             'name'    => 'custom-field',
             'actions' => [],
         ],
@@ -151,28 +196,38 @@ class FleetOps
         ],
         [
             'name'           => 'navigator-settings', // the navigator mobile app used by drivers
-            'action'         => [],
+            'actions'        => [],
             'remove_actions' => ['delete', 'export', 'list', 'create'],
         ],
         [
             'name'           => 'payments',
-            'action'         => ['onboard'],
+            'actions'        => ['onboard'],
             'remove_actions' => ['delete', 'export', 'list', 'create'],
         ],
         [
             'name'           => 'notification-settings',
-            'action'         => [],
+            'actions'        => [],
             'remove_actions' => ['export', 'create'],
         ],
         [
             'name'           => 'routing-settings',
-            'action'         => [],
+            'actions'        => [],
             'remove_actions' => ['export', 'create'],
         ],
         [
             'name'           => 'map-settings',
-            'action'         => [],
+            'actions'        => [],
             'remove_actions' => ['export', 'create'],
+        ],
+        [
+            'name'           => 'scheduling-settings',
+            'actions'        => [],
+            'remove_actions' => ['delete', 'export', 'create'],
+        ],
+        [
+            'name'           => 'tracking-settings',
+            'actions'        => [],
+            'remove_actions' => ['delete', 'export', 'create'],
         ],
         [
             'name'           => 'telematics-settings', // data retention and storage for telematics ingestion
@@ -192,6 +247,9 @@ class FleetOps
                 'see extension',
                 '* order',
                 '* route',
+                'see analytics',
+                'list analytics',
+                'view analytics',
                 'see order-config',
                 'list order-config',
                 'view order-config',
@@ -235,6 +293,12 @@ class FleetOps
                 '* driver',
                 '* vehicle',
                 '* trailer',
+                '* device',
+                '* sensor',
+                '* telematic',
+                'see device-event',
+                'list device-event',
+                'view device-event',
             ],
         ],
         [
@@ -282,6 +346,7 @@ class FleetOps
             'permissions' => [
                 'see extension',
                 '* service-rate',
+                '* purchase-rate',
                 'see order',
                 'list order',
                 'see service-area',
@@ -314,6 +379,8 @@ class FleetOps
                 '* inspection-submission',
                 '* equipment',
                 '* part',
+                '* maintenance-schedule',
+                '* warranty',
                 '* trailer',
                 'see vehicle',
                 'list vehicle',
@@ -341,6 +408,18 @@ class FleetOps
                 '* inspection-submission',
                 '* equipment',
                 '* part',
+                '* maintenance-schedule',
+                '* warranty',
+                '* device',
+                '* sensor',
+                '* device-event',
+                '* telematic',
+                '* fuel-provider-connection',
+                '* fuel-provider-transaction',
+                '* fuel-provider-sync-run',
+                'see analytics',
+                'list analytics',
+                'view analytics',
                 '* trailer',
             ],
         ],

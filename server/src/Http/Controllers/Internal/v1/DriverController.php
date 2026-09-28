@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\Exceptions\FleetbaseRequestValidationException;
 use Fleetbase\FleetOps\Exceptions\ProfileIdentityConflictException;
 use Fleetbase\FleetOps\Exports\DriverExport;
@@ -33,6 +34,20 @@ use Maatwebsite\Excel\Facades\Excel;
 class DriverController extends FleetOpsController
 {
     use Traits\DriverSchedulingTrait;
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'sendCredentials'  => 'update-user-for driver',
+        'resetCredentials' => 'update-user-for driver',
+        'deactivateLogin'  => 'update-user-for driver',
+        'reactivateLogin'  => 'update-user-for driver',
+        'unassignOrders'   => 'assign-order-for driver',
+        'unassignOrder'    => 'assign-order-for driver',
+        'unassignVehicle'  => 'assign-vehicle-for driver',
+    ];
     /**
      * The resource to query.
      *
@@ -200,6 +215,7 @@ class DriverController extends FleetOpsController
      *
      * @return JsonResponse
      */
+    #[SkipAuthorizationCheck]
     public function sendCredentials(string $id)
     {
         [$driver, $user, $error] = $this->resolveDriverLogin($id);
@@ -221,6 +237,7 @@ class DriverController extends FleetOpsController
      *
      * @return JsonResponse
      */
+    #[SkipAuthorizationCheck]
     public function resetCredentials(Request $request, string $id)
     {
         $password = $request->input('password');
@@ -255,6 +272,7 @@ class DriverController extends FleetOpsController
      *
      * @return JsonResponse
      */
+    #[SkipAuthorizationCheck]
     public function deactivateLogin(string $id)
     {
         [$driver, $user, $error] = $this->resolveDriverLogin($id);
@@ -275,6 +293,7 @@ class DriverController extends FleetOpsController
      *
      * @return JsonResponse
      */
+    #[SkipAuthorizationCheck]
     public function reactivateLogin(string $id)
     {
         [$driver, $user, $error] = $this->resolveDriverLogin($id);
@@ -430,6 +449,7 @@ class DriverController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function unassignOrders(Request $request, string $id): JsonResponse
     {
         $request->validate([
@@ -462,6 +482,7 @@ class DriverController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function unassignOrder(string $id): JsonResponse
     {
         $driver = $this->findDriver($id);
@@ -498,6 +519,7 @@ class DriverController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function unassignVehicle(string $id): JsonResponse
     {
         $driver  = $this->findDriver($id);

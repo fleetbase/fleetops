@@ -8,6 +8,7 @@ class FleetOpsSettingControllerProbe extends SettingController
     public array $configured            = [];
     public array $configuredCompany     = [];
     public array $settingValues         = [];
+    public array $orderConfigKeys       = [];
     public array $settings              = [];
     public array $companySettings       = [];
     public array $lookupCompanySettings = [];
@@ -32,6 +33,11 @@ class FleetOpsSettingControllerProbe extends SettingController
         $this->lookupCompanySettings[$key] = $value;
 
         return null;
+    }
+
+    protected function companyOrderConfigKeys(): array
+    {
+        return $this->orderConfigKeys;
     }
 
     protected function settingValue(string $key): mixed
@@ -141,16 +147,22 @@ function fleetopsJsonPayload(mixed $response): array
 }
 
 test('setting controller persists and returns basic company settings through configured keys', function () {
-    $controller = new FleetOpsSettingControllerProbe();
+    session(['company' => 'company-1']);
+    $controller                  = new FleetOpsSettingControllerProbe();
+    $controller->orderConfigKeys = ['orders'];
 
-    $entityPayload = fleetopsJsonPayload($controller->saveEntityEditingSettings(new Request([
-        'entityEditingSettings' => ['orders' => ['editable' => true]],
+    // The setting is one platform-wide map keyed by order config: another company's entry must survive,
+    // and this company cannot write keys for order configs it does not own.
+    $controller->settingValues['fleet-ops.entity-editing-settings'] = ['foreign-config' => ['editable' => true]];
+    $entityPayload                                                  = fleetopsJsonPayload($controller->saveEntityEditingSettings(new Request([
+        'entityEditingSettings' => ['orders' => ['editable' => true], 'foreign-config' => ['editable' => false]],
     ])));
-    $controller->settingValues['fleet-ops.entity-editing-settings'] = ['orders' => ['editable' => false]];
+    $controller->settingValues['fleet-ops.entity-editing-settings'] = ['orders' => ['editable' => false], 'foreign-config' => ['editable' => true]];
 
+    // A request-supplied company id is ignored in favour of the session company.
     $disabledDriverPayload = fleetopsJsonPayload($controller->savedDriverOnboardSettings(new Request([
         'driverOnboardSettings' => [
-            'companyId'                         => 'company-1',
+            'companyId'                         => 'company-2',
             'enableDriverOnboardFromApp'        => false,
             'driverMustProvideOnboardDoucments' => true,
             'requiredOnboardDocuments'          => ['license'],
@@ -171,7 +183,7 @@ test('setting controller persists and returns basic company settings through con
     $controller->company                                                = (object) ['stripe_connect_id' => 'acct_123'];
 
     expect($entityPayload)->toBe(['entityEditingSettings' => ['orders' => ['editable' => true]]])
-        ->and($controller->configured['fleet-ops.entity-editing-settings'])->toBe(['orders' => ['editable' => true]])
+        ->and($controller->configured['fleet-ops.entity-editing-settings'])->toBe(['foreign-config' => ['editable' => true], 'orders' => ['editable' => true]])
         ->and(fleetopsJsonPayload($controller->getEntityEditingSettings()))->toBe(['entityEditingSettings' => ['orders' => ['editable' => false]]])
         ->and(fleetopsJsonPayload((new FleetOpsSettingControllerProbe())->getEntityEditingSettings()))->toBe(['entityEditingSettings' => []])
         ->and($disabledDriverPayload['driverOnboardSettings'])->toMatchArray([
@@ -182,6 +194,7 @@ test('setting controller persists and returns basic company settings through con
             'driverOnboardAppMethod'            => '',
         ])
         ->and($controller->configured['fleet-ops.driver-onboard-settings.company-1'])->toBe($disabledDriverPayload['driverOnboardSettings'])
+        ->and($controller->configured)->not->toHaveKey('fleet-ops.driver-onboard-settings.company-2')
         ->and(fleetopsJsonPayload($controller->getDriverOnboardSettings('company-1')))->toBe(['driverOnboardSettings' => ['enableDriverOnboardFromApp' => true]])
         ->and(fleetopsJsonPayload((new FleetOpsSettingControllerProbe())->getDriverOnboardSettings('missing')))->toBe(['driverOnboardSettings' => []])
         ->and($enabledConfigs)->toBe(['order-express', 'order-freight'])

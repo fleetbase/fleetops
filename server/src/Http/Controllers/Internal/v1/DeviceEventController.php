@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\DeviceEvent;
 use Fleetbase\FleetOps\Support\Utils;
@@ -9,6 +10,15 @@ use Illuminate\Http\JsonResponse;
 
 class DeviceEventController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'markProcessed' => 'update device-event',
+    ];
+
     /**
      * The resource to query.
      *
@@ -51,6 +61,7 @@ class DeviceEventController extends FleetOpsController
         }
     }
 
+    #[SkipAuthorizationCheck]
     public function markProcessed(string $id): JsonResponse
     {
         $deviceEvent = DeviceEvent::where('company_uuid', session('company'))

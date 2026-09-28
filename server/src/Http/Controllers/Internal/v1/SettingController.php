@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 use Fleetbase\FleetOps\Jobs\PruneTelematicsDataJob;
 use Fleetbase\FleetOps\Support\Telematics\Retention\RetentionPolicy;
 use Fleetbase\FleetOps\Tracking\TrackingProviderRegistry;
+use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
 use Fleetbase\Support\Auth;
@@ -17,6 +18,29 @@ use Illuminate\Support\Facades\DB;
  */
 class SettingController extends Controller
 {
+    use AuthorizesMethods;
+
+    public function __construct()
+    {
+        $this->authorizeMethods([
+            'saveEntityEditingSettings'               => 'update navigator-settings',
+            'savedDriverOnboardSettings'              => 'update navigator-settings',
+            'saveCustomerEnabledOrderConfigs'         => 'update order-config',
+            'saveCustomerPortalPaymentConfig'         => 'update payments',
+            'saveNotificationSettings'                => 'update notification-settings',
+            'saveRoutingSettings'                     => 'update routing-settings',
+            'saveTrackingSettings'                    => 'update tracking-settings',
+            'getAdminTrackingSettings'                => 'admin',
+            'saveAdminTrackingSettings'               => 'admin',
+            'saveMapSettings'                         => 'update map-settings',
+            'getAdminMapSettings'                     => 'admin',
+            'saveAdminMapSettings'                    => 'admin',
+            'saveSchedulingSettings'                  => 'update scheduling-settings',
+            'saveOrchestratorSettings'                => 'update routing-settings',
+            'saveOrchestratorCardFields'              => 'update routing-settings',
+        ]);
+    }
+
     /**
      * Save entity editing settings.
      *
@@ -24,37 +48,54 @@ class SettingController extends Controller
      */
     public function saveEntityEditingSettings(Request $request)
     {
-        $entityEditingSettings  = $request->input('entityEditingSettings', []);
+        // The setting is one platform-wide map keyed by order config id. Only this
+        // company's order configs may be written, and other companies' entries are kept.
+        $ownKeys  = $this->companyOrderConfigKeys();
+        $incoming = array_intersect_key((array) $request->input('entityEditingSettings', []), array_flip($ownKeys));
+        $existing = (array) ($this->settingValue('fleet-ops.entity-editing-settings') ?? []);
+        $merged   = array_merge(array_diff_key($existing, array_flip($ownKeys)), $incoming);
 
-        // Save entity editing settings
-        $this->configureSetting('fleet-ops.entity-editing-settings', $entityEditingSettings);
+        $this->configureSetting('fleet-ops.entity-editing-settings', $merged);
 
-        return response()->json(['entityEditingSettings' => $entityEditingSettings]);
+        return response()->json(['entityEditingSettings' => $incoming]);
     }
 
     /**
-     * Retrieve entity editing settings.
+     * Retrieve entity editing settings for this company's order configs.
      *
      * @return \Illuminate\Http\JsonResponse
      */
     public function getEntityEditingSettings()
     {
-        $entityEditingSettings  = $this->settingValue('fleet-ops.entity-editing-settings');
-        if (!$entityEditingSettings) {
-            $entityEditingSettings = [];
-        }
+        $entityEditingSettings = (array) ($this->settingValue('fleet-ops.entity-editing-settings') ?? []);
+        $entityEditingSettings = array_intersect_key($entityEditingSettings, array_flip($this->companyOrderConfigKeys()));
 
         return response()->json(['entityEditingSettings' => $entityEditingSettings]);
     }
 
     /**
-     * Retrieve driver onboard settings.
+     * Ids (uuid and public id) of the session company's order configs.
+     */
+    protected function companyOrderConfigKeys(): array
+    {
+        return \Fleetbase\FleetOps\Models\OrderConfig::where('company_uuid', session('company'))
+            ->get(['uuid', 'public_id'])
+            ->flatMap(fn ($config) => array_filter([$config->uuid, $config->public_id]))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Retrieve driver onboard settings for the session company.
+     *
+     * The route still carries a company id for backwards compatibility, but only
+     * the session company's settings are ever returned.
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getDriverOnboardSettings($companyId)
+    public function getDriverOnboardSettings($companyId = null)
     {
-        $driverOnboardSettings  = $this->settingValue('fleet-ops.driver-onboard-settings.' . $companyId);
+        $driverOnboardSettings  = $this->settingValue('fleet-ops.driver-onboard-settings.' . session('company'));
         if (!$driverOnboardSettings) {
             $driverOnboardSettings = [];
         }
@@ -69,9 +110,10 @@ class SettingController extends Controller
      */
     public function savedDriverOnboardSettings(Request $request)
     {
-        $driverOnboardSettings = $request->array('driverOnboardSettings', []);
+        $driverOnboardSettings              = $request->array('driverOnboardSettings', []);
+        $driverOnboardSettings['companyId'] = session('company');
 
-        if ($driverOnboardSettings['enableDriverOnboardFromApp'] == false) {
+        if (empty($driverOnboardSettings['enableDriverOnboardFromApp'])) {
             $driverOnboardSettings['driverMustProvideOnboardDoucments'] = false;
             $driverOnboardSettings['requiredOnboardDocuments']          = [];
             $driverOnboardSettings['driverOnboardAppMethod']            = '';

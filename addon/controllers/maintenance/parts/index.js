@@ -46,14 +46,21 @@ export default class MaintenancePartsIndexController extends Controller {
                 helpText: 'Change the layout',
             },
             { icon: 'refresh', onClick: this.partActions.refresh, helpText: this.intl.t('common.refresh') },
-            { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.partActions.transition.create },
-            { text: this.intl.t('common.import'), type: 'magic', icon: 'upload', onClick: this.partActions.import },
-            { text: this.intl.t('common.export'), icon: 'long-arrow-up', iconClass: 'rotate-icon-45', wrapperClass: 'hidden md:flex', onClick: this.partActions.export },
+            { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.partActions.transition.create, permission: 'fleet-ops create part' },
+            { text: this.intl.t('common.import'), type: 'magic', icon: 'upload', onClick: this.partActions.import, permission: 'fleet-ops import part' },
+            {
+                text: this.intl.t('common.export'),
+                icon: 'long-arrow-up',
+                iconClass: 'rotate-icon-45',
+                wrapperClass: 'hidden md:flex',
+                onClick: this.partActions.export,
+                permission: 'fleet-ops export part',
+            },
         ];
     }
 
     get bulkActions() {
-        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.partActions.bulkDelete }];
+        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.partActions.bulkDelete, permission: 'fleet-ops delete part' }];
     }
 
     get columns() {

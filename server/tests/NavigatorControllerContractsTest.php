@@ -137,17 +137,24 @@ function fleetopsNavigatorCredential(string $key = 'flb_live_key'): ApiCredentia
     return $credential;
 }
 
+function fleetopsNavigatorSignedQuery(): array
+{
+    $expires = time() + 600;
+
+    return ['expires' => $expires, 'signature' => NavigatorController::linkSignature($expires)];
+}
+
 test('navigator controller builds android and ios app link redirects', function () {
     $company                   = fleetopsNavigatorCompany();
     $controller                = new FleetOpsNavigatorControllerProbe();
     $controller->adminUser     = fleetopsNavigatorUser($company);
     $controller->apiCredential = fleetopsNavigatorCredential('flb_live_navigator');
 
-    $android = $controller->linkApp(Request::create('/navigator/link-app', 'GET', [], [], [], [
+    $android = $controller->linkApp(Request::create('/navigator/link-app', 'GET', fleetopsNavigatorSignedQuery(), [], [], [
         'HTTP_USER_AGENT' => 'Mozilla/5.0 Android',
     ]))->getData(true);
 
-    $ios = $controller->linkApp(Request::create('/navigator/link-app', 'GET', [], [], [], [
+    $ios = $controller->linkApp(Request::create('/navigator/link-app', 'GET', fleetopsNavigatorSignedQuery(), [], [], [
         'HTTP_USER_AGENT' => 'Mozilla/5.0 iPhone',
     ]))->getData(true);
 
@@ -169,9 +176,30 @@ test('navigator controller returns missing organization error when no admin comp
     $controller            = new FleetOpsNavigatorControllerProbe();
     $controller->adminUser = fleetopsNavigatorUser(null);
 
-    $response = $controller->linkApp(new Request());
+    $response = $controller->linkApp(Request::create('/navigator/link-app', 'GET', fleetopsNavigatorSignedQuery()));
 
     expect($response->getData(true))->toBe(['error' => 'Organization for linking not found.']);
+});
+
+test('navigator controller refuses unsigned, tampered and expired app links before touching credentials', function () {
+    $company                   = fleetopsNavigatorCompany();
+    $controller                = new FleetOpsNavigatorControllerProbe();
+    $controller->adminUser     = fleetopsNavigatorUser($company);
+    $controller->apiCredential = fleetopsNavigatorCredential('flb_live_navigator');
+
+    $expired  = time() - 60;
+    $requests = [
+        'unsigned' => Request::create('/navigator/link-app', 'GET'),
+        'tampered' => Request::create('/navigator/link-app', 'GET', ['signature' => 'forged'] + fleetopsNavigatorSignedQuery()),
+        'expired'  => Request::create('/navigator/link-app', 'GET', ['expires' => $expired, 'signature' => NavigatorController::linkSignature($expired)]),
+    ];
+
+    foreach ($requests as $request) {
+        $response = $controller->linkApp($request);
+        expect($response->getData(true))->toBe(['error' => 'This Navigator link is invalid or has expired. Generate a new one from the console.']);
+    }
+
+    expect($controller->credentialLookups)->toBe([]);
 });
 
 test('navigator controller exposes link url settings and current organization token lookup branches', function () {
@@ -194,7 +222,11 @@ test('navigator controller exposes link url settings and current organization to
     ]);
     $missing = $controller->getCurrentOrganization($secretRequest);
 
-    expect($linkUrl)->toBe(['linkUrl' => 'http://localhost/int/v1/fleet-ops/navigator/link-app'])
+    parse_str((string) parse_url($linkUrl['linkUrl'], PHP_URL_QUERY), $linkQuery);
+
+    expect($linkUrl['linkUrl'])->toStartWith('http://localhost/int/v1/fleet-ops/navigator/link-app?')
+        ->and($linkQuery['signature'])->toBe(NavigatorController::linkSignature((int) $linkQuery['expires']))
+        ->and((int) $linkQuery['expires'])->toBeGreaterThan(time())
         ->and($settings)->toBe(['enabled' => true, 'invite_code_required' => false])
         ->and($organization)->toBeInstanceOf(Organization::class)
         ->and($controller->credentialLookups)->toContain(

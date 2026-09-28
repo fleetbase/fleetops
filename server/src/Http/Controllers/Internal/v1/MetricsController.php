@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\FleetOps\Support\Metrics;
 use Fleetbase\FleetOps\Support\Metrics\Registry;
 use Fleetbase\Http\Controllers\Controller;
@@ -10,6 +11,16 @@ use Illuminate\Support\Carbon;
 
 class MetricsController extends Controller
 {
+    public function __construct()
+    {
+        // Not a resource controller, so AuthorizationGuard cannot resolve a permission for it.
+        $this->middleware(function ($request, $next) {
+            Authorization::authorize('view analytics');
+
+            return $next($request);
+        });
+    }
+
     /**
      * Legacy bulk endpoint. Returns a flat map of slug → scalar value for the
      * requested period. Preserved for backward compat; the dashboard widgets

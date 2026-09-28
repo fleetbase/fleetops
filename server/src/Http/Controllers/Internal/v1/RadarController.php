@@ -19,6 +19,7 @@ use Fleetbase\FleetOps\Support\Radar\RadarAgenda;
 use Fleetbase\FleetOps\Support\Radar\RadarBriefing;
 use Fleetbase\FleetOps\Support\Radar\RadarItemState;
 use Fleetbase\FleetOps\Support\Radar\RadarRules;
+use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Alert;
 use Fleetbase\Models\CompanyUser;
@@ -42,6 +43,24 @@ use Illuminate\Support\Carbon;
  */
 class RadarController extends Controller
 {
+    use AuthorizesMethods;
+
+    public function __construct()
+    {
+        $this->authorizeMethods([
+            'extendShift'       => ['update driver', 'update vehicle'],
+            'acknowledge'       => ['update driver', 'update vehicle'],
+            'snooze'            => ['update driver', 'update vehicle'],
+            'wake'              => ['update driver', 'update vehicle'],
+            'assign'            => ['update driver', 'update vehicle'],
+            'plan'              => ['update driver', 'update vehicle'],
+            'resolve'           => ['update driver', 'update vehicle'],
+            'bulk'              => ['update driver', 'update vehicle'],
+            'storeNotice'       => ['update driver', 'update vehicle'],
+            'destroyNotice'     => ['update driver', 'update vehicle'],
+        ]);
+    }
+
     public const RESOLVED_WINDOW_DAYS = 7;
     public const SNOOZE_MAX_DAYS      = 90;
 

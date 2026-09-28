@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Exports\TelematicExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\Telematic;
@@ -16,6 +17,20 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class TelematicController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'testConnection'          => 'update telematic',
+        'testCredentials'         => 'create telematic',
+        'discover'                => 'update telematic',
+        'linkDevice'              => 'update telematic',
+        'telemetryWebhook'        => 'update telematic',
+        'replayTelemetryDelivery' => 'update telematic',
+    ];
+
     /**
      * The resource to query.
      *
@@ -71,6 +86,7 @@ class TelematicController extends FleetOpsController
     /**
      * Test connection to provider.
      */
+    #[SkipAuthorizationCheck]
     public function testConnection(Request $request, string $id): JsonResponse
     {
         $telematic = $this->findTelematic($id);
@@ -89,6 +105,7 @@ class TelematicController extends FleetOpsController
     /**
      * Test connection to provider.
      */
+    #[SkipAuthorizationCheck]
     public function testCredentials(Request $request, string $key): JsonResponse
     {
         $credentials = $request->array('credentials', []);
@@ -120,6 +137,7 @@ class TelematicController extends FleetOpsController
     /**
      * Discover devices from provider.
      */
+    #[SkipAuthorizationCheck]
     public function discover(Request $request, string $id): JsonResponse
     {
         $telematic = $this->findTelematic($id);
@@ -181,6 +199,7 @@ class TelematicController extends FleetOpsController
     /**
      * Link a device to a telematic.
      */
+    #[SkipAuthorizationCheck]
     public function linkDevice(Request $request, string $id): JsonResponse
     {
         $telematic = $this->findTelematic($id);
@@ -199,6 +218,7 @@ class TelematicController extends FleetOpsController
         ], 201);
     }
 
+    #[SkipAuthorizationCheck]
     public function telemetryWebhook(Request $request, string $id): JsonResponse
     {
         $telematic = $this->findTelematic($id);
@@ -248,6 +268,7 @@ class TelematicController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function replayTelemetryDelivery(string $id, string $delivery): JsonResponse
     {
         $telematic = $this->findTelematic($id);

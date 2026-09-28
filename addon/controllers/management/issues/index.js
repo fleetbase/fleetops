@@ -56,12 +56,14 @@ export default class ManagementIssuesIndexController extends Controller {
                 type: 'primary',
                 icon: 'plus',
                 onClick: this.issueActions.transition.create,
+                permission: 'fleet-ops create issue',
             },
             {
                 text: this.intl.t('common.import'),
                 type: 'magic',
                 icon: 'upload',
                 onClick: this.issueActions.import,
+                permission: 'fleet-ops import issue',
             },
             {
                 text: this.intl.t('common.export'),
@@ -69,6 +71,7 @@ export default class ManagementIssuesIndexController extends Controller {
                 iconClass: 'rotate-icon-45',
                 wrapperClass: 'hidden md:flex',
                 onClick: this.issueActions.export,
+                permission: 'fleet-ops export issue',
             },
         ];
     }
@@ -82,6 +85,7 @@ export default class ManagementIssuesIndexController extends Controller {
                 label: this.intl.t('common.delete-selected-count', { count: selected.length }),
                 class: 'text-red-500',
                 fn: this.issueActions.bulkDelete,
+                permission: 'fleet-ops delete issue',
             },
         ];
     }

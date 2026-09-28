@@ -298,7 +298,8 @@ export default class MapLeafletLiveMapComponent extends Component {
     }
 
     @task *loadResource(path, options = {}) {
-        if (this.abilities.cannot(`fleet-ops list ${path}`)) return [];
+        // Permissions use the singular resource name (e.g. `fleet-ops list vehicle`), not the plural endpoint path.
+        if (this.abilities.cannot(`fleet-ops list ${singularize(path)}`)) return [];
 
         if (path === 'service-areas') {
             const serviceAreas = yield this.serviceAreaActions.loadAll.perform();

@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Exceptions\DeviceAlreadyAttachedException;
 use Fleetbase\FleetOps\Exports\TrailerExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
@@ -23,6 +24,20 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class TrailerController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'attach'          => 'attach-vehicle-for trailer',
+        'detach'          => 'detach-vehicle-for trailer',
+        'attachDevice'    => 'attach-device-for trailer',
+        'detachDevice'    => 'detach-device-for trailer',
+        'attachEquipment' => 'attach-equipment-for trailer',
+        'detachEquipment' => 'detach-equipment-for trailer',
+    ];
+
     /**
      * The resource to query.
      *
@@ -69,6 +84,7 @@ class TrailerController extends FleetOpsController
     /**
      * Attach the trailer to a vehicle. Re-attaching to the same vehicle is idempotent.
      */
+    #[SkipAuthorizationCheck]
     public function attach(Request $request, string $id)
     {
         $request->validate(['vehicle' => ['required', 'string'], 'position' => ['nullable', 'integer', 'min:1']]);
@@ -134,6 +150,7 @@ class TrailerController extends FleetOpsController
     /**
      * End the active towing connection. Detaching an unattached trailer is a no-op.
      */
+    #[SkipAuthorizationCheck]
     public function detach(string $id)
     {
         $trailer = $this->resolveTrailer($id);
@@ -157,6 +174,7 @@ class TrailerController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function attachDevice(Request $request, string $id)
     {
         $request->validate(['device' => ['required', 'string']]);
@@ -186,6 +204,7 @@ class TrailerController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function detachDevice(Request $request, string $id)
     {
         $request->validate(['device' => ['required', 'string']]);
@@ -215,6 +234,7 @@ class TrailerController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function attachEquipment(Request $request, string $id)
     {
         $request->validate(['equipment' => ['required', 'string']]);
@@ -242,6 +262,7 @@ class TrailerController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function detachEquipment(Request $request, string $id)
     {
         $request->validate(['equipment' => ['required', 'string']]);
