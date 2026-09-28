@@ -4,8 +4,8 @@ import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 
 /**
- * System-wide telematics retention defaults, applied to every company that
- * has not set its own values from Fleet-Ops > Settings > Telematics Data.
+ * System-wide telematics defaults, applied to every company that
+ * has not set its own values from Fleet-Ops > Settings > Telematics.
  */
 export default class AdminTelematicsSettingsComponent extends Component {
     @service fetch;
@@ -36,7 +36,7 @@ export default class AdminTelematicsSettingsComponent extends Component {
         try {
             const settings = yield this.fetch.post('fleet-ops/settings/admin-telematics-settings', this.settingsPayload);
             this.applySettings(settings);
-            this.notifications.success('Telematics retention defaults saved.');
+            this.notifications.success('System telematics settings saved.');
         } catch (error) {
             this.notifications.serverError(error);
         }

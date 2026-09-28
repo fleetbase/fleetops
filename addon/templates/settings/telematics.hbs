@@ -54,15 +54,25 @@
 
             {{! ── Activity logging ─────────────────────────────────────────── }}
             <ContentPanel @title={{t "settings.telematics.activity-logging"}} @open={{true}} @wrapperClass="bordered-classic">
-                <InputGroup @name={{t "settings.telematics.log-telemetry-activity"}} @helpText={{t "settings.telematics.log-telemetry-activity-help"}}>
-                    <Toggle @isToggled={{this.logTelemetryActivity}} @onToggle={{fn (mut this.logTelemetryActivity)}} />
-                </InputGroup>
+                <Toggle
+                    @label={{t "settings.telematics.log-telemetry-activity"}}
+                    @helpText={{t "settings.telematics.log-telemetry-activity-help"}}
+                    @isToggled={{this.logTelemetryActivity}}
+                    @onToggle={{fn (mut this.logTelemetryActivity)}}
+                />
             </ContentPanel>
 
             {{! ── Storage usage ────────────────────────────────────────────── }}
             <ContentPanel @title={{t "settings.telematics.storage-usage"}} @open={{true}} @wrapperClass="bordered-classic">
                 <div class="flex items-center justify-end gap-2 mb-3">
-                    <Button @size="xs" @icon="rotate" @text={{t "settings.telematics.refresh"}} @onClick={{perform this.loadUsage}} @isLoading={{this.loadUsage.isRunning}} />
+                    <Button
+                        @size="xs"
+                        @icon="rotate"
+                        @text={{t "settings.telematics.refresh"}}
+                        @onClick={{perform this.loadUsage}}
+                        @disabled={{this.loadUsage.isRunning}}
+                        @isLoading={{this.loadUsage.isRunning}}
+                    />
                     <Button
                         @type="danger"
                         @size="xs"
@@ -114,13 +124,6 @@
                     </div>
                 {{/if}}
             </ContentPanel>
-
-            {{! ── System defaults (administrators) ────────────────────────── }}
-            {{#if this.isAdmin}}
-                <ContentPanel @title={{t "settings.telematics.admin-defaults"}} @open={{false}} @wrapperClass="bordered-classic">
-                    <Admin::TelematicsSettings @embedded={{true}} />
-                </ContentPanel>
-            {{/if}}
 
         </div>
     </div>

@@ -1,44 +1,59 @@
 <div class="space-y-6">
-    {{#unless @embedded}}
-        <InfoBlock @type="info" @icon="circle-info" class="mb-4">
-            Configure system-wide telematics data retention defaults here. Organizations can override these values from Fleet-Ops &rsaquo; Settings &rsaquo; Telematics Data. A value of 0 keeps rows forever.
-        </InfoBlock>
-    {{/unless}}
+    <InfoBlock @type="info" @icon="circle-info" class="mb-4">
+        Configure system-wide telematics defaults here. Organizations can override these values from Fleet-Ops &rsaquo; Settings &rsaquo; Telematics. A retention value of 0 keeps records forever.
+    </InfoBlock>
 
-    <ContentPanel @title="Retention Defaults" @open={{true}} @wrapperClass="bordered-classic">
+    <ContentPanel @title="System Device Events Retention Defaults" @open={{true}} @wrapperClass="bordered-classic">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <InputGroup @name="Device Event Retention (days)" @helpText="Delete telemetry events older than this. 0 keeps them forever.">
                 <Input @type="number" @value={{this.eventRetentionDays}} min="0" max="3650" class="form-input w-full" />
             </InputGroup>
-            <InputGroup @name="Strip Raw Payloads After (days)" @helpText="Remove the raw provider payload from kept events after this many days. 0 disables compaction.">
+            <InputGroup @name="Device Event Raw Payload Retention (days)" @helpText="Remove the raw provider payload from kept events after this many days. 0 disables compaction.">
                 <Input @type="number" @value={{this.eventCompactAfterDays}} min="0" max="3650" class="form-input w-full" />
             </InputGroup>
-            <InputGroup @name="Position Retention (days)" @helpText="Delete vehicle and trailer positions older than this. 0 keeps them forever.">
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="System Position History Retention Defaults" @open={{true}} @wrapperClass="bordered-classic">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <InputGroup @name="Position History Retention (days)" @helpText="Delete vehicle and trailer positions older than this. 0 keeps them forever.">
                 <Input @type="number" @value={{this.positionRetentionDays}} min="0" max="3650" class="form-input w-full" />
             </InputGroup>
-            <InputGroup @name="Processed Deliveries (hours)" @helpText="Delete processed delivery envelopes older than this.">
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="System Delivery Inbox and Sync Run Retention Defaults" @open={{true}} @wrapperClass="bordered-classic">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <InputGroup @name="Processed Delivery Retention (hours)" @helpText="Delete processed delivery envelopes older than this.">
                 <Input @type="number" @value={{this.processedRetentionHours}} min="0" max="720" class="form-input w-full" />
             </InputGroup>
-            <InputGroup @name="Quarantined Deliveries (days)" @helpText="Delete quarantined delivery envelopes older than this.">
+            <InputGroup @name="Quarantined Delivery Retention (days)" @helpText="Delete quarantined delivery envelopes older than this.">
                 <Input @type="number" @value={{this.quarantineRetentionDays}} min="0" max="365" class="form-input w-full" />
             </InputGroup>
-            <InputGroup @name="Sync Runs (days)" @helpText="Delete finished sync run diagnostics older than this.">
+            <InputGroup @name="Sync Run Diagnostics Retention (days)" @helpText="Delete finished sync run diagnostics older than this.">
                 <Input @type="number" @value={{this.syncRunRetentionDays}} min="0" max="365" class="form-input w-full" />
             </InputGroup>
         </div>
-        <InputGroup @name="Log Telemetry Activity" @helpText="Write telemetry-driven device, event and vehicle saves to the activity log. Off by default; every poll otherwise adds several activity rows per device.">
-            <Toggle @isToggled={{this.logTelemetryActivity}} @onToggle={{fn (mut this.logTelemetryActivity)}} />
-        </InputGroup>
-        <div class="flex justify-end mt-4">
-            <Button
-                @type="primary"
-                @size="sm"
-                @icon="save"
-                @text="Save Defaults"
-                @onClick={{perform this.saveSettings}}
-                @disabled={{this.saveSettings.isRunning}}
-                @isLoading={{or this.saveSettings.isRunning this.loadSettings.isRunning}}
-            />
-        </div>
     </ContentPanel>
+
+    <ContentPanel @title="System Activity Logging Defaults" @open={{true}} @wrapperClass="bordered-classic">
+        <Toggle
+            @label="Log Telemetry Activity by Default"
+            @helpText="Write telemetry-driven device, event and vehicle saves to the activity log. Off by default; every poll otherwise adds several activity rows per device."
+            @isToggled={{this.logTelemetryActivity}}
+            @onToggle={{fn (mut this.logTelemetryActivity)}}
+        />
+    </ContentPanel>
+
+    <div class="flex justify-end">
+        <Button
+            @type="primary"
+            @size="sm"
+            @icon="save"
+            @text="Save System Defaults"
+            @onClick={{perform this.saveSettings}}
+            @disabled={{this.saveSettings.isRunning}}
+            @isLoading={{or this.saveSettings.isRunning this.loadSettings.isRunning}}
+        />
+    </div>
 </div>

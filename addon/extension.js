@@ -113,7 +113,7 @@ export default {
                     component: new ExtensionComponent('@fleetbase/fleetops-engine', 'admin/navigator-app'),
                 }),
                 new MenuItem({
-                    title: 'Telematics Data',
+                    title: 'Telematics',
                     icon: 'database',
                     component: new ExtensionComponent('@fleetbase/fleetops-engine', 'admin/telematics-settings'),
                 }),

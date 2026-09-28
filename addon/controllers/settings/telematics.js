@@ -18,7 +18,6 @@ export default class SettingsTelematicsController extends Controller {
     @service fetch;
     @service notifications;
     @service intl;
-    @service currentUser;
     @service modalsManager;
 
     /** Days to keep device events; 0 keeps them forever. */
@@ -48,10 +47,6 @@ export default class SettingsTelematicsController extends Controller {
 
     /** Per-table storage usage reported by the API. */
     @tracked usage = null;
-
-    get isAdmin() {
-        return this.currentUser.isAdmin === true;
-    }
 
     /** Compaction is pointless once events are deleted at the same age or sooner. */
     get compactionIneffective() {
@@ -115,11 +110,18 @@ export default class SettingsTelematicsController extends Controller {
     /**
      * Load per-table storage usage for the current company.
      */
-    @task *loadUsage() {
+    @task({ drop: true }) *loadUsage() {
+        const abortController = new AbortController();
+        const requestTimeout = setTimeout(() => abortController.abort(), 30000);
+
         try {
-            this.usage = yield this.fetch.get('fleet-ops/settings/telematics-storage-usage');
-        } catch {
-            this.usage = null;
+            // Pass the signal as request data; fetch.get options do not forward it.
+            this.usage = yield this.fetch.request('fleet-ops/settings/telematics-storage-usage?include_payload_counts=0', 'GET', { signal: abortController.signal });
+        } catch (error) {
+            this.notifications.serverError(abortController.signal.aborted ? new Error(this.intl.t('settings.telematics.usage-unavailable')) : error);
+        } finally {
+            clearTimeout(requestTimeout);
+            abortController.abort();
         }
     }
 

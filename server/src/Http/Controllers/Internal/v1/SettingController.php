@@ -38,6 +38,8 @@ class SettingController extends Controller
             'saveSchedulingSettings'                  => 'update scheduling-settings',
             'saveOrchestratorSettings'                => 'update routing-settings',
             'saveOrchestratorCardFields'              => 'update routing-settings',
+            'getAdminTelematicsSettings'              => 'admin',
+            'saveAdminTelematicsSettings'             => 'admin',
         ]);
     }
 
@@ -752,7 +754,6 @@ class SettingController extends Controller
         }
 
         $companyUuid = $company->uuid;
-        $policy      = RetentionPolicy::normalize((array) $this->lookupFromCompanySetting(RetentionPolicy::SETTING_KEY, []), $this->telematicsDefaults());
         $telematics  = $this->companyTelematicUuids($companyUuid);
         $byCompany   = fn ($query) => $query->where('company_uuid', $companyUuid);
         $byInbox     = fn ($query) => $query->whereIn('telematic_uuid', $telematics);
@@ -764,12 +765,16 @@ class SettingController extends Controller
             'telematic_sync_runs'  => $telematics ? $this->tableUsage('telematic_sync_runs', $byInbox, 'created_at') : ['rows' => 0, 'oldest' => null],
         ];
 
-        // Events still carrying raw provider payloads, and how many of them compaction would strip now.
-        $tables['device_events']['raw_payload_rows'] = $this->tableCount('device_events', fn ($query) => $byCompany($query)->whereNotNull('payload'));
-        $compactAfter                                = (int) $policy['event_compact_after_days'];
-        $tables['device_events']['compactable_rows'] = $compactAfter > 0
-            ? $this->tableCount('device_events', fn ($query) => $byCompany($query)->whereNotNull('payload')->where('created_at', '<', now()->subDays($compactAfter)->toDateTimeString()))
-            : 0;
+        // Payload counts scan the JSON-bearing event rows. The storage table can
+        // omit these details to use only indexed counts and ages on large histories.
+        if (request()->boolean('include_payload_counts', true)) {
+            $policy                                      = RetentionPolicy::normalize((array) $this->lookupFromCompanySetting(RetentionPolicy::SETTING_KEY, []), $this->telematicsDefaults());
+            $tables['device_events']['raw_payload_rows'] = $this->tableCount('device_events', fn ($query) => $byCompany($query)->whereNotNull('payload'));
+            $compactAfter                                = (int) $policy['event_compact_after_days'];
+            $tables['device_events']['compactable_rows'] = $compactAfter > 0
+                ? $this->tableCount('device_events', fn ($query) => $byCompany($query)->whereNotNull('payload')->where('created_at', '<', now()->subDays($compactAfter)->toDateTimeString()))
+                : 0;
+        }
 
         foreach ($this->averageRowLengths(array_keys($tables)) as $table => $length) {
             $tables[$table]['avg_row_bytes']   = $length;
