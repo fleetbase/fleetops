@@ -229,6 +229,11 @@ class FleetOps
             'actions'        => [],
             'remove_actions' => ['delete', 'export', 'create'],
         ],
+        [
+            'name'           => 'telematics-settings', // data retention and storage for telematics ingestion
+            'action'         => [],
+            'remove_actions' => ['export', 'create'],
+        ],
     ];
 
     /**
@@ -433,6 +438,14 @@ class FleetOps
             ],
         ],
         [
+            'name'        => 'TelematicsSettingsManager',
+            'description' => 'Policy for managing telematics data retention and storage settings.',
+            'permissions' => [
+                'see extension',
+                '* telematics-settings',
+            ],
+        ],
+        [
             'name'        => 'DriverOperations',
             'description' => 'Policy for drivers to manage their assigned tasks and access necessary information.',
             'permissions' => [
@@ -530,6 +543,13 @@ class FleetOps
             'description' => 'Role responsible for managing the Navigator mobile app settings.',
             'policies'    => [
                 'NavigatorSettingsManager',
+            ],
+        ],
+        [
+            'name'        => 'Telematics Settings Manager',
+            'description' => 'Role responsible for managing telematics data retention and storage settings.',
+            'policies'    => [
+                'TelematicsSettingsManager',
             ],
         ],
         [

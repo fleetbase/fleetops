@@ -112,6 +112,11 @@ export default {
                     icon: 'location-arrow',
                     component: new ExtensionComponent('@fleetbase/fleetops-engine', 'admin/navigator-app'),
                 }),
+                new MenuItem({
+                    title: 'Telematics Data',
+                    icon: 'database',
+                    component: new ExtensionComponent('@fleetbase/fleetops-engine', 'admin/telematics-settings'),
+                }),
             ],
             {
                 slug: 'fleet-ops',
@@ -482,6 +487,7 @@ export default {
             'fleet-ops:template:settings:routing',
             'fleet-ops:template:settings:orchestrator',
             'fleet-ops:component:admin:routing-settings',
+            'fleet-ops:component:admin:telematics-settings',
         ]);
     },
 };

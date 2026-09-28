@@ -48,7 +48,7 @@ class NotifyDriverOnShiftChange implements ShouldQueue
         }
 
         // Check the company-level scheduling setting
-        $settings     = $this->getSchedulingSettings();
+        $settings     = $this->getSchedulingSettings($schedule->company_uuid);
         $shouldNotify = (bool) data_get($settings, 'notify_drivers_on_shift_change', false);
         if (!$shouldNotify) {
             return;
@@ -66,9 +66,9 @@ class NotifyDriverOnShiftChange implements ShouldQueue
         return $scheduleItem->schedule()->with('subject')->first();
     }
 
-    protected function getSchedulingSettings(): array
+    protected function getSchedulingSettings(?string $companyUuid): array
     {
-        return Setting::lookupFromCompany('fleet-ops.scheduling-settings', []);
+        return Setting::lookupForCompany($companyUuid, 'fleet-ops.scheduling-settings', []);
     }
 
     protected function isCreatedEvent(object $event): bool

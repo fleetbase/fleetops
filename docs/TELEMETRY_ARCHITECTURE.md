@@ -48,10 +48,57 @@ persistence. The performance requirement did not justify those dependencies.
 ## Tradeoffs
 
 Three shared tables separate run-level diagnostics, high-volume delivery retention,
-and connection-level secrets with different lifetimes. Provider-specific protocol
+and connection-level secrets with different lifetimes (see Retention below). Provider-specific protocol
 classes remain appropriate. Capability opt-in avoids silently changing every
 existing integration's ingestion or webhook behavior. Production throughput and
 real AFAQY payload verification remain separate deployment gates.
+
+## Retention
+
+Every poll writes one `device_events` row, one `positions` row and a delivery
+envelope per batch for each reporting device. Without a ceiling those tables grow
+until the disk fills, so retention is enforced by `fleetops:prune-telematics-data`
+(scheduled every fifteen minutes, `withoutOverlapping(14)`) using a per-company
+policy resolved by `Support\Telematics\Retention\RetentionPolicy`:
+
+| Layer | Source | Where it is edited |
+|---|---|---|
+| Package config | `server/config/telemetry.php` | deployment |
+| System defaults | setting `fleet-ops.telematics-settings` | Admin console → Fleet-Ops Config → Telematics Data |
+| Company policy | `company.<uuid>.fleet-ops.telematics-settings` | Fleet-Ops → Settings → Telematics Data |
+
+Defaults: device events 30 days, raw payload/meta stripped ("compacted") after
+7 days, positions 90 days, processed deliveries 24 hours, quarantined deliveries
+7 days, sync runs 7 days. `0` keeps rows forever. Values are clamped to
+`RetentionPolicy::LIMITS`.
+
+Rules the sweep follows:
+
+- Hard deletes only. The models soft-delete, so `delete()` would grow the table;
+  rows already soft-deleted are purged regardless of age.
+- Bounded work: at most `--max-batches` (default 50) statements of `--batch-size`
+  (default 1000) rows per table per company per run. A capped run is normal; the
+  next tick continues. Operators can catch up faster off-peak with
+  `php artisan fleetops:prune-telematics-data --max-batches=500 --no-lock`.
+- Compaction keeps the event (type, severity, location, normalized `data`) and
+  nulls `payload` and `meta`, which hold the bulk of each row.
+- `telematic_deliveries` and `telematic_sync_runs` carry no company; they are
+  resolved through the company's connections (including trashed ones). In-flight
+  sync runs (`fetching`, `ingesting`) are recovered by the drain, never expired.
+- Rows whose company or connection no longer exists are swept with the system
+  defaults.
+- Migrations add `(company_uuid, created_at)` on `device_events` and `positions`
+  and `(telematic_uuid, updated_at)` on `telematic_sync_runs`; on multi-GB tables
+  run them in a maintenance window.
+- Deleting rows frees space inside InnoDB files, not on disk. Run
+  `OPTIMIZE TABLE device_events` (requires `innodb_file_per_table`) off-peak to
+  return it to the operating system.
+
+Two write-amplification fixes accompany the sweep: `device_events.meta` stores only
+the normalized block (the raw unit lives once, in `payload`), and telemetry-driven
+saves run inside `activity()->withoutLogs()` unless the company enables
+"Log telemetry activity". `DrainTelematicInbox` now only recovers deliveries and
+finishes interrupted runs.
 
 ## Adding an adapter
 

@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Events\DeviceTelemetryUpdated;
 use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\DeviceEvent;
 use Fleetbase\FleetOps\Models\Telematic;
+use Fleetbase\FleetOps\Support\Telematics\Retention\TelemetryActivity;
 use Fleetbase\FleetOps\Support\Telematics\TelematicService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -32,7 +33,8 @@ class Ingestor
         }
         $key = 'telemetry:device:' . hash('sha256', $telematic->uuid . '|' . $id);
 
-        return Cache::lock($key, 60)->block(5, fn () => DB::transaction(function () use ($telematic, $sample, $options, $service, $receivedAt, $source, $normalized, $event, $id) {
+        // Telemetry saves (device, event, position, vehicle, sensors) only reach the activity log when the company opts in.
+        return Cache::lock($key, 60)->block(5, fn () => TelemetryActivity::run($telematic->company_uuid, fn () => DB::transaction(function () use ($telematic, $sample, $options, $service, $receivedAt, $source, $normalized, $event, $id) {
             $device            = Device::withoutGlobalScopes()->where('company_uuid', $telematic->company_uuid)->where('telematic_uuid', $telematic->uuid)->where('device_id', $id)->lockForUpdate()->first();
             $current           = data_get($device?->meta, 'telemetry.position_at') ?? data_get($device?->meta, 'last_update.occurred_at');
             $valid             = Sample::validPosition($event);
@@ -107,6 +109,6 @@ class Ingestor
             }
 
             return ['device' => $device, 'event' => $stored, 'events' => $stored ? [$stored] : [], 'sensors' => $sensors, 'duplicate' => $duplicate, 'invalid_position' => !$valid];
-        }, 3));
+        }, 3)));
     }
 }
