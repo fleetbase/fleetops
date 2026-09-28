@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrchestrationController as InternalOrchestrationController;
+use Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,6 +15,14 @@ use Illuminate\Http\Request;
  */
 class OrchestrationController extends InternalOrchestrationController
 {
+    public function __construct(OrchestrationEngineRegistry $registry)
+    {
+        // The fleetbase.api route group authenticates API credentials and establishes
+        // their company scope. Console IAM middleware belongs to the internal
+        // workbench, not to these organization-credential endpoints.
+        $this->registry = $registry;
+    }
+
     public function run(Request $request): JsonResponse
     {
         return $this->publicResponse(parent::run($request));

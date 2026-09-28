@@ -122,10 +122,7 @@ export default class AdminTelematicsSettingsComponent extends Component {
     }
 
     applySettings(settings = {}) {
-        if (
-            !Object.prototype.hasOwnProperty.call(settings ?? {}, 'max_event_retention_days') ||
-            !Object.prototype.hasOwnProperty.call(settings ?? {}, 'max_position_retention_days')
-        ) {
+        if (!Object.prototype.hasOwnProperty.call(settings ?? {}, 'max_event_retention_days') || !Object.prototype.hasOwnProperty.call(settings ?? {}, 'max_position_retention_days')) {
             throw new Error(this.intl.t('settings.telematics.settings-unavailable'));
         }
 

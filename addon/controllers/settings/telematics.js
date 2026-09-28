@@ -108,8 +108,6 @@ export default class SettingsTelematicsController extends Controller {
     }
 
     retentionPolicyHelp(maximum) {
-        return maximum > 0
-            ? this.intl.t('settings.telematics.history-policy-maximum', { days: maximum })
-            : this.intl.t('settings.telematics.history-policy-unlimited');
+        return maximum > 0 ? this.intl.t('settings.telematics.history-policy-maximum', { days: maximum }) : this.intl.t('settings.telematics.history-policy-unlimited');
     }
 }

@@ -28,7 +28,12 @@ export default class SettingsIndexController extends Controller {
             description: 'Keep commerce, metadata, and visual conventions aligned.',
             links: [
                 { label: 'Payments', route: 'settings.payments', icon: 'cash-register', description: 'Payment setup for operational commerce workflows.' },
-                { label: 'Telematics', route: 'settings.telematics', icon: 'satellite-dish', description: 'Device event and position history preferences within the system retention policy.' },
+                {
+                    label: 'Telematics',
+                    route: 'settings.telematics',
+                    icon: 'satellite-dish',
+                    description: 'Device event and position history preferences within the system retention policy.',
+                },
                 { label: 'Custom Fields', route: 'settings.custom-fields', icon: 'pen-to-square', description: 'Operational metadata fields for Fleet-Ops records.' },
                 { label: 'Avatars', route: 'settings.avatars', icon: 'icons', description: 'Visual assets for driver, vehicle, and map displays.' },
             ],

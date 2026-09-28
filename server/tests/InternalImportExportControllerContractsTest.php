@@ -269,14 +269,11 @@ test('internal fuel report controller syncs custom fields after save when provid
     $controller = new FleetOpsInternalFuelReportControllerProbe();
     $fuelReport = new FleetOpsInternalFuelReportAfterSaveFake();
 
-    $controller->afterSave(new Request([
-        'fuel_report' => [
-            'custom_field_values' => [
-                ['key' => 'receipt_number', 'value' => 'R-100'],
-            ],
-        ],
-    ]), $fuelReport);
-    $controller->afterSave(new Request(['fuel_report' => ['custom_field_values' => []]]), $fuelReport);
+    $input = ['custom_field_values' => [['key' => 'receipt_number', 'value' => 'R-100']]];
+    $controller->afterSave(new Request(['fuelReport' => $input]), $fuelReport, $input);
+    $controller->afterSave(new Request(), $fuelReport, ['custom_field_values' => []]);
+    $controller->afterSave(new Request(), $fuelReport, ['custom_field_values' => 'invalid']);
+    $controller->afterSave(new Request(), $fuelReport);
 
     expect($fuelReport->synced)->toBe([
         [
