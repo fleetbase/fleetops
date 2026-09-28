@@ -17,6 +17,7 @@ class FleetOpsSettingControllerProbe extends SettingController
     public array $notifications         = [];
     public array $providers             = [];
     public string $googleMapsApiKey     = '';
+    public array $reconciledTelematicsDefaults = [];
 
     protected function configureSetting(string $key, mixed $value): mixed
     {
@@ -65,6 +66,16 @@ class FleetOpsSettingControllerProbe extends SettingController
         return $this->company;
     }
 
+    protected function reconcileTelematicsCompanyPreferences(array $defaults): void
+    {
+        $this->reconciledTelematicsDefaults = $defaults;
+    }
+
+    protected function withTelematicsPolicyLock(Closure $callback): mixed
+    {
+        return $callback();
+    }
+
     protected function notificationNotifiables(): array
     {
         return $this->notifiables;
@@ -85,20 +96,17 @@ class FleetOpsSettingControllerProbe extends SettingController
         return $this->googleMapsApiKey;
     }
 
-    public array $telematicUuids = [];
-    public array $counts         = [];
-    public array $oldest         = [];
-    public array $rowLengths     = [];
-    public array $countScopes    = [];
-    public array $pruned         = [];
-
-    protected function companyTelematicUuids(string $companyUuid): array
-    {
-        return $this->telematicUuids[$companyUuid] ?? [];
-    }
+    public array $counts          = [];
+    public array $oldest          = [];
+    public array $tableStatistics = [];
+    public array $countScopes     = [];
+    public array $pruned          = [];
 
     protected function tableUsage(string $table, Closure $scope, string $ageColumn): array
     {
+        // System storage must not add company or connection filters.
+        $scope(new stdClass());
+
         return [
             'rows'   => $this->tableCount($table, $scope),
             'oldest' => $this->tableOldest($table, $scope, $ageColumn),
@@ -117,14 +125,14 @@ class FleetOpsSettingControllerProbe extends SettingController
         return $this->oldest[$table] ?? null;
     }
 
-    protected function averageRowLengths(array $tables): array
+    protected function storageTableStatistics(array $tables): array
     {
-        return $this->rowLengths;
+        return $this->tableStatistics;
     }
 
-    protected function dispatchTelematicsPrune(string $companyUuid): void
+    protected function dispatchTelematicsPrune(): void
     {
-        $this->pruned[] = $companyUuid;
+        $this->pruned[] = 'system';
     }
 }
 
@@ -545,6 +553,8 @@ test('telematics settings expose only customer history preferences within admini
         ->and($savedAdmin['max_event_retention_days'])->toBe(90)
         ->and($savedAdmin['max_position_retention_days'])->toBe(45)
         ->and($savedAdmin['log_telemetry_activity'])->toBeTrue()
+        ->and($controller->reconciledTelematicsDefaults['max_event_retention_days'])->toBe(90)
+        ->and($controller->reconciledTelematicsDefaults['max_position_retention_days'])->toBe(45)
         ->and($controller->configured['fleet-ops.telematics-settings']['position_retention_days'])->toBe(120);
 
     $partialAdmin = fleetopsJsonPayload($controller->saveAdminTelematicsSettings(new Request(['log_telemetry_activity' => false])));
@@ -559,65 +569,101 @@ test('telematics settings expose only customer history preferences within admini
     config(['telematics.telemetry' => []]);
 });
 
-test('telematics customer settings, storage usage and cleanup require a company session', function () {
+test('explicit unlimited customer history stays distinct from inheritance and reads back with current maximums', function () {
+    $controller          = new FleetOpsSettingControllerProbe();
+    $controller->company = (object) ['uuid' => 'company-1'];
+
+    $saved = fleetopsJsonPayload($controller->saveTelematicsSettings(new Request([
+        'event_retention_days'    => 0,
+        'position_retention_days' => null,
+    ])));
+    expect($saved['event_retention_days'])->toBe(0)
+        ->and($saved['preferences'])->toBe(['event_retention_days' => 0, 'position_retention_days' => null])
+        ->and($controller->configuredCompany['fleet-ops.telematics-settings'])->toBe(['event_retention_days' => 0])
+        ->and(fleetopsJsonPayload($controller->getTelematicsSettings())['preferences'])->toBe($saved['preferences']);
+
+    $controller->settings['fleet-ops.telematics-settings'] = ['max_event_retention_days' => 90, 'max_position_retention_days' => 360];
+    $loaded = fleetopsJsonPayload($controller->getTelematicsSettings());
+    expect($loaded['event_retention_days'])->toBe(90)
+        ->and($loaded['preferences'])->toBe(['event_retention_days' => 90, 'position_retention_days' => null])
+        ->and($loaded['policy'])->toBe(['max_event_retention_days' => 90, 'max_position_retention_days' => 360]);
+});
+
+test('telematics customer settings require a company session', function () {
     $controller = new FleetOpsSettingControllerProbe();
     expect($controller->getTelematicsSettings()->getStatusCode())->toBe(401)
         ->and($controller->saveTelematicsSettings(new Request())->getStatusCode())->toBe(401)
-        ->and($controller->getTelematicsStorageUsage()->getStatusCode())->toBe(401)
-        ->and($controller->runTelematicsRetention()->getStatusCode())->toBe(401)
         ->and($controller->configuredCompany)->toBe([])
         ->and($controller->pruned)->toBe([]);
 });
 
-test('telematics storage usage reports rows, age, compaction backlog and estimated size per table', function () {
-    $originalRequest = app('request');
+test('admin telematics storage and cleanup cover the system without a company session', function () {
+    $originalRequest     = app('request');
+    $originalQueueConfig = config('queue', []);
+    config(['queue.default' => 'database', 'queue.connections.database.driver' => 'database']);
     app()->instance('request', new Request(['include_payload_counts' => true]));
     Illuminate\Support\Carbon::setTestNow('2026-09-23 12:00:00 UTC');
     try {
-        $controller                 = new FleetOpsSettingControllerProbe();
-        $controller->company        = (object) ['uuid' => 'company-1'];
-        $controller->telematicUuids = ['company-1' => ['tm-1']];
-        $controller->counts         = ['device_events' => 500, 'positions' => 40, 'telematic_deliveries' => 6, 'telematic_sync_runs' => 3];
-        $controller->oldest         = ['device_events' => '2026-08-01 00:00:00'];
-        $controller->rowLengths     = ['device_events' => 32000, 'positions' => 700];
+        $controller                  = new FleetOpsSettingControllerProbe();
+        $controller->counts          = ['device_events' => 500, 'positions' => 40, 'telematic_deliveries' => 6, 'telematic_sync_runs' => 3];
+        $controller->oldest          = ['device_events' => '2026-08-01 00:00:00'];
+        $controller->tableStatistics = [
+            'device_events' => ['rows' => 500, 'rows_estimated' => true, 'estimated_bytes' => 16000000],
+            'positions'    => ['rows' => 40, 'rows_estimated' => true, 'estimated_bytes' => 28000],
+        ];
 
         $usage = fleetopsJsonPayload($controller->getTelematicsStorageUsage());
         expect($usage['tables']['device_events'])->toBe([
             'rows'             => 500,
+            'rows_estimated'   => true,
+            'estimated_bytes'  => 16000000,
             'oldest'           => '2026-08-01 00:00:00',
             'raw_payload_rows' => 500,
             'compactable_rows' => 500,
-            'avg_row_bytes'    => 32000,
-            'estimated_bytes'  => 16000000,
         ])
-            ->and($usage['tables']['positions'])->toBe(['rows' => 40, 'oldest' => null, 'avg_row_bytes' => 700, 'estimated_bytes' => 28000])
+            ->and($usage['tables']['positions'])->toBe(['rows' => 40, 'rows_estimated' => true, 'estimated_bytes' => 28000, 'oldest' => null])
             ->and($usage['tables']['telematic_deliveries'])->toBe(['rows' => 6, 'oldest' => null])
             ->and($usage['tables']['telematic_sync_runs']['rows'])->toBe(3)
-            ->and($usage['company'])->toBe(['uuid' => 'company-1', 'name' => null])
+            ->and($usage['scope'])->toBe('system')
+            ->and($usage)->not->toHaveKey('company')
             ->and($usage['generated_at'])->toBe('2026-09-23T12:00:00.000000Z')
-            ->and($controller->countScopes)->toBe(['device_events', 'positions', 'telematic_deliveries', 'telematic_sync_runs', 'device_events', 'device_events']);
+            ->and($controller->countScopes)->toBe(['telematic_deliveries', 'telematic_sync_runs', 'device_events', 'device_events']);
 
-        // Without connections the inbox tables are reported empty; compaction disabled skips the backlog count.
-        $controller->telematicUuids                                    = [];
-        $controller->settings['fleet-ops.telematics-settings']         = ['event_compact_after_days' => 0];
-        $controller->countScopes                                       = [];
-        $usage                                                         = fleetopsJsonPayload($controller->getTelematicsStorageUsage());
-        expect($usage['tables']['telematic_deliveries'])->toBe(['rows' => 0, 'oldest' => null])
-            ->and($usage['tables']['telematic_sync_runs'])->toBe(['rows' => 0, 'oldest' => null])
+        // Missing metadata uses bounded full-table counts, independent of any organization's connections.
+        $controller->tableStatistics                          = [];
+        $controller->settings['fleet-ops.telematics-settings'] = ['event_compact_after_days' => 0];
+        $controller->countScopes                              = [];
+        $usage                                                = fleetopsJsonPayload($controller->getTelematicsStorageUsage());
+        expect($usage['tables']['telematic_deliveries'])->toBe(['rows' => 6, 'oldest' => null])
+            ->and($usage['tables']['telematic_sync_runs'])->toBe(['rows' => 3, 'oldest' => null])
             ->and($usage['tables']['device_events']['compactable_rows'])->toBe(0)
-            ->and($controller->countScopes)->toBe(['device_events', 'positions', 'device_events']);
+            ->and($controller->countScopes)->toBe(['device_events', 'positions', 'telematic_deliveries', 'telematic_sync_runs', 'device_events']);
 
         $queued = $controller->runTelematicsRetention();
         expect($queued->getStatusCode())->toBe(202)
             ->and(fleetopsJsonPayload($queued)['status'])->toBe('queued')
-            ->and($controller->pruned)->toBe(['company-1']);
+            ->and(fleetopsJsonPayload($queued)['scope'])->toBe('system')
+            ->and($controller->pruned)->toBe(['system']);
     } finally {
         app()->instance('request', $originalRequest);
+        config(['queue' => $originalQueueConfig]);
         Illuminate\Support\Carbon::setTestNow();
     }
 });
 
-test('telematics storage helpers query the database and size rows from InnoDB statistics on MySQL', function () {
+test('system cleanup does not run an entire platform inline on a synchronous queue', function () {
+    $originalQueueConfig = config('queue', []);
+    try {
+        config(['queue.default' => 'sync', 'queue.connections.sync.driver' => 'sync']);
+        $controller = new FleetOpsSettingControllerProbe();
+        expect($controller->runTelematicsRetention()->getStatusCode())->toBe(503)
+            ->and($controller->pruned)->toBe([]);
+    } finally {
+        config(['queue' => $originalQueueConfig]);
+    }
+});
+
+test('telematics storage helpers query all rows and allocated table bytes from MySQL statistics', function () {
     $connection = new class(new PDO('sqlite::memory:')) extends Illuminate\Database\SQLiteConnection {
         public string $driver = 'sqlite';
         public array $selects = [];
@@ -633,7 +679,7 @@ test('telematics storage helpers query the database and size rows from InnoDB st
                 $this->selects[] = [$query, $bindings];
 
                 // information_schema reports prefixed table names.
-                return [(object) ['name' => $bindings[0], 'length' => '32000'], (object) ['name' => $bindings[1], 'length' => 700]];
+                return [(object) ['name' => $bindings[0], 'row_count' => '500', 'data_bytes' => '16000000', 'index_bytes' => '5000'], (object) ['name' => $bindings[1], 'row_count' => 40, 'data_bytes' => 28000, 'index_bytes' => 2000]];
             }
 
             return parent::select($query, $bindings, $useReadPdo);
@@ -677,30 +723,26 @@ test('telematics storage helpers query the database and size rows from InnoDB st
         ]);
 
         $controller = new class extends SettingController {
-            public function telematics(string $company): array
-            {
-                return $this->companyTelematicUuids($company);
-            }
-
             public function usage(string $table, Closure $scope, string $column): array
             {
                 return $this->tableUsage($table, $scope, $column);
             }
 
-            public function lengths(array $tables): array
+            public function statistics(array $tables): array
             {
-                return $this->averageRowLengths($tables);
+                return $this->storageTableStatistics($tables);
             }
         };
-        $byCompany = fn ($query) => $query->where('company_uuid', 'company-1');
-        expect($controller->telematics('company-1'))->toBe(['tm-1'])
-            ->and($controller->usage('device_events', $byCompany, 'created_at'))->toBe(['rows' => 2, 'oldest' => '2026-08-01 00:00:00'])
+        expect($controller->usage('device_events', fn ($query) => $query, 'created_at'))->toBe(['rows' => 3, 'oldest' => '2026-07-01 00:00:00'])
             ->and($controller->usage('device_events', fn ($query) => $query->where('company_uuid', 'none'), 'created_at'))->toBe(['rows' => 0, 'oldest' => null])
-            ->and($controller->lengths(['device_events', 'positions']))->toBe([]);
+            ->and($controller->statistics(['device_events', 'positions']))->toBe([]);
 
         $connection->driver = 'mysql';
         $connection->setTablePrefix('fb_');
-        expect($controller->lengths(['device_events', 'positions']))->toBe(['device_events' => 32000, 'positions' => 700])
+        expect($controller->statistics(['device_events', 'positions']))->toBe([
+            'device_events' => ['rows' => 500, 'rows_estimated' => true, 'estimated_bytes' => 16005000],
+            'positions'    => ['rows' => 40, 'rows_estimated' => true, 'estimated_bytes' => 30000],
+        ])
             ->and($connection->selects[0][1])->toBe(['fb_device_events', 'fb_positions'])
             ->and($connection->selects[0][0])->toContain('TABLE_NAME IN (?, ?)');
     } finally {
@@ -713,18 +755,50 @@ test('telematics storage helpers query the database and size rows from InnoDB st
     }
 });
 
-test('telematics cleanup dispatches the unique prune job for the company', function () {
-    Fleetbase\TestSupport\DispatchRecorder::$dispatched = [];
-    $controller                                         = new class extends SettingController {
-        public function prune(string $company): void
+test('admin telematics cleanup dispatches the system-wide fanout job', function () {
+    $controller = new class extends SettingController {
+        public function prune(): void
         {
-            $this->dispatchTelematicsPrune($company);
+            $this->dispatchTelematicsPrune();
         }
     };
-    $controller->prune('company-1');
+    $originalCache       = Illuminate\Support\Facades\Cache::getFacadeRoot();
+    $originalCacheConfig = config('cache', []);
+    $dispatcherContract  = Illuminate\Contracts\Bus\Dispatcher::class;
+    $originalDispatcher  = app()->bound($dispatcherContract) ? app($dispatcherContract) : null;
+    try {
+        config(['cache.default' => 'array', 'cache.stores.array' => ['driver' => 'array']]);
+        Illuminate\Support\Facades\Cache::swap(new Illuminate\Cache\CacheManager(app()));
+        $dispatcher = new class(app()) extends Illuminate\Bus\Dispatcher {
+            public array $jobs = [];
+            public bool $fail = true;
 
-    expect(Fleetbase\TestSupport\DispatchRecorder::$dispatched)->toBe([
-        ['job' => Fleetbase\FleetOps\Jobs\PruneTelematicsDataJob::class, 'arguments' => ['company-1']],
-    ]);
-    Fleetbase\TestSupport\DispatchRecorder::$dispatched = [];
+            public function dispatch($command)
+            {
+                if ($this->fail) {
+                    throw new RuntimeException('Broker unavailable');
+                }
+                $this->jobs[] = $command;
+
+                return $command;
+            }
+        };
+        app()->instance($dispatcherContract, $dispatcher);
+
+        expect(fn () => $controller->prune())->toThrow(RuntimeException::class, 'Broker unavailable');
+        $dispatcher->fail = false;
+        $controller->prune();
+        $controller->prune();
+        expect($dispatcher->jobs)->toHaveCount(1)
+            ->and($dispatcher->jobs[0])->toBeInstanceOf(Fleetbase\FleetOps\Jobs\DispatchTelematicsRetentionJobs::class)
+            ->and($dispatcher->jobs[0]->afterCompanyId)->toBe(0);
+    } finally {
+        Illuminate\Support\Facades\Cache::swap($originalCache);
+        config(['cache' => $originalCacheConfig]);
+        if ($originalDispatcher) {
+            app()->instance($dispatcherContract, $originalDispatcher);
+        } else {
+            app()->forgetInstance($dispatcherContract);
+        }
+    }
 });

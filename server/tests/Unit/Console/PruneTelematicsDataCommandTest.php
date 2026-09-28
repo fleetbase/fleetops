@@ -106,6 +106,34 @@ function fleetopsPruneRun(string $uuid, string $telematic, string $status, int $
 
 afterEach(fn () => Carbon::setTestNow());
 
+test('orphan cleanup reaches missing connections and connections whose organization no longer exists', function () {
+    fleetopsPruneBoot();
+    DB::table('telematics')->insert(['uuid' => 'tm-orphan-company', 'company_uuid' => 'company-gone', 'provider' => 'afaqy', 'status' => 'disabled']);
+    DB::table('device_events')->insert([
+        fleetopsPruneEvent('e-unowned', null, 40),
+        fleetopsPruneEvent('e-owned', 'company-1', 40),
+    ]);
+    DB::table('telematic_deliveries')->insert([
+        fleetopsPruneDelivery('d-missing-connection', 'tm-gone', 'processed', 48),
+        fleetopsPruneDelivery('d-missing-company', 'tm-orphan-company', 'processed', 48),
+        fleetopsPruneDelivery('d-active-company', 'tm-1', 'processed', 48),
+        fleetopsPruneDelivery('d-orphan-pending', 'tm-gone', 'pending', 48),
+    ]);
+    DB::table('telematic_sync_runs')->insert([
+        fleetopsPruneRun('r-missing-connection', 'tm-gone', 'completed', 10),
+        fleetopsPruneRun('r-missing-company', 'tm-orphan-company', 'completed', 10),
+        fleetopsPruneRun('r-active-company', 'tm-1', 'completed', 10),
+        fleetopsPruneRun('r-orphan-in-flight', 'tm-gone', 'ingesting', 10),
+    ]);
+
+    $command = new PruneTelematicsDataProbe();
+    $command->options['orphans-only'] = true;
+    expect($command->handle())->toBe(PruneTelematicsData::SUCCESS)
+        ->and(DB::table('device_events')->pluck('uuid')->all())->toBe(['e-owned'])
+        ->and(DB::table('telematic_deliveries')->orderBy('uuid')->pluck('uuid')->all())->toBe(['d-active-company', 'd-orphan-pending'])
+        ->and(DB::table('telematic_sync_runs')->orderBy('uuid')->pluck('uuid')->all())->toBe(['r-active-company', 'r-orphan-in-flight']);
+});
+
 test('prune applies each company policy to events, positions and the inbox, and system defaults to orphans', function () {
     fleetopsPruneBoot();
     DB::table('device_events')->insert([

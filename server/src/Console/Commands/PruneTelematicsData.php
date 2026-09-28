@@ -23,6 +23,7 @@ class PruneTelematicsData extends Command
 
     protected $signature = 'fleetops:prune-telematics-data
         {--company= : Only prune data for this company (uuid or public id)}
+        {--orphans-only : Only prune data without an existing company or connection}
         {--table=* : Only prune these tables (device_events, positions, telematic_deliveries, telematic_sync_runs)}
         {--batch-size=1000 : Rows per delete or update statement}
         {--max-batches=50 : Maximum batches per table per company per run}
@@ -55,12 +56,20 @@ class PruneTelematicsData extends Command
         }
 
         try {
+            // Queue workers may have cached settings before an administrator saved a new policy.
+            RetentionPolicy::flush();
             $this->batchSize  = max(100, min(5000, (int) $this->option('batch-size') ?: 1000));
             $this->maxBatches = max(1, (int) $this->option('max-batches') ?: 50);
             $this->dryRun     = (bool) $this->option('dry-run');
 
-            $only      = ((string) $this->option('company')) ?: null;
-            $companies = $this->companies($only);
+            $only        = ((string) $this->option('company')) ?: null;
+            $orphansOnly = (bool) $this->option('orphans-only');
+            if ($only && $orphansOnly) {
+                $this->error('Choose either --company or --orphans-only.');
+
+                return self::FAILURE;
+            }
+            $companies = $orphansOnly ? new Collection() : $this->companies($only);
             if ($only && $companies->isEmpty()) {
                 $this->error(sprintf('Company [%s] was not found.', $only));
 
@@ -144,7 +153,12 @@ class PruneTelematicsData extends Command
         $rows = fn ($query) => $query->where(function ($where) {
             $where->whereNull('company_uuid')->orWhereNotIn('company_uuid', DB::table('companies')->select('uuid'));
         });
-        $inbox = fn ($query) => $query->whereNotIn('telematic_uuid', DB::table('telematics')->select('uuid'));
+        $inbox = fn ($query) => $query->whereNotExists(function ($connections) use ($query) {
+            $connections->selectRaw('1')
+                ->from('telematics')
+                ->join('companies', 'companies.uuid', '=', 'telematics.company_uuid')
+                ->whereColumn('telematics.uuid', $query->from . '.telematic_uuid');
+        });
 
         return $this->prune($rows, $inbox, $policy, $tables);
     }

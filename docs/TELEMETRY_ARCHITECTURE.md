@@ -64,13 +64,37 @@ policy resolved by `Support\Telematics\Retention\RetentionPolicy`:
 | Layer | Source | Where it is edited |
 |---|---|---|
 | Package config | `server/config/telemetry.php` | deployment |
-| System defaults | setting `fleet-ops.telematics-settings` | Admin console → Fleet-Ops Config → Telematics Data |
-| Company policy | `company.<uuid>.fleet-ops.telematics-settings` | Fleet-Ops → Settings → Telematics Data |
+| System policy | setting `fleet-ops.telematics-settings` | Admin console → Fleet-Ops Config → Telematics |
+| Company history preferences | `company.<uuid>.fleet-ops.telematics-settings` | Fleet-Ops → Settings → Telematics |
 
 Defaults: device events 30 days, raw payload/meta stripped ("compacted") after
 7 days, positions 90 days, processed deliveries 24 hours, quarantined deliveries
-7 days, sync runs 7 days. `0` keeps rows forever. Values are clamped to
-`RetentionPolicy::LIMITS`.
+7 days, sync runs 7 days. Organizations can choose only device event and position
+history retention, or inherit the system defaults. Administrators own raw payload,
+delivery, sync-run retention and telemetry activity logging.
+
+`max_event_retention_days` and `max_position_retention_days` constrain every
+organization's history, including inherited defaults. A maximum of `0` allows
+unlimited history; a history preference of `0` keeps records forever only while
+that maximum is unset. Setting a finite maximum replaces saved unlimited or longer
+preferences with that maximum. Missing preferences continue to inherit. Values
+are also clamped to `RetentionPolicy::LIMITS`.
+
+Admin storage diagnostics cover the entire system, including organizations the
+administrator does not belong to. System cleanup queues work for every
+organization plus orphaned records, with each organization's effective policy
+applied independently. Storage sizes include table data and indexes; database row
+estimates are labeled. Cleanup is asynchronous, so refreshing usage does not mean
+all queued work has finished.
+
+Manual system cleanup requires an asynchronous queue connection and a worker for
+`telematics.telemetry.ingestion_queue`. A synchronous or disabled queue is rejected
+instead of running every organization's cleanup inside the HTTP request.
+
+Deploy the frontend and backend together and reload Octane and queue workers after
+updating the backend. In linked development checkouts, Octane's watch paths must
+include `packages/fleetops/server`; watching only the host API directory leaves
+previously loaded controllers and policies running.
 
 Rules the sweep follows:
 
@@ -96,7 +120,7 @@ Rules the sweep follows:
 
 Two write-amplification fixes accompany the sweep: `device_events.meta` stores only
 the normalized block (the raw unit lives once, in `payload`), and telemetry-driven
-saves run inside `activity()->withoutLogs()` unless the company enables
+saves run inside `activity()->withoutLogs()` unless the system administrator enables
 "Log telemetry activity". `DrainTelematicInbox` now only recovers deliveries and
 finishes interrupted runs.
 

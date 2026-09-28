@@ -69,8 +69,7 @@
 
     <ContentPanel @title={{t "settings.telematics.storage-usage"}} @open={{true}} @wrapperClass="bordered-classic">
         <p class="mb-3 text-sm text-gray-600 dark:text-gray-300">
-            Storage diagnostics and manual cleanup apply only to the currently selected Console organization{{#if this.usage.company.name}}: <strong>{{this.usage.company.name}}</strong>{{/if}}.
-            Cleanup uses the saved system policy and the organization's history preferences within that policy.
+            Storage usage includes telematics data across all organizations. Cleanup applies system-wide, using the saved system policy and each organization's history preferences within that policy.
         </p>
         <div class="flex items-center justify-end gap-2 mb-3">
             <Button
@@ -87,7 +86,7 @@
                 @icon="broom"
                 @text={{t "settings.telematics.run-cleanup"}}
                 @onClick={{this.confirmRunCleanup}}
-                @disabled={{or this.runCleanup.isRunning this.loadSettings.isRunning (not this.settingsLoaded)}}
+                @disabled={{or this.runCleanup.isRunning this.loadSettings.isRunning this.saveSettings.isRunning (not this.settingsLoaded)}}
                 @isLoading={{this.runCleanup.isRunning}}
             />
         </div>

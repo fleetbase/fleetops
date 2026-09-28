@@ -13,4 +13,9 @@ export default class SettingsTelematicsRoute extends Route {
             return this.hostRouter.transitionTo('console.fleet-ops');
         }
     }
+
+    setupController(controller) {
+        super.setupController(...arguments);
+        controller.getSettings.perform();
+    }
 }

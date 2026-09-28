@@ -151,6 +151,18 @@ final class RetentionPolicy
     }
 
     /**
+     * Return the explicit history choices after applying the administrator's
+     * maximums. Inherited values stay absent, and an allowed zero stays explicit.
+     */
+    public static function constrainCompanyPreferences(array $preferences, ?array $defaults = null): array
+    {
+        $preferences = self::companyPreferences($preferences);
+        $effective   = self::fromCompanyPreferences($preferences, $defaults)->toArray();
+
+        return array_intersect_key($effective, $preferences);
+    }
+
+    /**
      * Clamp and cast user input, filling gaps from `$base`.
      */
     public static function normalize(array $input, array $base): array

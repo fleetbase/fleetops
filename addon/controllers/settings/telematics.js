@@ -49,12 +49,9 @@ export default class SettingsTelematicsController extends Controller {
         };
     }
 
-    constructor() {
-        super(...arguments);
-        this.getSettings.perform();
-    }
+    @task({ restartable: true }) *getSettings() {
+        this.settingsLoaded = false;
 
-    @task *getSettings() {
         try {
             const settings = yield this.fetch.get('fleet-ops/settings/telematics-settings');
             this.applySettings(settings);
@@ -64,7 +61,11 @@ export default class SettingsTelematicsController extends Controller {
         }
     }
 
-    @task *saveSettings() {
+    @task({ drop: true }) *saveSettings() {
+        if (!this.settingsLoaded) {
+            return;
+        }
+
         try {
             const settings = yield this.fetch.post('fleet-ops/settings/telematics-settings', this.settingsPayload);
             this.applySettings(settings);
@@ -89,6 +90,15 @@ export default class SettingsTelematicsController extends Controller {
     }
 
     applySettings(settings = {}) {
+        const has = (object, key) => Object.prototype.hasOwnProperty.call(object ?? {}, key);
+        const hasHistoryMetadata = ['event_retention_days', 'position_retention_days'].every(
+            (key) => has(settings?.preferences, key) && has(settings?.defaults, key) && has(settings?.policy, `max_${key}`)
+        );
+
+        if (!hasHistoryMetadata) {
+            throw new Error(this.intl.t('settings.telematics.settings-unavailable'));
+        }
+
         this.eventRetentionDays = settings.event_retention_days ?? this.eventRetentionDays;
         this.positionRetentionDays = settings.position_retention_days ?? this.positionRetentionDays;
         this.useDefaultEventRetention = (settings.preferences?.event_retention_days ?? null) === null;

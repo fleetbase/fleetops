@@ -5,8 +5,7 @@ import { action } from '@ember/object';
 import { task, timeout } from 'ember-concurrency';
 
 /**
- * System-wide telematics policy and operational controls. Storage diagnostics
- * and manual cleanup are scoped to the current Console organization.
+ * System-wide telematics policy, storage diagnostics and operational controls.
  */
 export default class AdminTelematicsSettingsComponent extends Component {
     @service fetch;
@@ -55,14 +54,18 @@ export default class AdminTelematicsSettingsComponent extends Component {
         }
     }
 
-    /** Load storage usage for the current Console organization. */
+    /** Load system-wide storage usage across all organizations. */
     @task({ drop: true }) *loadUsage() {
         const abortController = new AbortController();
         const requestTimeout = setTimeout(() => abortController.abort(), 30000);
 
         try {
             // Pass the signal as request data; fetch.get options do not forward it.
-            this.usage = yield this.fetch.request('fleet-ops/settings/telematics-storage-usage?include_payload_counts=0', 'GET', { signal: abortController.signal });
+            const usage = yield this.fetch.request('fleet-ops/settings/telematics-storage-usage?include_payload_counts=0', 'GET', { signal: abortController.signal });
+            if (usage?.scope !== 'system') {
+                throw new Error(this.intl.t('settings.telematics.usage-unavailable'));
+            }
+            this.usage = usage;
         } catch (error) {
             this.notifications.serverError(abortController.signal.aborted ? new Error(this.intl.t('settings.telematics.usage-unavailable')) : error);
         } finally {
@@ -71,10 +74,13 @@ export default class AdminTelematicsSettingsComponent extends Component {
         }
     }
 
-    /** Queue cleanup for the current organization using the saved policy. */
+    /** Queue cleanup for all organizations using the saved policy. */
     @task({ drop: true }) *runCleanup() {
         try {
-            yield this.fetch.post('fleet-ops/settings/telematics-retention/run');
+            const cleanup = yield this.fetch.post('fleet-ops/settings/telematics-retention/run');
+            if (cleanup?.scope !== 'system') {
+                throw new Error(this.intl.t('settings.telematics.cleanup-unavailable'));
+            }
             this.notifications.success(this.intl.t('settings.telematics.cleanup-queued'));
             yield timeout(5000);
             yield this.loadUsage.perform();
@@ -116,8 +122,11 @@ export default class AdminTelematicsSettingsComponent extends Component {
     }
 
     applySettings(settings = {}) {
-        if (!settings) {
-            return;
+        if (
+            !Object.prototype.hasOwnProperty.call(settings ?? {}, 'max_event_retention_days') ||
+            !Object.prototype.hasOwnProperty.call(settings ?? {}, 'max_position_retention_days')
+        ) {
+            throw new Error(this.intl.t('settings.telematics.settings-unavailable'));
         }
 
         this.eventRetentionDays = settings.event_retention_days ?? this.eventRetentionDays;

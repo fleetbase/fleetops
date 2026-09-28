@@ -136,6 +136,18 @@ test('unconfigured maximums preserve unlimited history and null preferences inhe
         ->and(RetentionPolicy::companyPreferences(['event_retention_days' => null, 'position_retention_days' => '', 'log_telemetry_activity' => true]))->toBe([]);
 });
 
+test('constrained preferences keep zero explicit when allowed and replace it when an administrator imposes a maximum', function () {
+    $preferences = ['event_retention_days' => 0, 'position_retention_days' => null];
+    expect(RetentionPolicy::constrainCompanyPreferences($preferences, RetentionPolicy::FALLBACKS))->toBe(['event_retention_days' => 0]);
+
+    $defaults = array_replace(RetentionPolicy::FALLBACKS, ['max_event_retention_days' => 90, 'max_position_retention_days' => 360]);
+    $bounded  = RetentionPolicy::constrainCompanyPreferences($preferences, $defaults);
+    expect($bounded)->toBe(['event_retention_days' => 90])
+        ->and(RetentionPolicy::constrainCompanyPreferences(['event_retention_days' => 30, 'position_retention_days' => 720], $defaults))->toBe(['event_retention_days' => 30, 'position_retention_days' => 360])
+        ->and(RetentionPolicy::constrainCompanyPreferences([], $defaults))->toBe([])
+        ->and(RetentionPolicy::constrainCompanyPreferences($bounded, RetentionPolicy::FALLBACKS))->toBe(['event_retention_days' => 90]);
+});
+
 test('cutoffs, compaction and deletion rules follow the clamped values', function () {
     Carbon::setTestNow('2026-09-23 12:00:00 UTC');
 

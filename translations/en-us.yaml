@@ -2749,7 +2749,7 @@ settings:
         activity-logging: Telemetry Activity Logging
         log-telemetry-activity: Log telemetry activity
         log-telemetry-activity-help: Write telemetry-driven device, event and vehicle saves to the activity log. Off by default; every poll otherwise adds several activity rows per device.
-        storage-usage: Telematics Storage Usage
+        storage-usage: System Telematics Storage Usage
         table: Table
         rows: Rows
         estimated-rows: "{count} (estimated)"
@@ -2758,12 +2758,14 @@ settings:
         not-available: n/a
         raw-payload-rows: "{count} rows still carry raw payloads, {compactable} eligible for compaction now"
         refresh: Refresh
-        run-cleanup: Run cleanup now
-        run-cleanup-confirm: This queues cleanup for the organization currently selected in Console, using the saved system policy and its effective history preferences. Expired records are permanently deleted and cannot be recovered. Continue?
-        cleanup-queued: Telematics cleanup has been queued for the selected organization. Usage refreshes shortly.
+        run-cleanup: Run system cleanup
+        run-cleanup-confirm: This queues telematics cleanup across all organizations, using the saved system policy and each organization's effective history preferences. Expired records are permanently deleted and cannot be recovered. Continue?
+        cleanup-queued: Telematics cleanup has been queued across all organizations. Usage refreshes shortly; cleanup may still be running.
+        cleanup-unavailable: System-wide telematics cleanup could not be confirmed. Please try again.
         usage-unavailable: Storage usage could not be loaded. Select Refresh to try again.
-        space-reclaim-note: Usage applies to the organization currently selected in Console. Row counts marked as estimated use that organization's database query statistics. Sizes use shared-table average row lengths. Deleting records frees space for reuse within the database; physical disk usage may not decrease immediately.
+        space-reclaim-note: Usage includes all telematics data across the system. Row counts marked as estimated use database statistics. Sizes include table data and indexes. Deleting records frees space for reuse within the database; physical disk usage may not decrease immediately.
         settings-saved: Telematics settings saved.
+        settings-unavailable: Telematics settings could not be loaded. Please try again.
         tables:
             device_events: Device events
             positions: Positions

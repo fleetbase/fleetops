@@ -12,7 +12,7 @@ use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 
 /**
- * Runs the telematics prune for one company on demand ("Run cleanup now").
+ * Runs a bounded telematics prune for one company or orphaned data.
  *
  * The command is executed directly rather than through the console kernel so a
  * worker started before this package version can still run it.
@@ -23,17 +23,22 @@ class PruneTelematicsDataJob implements ShouldQueue, ShouldBeUnique
     use InteractsWithQueue;
     use Queueable;
 
-    public int $uniqueFor = 900;
-    public int $tries     = 1;
-    public int $timeout   = 600;
+    public int $uniqueFor      = 900;
+    public int $tries          = 1;
+    // Finish or fail before Laravel's baseline Redis retry_after of 90 seconds.
+    public int $timeout        = 80;
+    public bool $failOnTimeout = true;
+    public bool $orphansOnly   = false;
 
-    public function __construct(public ?string $companyUuid = null, public int $maxBatches = 200)
+    public function __construct(public ?string $companyUuid = null, public int $maxBatches = 200, bool $orphansOnly = false)
     {
+        $this->orphansOnly = $orphansOnly;
+        $this->onQueue(config('telematics.telemetry.ingestion_queue', 'default'));
     }
 
     public function uniqueId(): string
     {
-        return $this->companyUuid ?? 'all';
+        return $this->orphansOnly ? 'orphans' : ($this->companyUuid ?? 'all');
     }
 
     /**
@@ -45,6 +50,9 @@ class PruneTelematicsDataJob implements ShouldQueue, ShouldBeUnique
         if ($this->companyUuid) {
             $parameters['--company'] = $this->companyUuid;
         }
+        if ($this->orphansOnly) {
+            $parameters['--orphans-only'] = true;
+        }
 
         return $parameters;
     }
@@ -53,7 +61,10 @@ class PruneTelematicsDataJob implements ShouldQueue, ShouldBeUnique
     {
         $command = $this->command();
         $command->setLaravel(app());
-        $command->run(new ArrayInput($this->parameters()), new BufferedOutput());
+        $exitCode = $command->run(new ArrayInput($this->parameters()), new BufferedOutput());
+        if ($exitCode !== PruneTelematicsData::SUCCESS) {
+            throw new \RuntimeException('Telematics cleanup failed with exit code ' . $exitCode . '.');
+        }
     }
 
     protected function command(): PruneTelematicsData

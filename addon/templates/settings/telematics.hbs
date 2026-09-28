@@ -36,7 +36,9 @@
                         class="w-full form-input"
                     />
                 </InputGroup>
-                <p class="text-xs text-gray-500 dark:text-gray-400">{{this.eventRetentionPolicyHelp}}</p>
+                {{#if this.settingsLoaded}}
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{this.eventRetentionPolicyHelp}}</p>
+                {{/if}}
             </ContentPanel>
 
             <ContentPanel @title={{t "settings.telematics.positions"}} @open={{true}} @wrapperClass="bordered-classic">
@@ -58,7 +60,9 @@
                         class="w-full form-input"
                     />
                 </InputGroup>
-                <p class="text-xs text-gray-500 dark:text-gray-400">{{this.positionRetentionPolicyHelp}}</p>
+                {{#if this.settingsLoaded}}
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{this.positionRetentionPolicyHelp}}</p>
+                {{/if}}
             </ContentPanel>
         </div>
     </div>
