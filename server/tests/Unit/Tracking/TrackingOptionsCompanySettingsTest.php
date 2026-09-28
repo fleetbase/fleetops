@@ -93,3 +93,17 @@ test('order tracker builds options from the order company', function () {
     expect($service->received)->toBeInstanceOf(TrackingOptions::class)
         ->and($service->received->provider)->toBe('osrm');
 });
+
+test('tracking remains available with configured defaults when the settings database is unavailable', function () {
+    $connection = fleetopsTrackingOptionsBoot();
+    $connection->getSchemaBuilder()->drop('settings');
+    $original = config('fleetops.tracking', []);
+    try {
+        config(['fleetops.tracking' => ['provider' => 'calculated', 'cache_ttl_seconds' => 17]]);
+        $options = TrackingOptions::fromArray([], 'uncached-unavailable-company');
+        expect($options->provider)->toBe('calculated')->and($options->cacheTtlSeconds)->toBe(17);
+        expect(TrackingOptions::fromArray(['provider' => 'osrm'], 'uncached-unavailable-company')->provider)->toBe('osrm');
+    } finally {
+        config(['fleetops.tracking' => $original]);
+    }
+});

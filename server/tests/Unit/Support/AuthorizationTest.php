@@ -126,3 +126,17 @@ test('controller middleware applies the mapped operation and administrator check
     $this->user->setAttribute('type', 'admin');
     expect($middleware[1]['middleware']($request, fn () => 'allowed'))->toBe('allowed');
 });
+
+test('analytics controllers enforce authorization before invoking their next middleware', function (string $class) {
+    $connection = Model::getConnectionResolver()->connection();
+    $connection->table('permissions')->insert(['id' => 'analytics', 'name' => 'fleet-ops view analytics']);
+    $controller = new $class();
+    $middleware = $controller->getMiddleware()[0]['middleware'];
+    $request    = Request::create('/analytics');
+    expect(fn () => $middleware($request, fn () => 'private analytics'))->toThrow(HttpResponseException::class);
+    $this->user->grantedPermissions = ['fleet-ops view analytics'];
+    expect($middleware($request, fn ($forwarded) => $forwarded))->toBe($request);
+})->with([
+    Fleetbase\FleetOps\Http\Controllers\Internal\v1\AnalyticsController::class,
+    Fleetbase\FleetOps\Http\Controllers\Internal\v1\MetricsController::class,
+]);

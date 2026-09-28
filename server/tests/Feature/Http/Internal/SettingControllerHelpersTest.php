@@ -131,3 +131,74 @@ test('setting helpers read notification and tracking registries', function () {
         ->and($helper('notificationsByPackage', 'fleet-ops'))->toBeArray()
         ->and($helper('trackingProviders'))->toBeArray();
 });
+
+test('history policy reconciliation clamps every organization and preserves inherited and internal settings', function () {
+    $connection = fleetopsSettingHelpersBoot();
+    $key        = Fleetbase\FleetOps\Support\Telematics\Retention\RetentionPolicy::SETTING_KEY;
+    $controller = new class extends SettingController {
+        public ?Closure $beforeLock = null;
+
+        public function reconcile(array $defaults): void
+        {
+            $this->reconcileTelematicsCompanyPreferences($defaults);
+        }
+
+        public function lock(Closure $callback): mixed
+        {
+            return parent::withTelematicsPolicyLock($callback);
+        }
+
+        protected function withTelematicsPolicyLock(Closure $callback): mixed
+        {
+            if ($this->beforeLock) {
+                ($this->beforeLock)();
+                $this->beforeLock = null;
+            }
+
+            return parent::withTelematicsPolicyLock($callback);
+        }
+
+        protected function telematicsDefaults(): array
+        {
+            return ['max_event_retention_days' => 90, 'max_position_retention_days' => 360];
+        }
+    };
+    // The first write creates the lock anchor; subsequent writes reuse it.
+    expect($controller->lock(fn () => 'saved'))->toBe('saved');
+    expect($controller->lock(fn () => $connection->transactionLevel()))->toBe(1)
+        ->and($connection->table('settings')->where('key', $key)->count())->toBe(1);
+    foreach ([
+        'a' => ['event_retention_days' => 0, 'position_retention_days' => 900, 'log_telemetry_activity' => true],
+        'b' => ['event_retention_days' => 30],
+        'c' => [],
+    ] as $company => $preferences) {
+        $connection->table('settings')->insert(['key' => "company.$company.$key", 'value' => json_encode($preferences)]);
+    }
+    $controller->reconcile(['max_event_retention_days' => 0, 'max_position_retention_days' => 0]);
+    $read = fn ($company) => json_decode($connection->table('settings')->where('key', "company.$company.$key")->value('value'), true);
+    expect($read('a')['event_retention_days'])->toBe(0);
+    $controller->reconcile(['max_event_retention_days' => 90, 'max_position_retention_days' => 360]);
+    expect($read('a'))->toBe(['event_retention_days' => 90, 'position_retention_days' => 360, 'log_telemetry_activity' => true])
+        ->and($read('b'))->toBe(['event_retention_days' => 30])->and($read('c'))->toBe([]);
+    // A tenant removed after the batch is read must not be recreated.
+    $controller->beforeLock = fn () => $connection->table('settings')->where('key', "company.a.$key")->delete();
+    $controller->reconcile(['max_event_retention_days' => 90]);
+    expect($connection->table('settings')->where('key', "company.a.$key")->exists())->toBeFalse();
+});
+
+test('company order configuration keys exclude other tenants and deleted configurations', function () {
+    $connection = fleetopsSettingHelpersBoot();
+    $connection->getSchemaBuilder()->create('order_configs', function ($table) {
+        $table->increments('id');
+        $table->string('uuid');
+        $table->string('public_id')->nullable();
+        $table->string('company_uuid');
+        $table->softDeletes();
+    });
+    $connection->table('order_configs')->insert([
+        ['uuid' => 'own', 'public_id' => 'own-public', 'company_uuid' => 'company-1', 'deleted_at' => null],
+        ['uuid' => 'other', 'public_id' => 'other-public', 'company_uuid' => 'company-2', 'deleted_at' => null],
+        ['uuid' => 'deleted', 'public_id' => null, 'company_uuid' => 'company-1', 'deleted_at' => '2026-01-01'],
+    ]);
+    expect((new ReflectionMethod(SettingController::class, 'companyOrderConfigKeys'))->invoke(new SettingController()))->toBe(['own', 'own-public']);
+});

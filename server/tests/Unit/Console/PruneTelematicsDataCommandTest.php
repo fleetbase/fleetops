@@ -126,7 +126,7 @@ test('orphan cleanup reaches missing connections and connections whose organizat
         fleetopsPruneRun('r-orphan-in-flight', 'tm-gone', 'ingesting', 10),
     ]);
 
-    $command = new PruneTelematicsDataProbe();
+    $command                          = new PruneTelematicsDataProbe();
     $command->options['orphans-only'] = true;
     expect($command->handle())->toBe(PruneTelematicsData::SUCCESS)
         ->and(DB::table('device_events')->pluck('uuid')->all())->toBe(['e-owned'])
@@ -339,4 +339,15 @@ test('prune resolves the live company policy when none is injected', function ()
         Fleetbase\FleetOps\Support\Telematics\Retention\RetentionPolicy::flush();
         Fleetbase\FleetOps\Support\Telematics\Retention\RetentionPolicy::$settingsResolver = null;
     }
+});
+
+test('prune rejects conflicting company and orphan scopes without deleting history', function () {
+    fleetopsPruneBoot();
+    DB::table('device_events')->insert([fleetopsPruneEvent('keep', 'company-1', 400)]);
+    $command                          = new PruneTelematicsDataProbe();
+    $command->options['company']      = 'company-1';
+    $command->options['orphans-only'] = true;
+    expect($command->handle())->toBe(PruneTelematicsData::FAILURE)
+        ->and($command->messages)->toContain(['error', 'Choose either --company or --orphans-only.'])
+        ->and(DB::table('device_events')->count())->toBe(1);
 });

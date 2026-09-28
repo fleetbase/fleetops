@@ -5,18 +5,18 @@ use Illuminate\Http\Request;
 
 class FleetOpsSettingControllerProbe extends SettingController
 {
-    public array $configured            = [];
-    public array $configuredCompany     = [];
-    public array $settingValues         = [];
-    public array $orderConfigKeys       = [];
-    public array $settings              = [];
-    public array $companySettings       = [];
-    public array $lookupCompanySettings = [];
-    public mixed $company               = null;
-    public array $notifiables           = [];
-    public array $notifications         = [];
-    public array $providers             = [];
-    public string $googleMapsApiKey     = '';
+    public array $configured                   = [];
+    public array $configuredCompany            = [];
+    public array $settingValues                = [];
+    public array $orderConfigKeys              = [];
+    public array $settings                     = [];
+    public array $companySettings              = [];
+    public array $lookupCompanySettings        = [];
+    public mixed $company                      = null;
+    public array $notifiables                  = [];
+    public array $notifications                = [];
+    public array $providers                    = [];
+    public string $googleMapsApiKey            = '';
     public array $reconciledTelematicsDefaults = [];
 
     protected function configureSetting(string $key, mixed $value): mixed
@@ -583,7 +583,7 @@ test('explicit unlimited customer history stays distinct from inheritance and re
         ->and(fleetopsJsonPayload($controller->getTelematicsSettings())['preferences'])->toBe($saved['preferences']);
 
     $controller->settings['fleet-ops.telematics-settings'] = ['max_event_retention_days' => 90, 'max_position_retention_days' => 360];
-    $loaded = fleetopsJsonPayload($controller->getTelematicsSettings());
+    $loaded                                                = fleetopsJsonPayload($controller->getTelematicsSettings());
     expect($loaded['event_retention_days'])->toBe(90)
         ->and($loaded['preferences'])->toBe(['event_retention_days' => 90, 'position_retention_days' => null])
         ->and($loaded['policy'])->toBe(['max_event_retention_days' => 90, 'max_position_retention_days' => 360]);
@@ -610,7 +610,7 @@ test('admin telematics storage and cleanup cover the system without a company se
         $controller->oldest          = ['device_events' => '2026-08-01 00:00:00'];
         $controller->tableStatistics = [
             'device_events' => ['rows' => 500, 'rows_estimated' => true, 'estimated_bytes' => 16000000],
-            'positions'    => ['rows' => 40, 'rows_estimated' => true, 'estimated_bytes' => 28000],
+            'positions'     => ['rows' => 40, 'rows_estimated' => true, 'estimated_bytes' => 28000],
         ];
 
         $usage = fleetopsJsonPayload($controller->getTelematicsStorageUsage());
@@ -631,10 +631,10 @@ test('admin telematics storage and cleanup cover the system without a company se
             ->and($controller->countScopes)->toBe(['telematic_deliveries', 'telematic_sync_runs', 'device_events', 'device_events']);
 
         // Missing metadata uses bounded full-table counts, independent of any organization's connections.
-        $controller->tableStatistics                          = [];
+        $controller->tableStatistics                           = [];
         $controller->settings['fleet-ops.telematics-settings'] = ['event_compact_after_days' => 0];
-        $controller->countScopes                              = [];
-        $usage                                                = fleetopsJsonPayload($controller->getTelematicsStorageUsage());
+        $controller->countScopes                               = [];
+        $usage                                                 = fleetopsJsonPayload($controller->getTelematicsStorageUsage());
         expect($usage['tables']['telematic_deliveries'])->toBe(['rows' => 6, 'oldest' => null])
             ->and($usage['tables']['telematic_sync_runs'])->toBe(['rows' => 3, 'oldest' => null])
             ->and($usage['tables']['device_events']['compactable_rows'])->toBe(0)
@@ -746,7 +746,7 @@ test('telematics storage helpers query all rows and allocated table bytes from M
         $connection->setTablePrefix('fb_');
         expect($controller->statistics(['device_events', 'positions']))->toBe([
             'device_events' => ['rows' => 500, 'rows_estimated' => true, 'estimated_bytes' => 16005000],
-            'positions'    => ['rows' => 40, 'rows_estimated' => true, 'estimated_bytes' => 30000],
+            'positions'     => ['rows' => 40, 'rows_estimated' => true, 'estimated_bytes' => 30000],
         ])
             ->and($connection->selects[0][1])->toBe(['fb_device_events', 'fb_positions'])
             ->and($connection->selects[0][0])->toContain('TABLE_NAME IN (?, ?)');
@@ -776,7 +776,7 @@ test('admin telematics cleanup dispatches the system-wide fanout job', function 
         Illuminate\Support\Facades\Cache::swap(new Illuminate\Cache\CacheManager(app()));
         $dispatcher = new class(app()) extends Illuminate\Bus\Dispatcher {
             public array $jobs = [];
-            public bool $fail = true;
+            public bool $fail  = true;
 
             public function dispatch($command)
             {
@@ -804,6 +804,51 @@ test('admin telematics cleanup dispatches the system-wide fanout job', function 
             app()->instance($dispatcherContract, $originalDispatcher);
         } else {
             app()->forgetInstance($dispatcherContract);
+        }
+    }
+});
+
+test('customer history save reports a failed persistence operation', function () {
+    $controller = new class extends FleetOpsSettingControllerProbe {
+        protected function configureCompanySetting(string $key, mixed $value): mixed
+        {
+            return false;
+        }
+    };
+    $controller->company = (object) ['uuid' => 'company-a'];
+    $response            = $controller->saveTelematicsSettings(Request::create('/', 'POST', ['event_retention_days' => 0]));
+    expect($response->getStatusCode())->toBe(500);
+});
+
+test('optional payload counts omit timeouts but surface other database errors', function () {
+    $hadRequest = app()->bound('request');
+    $original   = $hadRequest ? app('request') : null;
+    app()->instance('request', Request::create('/', 'GET', ['include_payload_counts' => true]));
+    try {
+        $controller = new class extends FleetOpsSettingControllerProbe {
+            public int $errorCode = 3024;
+
+            protected function tableUsage(string $table, Closure $scope, string $ageColumn): array
+            {
+                return ['rows' => 5, 'oldest' => null];
+            }
+
+            protected function tableCount(string $table, Closure $scope): int
+            {
+                $error            = new PDOException('Query failed');
+                $error->errorInfo = ['HY000', $this->errorCode, 'Query failed'];
+                throw new Illuminate\Database\QueryException('mysql', 'select payload', [], $error);
+            }
+        };
+        $data = $controller->getTelematicsStorageUsage()->getData(true);
+        expect($data['scope'])->toBe('system')->and($data['tables']['device_events'])->toBe(['rows' => 5, 'oldest' => null]);
+        $controller->errorCode = 1146;
+        expect(fn () => $controller->getTelematicsStorageUsage())->toThrow(Illuminate\Database\QueryException::class);
+    } finally {
+        if ($hadRequest) {
+            app()->instance('request', $original);
+        } else {
+            app()->forgetInstance('request');
         }
     }
 });

@@ -1013,9 +1013,7 @@ class SettingController extends Controller
         $isMariaDb  = $driver === 'mariadb';
 
         if ($connection instanceof MySqlConnection) {
-            $isMariaDb = method_exists($connection, 'isMaria')
-                ? $connection->isMaria()
-                : stripos((string) $connection->getReadPdo()->getAttribute(\PDO::ATTR_SERVER_VERSION), 'MariaDB') !== false;
+            $isMariaDb = stripos((string) $connection->getReadPdo()->getAttribute(\PDO::ATTR_SERVER_VERSION), 'MariaDB') !== false;
         }
 
         if ($isMariaDb) {
