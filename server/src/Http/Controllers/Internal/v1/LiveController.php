@@ -18,6 +18,7 @@ use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\LiveCacheService;
 use Fleetbase\FleetOps\Support\LiveOrderQuery;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
@@ -26,6 +27,21 @@ use Illuminate\Http\Request;
  */
 class LiveController extends Controller
 {
+    use AuthorizesMethods;
+
+    public function __construct()
+    {
+        $this->authorizeMethods([
+            'coordinates'           => 'list order',
+            'routes'                => 'list order',
+            'orders'                => 'list order',
+            'drivers'               => 'list driver',
+            'vehicles'              => 'list vehicle',
+            'operationsMonitor'     => 'list order',
+            'places'                => 'list place',
+        ]);
+    }
+
     protected const DEFAULT_VIEWPORT_LIMIT    = 500;
     protected const MAX_VIEWPORT_LIMIT        = 1000;
     protected const VIEWPORT_BOUNDS_PRECISION = 4;

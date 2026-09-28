@@ -6,6 +6,15 @@ export default class MaintenanceInspectionFormsIndexDetailsRoute extends Route {
     @service store;
     @service hostRouter;
     @service notifications;
+    @service abilities;
+    @service intl;
+
+    beforeModel() {
+        if (this.abilities.cannot('fleet-ops view inspection-form')) {
+            this.notifications.warning(this.intl.t('common.unauthorized-access'));
+            return this.hostRouter.transitionTo('console.fleet-ops.maintenance.inspection-forms.index');
+        }
+    }
 
     model({ public_id }) {
         return this.store.findRecord('inspection-form', public_id);
@@ -13,6 +22,6 @@ export default class MaintenanceInspectionFormsIndexDetailsRoute extends Route {
 
     @action error(error) {
         this.notifications.serverError(error);
-        return this.hostRouter.transitionTo('maintenance.inspection-forms.index');
+        return this.hostRouter.transitionTo('console.fleet-ops.maintenance.inspection-forms.index');
     }
 }

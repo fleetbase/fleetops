@@ -17,6 +17,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
     @service hostRouter;
     @service universe;
     @service sidebar;
+    @service abilities;
     @tracked routingControl;
     @tracked routingCompleted = false;
     @tracked realtimeOrderPublicId = null;
@@ -90,12 +91,14 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                     {
                         text: 'Edit details',
                         icon: 'pencil',
+                        permission: 'fleet-ops update order',
                         disabled: this.model.status === 'canceled',
                         fn: () => this.orderActions.editOrderDetails(this.model),
                     },
                     {
                         text: 'Update activity',
                         icon: 'signal',
+                        permission: 'fleet-ops update order',
                         disabled: this.model.status === 'canceled',
                         fn: () =>
                             this.orderActions.updateActivity(this.model, {
@@ -105,12 +108,14 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                     {
                         text: this.model.has_driver_assigned ? 'Unassign driver' : 'Assign driver',
                         icon: this.model.has_driver_assigned ? 'user-xmark' : 'edit',
+                        permission: 'fleet-ops assign-driver-for order',
                         disabled: this.model.has_driver_assigned ? !this.model.hasActiveStatus || !this.model.driver_assigned : !this.model.hasActiveStatus,
                         fn: () => (this.model.has_driver_assigned ? this.orderActions.unassignDriver(this.model) : this.orderActions.assignDriver(this.model)),
                     },
                     {
                         text: 'View order label',
                         icon: 'file-invoice',
+                        permission: 'fleet-ops view order',
                         fn: () => this.orderActions.viewLabel(this.model),
                     },
                     {
@@ -133,6 +138,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         text: 'Cancel order',
                         icon: 'ban',
                         class: 'text-danger',
+                        permission: 'fleet-ops cancel order',
                         disabled: this.model.status === 'canceled',
                         fn: () => this.orderActions.cancel(this.model),
                     },
@@ -140,6 +146,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         text: 'Delete order',
                         icon: 'trash',
                         class: 'text-danger',
+                        permission: 'fleet-ops delete order',
                         fn: () =>
                             this.orderActions.delete(this.model, {
                                 taskOptions: {
@@ -151,7 +158,29 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                     },
                 ].filter(Boolean),
             },
-        ];
+        ].map((actionButton) => ({ ...actionButton, items: this.permittedMenuItems(actionButton.items) }));
+    }
+
+    /**
+     * The panel header dropdown renders `items` as-is and ignores `permission`, so items the
+     * user is not permitted to use are removed here, along with any separators left dangling.
+     */
+    permittedMenuItems(items = []) {
+        const permitted = items.filter((item) => !item.permission || this.abilities.can(item.permission));
+        const result = permitted.reduce((list, item) => {
+            if (item.separator && (list.length === 0 || list[list.length - 1].separator)) {
+                return list;
+            }
+
+            list.push(item);
+            return list;
+        }, []);
+
+        if (result.length && result[result.length - 1].separator) {
+            result.pop();
+        }
+
+        return result;
     }
 
     @action handleActivityModalFinish(options) {

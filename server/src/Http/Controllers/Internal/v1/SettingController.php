@@ -2,18 +2,54 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\FleetOps\Jobs\DispatchTelematicsRetentionJobs;
+use Fleetbase\FleetOps\Support\Telematics\Retention\RetentionPolicy;
+use Fleetbase\FleetOps\Support\Telematics\Telemetry\Queue;
 use Fleetbase\FleetOps\Tracking\TrackingProviderRegistry;
+use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
 use Fleetbase\Support\Auth;
 use Fleetbase\Support\NotificationRegistry;
+use Illuminate\Database\MySqlConnection;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Class SettingController.
  */
 class SettingController extends Controller
 {
+    use AuthorizesMethods;
+
+    public function __construct()
+    {
+        $this->authorizeMethods([
+            'saveEntityEditingSettings'               => 'update navigator-settings',
+            'savedDriverOnboardSettings'              => 'update navigator-settings',
+            'saveCustomerEnabledOrderConfigs'         => 'update order-config',
+            'saveCustomerPortalPaymentConfig'         => 'update payments',
+            'saveNotificationSettings'                => 'update notification-settings',
+            'saveRoutingSettings'                     => 'update routing-settings',
+            'saveTrackingSettings'                    => 'update tracking-settings',
+            'getAdminTrackingSettings'                => 'admin',
+            'saveAdminTrackingSettings'               => 'admin',
+            'saveMapSettings'                         => 'update map-settings',
+            'getAdminMapSettings'                     => 'admin',
+            'saveAdminMapSettings'                    => 'admin',
+            'saveSchedulingSettings'                  => 'update scheduling-settings',
+            'saveOrchestratorSettings'                => 'update routing-settings',
+            'saveOrchestratorCardFields'              => 'update routing-settings',
+            'getAdminTelematicsSettings'              => 'admin',
+            'saveAdminTelematicsSettings'             => 'admin',
+            'getTelematicsSettings'                   => 'view telematics-settings',
+            'saveTelematicsSettings'                  => 'update telematics-settings',
+            'getTelematicsStorageUsage'               => 'admin',
+            'runTelematicsRetention'                  => 'admin',
+        ]);
+    }
+
     /**
      * Save entity editing settings.
      *
@@ -21,37 +57,54 @@ class SettingController extends Controller
      */
     public function saveEntityEditingSettings(Request $request)
     {
-        $entityEditingSettings  = $request->input('entityEditingSettings', []);
+        // The setting is one platform-wide map keyed by order config id. Only this
+        // company's order configs may be written, and other companies' entries are kept.
+        $ownKeys  = $this->companyOrderConfigKeys();
+        $incoming = array_intersect_key((array) $request->input('entityEditingSettings', []), array_flip($ownKeys));
+        $existing = (array) ($this->settingValue('fleet-ops.entity-editing-settings') ?? []);
+        $merged   = array_merge(array_diff_key($existing, array_flip($ownKeys)), $incoming);
 
-        // Save entity editing settings
-        $this->configureSetting('fleet-ops.entity-editing-settings', $entityEditingSettings);
+        $this->configureSetting('fleet-ops.entity-editing-settings', $merged);
 
-        return response()->json(['entityEditingSettings' => $entityEditingSettings]);
+        return response()->json(['entityEditingSettings' => $incoming]);
     }
 
     /**
-     * Retrieve entity editing settings.
+     * Retrieve entity editing settings for this company's order configs.
      *
      * @return \Illuminate\Http\JsonResponse
      */
     public function getEntityEditingSettings()
     {
-        $entityEditingSettings  = $this->settingValue('fleet-ops.entity-editing-settings');
-        if (!$entityEditingSettings) {
-            $entityEditingSettings = [];
-        }
+        $entityEditingSettings = (array) ($this->settingValue('fleet-ops.entity-editing-settings') ?? []);
+        $entityEditingSettings = array_intersect_key($entityEditingSettings, array_flip($this->companyOrderConfigKeys()));
 
         return response()->json(['entityEditingSettings' => $entityEditingSettings]);
     }
 
     /**
-     * Retrieve driver onboard settings.
+     * Ids (uuid and public id) of the session company's order configs.
+     */
+    protected function companyOrderConfigKeys(): array
+    {
+        return \Fleetbase\FleetOps\Models\OrderConfig::where('company_uuid', session('company'))
+            ->get(['uuid', 'public_id'])
+            ->flatMap(fn ($config) => array_filter([$config->uuid, $config->public_id]))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Retrieve driver onboard settings for the session company.
+     *
+     * The route still carries a company id for backwards compatibility, but only
+     * the session company's settings are ever returned.
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getDriverOnboardSettings($companyId)
+    public function getDriverOnboardSettings($companyId = null)
     {
-        $driverOnboardSettings  = $this->settingValue('fleet-ops.driver-onboard-settings.' . $companyId);
+        $driverOnboardSettings  = $this->settingValue('fleet-ops.driver-onboard-settings.' . session('company'));
         if (!$driverOnboardSettings) {
             $driverOnboardSettings = [];
         }
@@ -66,9 +119,10 @@ class SettingController extends Controller
      */
     public function savedDriverOnboardSettings(Request $request)
     {
-        $driverOnboardSettings = $request->array('driverOnboardSettings', []);
+        $driverOnboardSettings              = $request->array('driverOnboardSettings', []);
+        $driverOnboardSettings['companyId'] = session('company');
 
-        if ($driverOnboardSettings['enableDriverOnboardFromApp'] == false) {
+        if (empty($driverOnboardSettings['enableDriverOnboardFromApp'])) {
             $driverOnboardSettings['driverMustProvideOnboardDoucments'] = false;
             $driverOnboardSettings['requiredOnboardDocuments']          = [];
             $driverOnboardSettings['driverOnboardAppMethod']            = '';
@@ -626,6 +680,403 @@ class SettingController extends Controller
                 'capabilities' => $provider->capabilities()->toArray(),
             ];
         })->values()->all();
+    }
+
+    /**
+     * Retrieve customer history preferences for the current company.
+     *
+     * Company values fall back to the system defaults (admin setting over
+     * package config); the response carries both so the UI can show them.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTelematicsSettings()
+    {
+        if (!$this->currentCompany()) {
+            return response()->error('No company session.', 401);
+        }
+
+        return response()->json($this->telematicsCompanySettings((array) $this->lookupFromCompanySetting(RetentionPolicy::SETTING_KEY, [])));
+    }
+
+    /**
+     * Save customer history preferences within the administrator's policy.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveTelematicsSettings(Request $request)
+    {
+        $company = $this->currentCompany();
+        if (!$company) {
+            return response()->error('No company session.', 401);
+        }
+
+        $request->validate([
+            'event_retention_days'    => ['nullable', 'integer', 'min:0', 'max:3650'],
+            'position_retention_days' => ['nullable', 'integer', 'min:0', 'max:3650'],
+        ]);
+
+        $saved = $this->withTelematicsPolicyLock(function () use ($request) {
+            $preferences = RetentionPolicy::constrainCompanyPreferences($request->only(RetentionPolicy::HISTORY_KEYS), $this->telematicsDefaults());
+
+            return $this->configureCompanySetting(RetentionPolicy::SETTING_KEY, $preferences);
+        });
+        if ($saved === false) {
+            return response()->error('Unable to save telematics history preferences.', 500);
+        }
+        RetentionPolicy::flush($company->uuid);
+
+        return response()->json(array_merge($this->getTelematicsSettings()->getData(true), [
+            'status'  => 'ok',
+            'message' => 'Telematics history preferences successfully saved.',
+        ]));
+    }
+
+    /**
+     * Retrieve the system-wide telematics retention defaults.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAdminTelematicsSettings()
+    {
+        return response()->json(array_merge($this->telematicsDefaults(), [
+            'limits' => RetentionPolicy::LIMITS,
+        ]));
+    }
+
+    /**
+     * Save the system-wide telematics retention defaults.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveAdminTelematicsSettings(Request $request)
+    {
+        $request->validate([
+            'max_event_retention_days'    => ['sometimes', 'integer', 'min:0', 'max:3650'],
+            'max_position_retention_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
+        ]);
+
+        try {
+            $settings = $this->withTelematicsPolicyLock(function () use ($request) {
+                $settings = RetentionPolicy::normalize($request->only(RetentionPolicy::keys()), $this->telematicsDefaults());
+                $this->configureSetting(RetentionPolicy::SETTING_KEY, $settings);
+
+                return $settings;
+            });
+            $this->reconcileTelematicsCompanyPreferences($settings);
+        } finally {
+            RetentionPolicy::flush();
+        }
+
+        return response()->json($this->getAdminTelematicsSettings()->getData(true));
+    }
+
+    /**
+     * Report system-wide telematics storage, including data without an owner.
+     *
+     * Use table statistics for MySQL/MariaDB instead of scanning every tenant's
+     * history. Oldest-row lookups and fallback counts have a database deadline.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTelematicsStorageUsage()
+    {
+        $ageColumns = [
+            'device_events'        => 'created_at',
+            'positions'            => 'created_at',
+            'telematic_deliveries' => 'received_at',
+            'telematic_sync_runs'  => 'created_at',
+        ];
+        $statistics = $this->storageTableStatistics(array_keys($ageColumns));
+        $allRows    = fn ($query) => $query;
+        $tables     = [];
+        foreach ($ageColumns as $table => $ageColumn) {
+            $tables[$table] = isset($statistics[$table])
+                ? array_merge($statistics[$table], ['oldest' => $this->tableOldest($table, $allRows, $ageColumn)])
+                : $this->tableUsage($table, $allRows, $ageColumn);
+        }
+
+        // Payload details require reading JSON-bearing rows, so they are opt-in
+        // and omitted if they cannot be counted within the database deadline.
+        if (request()->boolean('include_payload_counts', false)) {
+            try {
+                $rawPayloadRows  = $this->tableCount('device_events', fn ($query) => $query->whereNotNull('payload'));
+                $compactAfter    = (int) $this->telematicsDefaults()['event_compact_after_days'];
+                $compactableRows = $compactAfter > 0
+                    ? $this->tableCount('device_events', fn ($query) => $query->whereNotNull('payload')->where('created_at', '<', now()->subDays($compactAfter)->toDateTimeString()))
+                    : 0;
+
+                $tables['device_events']['raw_payload_rows'] = $rawPayloadRows;
+                $tables['device_events']['compactable_rows'] = $compactableRows;
+            } catch (QueryException $exception) {
+                if (!$this->isStorageUsageTimeout($exception)) {
+                    throw $exception;
+                }
+            }
+        }
+
+        return response()->json([
+            'tables'       => $tables,
+            'scope'        => 'system',
+            'generated_at' => now()->toISOString(),
+        ]);
+    }
+
+    /**
+     * Queue retention for all companies and orphaned data, independent of session company.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function runTelematicsRetention()
+    {
+        $connection = (string) config('queue.default', 'sync');
+        $driver     = config('queue.connections.' . $connection . '.driver', $connection);
+        if (in_array($driver, ['sync', 'null'], true)) {
+            return response()->error('System-wide telematics cleanup requires an asynchronous queue connection and a running queue worker.', 503);
+        }
+
+        $this->dispatchTelematicsPrune();
+
+        return response()->json([
+            'status'  => 'queued',
+            'scope'   => 'system',
+            'message' => 'System-wide telematics cleanup has been queued.',
+        ], 202);
+    }
+
+    /**
+     * System-wide retention defaults: package config overridden by the admin setting.
+     */
+    protected function telematicsDefaults(): array
+    {
+        $config = array_intersect_key((array) config('telematics.telemetry', []), RetentionPolicy::FALLBACKS);
+
+        return RetentionPolicy::normalize((array) $this->lookupSetting(RetentionPolicy::SETTING_KEY, []), RetentionPolicy::normalize($config, RetentionPolicy::FALLBACKS));
+    }
+
+    /**
+     * Customer responses expose history choices and constraints, never internal
+     * ingestion, cleanup, storage or activity logging configuration.
+     */
+    protected function telematicsCompanySettings(array $stored, ?array $defaults = null): array
+    {
+        $defaults    = $defaults ?? $this->telematicsDefaults();
+        $history     = array_flip(RetentionPolicy::HISTORY_KEYS);
+        $preferences = RetentionPolicy::constrainCompanyPreferences($stored, $defaults);
+        $effective   = RetentionPolicy::fromCompanyPreferences($preferences, $defaults)->toArray();
+        $inherited   = RetentionPolicy::fromCompanyPreferences([], $defaults)->toArray();
+
+        return array_merge(array_intersect_key($effective, $history), [
+            'preferences' => array_merge(array_fill_keys(RetentionPolicy::HISTORY_KEYS, null), $preferences),
+            'defaults'    => array_intersect_key($inherited, $history),
+            'policy'      => array_intersect_key($defaults, array_flip(array_values(RetentionPolicy::MAXIMUMS))),
+            'limits'      => array_intersect_key(RetentionPolicy::LIMITS, $history),
+        ]);
+    }
+
+    /**
+     * Serialize policy changes with a customer's policy lookup and preference
+     * write, so a request cannot save an old unlimited choice after a new cap.
+     * The empty row is only a lock anchor and keeps config fallbacks intact.
+     */
+    protected function withTelematicsPolicyLock(\Closure $callback): mixed
+    {
+        $setting = new Setting();
+        if (!$setting->newQuery()->where('key', RetentionPolicy::SETTING_KEY)->exists()) {
+            $setting->newQuery()->insertOrIgnore(['key' => RetentionPolicy::SETTING_KEY, 'value' => '[]']);
+        }
+
+        return $setting->getConnection()->transaction(function () use ($setting, $callback) {
+            $setting->newQuery()->where('key', RetentionPolicy::SETTING_KEY)->lockForUpdate()->firstOrFail();
+
+            return $callback();
+        }, 3);
+    }
+
+    /**
+     * A newly imposed maximum replaces existing unlimited or longer explicit
+     * choices for every organization. Keep inherited preferences absent so they
+     * continue following future system defaults. Process settings in bounded
+     * batches rather than loading every organization or its telemetry history.
+     */
+    protected function reconcileTelematicsCompanyPreferences(array $defaults): void
+    {
+        $maximums = array_intersect_key($defaults, array_flip(array_values(RetentionPolicy::MAXIMUMS)));
+        if (!array_filter($maximums, fn ($maximum) => $maximum > 0)) {
+            return;
+        }
+
+        Setting::query()
+            ->where('key', 'like', 'company.%.' . RetentionPolicy::SETTING_KEY)
+            ->select('id')
+            ->chunkById(200, function ($settings) {
+                foreach ($settings as $setting) {
+                    // Lock policy then company, as customer saves do. Reread
+                    // both so a later admin change or customer preference is
+                    // never overwritten using an earlier batch's snapshot.
+                    $this->withTelematicsPolicyLock(function () use ($setting) {
+                        $current = Setting::query()->whereKey($setting->getKey())->lockForUpdate()->first();
+                        if (!$current) {
+                            return;
+                        }
+
+                        $stored      = (array) $current->value;
+                        $preferences = RetentionPolicy::companyPreferences($stored);
+                        $constrained = RetentionPolicy::constrainCompanyPreferences($preferences, $this->telematicsDefaults());
+                        if ($preferences === $constrained) {
+                            return;
+                        }
+
+                        $current->value = array_replace($stored, $constrained);
+                        $current->save();
+                    });
+                }
+            });
+    }
+
+    protected function tableUsage(string $table, \Closure $scope, string $ageColumn): array
+    {
+        if (!in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+            return [
+                'rows'   => $this->tableCount($table, $scope),
+                'oldest' => $this->tableOldest($table, $scope, $ageColumn),
+            ];
+        }
+
+        $query = $scope(DB::table($table));
+        $query->selectRaw('COUNT(*) AS row_count, MIN(' . $query->getGrammar()->wrap($ageColumn) . ') AS oldest');
+
+        try {
+            $usage = $this->storageUsageSelect($query->toSql(), $query->getBindings())[0];
+
+            return [
+                'rows'   => (int) $usage->row_count,
+                'oldest' => $usage->oldest === null ? null : (string) $usage->oldest,
+            ];
+        } catch (QueryException $exception) {
+            if (!$this->isStorageUsageTimeout($exception)) {
+                throw $exception;
+            }
+        }
+
+        // EXPLAIN does not execute the history scan. The caller's scope is
+        // preserved when metadata is unavailable and a count reaches its deadline.
+        $estimate = null;
+        $query    = $scope(DB::table($table))->select($ageColumn);
+        try {
+            $plan = $this->storageUsageSelect($query->toSql(), $query->getBindings(), true)[0] ?? null;
+            if (isset($plan->rows)) {
+                $estimate = max(0, (int) round((float) $plan->rows * (float) ($plan->filtered ?? 100) / 100));
+            }
+        } catch (QueryException $exception) {
+            if (!$this->isStorageUsageTimeout($exception)) {
+                throw $exception;
+            }
+        }
+
+        return ['rows' => $estimate, 'oldest' => null, 'rows_estimated' => true];
+    }
+
+    protected function tableCount(string $table, \Closure $scope): int
+    {
+        $query = $scope(DB::table($table))->selectRaw('COUNT(*) AS row_count');
+        $usage = $this->storageUsageSelect($query->toSql(), $query->getBindings())[0];
+
+        return (int) $usage->row_count;
+    }
+
+    protected function tableOldest(string $table, \Closure $scope, string $column): ?string
+    {
+        $query = $scope(DB::table($table));
+        $query->selectRaw('MIN(' . $query->getGrammar()->wrap($column) . ') AS oldest');
+        try {
+            $oldest = $this->storageUsageSelect($query->toSql(), $query->getBindings())[0]->oldest ?? null;
+        } catch (QueryException $exception) {
+            if (!$this->isStorageUsageTimeout($exception)) {
+                throw $exception;
+            }
+
+            return null;
+        }
+
+        return $oldest ? (string) $oldest : null;
+    }
+
+    /**
+     * Bound each MySQL/MariaDB scan to one second without changing persistent
+     * connection settings. A browser abort alone leaves database work running.
+     */
+    protected function storageUsageSelect(string $sql, array $bindings = [], bool $explain = false): array
+    {
+        $connection = DB::connection();
+        $driver     = $connection->getDriverName();
+        $isMariaDb  = $driver === 'mariadb';
+
+        if ($connection instanceof MySqlConnection) {
+            $isMariaDb = stripos((string) $connection->getReadPdo()->getAttribute(\PDO::ATTR_SERVER_VERSION), 'MariaDB') !== false;
+        }
+
+        if ($isMariaDb) {
+            $sql = 'SET STATEMENT max_statement_time=1 FOR ' . ($explain ? 'EXPLAIN ' : '') . $sql;
+        } else {
+            if ($driver === 'mysql') {
+                $sql = preg_replace('/^select\b/i', 'SELECT /*+ MAX_EXECUTION_TIME(1000) */', $sql, 1);
+            }
+            if ($explain) {
+                $sql = 'EXPLAIN ' . $sql;
+            }
+        }
+
+        return $connection->select($sql, $bindings);
+    }
+
+    protected function isStorageUsageTimeout(QueryException $exception): bool
+    {
+        return in_array((int) ($exception->errorInfo[1] ?? 0), [3024, 1969], true);
+    }
+
+    /**
+     * Whole-table row estimates and allocated data/index bytes. Empty on other drivers.
+     *
+     * @return array<string, array<string, int|bool|null>>
+     */
+    protected function storageTableStatistics(array $tables): array
+    {
+        $connection = DB::connection();
+        if (!in_array($connection->getDriverName(), ['mysql', 'mariadb'], true)) {
+            return [];
+        }
+
+        $prefix       = $connection->getTablePrefix();
+        $placeholders = implode(', ', array_fill(0, count($tables), '?'));
+        try {
+            $rows = $this->storageUsageSelect(
+                'SELECT TABLE_NAME AS name, TABLE_ROWS AS row_count, DATA_LENGTH AS data_bytes, INDEX_LENGTH AS index_bytes FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (' . $placeholders . ')',
+                array_map(fn ($table) => $prefix . $table, $tables)
+            );
+        } catch (QueryException $exception) {
+            if (!$this->isStorageUsageTimeout($exception)) {
+                throw $exception;
+            }
+
+            return [];
+        }
+
+        $statistics = [];
+        foreach ($rows as $row) {
+            $statistics[substr($row->name, strlen($prefix))] = [
+                'rows'            => $row->row_count === null ? null : (int) $row->row_count,
+                'rows_estimated'  => true,
+                'estimated_bytes' => $row->data_bytes === null || $row->index_bytes === null ? null : (int) $row->data_bytes + (int) $row->index_bytes,
+            ];
+        }
+
+        return $statistics;
+    }
+
+    protected function dispatchTelematicsPrune(): void
+    {
+        Queue::dispatch(new DispatchTelematicsRetentionJobs());
     }
 
     protected function configureSetting(string $key, mixed $value): mixed

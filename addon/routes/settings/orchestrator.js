@@ -14,7 +14,7 @@ export default class SettingsOrchestratorRoute extends Route {
     @service hostRouter;
 
     beforeModel() {
-        if (this.abilities.cannot('fleet-ops list order')) {
+        if (this.abilities.cannot('fleet-ops view routing-settings')) {
             this.notifications.warning(this.intl.t('common.unauthorized-access'));
             return this.hostRouter.transitionTo('console.fleet-ops');
         }

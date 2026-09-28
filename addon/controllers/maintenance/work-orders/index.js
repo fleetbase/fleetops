@@ -21,14 +21,21 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
     get actionButtons() {
         return [
             { icon: 'refresh', onClick: this.workOrderActions.refresh, helpText: this.intl.t('common.refresh') },
-            { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.workOrderActions.transition.create },
-            { text: this.intl.t('common.import'), type: 'magic', icon: 'upload', onClick: this.workOrderActions.import },
-            { text: this.intl.t('common.export'), icon: 'long-arrow-up', iconClass: 'rotate-icon-45', wrapperClass: 'hidden md:flex', onClick: this.workOrderActions.export },
+            { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.workOrderActions.transition.create, permission: 'fleet-ops create work-order' },
+            { text: this.intl.t('common.import'), type: 'magic', icon: 'upload', onClick: this.workOrderActions.import, permission: 'fleet-ops import work-order' },
+            {
+                text: this.intl.t('common.export'),
+                icon: 'long-arrow-up',
+                iconClass: 'rotate-icon-45',
+                wrapperClass: 'hidden md:flex',
+                onClick: this.workOrderActions.export,
+                permission: 'fleet-ops export work-order',
+            },
         ];
     }
 
     get bulkActions() {
-        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.workOrderActions.bulkDelete }];
+        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.workOrderActions.bulkDelete, permission: 'fleet-ops delete work-order' }];
     }
 
     get columns() {

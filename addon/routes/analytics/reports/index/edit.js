@@ -17,7 +17,7 @@ export default class AnalyticsReportsIndexEditRoute extends Route {
     }
 
     beforeModel() {
-        if (this.abilities.cannot('fleet-ops update report')) {
+        if (this.abilities.cannot('iam update report')) {
             this.notifications.warning(this.intl.t('common.unauthorized-access'));
             return this.hostRouter.transitionTo('console.fleet-ops.analytics.reports.index');
         }

@@ -15,7 +15,7 @@
                 </div>
                 <div class="flex flex-shrink-0 items-center gap-2 whitespace-nowrap">
                     <Button @icon="refresh" @size="sm" @helpText={{t "common.reload"}} @onClick={{this.refresh}} />
-                    <Button @icon="plus" @text="Connect Provider" @type="primary" @size="sm" @onClick={{this.telematicActions.transition.create}} />
+                    <Button @icon="plus" @text="Connect Provider" @type="primary" @size="sm" @permission="fleet-ops create telematic" @onClick={{this.telematicActions.transition.create}} />
                 </div>
             </div>
         </section>

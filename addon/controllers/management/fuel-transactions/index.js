@@ -71,6 +71,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
                 icon: 'gas-pump',
                 text: 'Fuel Integrations',
                 onClick: () => this.hostRouter.transitionTo('console.fleet-ops.connectivity.fuel-providers.index'),
+                permission: 'fleet-ops list fuel-provider-connection',
             },
         ];
     }
@@ -86,6 +87,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
             {
                 label: `Reprocess ${selected.length} selected`,
                 fn: () => this.confirmAction('reprocess', selected),
+                permission: 'fleet-ops update fuel-provider-transaction',
             },
         ];
     }
@@ -196,14 +198,14 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
                 sticky: 'right',
                 width: 60,
                 actions: [
-                    { label: 'Review Details', fn: this.openDetails },
-                    { label: 'Open Fuel Report', fn: this.openFuelReport, isVisible: (transaction) => Boolean(transaction.fuel_report_id) },
+                    { label: 'Review Details', fn: this.openDetails, permission: 'fleet-ops view fuel-provider-transaction' },
+                    { label: 'Open Fuel Report', fn: this.openFuelReport, isVisible: (transaction) => Boolean(transaction.fuel_report_id), permission: 'fleet-ops view fuel-report' },
                     { separator: true },
-                    { label: 'Match to Vehicle', fn: this.matchVehicle },
-                    { label: 'Match to Order', fn: this.matchOrder },
-                    { label: 'Reprocess / Rematch', fn: (transaction) => this.confirmAction('reprocess', transaction) },
-                    { label: 'Ignore Transaction', fn: (transaction) => this.confirmAction('ignored', transaction) },
-                    { label: 'Mark Reviewed', fn: (transaction) => this.confirmAction('reviewed', transaction) },
+                    { label: 'Match to Vehicle', fn: this.matchVehicle, permission: 'fleet-ops update fuel-provider-transaction' },
+                    { label: 'Match to Order', fn: this.matchOrder, permission: 'fleet-ops update fuel-provider-transaction' },
+                    { label: 'Reprocess / Rematch', fn: (transaction) => this.confirmAction('reprocess', transaction), permission: 'fleet-ops update fuel-provider-transaction' },
+                    { label: 'Ignore Transaction', fn: (transaction) => this.confirmAction('ignored', transaction), permission: 'fleet-ops review fuel-provider-transaction' },
+                    { label: 'Mark Reviewed', fn: (transaction) => this.confirmAction('reviewed', transaction), permission: 'fleet-ops review fuel-provider-transaction' },
                 ],
                 sortable: false,
                 filterable: false,

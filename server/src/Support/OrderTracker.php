@@ -14,11 +14,11 @@ class OrderTracker
 
     public function eta(array $options = []): array
     {
-        return app(TrackingIntelligenceService::class)->eta($this->order, TrackingOptions::fromArray($options));
+        return app(TrackingIntelligenceService::class)->eta($this->order, TrackingOptions::fromArray($options, $this->order->company_uuid));
     }
 
     public function toArray(array $options = []): array
     {
-        return app(TrackingIntelligenceService::class)->track($this->order, TrackingOptions::fromArray($options));
+        return app(TrackingIntelligenceService::class)->track($this->order, TrackingOptions::fromArray($options, $this->order->company_uuid));
     }
 }

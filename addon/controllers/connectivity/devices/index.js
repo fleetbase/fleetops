@@ -65,12 +65,14 @@ export default class ConnectivityDevicesIndexController extends Controller {
             type: 'primary',
             icon: 'plus',
             onClick: this.deviceActions.transition.create,
+            permission: 'fleet-ops create device',
         },
         {
             text: this.intl.t('common.import'),
             type: 'magic',
             icon: 'upload',
             onClick: this.deviceActions.import,
+            permission: 'fleet-ops import device',
         },
         {
             text: this.intl.t('common.export'),
@@ -78,6 +80,7 @@ export default class ConnectivityDevicesIndexController extends Controller {
             iconClass: 'rotate-icon-45',
             wrapperClass: 'hidden md:flex',
             onClick: this.deviceActions.export,
+            permission: 'fleet-ops export device',
         },
     ];
 
@@ -87,6 +90,7 @@ export default class ConnectivityDevicesIndexController extends Controller {
             label: 'Delete selected...',
             class: 'text-red-500',
             fn: this.deviceActions.bulkDelete,
+            permission: 'fleet-ops delete device',
         },
     ];
 

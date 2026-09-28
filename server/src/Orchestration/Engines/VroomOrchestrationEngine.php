@@ -37,6 +37,12 @@ use Illuminate\Support\Facades\Log;
  */
 class VroomOrchestrationEngine implements OrchestrationEngineInterface
 {
+    /**
+     * The company whose VROOM settings apply to the current allocation run.
+     * Resolved from the orders so queued runs work without a company session.
+     */
+    protected ?string $companyUuid = null;
+
     public function getName(): string
     {
         return 'VROOM';
@@ -59,6 +65,8 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
      */
     public function allocate(Collection $orders, Collection $vehicles, array $options = []): array
     {
+        $this->companyUuid = data_get($orders->first(), 'company_uuid');
+
         if (($options['allocation_strategy'] ?? null) === 'capacity_only') {
             return $this->allocateCapacityOnly($orders, $vehicles, $options);
         }
@@ -520,7 +528,7 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
     protected function resolveVroomSetting(string $key, $default = null)
     {
         try {
-            $organizationValue = data_get(Setting::lookupCompany('vroom', []), $key);
+            $organizationValue = data_get(Setting::lookupForCompany($this->companyUuid ?? session('company'), 'vroom', []), $key);
             if ($this->hasConfiguredValue($organizationValue)) {
                 return $organizationValue;
             }

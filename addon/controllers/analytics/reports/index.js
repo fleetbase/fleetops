@@ -29,6 +29,7 @@ export default class AnalyticsReportsIndexController extends Controller {
                 type: 'primary',
                 icon: 'plus',
                 onClick: this.reportActions.transition.create,
+                permission: 'iam create report',
             },
         ];
     }
@@ -39,6 +40,7 @@ export default class AnalyticsReportsIndexController extends Controller {
                 label: 'Delete selected...',
                 class: 'text-red-500',
                 fn: this.reportActions.bulkDelete,
+                permission: 'iam delete report',
             },
         ];
     }
@@ -81,10 +83,12 @@ export default class AnalyticsReportsIndexController extends Controller {
                     {
                         label: 'View report...',
                         fn: this.reportActions.transition.view,
+                        permission: 'iam view report',
                     },
                     {
                         label: 'Edit report...',
                         fn: this.reportActions.transition.edit,
+                        permission: 'iam update report',
                     },
                     {
                         separator: true,
@@ -92,6 +96,7 @@ export default class AnalyticsReportsIndexController extends Controller {
                     {
                         label: 'Delete report...',
                         fn: this.reportActions.delete,
+                        permission: 'iam delete report',
                     },
                 ],
                 sortable: false,

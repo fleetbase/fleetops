@@ -38,12 +38,14 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             type: 'primary',
             icon: 'plus',
             onClick: this.telematicActions.transition.create,
+            permission: 'fleet-ops create telematic',
         },
         {
             text: this.intl.t('common.import'),
             type: 'magic',
             icon: 'upload',
             onClick: this.telematicActions.import,
+            permission: 'fleet-ops import telematic',
         },
         {
             text: this.intl.t('common.export'),
@@ -51,6 +53,7 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             iconClass: 'rotate-icon-45',
             wrapperClass: 'hidden md:flex',
             onClick: this.telematicActions.export,
+            permission: 'fleet-ops export telematic',
         },
     ];
 
@@ -60,6 +63,7 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             label: 'Delete selected...',
             class: 'text-red-500',
             fn: this.telematicActions.bulkDelete,
+            permission: 'fleet-ops delete telematic',
         },
     ];
 

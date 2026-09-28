@@ -4,6 +4,17 @@ import { hash } from 'rsvp';
 
 export default class SettingsNotificationsRoute extends Route {
     @service fetch;
+    @service notifications;
+    @service hostRouter;
+    @service abilities;
+    @service intl;
+
+    beforeModel() {
+        if (this.abilities.cannot('fleet-ops view notification-settings')) {
+            this.notifications.warning(this.intl.t('common.unauthorized-access'));
+            return this.hostRouter.transitionTo('console.fleet-ops');
+        }
+    }
 
     model() {
         return hash({

@@ -2,6 +2,8 @@
 
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\OrchestrationController;
 use Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\Request;
 
 function sanitize_orchestrator_payload(array $payload): array
 {
@@ -71,4 +73,44 @@ test('consumable orchestrator routes are registered under the public api group',
     expect($routes)->toContain("['prefix' => 'orchestrator']");
     expect($routes)->toContain("\$router->post('run', 'OrchestrationController@run');");
     expect($routes)->toContain("\$router->post('commit', 'OrchestrationController@commit');");
+});
+
+test('public orchestration uses API authentication without inheriting console IAM middleware', function () {
+    $registry = new OrchestrationEngineRegistry();
+    $public   = new OrchestrationController($registry);
+    $internal = new Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrchestrationController($registry);
+
+    expect($public->getMiddleware())->toBe([]);
+
+    // An API-key request has no console IAM role. The internal workbench must
+    // still refuse this actor; its middleware must not leak onto the API class.
+    app('session.store')->flush();
+    $request = Request::create('/int/v1/fleet-ops/orchestrator/run', 'POST');
+    app()->instance('request', $request);
+    foreach (['run', 'commit'] as $method) {
+        $guard = collect($internal->getMiddleware())->first(fn ($entry) => in_array($method, $entry['options']['only'], true));
+        expect($guard)->not->toBeNull();
+
+        try {
+            $guard['middleware']($request, fn () => throw new RuntimeException('Unauthorized request reached the workbench'));
+            test()->fail('The internal workbench must require a permitted user');
+        } catch (HttpResponseException $error) {
+            expect($error->getResponse()->getStatusCode())->toBe(401);
+        }
+    }
+});
+
+test('public orchestration resolves tenant scope from the authenticated session, never request input', function () {
+    $controller = new OrchestrationController(new OrchestrationEngineRegistry());
+    $company    = new ReflectionMethod($controller, 'companyUuid');
+    $company->setAccessible(true);
+    $request = Request::create('/v1/orchestrator/run', 'POST', ['company_uuid' => 'other-company']);
+    app()->instance('request', $request);
+
+    session(['company' => 'credential-company']);
+    expect($company->invoke($controller))->toBe('credential-company');
+
+    session(['company' => 'next-credential-company']);
+    expect($company->invoke($controller))->toBe('next-credential-company');
+    app('session.store')->flush();
 });

@@ -454,7 +454,7 @@ class FleetOpsNotifyDriverOnShiftChangeProbe extends NotifyDriverOnShiftChange
         return $this->schedule;
     }
 
-    protected function getSchedulingSettings(): array
+    protected function getSchedulingSettings(?string $companyUuid): array
     {
         return $this->settings;
     }

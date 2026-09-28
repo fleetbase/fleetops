@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 use Fleetbase\FleetOps\Mail\CustomerCredentialsMail;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Support\ProfileAccountManager;
+use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\User;
 use Illuminate\Http\Request;
@@ -13,6 +14,19 @@ use Illuminate\Support\Str;
 
 class CustomerController extends Controller
 {
+    use AuthorizesMethods;
+
+    public function __construct()
+    {
+        $this->authorizeMethods([
+            'createPortalLogin'     => 'reset-credentials-for customer',
+            'sendCredentials'       => 'reset-credentials-for customer',
+            'deactivatePortalLogin' => 'reset-credentials-for customer',
+            'reactivatePortalLogin' => 'reset-credentials-for customer',
+            'resetCredentials'      => 'reset-credentials-for customer',
+        ]);
+    }
+
     public function createPortalLogin(Request $request)
     {
         $customer = $this->resolveCustomer($request);

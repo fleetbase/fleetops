@@ -184,10 +184,21 @@ test('operational alert helpers query orders positions and settings', function (
     $order = Order::where('uuid', 'order-1')->withoutGlobalScopes()->first();
     expect($probe->callHelper('latestPositionForOrder', $order))->toBeInstanceOf(Position::class);
 
-    $settings = $probe->callHelper('alertSettings');
+    $settings = $probe->callHelper('alertSettings', $order);
     expect($settings['late_departures']['enabled'])->toBeTrue()
         ->and($settings['route_deviations']['distance_threshold_meters'])->toBe(500)
         ->and($settings['prolonged_stoppages']['duration_threshold_minutes'])->toBe(30);
+
+    // Settings resolve from the order's company without a company session
+    $connection->table('settings')->insert([
+        'key'   => 'company.company-1.tracking',
+        'value' => json_encode(['alerts' => ['late_departures' => ['enabled' => false], 'route_deviations' => ['distance_threshold_meters' => 750]]]),
+    ]);
+    session(['company' => null]);
+    $settings = $probe->callHelper('alertSettings', $order);
+    session(['company' => 'company-1']);
+    expect($settings['late_departures']['enabled'])->toBeFalse()
+        ->and($settings['route_deviations']['distance_threshold_meters'])->toBe(750);
 });
 
 test('route point collection normalizes pairs and measures distances', function () {
