@@ -5,7 +5,7 @@ use Fleetbase\FleetOps\Support\Telematics\Retention\TelemetryActivity;
 use Spatie\Activitylog\ActivityLogger;
 
 /**
- * Telemetry writes bypass the activity log unless the company opted in, and
+ * Telemetry writes bypass the activity log unless an administrator enabled it, and
  * still run when no activity logger is available.
  */
 function fleetopsTelemetryActivityLogger(): ActivityLogger
@@ -40,16 +40,24 @@ afterEach(function () {
     app()->forgetInstance(ActivityLogger::class);
 });
 
-test('telemetry activity is suppressed by default and logged when a company opts in', function () {
+test('telemetry activity follows the system policy and ignores legacy company overrides', function () {
     RetentionPolicy::$settingsResolver = fn (string $scope, string $key, mixed $default, ?string $company) => $company === 'verbose' ? ['log_telemetry_activity' => true] : [];
     $logger                            = fleetopsTelemetryActivityLogger();
 
     expect(TelemetryActivity::run('quiet', fn () => 'saved'))->toBe('saved')
         ->and($logger->suppressed)->toBe(1)
-        ->and(TelemetryActivity::run('verbose', fn () => 'logged'))->toBe('logged')
-        ->and($logger->suppressed)->toBe(1)
+        ->and(TelemetryActivity::run('verbose', fn () => 'saved'))->toBe('saved')
+        ->and($logger->suppressed)->toBe(2)
         ->and(TelemetryActivity::run(null, fn () => 'system'))->toBe('system')
-        ->and($logger->suppressed)->toBe(2);
+        ->and($logger->suppressed)->toBe(3);
+
+    RetentionPolicy::flush();
+    RetentionPolicy::$settingsResolver = fn (string $scope) => ['log_telemetry_activity' => $scope === 'system'];
+
+    expect(TelemetryActivity::run('quiet', fn () => 'logged'))->toBe('logged')
+        ->and(TelemetryActivity::run('verbose', fn () => 'logged'))->toBe('logged')
+        ->and(TelemetryActivity::run(null, fn () => 'system'))->toBe('system')
+        ->and($logger->suppressed)->toBe(3);
 });
 
 test('telemetry writes still run when the activity logger cannot be resolved', function () {

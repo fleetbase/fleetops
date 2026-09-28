@@ -8,9 +8,9 @@ use Illuminate\Support\Carbon;
 /**
  * Resolves how long a company keeps telematics data.
  *
- * Values resolve in three layers: the package config (`telematics.telemetry`),
- * the system-wide admin setting, then the company setting. Every numeric value
- * is clamped to its limits; zero always means "keep forever".
+ * Administrators control retention policy and infrastructure settings. Companies
+ * may override event and position history retention within the system maximums.
+ * Zero means "keep forever" only when the administrator has not set a maximum.
  */
 final class RetentionPolicy
 {
@@ -19,27 +19,39 @@ final class RetentionPolicy
     /** Cached policies are refreshed after this many seconds so saved settings reach long-lived workers. */
     public const CACHE_TTL_SECONDS = 60;
 
+    public const HISTORY_KEYS = ['event_retention_days', 'position_retention_days'];
+
+    public const MAXIMUMS = [
+        'event_retention_days'    => 'max_event_retention_days',
+        'position_retention_days' => 'max_position_retention_days',
+    ];
+
     /** @var array<string, array{0: int, 1: int}> */
     public const LIMITS = [
-        'event_retention_days'      => [1, 3650],
-        'event_compact_after_days'  => [1, 3650],
-        'position_retention_days'   => [1, 3650],
-        'processed_retention_hours' => [1, 720],
-        'quarantine_retention_days' => [1, 365],
-        'sync_run_retention_days'   => [1, 365],
+        'event_retention_days'        => [1, 3650],
+        'event_compact_after_days'    => [1, 3650],
+        'position_retention_days'     => [1, 3650],
+        'processed_retention_hours'   => [1, 720],
+        'quarantine_retention_days'   => [1, 365],
+        'sync_run_retention_days'     => [1, 365],
+        'max_event_retention_days'    => [1, 3650],
+        'max_position_retention_days' => [1, 3650],
     ];
 
     public const BOOLEANS = ['log_telemetry_activity'];
 
     /** Used when neither config nor settings provide a value. */
     public const FALLBACKS = [
-        'event_retention_days'      => 30,
-        'event_compact_after_days'  => 7,
-        'position_retention_days'   => 90,
-        'processed_retention_hours' => 24,
-        'quarantine_retention_days' => 7,
-        'sync_run_retention_days'   => 7,
-        'log_telemetry_activity'    => false,
+        'event_retention_days'        => 30,
+        'event_compact_after_days'    => 7,
+        'position_retention_days'     => 90,
+        'processed_retention_hours'   => 24,
+        'quarantine_retention_days'   => 7,
+        'sync_run_retention_days'     => 7,
+        // A separate, opt-in cap preserves existing history when upgrading.
+        'max_event_retention_days'    => 0,
+        'max_position_retention_days' => 0,
+        'log_telemetry_activity'      => false,
     ];
 
     /**
@@ -85,7 +97,7 @@ final class RetentionPolicy
     public static function forCompany(?string $companyUuid): self
     {
         if (!$companyUuid) {
-            return new self(self::defaults());
+            return self::fromCompanyPreferences([]);
         }
 
         $cached = self::$companyCache[$companyUuid] ?? null;
@@ -94,16 +106,48 @@ final class RetentionPolicy
         }
 
         $defaults = self::defaults();
-        $policy   = new self(self::normalize(self::resolve('company', $companyUuid), $defaults));
+        $policy   = self::fromCompanyPreferences(self::resolve('company', $companyUuid), $defaults);
 
-        self::$companyCache[$companyUuid] = ['policy' => $policy, 'expires' => time() + self::CACHE_TTL_SECONDS];
+        // A policy must not extend the lifetime of system defaults it inherited.
+        self::$companyCache[$companyUuid] = ['policy' => $policy, 'expires' => self::$defaultsCache['expires']];
 
         return $policy;
     }
 
     public static function fromArray(array $values, ?array $base = null): self
     {
-        return new self(self::normalize($values, $base ?? self::FALLBACKS));
+        return new self(self::applyMaximums(self::normalize($values, $base ?? self::FALLBACKS)));
+    }
+
+    /**
+     * Keep only explicit, valid customer history preferences. Missing or null
+     * values remain absent so later changes to the system defaults are inherited.
+     */
+    public static function companyPreferences(array $input): array
+    {
+        $preferences = [];
+        foreach (self::HISTORY_KEYS as $key) {
+            $value = $input[$key] ?? null;
+            if ($value === null || $value === '' || is_bool($value) || filter_var($value, FILTER_VALIDATE_INT) === false) {
+                continue;
+            }
+
+            [$min, $max]       = self::LIMITS[$key];
+            $value             = (int) $value;
+            $preferences[$key] = $value === 0 ? 0 : max($min, min($max, $value));
+        }
+
+        return $preferences;
+    }
+
+    /**
+     * Legacy company overrides for ingestion, payloads and logging are ignored.
+     * Apply caps after inheritance so unlimited or overly long defaults cannot
+     * bypass an administrator's maximum either.
+     */
+    public static function fromCompanyPreferences(array $preferences, ?array $defaults = null): self
+    {
+        return self::fromArray(self::companyPreferences($preferences), $defaults ?? self::defaults());
     }
 
     /**
@@ -180,6 +224,18 @@ final class RetentionPolicy
     public function toArray(): array
     {
         return $this->values;
+    }
+
+    private static function applyMaximums(array $values): array
+    {
+        foreach (self::MAXIMUMS as $key => $maximumKey) {
+            $maximum = $values[$maximumKey];
+            if ($maximum > 0 && ($values[$key] === 0 || $values[$key] > $maximum)) {
+                $values[$key] = $maximum;
+            }
+        }
+
+        return $values;
     }
 
     private static function pick(array $input, array $base, string $key): mixed

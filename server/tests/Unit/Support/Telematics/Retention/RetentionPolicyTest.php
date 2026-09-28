@@ -4,8 +4,8 @@ use Fleetbase\FleetOps\Support\Telematics\Retention\RetentionPolicy;
 use Illuminate\Support\Carbon;
 
 /**
- * RetentionPolicy layers package config, the admin setting and the company
- * setting, clamps every value, and caches per company for long-lived workers.
+ * RetentionPolicy combines administrator policy with allowed company history
+ * preferences, enforces maximums, and caches policies for long-lived workers.
  */
 function fleetopsRetentionResolver(array $system, array $company, ?array &$calls = null): void
 {
@@ -34,13 +34,15 @@ afterEach(function () {
 test('defaults come from package config, overridden by the admin setting, with everything clamped', function () {
     fleetopsRetentionResolver([], []);
     expect(RetentionPolicy::defaults())->toBe([
-        'event_retention_days'      => 45,
-        'event_compact_after_days'  => 7,
-        'position_retention_days'   => 90,
-        'processed_retention_hours' => 48,
-        'quarantine_retention_days' => 7,
-        'sync_run_retention_days'   => 7,
-        'log_telemetry_activity'    => true,
+        'event_retention_days'        => 45,
+        'event_compact_after_days'    => 7,
+        'position_retention_days'     => 90,
+        'processed_retention_hours'   => 48,
+        'quarantine_retention_days'   => 7,
+        'sync_run_retention_days'     => 7,
+        'max_event_retention_days'    => 0,
+        'max_position_retention_days' => 0,
+        'log_telemetry_activity'      => true,
     ]);
 
     RetentionPolicy::flush();
@@ -71,7 +73,7 @@ test('company policies layer over the defaults and are cached until flushed', fu
     expect($policy->get('event_retention_days'))->toBe(10)
         ->and($policy->get('position_retention_days'))->toBe(30)
         ->and($policy->get('processed_retention_hours'))->toBe(48)
-        ->and($policy->logsTelemetryActivity())->toBeFalse()
+        ->and($policy->logsTelemetryActivity())->toBeTrue()
         ->and($policy->toArray())->toHaveKeys(RetentionPolicy::keys())
         ->and(RetentionPolicy::forCompany('company-1'))->toBe($policy)
         ->and(RetentionPolicy::forCompany(null)->toArray())->toBe(RetentionPolicy::defaults())
@@ -86,6 +88,52 @@ test('company policies layer over the defaults and are cached until flushed', fu
     RetentionPolicy::flush();
     RetentionPolicy::forCompany('company-2');
     expect(array_column($calls, 0))->toBe(['system', 'company', 'company', 'company', 'system', 'company']);
+});
+
+test('company history respects admin maximums and cannot override infrastructure or logging', function () {
+    fleetopsRetentionResolver([
+        'event_retention_days'        => 0,
+        'position_retention_days'     => 90,
+        'max_event_retention_days'    => 30,
+        'max_position_retention_days' => 45,
+        'log_telemetry_activity'      => false,
+    ], [
+        'company-1' => [
+            'event_retention_days'        => 0,
+            'position_retention_days'     => 120,
+            'max_event_retention_days'    => 0,
+            'max_position_retention_days' => 0,
+            'event_compact_after_days'    => 0,
+            'processed_retention_hours'   => 0,
+            'quarantine_retention_days'   => 0,
+            'sync_run_retention_days'     => 0,
+            'log_telemetry_activity'      => true,
+        ],
+        'company-2' => ['event_retention_days' => 5, 'position_retention_days' => 15],
+    ]);
+
+    $policy = RetentionPolicy::forCompany('company-1');
+    expect($policy->get('event_retention_days'))->toBe(30)
+        ->and($policy->get('position_retention_days'))->toBe(45)
+        ->and($policy->get('event_compact_after_days'))->toBe(7)
+        ->and($policy->get('processed_retention_hours'))->toBe(48)
+        ->and($policy->get('quarantine_retention_days'))->toBe(7)
+        ->and($policy->get('sync_run_retention_days'))->toBe(7)
+        ->and($policy->logsTelemetryActivity())->toBeFalse()
+        ->and(RetentionPolicy::forCompany('company-2')->get('event_retention_days'))->toBe(5)
+        ->and(RetentionPolicy::forCompany('company-2')->get('position_retention_days'))->toBe(15)
+        ->and(RetentionPolicy::forCompany('inherited')->get('event_retention_days'))->toBe(30)
+        ->and(RetentionPolicy::forCompany('inherited')->get('position_retention_days'))->toBe(45)
+        ->and(RetentionPolicy::forCompany(null)->get('event_retention_days'))->toBe(30);
+});
+
+test('unconfigured maximums preserve unlimited history and null preferences inherit defaults', function () {
+    fleetopsRetentionResolver([], ['company-1' => ['event_retention_days' => 0, 'position_retention_days' => null]]);
+
+    expect(RetentionPolicy::forCompany('company-1')->get('event_retention_days'))->toBe(0)
+        ->and(RetentionPolicy::forCompany('company-1')->get('position_retention_days'))->toBe(90)
+        ->and(RetentionPolicy::companyPreferences(['event_retention_days' => 'invalid', 'position_retention_days' => false]))->toBe([])
+        ->and(RetentionPolicy::companyPreferences(['event_retention_days' => null, 'position_retention_days' => '', 'log_telemetry_activity' => true]))->toBe([]);
 });
 
 test('cutoffs, compaction and deletion rules follow the clamped values', function () {

@@ -230,7 +230,7 @@ class FleetOps
             'remove_actions' => ['delete', 'export', 'create'],
         ],
         [
-            'name'           => 'telematics-settings', // data retention and storage for telematics ingestion
+            'name'           => 'telematics-settings', // organization device event and position history preferences
             'action'         => [],
             'remove_actions' => ['export', 'create'],
         ],
@@ -439,7 +439,7 @@ class FleetOps
         ],
         [
             'name'        => 'TelematicsSettingsManager',
-            'description' => 'Policy for managing telematics data retention and storage settings.',
+            'description' => 'Policy for managing organization telematics history preferences.',
             'permissions' => [
                 'see extension',
                 '* telematics-settings',
@@ -547,7 +547,7 @@ class FleetOps
         ],
         [
             'name'        => 'Telematics Settings Manager',
-            'description' => 'Role responsible for managing telematics data retention and storage settings.',
+            'description' => 'Role responsible for managing organization telematics history preferences.',
             'policies'    => [
                 'TelematicsSettingsManager',
             ],

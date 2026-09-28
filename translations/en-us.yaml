@@ -2726,7 +2726,10 @@ route-list:
 settings:
     telematics:
         telematics-settings: Telematics Settings
-        intro: Configure telematics data retention and activity logging for your organization. These values override the system defaults managed by your administrator. A retention value of 0 keeps records forever.
+        intro: Choose how long your organization keeps device events and position history within the limits set by your system administrator.
+        use-system-default: Use system default
+        history-policy-maximum: "Your administrator allows up to {days} days of history. Unlimited retention is not available."
+        history-policy-unlimited: Your administrator allows unlimited history. Set the retention period to 0 to keep history forever.
         device-events: Device Events Retention
         event-retention-days: Keep device events for (days)
         event-retention-days-help: Events older than this are permanently deleted. Applies to telemetry updates and provider alerts alike.
@@ -2756,10 +2759,10 @@ settings:
         raw-payload-rows: "{count} rows still carry raw payloads, {compactable} eligible for compaction now"
         refresh: Refresh
         run-cleanup: Run cleanup now
-        run-cleanup-confirm: This queues a retention run for your organization using the rules above. Rows outside the retention windows are permanently deleted and cannot be recovered. Continue?
-        cleanup-queued: Telematics cleanup has been queued. Usage refreshes shortly.
+        run-cleanup-confirm: This queues cleanup for the organization currently selected in Console, using the saved system policy and its effective history preferences. Expired records are permanently deleted and cannot be recovered. Continue?
+        cleanup-queued: Telematics cleanup has been queued for the selected organization. Usage refreshes shortly.
         usage-unavailable: Storage usage could not be loaded. Select Refresh to try again.
-        space-reclaim-note: Row counts marked as estimated use database statistics for your organization. Sizes are estimates from average row length. Deleting records frees space for reuse within the database; physical disk usage may not decrease immediately.
+        space-reclaim-note: Usage applies to the organization currently selected in Console. Row counts marked as estimated use that organization's database query statistics. Sizes use shared-table average row lengths. Deleting records frees space for reuse within the database; physical disk usage may not decrease immediately.
         settings-saved: Telematics settings saved.
         tables:
             device_events: Device events

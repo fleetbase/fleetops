@@ -6,7 +6,7 @@ use Spatie\Activitylog\ActivityLogger;
 
 /**
  * Runs telemetry-driven writes with activity logging suppressed unless the
- * company opted in. Every poll saves the device, event, position and vehicle,
+ * system administrator enabled it. Every poll saves the device, event, position and vehicle,
  * which otherwise writes several activity rows per device per minute.
  */
 final class TelemetryActivity

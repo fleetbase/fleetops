@@ -2,101 +2,68 @@ import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { task, timeout } from 'ember-concurrency';
+import { task } from 'ember-concurrency';
 
-/**
- * Settings::TelematicsController
- *
- * Company-level data retention for telematics ingestion:
- *   - How long device events are kept, and when their raw provider payloads are stripped
- *   - How long positions are kept
- *   - How long processed and quarantined delivery envelopes and sync runs are kept
- *   - Whether telemetry-driven saves are written to the activity log
- * plus a read-only view of the rows each table holds and an on-demand cleanup run.
- */
+/** Organization history preferences, subject to the system retention policy. */
 export default class SettingsTelematicsController extends Controller {
     @service fetch;
     @service notifications;
     @service intl;
-    @service modalsManager;
 
-    /** Days to keep device events; 0 keeps them forever. */
     @tracked eventRetentionDays = 30;
-
-    /** Days after which raw payload/meta blobs are stripped from kept events; 0 disables compaction. */
-    @tracked eventCompactAfterDays = 7;
-
-    /** Days to keep positions; 0 keeps them forever. */
     @tracked positionRetentionDays = 90;
-
-    /** Hours to keep processed delivery envelopes. */
-    @tracked processedRetentionHours = 24;
-
-    /** Days to keep quarantined delivery envelopes. */
-    @tracked quarantineRetentionDays = 7;
-
-    /** Days to keep sync run diagnostics. */
-    @tracked syncRunRetentionDays = 7;
-
-    /** Whether telemetry-driven saves are written to the activity log. */
-    @tracked logTelemetryActivity = false;
-
-    /** System defaults and clamp limits reported by the API. */
+    @tracked useDefaultEventRetention = true;
+    @tracked useDefaultPositionRetention = true;
     @tracked defaults = {};
-    @tracked limits = {};
+    @tracked policy = {};
+    @tracked settingsLoaded = false;
 
-    /** Per-table storage usage reported by the API. */
-    @tracked usage = null;
-
-    /** Compaction is pointless once events are deleted at the same age or sooner. */
-    get compactionIneffective() {
-        const retention = Number(this.eventRetentionDays);
-        const compactAfter = Number(this.eventCompactAfterDays);
-
-        return retention > 0 && compactAfter > 0 && compactAfter >= retention;
+    get eventRetentionMinimum() {
+        return this.policy.max_event_retention_days > 0 ? 1 : 0;
     }
 
-    get usageRows() {
-        const tables = this.usage?.tables ?? {};
+    get eventRetentionMaximum() {
+        return this.policy.max_event_retention_days > 0 ? this.policy.max_event_retention_days : 3650;
+    }
 
-        return ['device_events', 'positions', 'telematic_deliveries', 'telematic_sync_runs']
-            .filter((table) => tables[table])
-            .map((table) => ({ table, label: this.intl.t(`settings.telematics.tables.${table}`), ...tables[table] }));
+    get positionRetentionMinimum() {
+        return this.policy.max_position_retention_days > 0 ? 1 : 0;
+    }
+
+    get positionRetentionMaximum() {
+        return this.policy.max_position_retention_days > 0 ? this.policy.max_position_retention_days : 3650;
+    }
+
+    get eventRetentionPolicyHelp() {
+        return this.retentionPolicyHelp(this.policy.max_event_retention_days);
+    }
+
+    get positionRetentionPolicyHelp() {
+        return this.retentionPolicyHelp(this.policy.max_position_retention_days);
     }
 
     get settingsPayload() {
         return {
-            event_retention_days: this.toInteger(this.eventRetentionDays),
-            event_compact_after_days: this.toInteger(this.eventCompactAfterDays),
-            position_retention_days: this.toInteger(this.positionRetentionDays),
-            processed_retention_hours: this.toInteger(this.processedRetentionHours),
-            quarantine_retention_days: this.toInteger(this.quarantineRetentionDays),
-            sync_run_retention_days: this.toInteger(this.syncRunRetentionDays),
-            log_telemetry_activity: Boolean(this.logTelemetryActivity),
+            event_retention_days: this.useDefaultEventRetention ? null : this.eventRetentionDays,
+            position_retention_days: this.useDefaultPositionRetention ? null : this.positionRetentionDays,
         };
     }
 
     constructor() {
         super(...arguments);
         this.getSettings.perform();
-        this.loadUsage.perform();
     }
 
-    /**
-     * Load retention settings from the backend.
-     */
     @task *getSettings() {
         try {
             const settings = yield this.fetch.get('fleet-ops/settings/telematics-settings');
             this.applySettings(settings);
-        } catch {
-            // Settings may not exist yet — use defaults silently
+            this.settingsLoaded = true;
+        } catch (error) {
+            this.notifications.serverError(error);
         }
     }
 
-    /**
-     * Save retention settings to the backend.
-     */
     @task *saveSettings() {
         try {
             const settings = yield this.fetch.post('fleet-ops/settings/telematics-settings', this.settingsPayload);
@@ -107,67 +74,32 @@ export default class SettingsTelematicsController extends Controller {
         }
     }
 
-    /**
-     * Load per-table storage usage for the current company.
-     */
-    @task({ drop: true }) *loadUsage() {
-        const abortController = new AbortController();
-        const requestTimeout = setTimeout(() => abortController.abort(), 30000);
-
-        try {
-            // Pass the signal as request data; fetch.get options do not forward it.
-            this.usage = yield this.fetch.request('fleet-ops/settings/telematics-storage-usage?include_payload_counts=0', 'GET', { signal: abortController.signal });
-        } catch (error) {
-            this.notifications.serverError(abortController.signal.aborted ? new Error(this.intl.t('settings.telematics.usage-unavailable')) : error);
-        } finally {
-            clearTimeout(requestTimeout);
-            abortController.abort();
+    @action setUseDefaultEventRetention(enabled) {
+        this.useDefaultEventRetention = enabled;
+        if (enabled) {
+            this.eventRetentionDays = this.defaults.event_retention_days ?? this.eventRetentionDays;
         }
     }
 
-    /**
-     * Queue an immediate retention run for the current company, then refresh usage.
-     */
-    @task *runCleanup() {
-        try {
-            yield this.fetch.post('fleet-ops/settings/telematics-retention/run');
-            this.notifications.success(this.intl.t('settings.telematics.cleanup-queued'));
-            yield timeout(5000);
-            yield this.loadUsage.perform();
-        } catch (error) {
-            this.notifications.serverError(error);
+    @action setUseDefaultPositionRetention(enabled) {
+        this.useDefaultPositionRetention = enabled;
+        if (enabled) {
+            this.positionRetentionDays = this.defaults.position_retention_days ?? this.positionRetentionDays;
         }
-    }
-
-    @action confirmRunCleanup() {
-        return this.modalsManager.confirm({
-            title: this.intl.t('settings.telematics.run-cleanup'),
-            body: this.intl.t('settings.telematics.run-cleanup-confirm'),
-            acceptButtonText: this.intl.t('settings.telematics.run-cleanup'),
-            acceptButtonIcon: 'broom',
-            onConfirm: () => this.runCleanup.perform(),
-        });
     }
 
     applySettings(settings = {}) {
-        if (!settings) {
-            return;
-        }
-
         this.eventRetentionDays = settings.event_retention_days ?? this.eventRetentionDays;
-        this.eventCompactAfterDays = settings.event_compact_after_days ?? this.eventCompactAfterDays;
         this.positionRetentionDays = settings.position_retention_days ?? this.positionRetentionDays;
-        this.processedRetentionHours = settings.processed_retention_hours ?? this.processedRetentionHours;
-        this.quarantineRetentionDays = settings.quarantine_retention_days ?? this.quarantineRetentionDays;
-        this.syncRunRetentionDays = settings.sync_run_retention_days ?? this.syncRunRetentionDays;
-        this.logTelemetryActivity = settings.log_telemetry_activity ?? this.logTelemetryActivity;
+        this.useDefaultEventRetention = (settings.preferences?.event_retention_days ?? null) === null;
+        this.useDefaultPositionRetention = (settings.preferences?.position_retention_days ?? null) === null;
         this.defaults = settings.defaults ?? this.defaults;
-        this.limits = settings.limits ?? this.limits;
+        this.policy = settings.policy ?? this.policy;
     }
 
-    toInteger(value) {
-        const number = parseInt(value, 10);
-
-        return Number.isFinite(number) && number > 0 ? number : 0;
+    retentionPolicyHelp(maximum) {
+        return maximum > 0
+            ? this.intl.t('settings.telematics.history-policy-maximum', { days: maximum })
+            : this.intl.t('settings.telematics.history-policy-unlimited');
     }
 }

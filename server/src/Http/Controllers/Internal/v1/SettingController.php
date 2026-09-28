@@ -42,6 +42,10 @@ class SettingController extends Controller
             'saveOrchestratorCardFields'              => 'update routing-settings',
             'getAdminTelematicsSettings'              => 'admin',
             'saveAdminTelematicsSettings'             => 'admin',
+            'getTelematicsSettings'                   => 'view telematics-settings',
+            'saveTelematicsSettings'                  => 'update telematics-settings',
+            'getTelematicsStorageUsage'               => 'admin',
+            'runTelematicsRetention'                  => 'admin',
         ]);
     }
 
@@ -678,7 +682,7 @@ class SettingController extends Controller
     }
 
     /**
-     * Retrieve telematics data retention settings for the current company.
+     * Retrieve customer history preferences for the current company.
      *
      * Company values fall back to the system defaults (admin setting over
      * package config); the response carries both so the UI can show them.
@@ -687,29 +691,40 @@ class SettingController extends Controller
      */
     public function getTelematicsSettings()
     {
-        $defaults = $this->telematicsDefaults();
-        $settings = RetentionPolicy::normalize((array) $this->lookupFromCompanySetting(RetentionPolicy::SETTING_KEY, []), $defaults);
+        if (!$this->currentCompany()) {
+            return response()->error('No company session.', 401);
+        }
 
-        return response()->json(array_merge($settings, [
-            'defaults' => $defaults,
-            'limits'   => RetentionPolicy::LIMITS,
-        ]));
+        return response()->json($this->telematicsCompanySettings((array) $this->lookupFromCompanySetting(RetentionPolicy::SETTING_KEY, [])));
     }
 
     /**
-     * Save telematics data retention settings for the current company.
+     * Save customer history preferences within the administrator's policy.
      *
      * @return \Illuminate\Http\JsonResponse
      */
     public function saveTelematicsSettings(Request $request)
     {
-        $settings = RetentionPolicy::normalize($request->only(RetentionPolicy::keys()), $this->telematicsDefaults());
-        $this->configureCompanySetting(RetentionPolicy::SETTING_KEY, $settings);
-        RetentionPolicy::flush($this->currentCompany()?->uuid);
+        $company = $this->currentCompany();
+        if (!$company) {
+            return response()->error('No company session.', 401);
+        }
 
-        return response()->json(array_merge($settings, [
+        $request->validate([
+            'event_retention_days'    => ['nullable', 'integer', 'min:0', 'max:3650'],
+            'position_retention_days' => ['nullable', 'integer', 'min:0', 'max:3650'],
+        ]);
+
+        $defaults    = $this->telematicsDefaults();
+        $preferences = RetentionPolicy::companyPreferences($request->only(RetentionPolicy::HISTORY_KEYS));
+        $effective   = RetentionPolicy::fromCompanyPreferences($preferences, $defaults)->toArray();
+        $preferences = array_intersect_key($effective, $preferences);
+        $this->configureCompanySetting(RetentionPolicy::SETTING_KEY, $preferences);
+        RetentionPolicy::flush($company->uuid);
+
+        return response()->json(array_merge($this->telematicsCompanySettings($preferences, $defaults), [
             'status'  => 'ok',
-            'message' => 'Telematics settings successfully saved.',
+            'message' => 'Telematics history preferences successfully saved.',
         ]));
     }
 
@@ -732,8 +747,12 @@ class SettingController extends Controller
      */
     public function saveAdminTelematicsSettings(Request $request)
     {
-        $config   = array_intersect_key((array) config('telematics.telemetry', []), RetentionPolicy::FALLBACKS);
-        $settings = RetentionPolicy::normalize($request->only(RetentionPolicy::keys()), RetentionPolicy::normalize($config, RetentionPolicy::FALLBACKS));
+        $request->validate([
+            'max_event_retention_days'    => ['sometimes', 'integer', 'min:0', 'max:3650'],
+            'max_position_retention_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
+        ]);
+
+        $settings = RetentionPolicy::normalize($request->only(RetentionPolicy::keys()), $this->telematicsDefaults());
         $this->configureSetting(RetentionPolicy::SETTING_KEY, $settings);
         RetentionPolicy::flush();
 
@@ -772,10 +791,10 @@ class SettingController extends Controller
         // and omitted if they cannot be counted within the database deadline.
         if (request()->boolean('include_payload_counts', false)) {
             try {
-                $policy          = RetentionPolicy::normalize((array) $this->lookupFromCompanySetting(RetentionPolicy::SETTING_KEY, []), $this->telematicsDefaults());
+                $policy          = RetentionPolicy::fromCompanyPreferences((array) $this->lookupFromCompanySetting(RetentionPolicy::SETTING_KEY, []), $this->telematicsDefaults());
                 $rawPayloadRows  = $this->tableCount('device_events', fn ($query) => $byCompany($query)->whereNotNull('payload'));
-                $compactAfter    = (int) $policy['event_compact_after_days'];
-                $compactableRows = $compactAfter > 0
+                $compactAfter    = (int) $policy->get('event_compact_after_days');
+                $compactableRows = $policy->compactsEvents()
                     ? $this->tableCount('device_events', fn ($query) => $byCompany($query)->whereNotNull('payload')->where('created_at', '<', now()->subDays($compactAfter)->toDateTimeString()))
                     : 0;
 
@@ -797,6 +816,7 @@ class SettingController extends Controller
 
         return response()->json([
             'tables'       => $tables,
+            'company'      => ['uuid' => $company->uuid, 'name' => $company->name ?? null],
             'generated_at' => now()->toISOString(),
         ]);
     }
@@ -829,6 +849,26 @@ class SettingController extends Controller
         $config = array_intersect_key((array) config('telematics.telemetry', []), RetentionPolicy::FALLBACKS);
 
         return RetentionPolicy::normalize((array) $this->lookupSetting(RetentionPolicy::SETTING_KEY, []), RetentionPolicy::normalize($config, RetentionPolicy::FALLBACKS));
+    }
+
+    /**
+     * Customer responses expose history choices and constraints, never internal
+     * ingestion, cleanup, storage or activity logging configuration.
+     */
+    protected function telematicsCompanySettings(array $stored, ?array $defaults = null): array
+    {
+        $defaults    = $defaults ?? $this->telematicsDefaults();
+        $history     = array_flip(RetentionPolicy::HISTORY_KEYS);
+        $preferences = RetentionPolicy::companyPreferences($stored);
+        $effective   = RetentionPolicy::fromCompanyPreferences($preferences, $defaults)->toArray();
+        $inherited   = RetentionPolicy::fromCompanyPreferences([], $defaults)->toArray();
+
+        return array_merge(array_intersect_key($effective, $history), [
+            'preferences' => array_merge(array_fill_keys(RetentionPolicy::HISTORY_KEYS, null), $preferences),
+            'defaults'    => array_intersect_key($inherited, $history),
+            'policy'      => array_intersect_key($defaults, array_flip(array_values(RetentionPolicy::MAXIMUMS))),
+            'limits'      => array_intersect_key(RetentionPolicy::LIMITS, $history),
+        ]);
     }
 
     protected function tableUsage(string $table, \Closure $scope, string $ageColumn): array

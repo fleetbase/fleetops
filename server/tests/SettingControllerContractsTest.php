@@ -497,21 +497,21 @@ test('setting controller sanitizes leaflet tile provider urls', function () {
         ->and($defaults['leafletDarkTileUrl'])->toBe('');
 });
 
-test('telematics settings layer package config, admin defaults and company overrides with clamping', function () {
+test('telematics settings expose only customer history preferences within administrator limits', function () {
     config(['telematics.telemetry' => ['event_retention_days' => 45, 'processed_retention_hours' => 48, 'log_telemetry_activity' => false, 'poll_queue' => 'default']]);
     $controller                                                    = new FleetOpsSettingControllerProbe();
-    $controller->settings['fleet-ops.telematics-settings']         = ['position_retention_days' => 120, 'event_retention_days' => 99999];
+    $controller->company                                           = (object) ['uuid' => 'company-1'];
+    $controller->settings['fleet-ops.telematics-settings']         = ['position_retention_days' => 120, 'event_retention_days' => 99999, 'max_event_retention_days' => 60];
     $controller->companySettings['fleet-ops.telematics-settings']  = ['event_compact_after_days' => 3, 'log_telemetry_activity' => '1'];
 
     $settings = fleetopsJsonPayload($controller->getTelematicsSettings());
-    expect($settings['event_retention_days'])->toBe(3650)
+    expect($settings['event_retention_days'])->toBe(60)
         ->and($settings['position_retention_days'])->toBe(120)
-        ->and($settings['event_compact_after_days'])->toBe(3)
-        ->and($settings['processed_retention_hours'])->toBe(48)
-        ->and($settings['log_telemetry_activity'])->toBeTrue()
-        ->and($settings['defaults']['event_compact_after_days'])->toBe(7)
-        ->and($settings['defaults']['log_telemetry_activity'])->toBeFalse()
-        ->and($settings['limits'])->toBe(Fleetbase\FleetOps\Support\Telematics\Retention\RetentionPolicy::LIMITS);
+        ->and($settings)->not->toHaveKeys(['event_compact_after_days', 'processed_retention_hours', 'log_telemetry_activity'])
+        ->and($settings['preferences'])->toBe(['event_retention_days' => null, 'position_retention_days' => null])
+        ->and($settings['defaults'])->toBe(['event_retention_days' => 60, 'position_retention_days' => 120])
+        ->and($settings['policy'])->toBe(['max_event_retention_days' => 60, 'max_position_retention_days' => 0])
+        ->and($settings['limits'])->toBe(['event_retention_days' => [1, 3650], 'position_retention_days' => [1, 3650]]);
 
     $saved = fleetopsJsonPayload($controller->saveTelematicsSettings(new Request([
         'event_retention_days'      => '0',
@@ -521,29 +521,51 @@ test('telematics settings layer package config, admin defaults and company overr
         'unexpected'                => 'ignored',
     ])));
     expect($saved['status'])->toBe('ok')
-        ->and($saved['event_retention_days'])->toBe(0)
-        ->and($saved['event_compact_after_days'])->toBe(1)
-        ->and($saved['processed_retention_hours'])->toBe(720)
+        ->and($saved['event_retention_days'])->toBe(60)
         ->and($saved['position_retention_days'])->toBe(120)
-        ->and($saved['log_telemetry_activity'])->toBeFalse()
-        ->and($controller->configuredCompany['fleet-ops.telematics-settings'])->not->toHaveKey('unexpected')
-        ->and($controller->configuredCompany['fleet-ops.telematics-settings']['quarantine_retention_days'])->toBe(7);
+        ->and($saved['preferences'])->toBe(['event_retention_days' => 60, 'position_retention_days' => null])
+        ->and($saved)->not->toHaveKeys(['event_compact_after_days', 'processed_retention_hours', 'log_telemetry_activity'])
+        ->and($controller->configuredCompany['fleet-ops.telematics-settings'])->toBe(['event_retention_days' => 60]);
 
     $admin = fleetopsJsonPayload($controller->getAdminTelematicsSettings());
-    expect($admin['event_retention_days'])->toBe(3650)->and($admin['limits'])->toHaveKey('sync_run_retention_days');
+    expect($admin['event_retention_days'])->toBe(3650)
+        ->and($admin['limits'])->toHaveKeys(['sync_run_retention_days', 'max_event_retention_days', 'max_position_retention_days'])
+        ->and($admin['log_telemetry_activity'])->toBeFalse();
 
-    $savedAdmin = fleetopsJsonPayload($controller->saveAdminTelematicsSettings(new Request(['event_retention_days' => 60, 'sync_run_retention_days' => 0])));
+    $savedAdmin = fleetopsJsonPayload($controller->saveAdminTelematicsSettings(new Request([
+        'event_retention_days'        => 60,
+        'sync_run_retention_days'     => 0,
+        'max_event_retention_days'    => 90,
+        'max_position_retention_days' => 45,
+        'log_telemetry_activity'      => true,
+    ])));
     expect($savedAdmin['event_retention_days'])->toBe(60)
         ->and($savedAdmin['sync_run_retention_days'])->toBe(0)
         ->and($savedAdmin['processed_retention_hours'])->toBe(48)
-        ->and($controller->configured['fleet-ops.telematics-settings']['position_retention_days'])->toBe(90);
+        ->and($savedAdmin['max_event_retention_days'])->toBe(90)
+        ->and($savedAdmin['max_position_retention_days'])->toBe(45)
+        ->and($savedAdmin['log_telemetry_activity'])->toBeTrue()
+        ->and($controller->configured['fleet-ops.telematics-settings']['position_retention_days'])->toBe(120);
+
+    $partialAdmin = fleetopsJsonPayload($controller->saveAdminTelematicsSettings(new Request(['log_telemetry_activity' => false])));
+    expect($partialAdmin['max_event_retention_days'])->toBe(90)
+        ->and($partialAdmin['max_position_retention_days'])->toBe(45);
+
+    $inherited = fleetopsJsonPayload($controller->saveTelematicsSettings(new Request(['event_retention_days' => null, 'position_retention_days' => null])));
+    expect($inherited['event_retention_days'])->toBe(60)
+        ->and($inherited['position_retention_days'])->toBe(45)
+        ->and($inherited['preferences'])->toBe(['event_retention_days' => null, 'position_retention_days' => null])
+        ->and($controller->configuredCompany['fleet-ops.telematics-settings'])->toBe([]);
     config(['telematics.telemetry' => []]);
 });
 
-test('telematics storage usage and cleanup require a company session', function () {
+test('telematics customer settings, storage usage and cleanup require a company session', function () {
     $controller = new FleetOpsSettingControllerProbe();
-    expect($controller->getTelematicsStorageUsage()->getStatusCode())->toBe(401)
+    expect($controller->getTelematicsSettings()->getStatusCode())->toBe(401)
+        ->and($controller->saveTelematicsSettings(new Request())->getStatusCode())->toBe(401)
+        ->and($controller->getTelematicsStorageUsage()->getStatusCode())->toBe(401)
         ->and($controller->runTelematicsRetention()->getStatusCode())->toBe(401)
+        ->and($controller->configuredCompany)->toBe([])
         ->and($controller->pruned)->toBe([]);
 });
 
@@ -571,12 +593,13 @@ test('telematics storage usage reports rows, age, compaction backlog and estimat
             ->and($usage['tables']['positions'])->toBe(['rows' => 40, 'oldest' => null, 'avg_row_bytes' => 700, 'estimated_bytes' => 28000])
             ->and($usage['tables']['telematic_deliveries'])->toBe(['rows' => 6, 'oldest' => null])
             ->and($usage['tables']['telematic_sync_runs']['rows'])->toBe(3)
+            ->and($usage['company'])->toBe(['uuid' => 'company-1', 'name' => null])
             ->and($usage['generated_at'])->toBe('2026-09-23T12:00:00.000000Z')
             ->and($controller->countScopes)->toBe(['device_events', 'positions', 'telematic_deliveries', 'telematic_sync_runs', 'device_events', 'device_events']);
 
         // Without connections the inbox tables are reported empty; compaction disabled skips the backlog count.
         $controller->telematicUuids                                    = [];
-        $controller->companySettings['fleet-ops.telematics-settings']  = ['event_compact_after_days' => 0];
+        $controller->settings['fleet-ops.telematics-settings']         = ['event_compact_after_days' => 0];
         $controller->countScopes                                       = [];
         $usage                                                         = fleetopsJsonPayload($controller->getTelematicsStorageUsage());
         expect($usage['tables']['telematic_deliveries'])->toBe(['rows' => 0, 'oldest' => null])
