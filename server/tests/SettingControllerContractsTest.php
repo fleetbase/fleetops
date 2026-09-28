@@ -598,7 +598,8 @@ test('telematics customer settings require a company session', function () {
 });
 
 test('admin telematics storage and cleanup cover the system without a company session', function () {
-    $originalRequest     = app('request');
+    $hadRequest          = app()->bound('request');
+    $originalRequest     = $hadRequest ? app('request') : null;
     $originalQueueConfig = config('queue', []);
     config(['queue.default' => 'database', 'queue.connections.database.driver' => 'database']);
     app()->instance('request', new Request(['include_payload_counts' => true]));
@@ -645,7 +646,11 @@ test('admin telematics storage and cleanup cover the system without a company se
             ->and(fleetopsJsonPayload($queued)['scope'])->toBe('system')
             ->and($controller->pruned)->toBe(['system']);
     } finally {
-        app()->instance('request', $originalRequest);
+        if ($hadRequest) {
+            app()->instance('request', $originalRequest);
+        } else {
+            app()->forgetInstance('request');
+        }
         config(['queue' => $originalQueueConfig]);
         Illuminate\Support\Carbon::setTestNow();
     }
