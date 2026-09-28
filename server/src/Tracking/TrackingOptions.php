@@ -30,8 +30,7 @@ class TrackingOptions
         $config          = array_merge(config('fleetops.tracking', []), is_array($systemSettings) ? $systemSettings : []);
         $companySettings = [];
         try {
-            $companyUuid     = $companyUuid ?? session('company');
-            $companySettings = $companyUuid ? Setting::lookup('company.' . $companyUuid . '.tracking', []) : [];
+            $companySettings = Setting::lookupForCompany($companyUuid ?? session('company'), 'tracking', []);
         } catch (\Throwable) {
             $companySettings = [];
         }

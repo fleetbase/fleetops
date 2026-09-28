@@ -68,7 +68,7 @@ class NotifyDriverOnShiftChange implements ShouldQueue
 
     protected function getSchedulingSettings(?string $companyUuid): array
     {
-        return $companyUuid ? Setting::lookup('company.' . $companyUuid . '.fleet-ops.scheduling-settings', []) : [];
+        return Setting::lookupForCompany($companyUuid, 'fleet-ops.scheduling-settings', []);
     }
 
     protected function isCreatedEvent(object $event): bool
