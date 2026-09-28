@@ -208,7 +208,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             this.createItem('menu.routing', 'route', 'settings.routing', 'fleet-ops view routing-settings', 'fleet-ops see routing-settings'),
             this.createItem('menu.orchestrator', 'circle-nodes', 'settings.orchestrator', 'fleet-ops view routing-settings', 'fleet-ops see routing-settings'),
             this.createItem('menu.scheduling', 'calendar-days', 'settings.scheduling', 'fleet-ops view scheduling-settings', 'fleet-ops see scheduling-settings'),
-            this.createItem('menu.telematics-settings', 'database', 'settings.telematics', 'fleet-ops view telematics-settings', 'fleet-ops see telematics-settings'),
+            this.createItem('menu.telematics-settings', 'satellite-dish', 'settings.telematics', 'fleet-ops view telematics-settings', 'fleet-ops see telematics-settings'),
             this.createItem('menu.custom-fields', 'pen-to-square', 'settings.custom-fields', 'fleet-ops list custom-field', 'fleet-ops see custom-field'),
             this.createItem('menu.avatars', 'icons', 'settings.avatars', 'fleet-ops list avatar', 'fleet-ops see avatar'),
         ]);

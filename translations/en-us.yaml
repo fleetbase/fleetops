@@ -2749,6 +2749,7 @@ settings:
         storage-usage: Telematics Storage Usage
         table: Table
         rows: Rows
+        estimated-rows: "{count} (estimated)"
         estimated-size: Estimated size
         oldest: Oldest row
         not-available: n/a
@@ -2758,7 +2759,7 @@ settings:
         run-cleanup-confirm: This queues a retention run for your organization using the rules above. Rows outside the retention windows are permanently deleted and cannot be recovered. Continue?
         cleanup-queued: Telematics cleanup has been queued. Usage refreshes shortly.
         usage-unavailable: Storage usage could not be loaded. Select Refresh to try again.
-        space-reclaim-note: Sizes are estimates from average row length. Deleting rows frees space inside the database files; run OPTIMIZE TABLE during a maintenance window to return it to the operating system.
+        space-reclaim-note: Row counts marked as estimated use database statistics for your organization. Sizes are estimates from average row length. Deleting records frees space for reuse within the database; physical disk usage may not decrease immediately.
         settings-saved: Telematics settings saved.
         tables:
             device_events: Device events

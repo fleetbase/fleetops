@@ -114,7 +114,7 @@ export default {
                 }),
                 new MenuItem({
                     title: 'Telematics',
-                    icon: 'database',
+                    icon: 'satellite-dish',
                     component: new ExtensionComponent('@fleetbase/fleetops-engine', 'admin/telematics-settings'),
                 }),
             ],

@@ -97,6 +97,14 @@ class FleetOpsSettingControllerProbe extends SettingController
         return $this->telematicUuids[$companyUuid] ?? [];
     }
 
+    protected function tableUsage(string $table, Closure $scope, string $ageColumn): array
+    {
+        return [
+            'rows'   => $this->tableCount($table, $scope),
+            'oldest' => $this->tableOldest($table, $scope, $ageColumn),
+        ];
+    }
+
     protected function tableCount(string $table, Closure $scope): int
     {
         $this->countScopes[] = $table;
@@ -540,6 +548,8 @@ test('telematics storage usage and cleanup require a company session', function 
 });
 
 test('telematics storage usage reports rows, age, compaction backlog and estimated size per table', function () {
+    $originalRequest = app('request');
+    app()->instance('request', new Request(['include_payload_counts' => true]));
     Illuminate\Support\Carbon::setTestNow('2026-09-23 12:00:00 UTC');
     try {
         $controller                 = new FleetOpsSettingControllerProbe();
@@ -579,6 +589,7 @@ test('telematics storage usage reports rows, age, compaction backlog and estimat
             ->and(fleetopsJsonPayload($queued)['status'])->toBe('queued')
             ->and($controller->pruned)->toBe(['company-1']);
     } finally {
+        app()->instance('request', $originalRequest);
         Illuminate\Support\Carbon::setTestNow();
     }
 });

@@ -10,6 +10,8 @@ use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
 use Fleetbase\Support\Auth;
 use Fleetbase\Support\NotificationRegistry;
+use Illuminate\Database\MySqlConnection;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -741,8 +743,9 @@ class SettingController extends Controller
     /**
      * Report how much telematics data the current company holds per table.
      *
-     * Row counts are exact; sizes are estimates from the table's average row
-     * length because InnoDB does not account space per tenant.
+     * Exact counts have a database execution deadline. Large histories fall
+     * back to explicitly marked, company-scoped query-plan estimates. Sizes
+     * use average row length because InnoDB does not account space per tenant.
      *
      * @return \Illuminate\Http\JsonResponse
      */
@@ -765,20 +768,31 @@ class SettingController extends Controller
             'telematic_sync_runs'  => $telematics ? $this->tableUsage('telematic_sync_runs', $byInbox, 'created_at') : ['rows' => 0, 'oldest' => null],
         ];
 
-        // Payload counts scan the JSON-bearing event rows. The storage table can
-        // omit these details to use only indexed counts and ages on large histories.
-        if (request()->boolean('include_payload_counts', true)) {
-            $policy                                      = RetentionPolicy::normalize((array) $this->lookupFromCompanySetting(RetentionPolicy::SETTING_KEY, []), $this->telematicsDefaults());
-            $tables['device_events']['raw_payload_rows'] = $this->tableCount('device_events', fn ($query) => $byCompany($query)->whereNotNull('payload'));
-            $compactAfter                                = (int) $policy['event_compact_after_days'];
-            $tables['device_events']['compactable_rows'] = $compactAfter > 0
-                ? $this->tableCount('device_events', fn ($query) => $byCompany($query)->whereNotNull('payload')->where('created_at', '<', now()->subDays($compactAfter)->toDateTimeString()))
-                : 0;
+        // Payload details require reading JSON-bearing rows, so they are opt-in
+        // and omitted if they cannot be counted within the database deadline.
+        if (request()->boolean('include_payload_counts', false)) {
+            try {
+                $policy          = RetentionPolicy::normalize((array) $this->lookupFromCompanySetting(RetentionPolicy::SETTING_KEY, []), $this->telematicsDefaults());
+                $rawPayloadRows  = $this->tableCount('device_events', fn ($query) => $byCompany($query)->whereNotNull('payload'));
+                $compactAfter    = (int) $policy['event_compact_after_days'];
+                $compactableRows = $compactAfter > 0
+                    ? $this->tableCount('device_events', fn ($query) => $byCompany($query)->whereNotNull('payload')->where('created_at', '<', now()->subDays($compactAfter)->toDateTimeString()))
+                    : 0;
+
+                $tables['device_events']['raw_payload_rows'] = $rawPayloadRows;
+                $tables['device_events']['compactable_rows'] = $compactableRows;
+            } catch (QueryException $exception) {
+                if (!$this->isStorageUsageTimeout($exception)) {
+                    throw $exception;
+                }
+            }
         }
 
         foreach ($this->averageRowLengths(array_keys($tables)) as $table => $length) {
-            $tables[$table]['avg_row_bytes']   = $length;
-            $tables[$table]['estimated_bytes'] = (int) ($tables[$table]['rows'] * $length);
+            $tables[$table]['avg_row_bytes'] = $length;
+            if ($tables[$table]['rows'] !== null) {
+                $tables[$table]['estimated_bytes'] = (int) ($tables[$table]['rows'] * $length);
+            }
         }
 
         return response()->json([
@@ -819,10 +833,45 @@ class SettingController extends Controller
 
     protected function tableUsage(string $table, \Closure $scope, string $ageColumn): array
     {
-        return [
-            'rows'   => $this->tableCount($table, $scope),
-            'oldest' => $this->tableOldest($table, $scope, $ageColumn),
-        ];
+        if (!in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+            return [
+                'rows'   => $this->tableCount($table, $scope),
+                'oldest' => $this->tableOldest($table, $scope, $ageColumn),
+            ];
+        }
+
+        $query = $scope(DB::table($table));
+        $query->selectRaw('COUNT(*) AS row_count, MIN(' . $query->getGrammar()->wrap($ageColumn) . ') AS oldest');
+
+        try {
+            $usage = $this->storageUsageSelect($query->toSql(), $query->getBindings())[0];
+
+            return [
+                'rows'   => (int) $usage->row_count,
+                'oldest' => $usage->oldest === null ? null : (string) $usage->oldest,
+            ];
+        } catch (QueryException $exception) {
+            if (!$this->isStorageUsageTimeout($exception)) {
+                throw $exception;
+            }
+        }
+
+        // EXPLAIN does not execute the history scan. Keep the original tenant
+        // filter: whole-table InnoDB row counts include other companies' data.
+        $estimate = null;
+        $query    = $scope(DB::table($table))->select($ageColumn);
+        try {
+            $plan = $this->storageUsageSelect($query->toSql(), $query->getBindings(), true)[0] ?? null;
+            if (isset($plan->rows)) {
+                $estimate = max(0, (int) round((float) $plan->rows * (float) ($plan->filtered ?? 100) / 100));
+            }
+        } catch (QueryException $exception) {
+            if (!$this->isStorageUsageTimeout($exception)) {
+                throw $exception;
+            }
+        }
+
+        return ['rows' => $estimate, 'oldest' => null, 'rows_estimated' => true];
     }
 
     protected function companyTelematicUuids(string $companyUuid): array
@@ -832,7 +881,10 @@ class SettingController extends Controller
 
     protected function tableCount(string $table, \Closure $scope): int
     {
-        return (int) $scope(DB::table($table))->count();
+        $query = $scope(DB::table($table))->selectRaw('COUNT(*) AS row_count');
+        $usage = $this->storageUsageSelect($query->toSql(), $query->getBindings())[0];
+
+        return (int) $usage->row_count;
     }
 
     protected function tableOldest(string $table, \Closure $scope, string $column): ?string
@@ -843,6 +895,41 @@ class SettingController extends Controller
     }
 
     /**
+     * Bound each MySQL/MariaDB scan to one second without changing persistent
+     * connection settings. A browser abort alone leaves database work running.
+     */
+    protected function storageUsageSelect(string $sql, array $bindings = [], bool $explain = false): array
+    {
+        $connection = DB::connection();
+        $driver     = $connection->getDriverName();
+        $isMariaDb  = $driver === 'mariadb';
+
+        if ($connection instanceof MySqlConnection) {
+            $isMariaDb = method_exists($connection, 'isMaria')
+                ? $connection->isMaria()
+                : stripos((string) $connection->getReadPdo()->getAttribute(\PDO::ATTR_SERVER_VERSION), 'MariaDB') !== false;
+        }
+
+        if ($isMariaDb) {
+            $sql = 'SET STATEMENT max_statement_time=1 FOR ' . ($explain ? 'EXPLAIN ' : '') . $sql;
+        } else {
+            if ($driver === 'mysql') {
+                $sql = preg_replace('/^select\b/i', 'SELECT /*+ MAX_EXECUTION_TIME(1000) */', $sql, 1);
+            }
+            if ($explain) {
+                $sql = 'EXPLAIN ' . $sql;
+            }
+        }
+
+        return $connection->select($sql, $bindings);
+    }
+
+    protected function isStorageUsageTimeout(QueryException $exception): bool
+    {
+        return in_array((int) ($exception->errorInfo[1] ?? 0), [3024, 1969], true);
+    }
+
+    /**
      * Average row length per table from InnoDB statistics. Empty on other drivers.
      *
      * @return array<string, int>
@@ -850,16 +937,24 @@ class SettingController extends Controller
     protected function averageRowLengths(array $tables): array
     {
         $connection = DB::connection();
-        if ($connection->getDriverName() !== 'mysql') {
+        if (!in_array($connection->getDriverName(), ['mysql', 'mariadb'], true)) {
             return [];
         }
 
         $prefix       = $connection->getTablePrefix();
         $placeholders = implode(', ', array_fill(0, count($tables), '?'));
-        $rows         = $connection->select(
-            'SELECT TABLE_NAME AS name, AVG_ROW_LENGTH AS length FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (' . $placeholders . ')',
-            array_map(fn ($table) => $prefix . $table, $tables)
-        );
+        try {
+            $rows = $this->storageUsageSelect(
+                'SELECT TABLE_NAME AS name, AVG_ROW_LENGTH AS length FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (' . $placeholders . ')',
+                array_map(fn ($table) => $prefix . $table, $tables)
+            );
+        } catch (QueryException $exception) {
+            if (!$this->isStorageUsageTimeout($exception)) {
+                throw $exception;
+            }
+
+            return [];
+        }
 
         $lengths = [];
         foreach ($rows as $row) {
