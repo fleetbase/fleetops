@@ -528,7 +528,8 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
     protected function resolveVroomSetting(string $key, $default = null)
     {
         try {
-            $organizationValue = data_get(Setting::lookupForCompany($this->companyUuid ?? session('company'), 'vroom', []), $key);
+            $companyUuid       = $this->companyUuid ?? session('company');
+            $organizationValue = $companyUuid ? data_get(Setting::lookup('company.' . $companyUuid . '.vroom', []), $key) : null;
             if ($this->hasConfiguredValue($organizationValue)) {
                 return $organizationValue;
             }

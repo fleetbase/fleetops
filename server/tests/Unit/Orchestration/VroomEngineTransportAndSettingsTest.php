@@ -252,10 +252,11 @@ test('connection settings fall back to defaults when the settings table is absen
         ->and($call('resolveVroomApiKey'))->toBeIn([null, '']);
 });
 
-test('allocation resolves organization settings from the orders company without a session', function () {
+test('allocation resolves organization settings from the orders company regardless of session', function (?string $sessionCompany) {
     $connection = fleetopsVroomBoot();
     $connection->table('settings')->insert([
         ['key' => 'company.company-2.vroom', 'value' => json_encode(['api_host' => 'https://company-two-vroom.test'])],
+        ['key' => 'company.company-1.vroom', 'value' => json_encode(['api_host' => 'https://company-one-vroom.test'])],
     ]);
 
     $order = fleetopsVroomOrder('order_vroom_queued', fleetopsVroomPlace('p-9', new Point(1.31, 103.81)), null);
@@ -264,9 +265,9 @@ test('allocation resolves organization settings from the orders company without 
 
     Http::fake(['*' => Http::response(['routes' => [], 'unassigned' => [], 'summary' => []], 200)]);
 
-    // Queued allocation runs (ProcessAllocationJob) have no company session
-    session(['company' => null]);
+    // Background allocation must not depend on an absent or unrelated session.
+    session(['company' => $sessionCompany]);
     (new VroomOrchestrationEngine())->allocate(collect([$order]), collect([$vehicle]));
 
     Http::assertSent(fn ($request) => str_starts_with($request->url(), 'https://company-two-vroom.test'));
-});
+})->with([null, 'company-1']);

@@ -258,7 +258,7 @@ class ProcessOperationalAlerts extends Command
 
     protected function alertSettings(Order $order): array
     {
-        $settings = Setting::lookupForCompany($order->company_uuid, 'tracking', []);
+        $settings = $order->company_uuid ? Setting::lookup('company.' . $order->company_uuid . '.tracking', []) : [];
         $alerts   = data_get($settings, 'alerts', []);
 
         return [

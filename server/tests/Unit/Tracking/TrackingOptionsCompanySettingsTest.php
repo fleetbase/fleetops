@@ -41,8 +41,9 @@ function fleetopsTrackingOptionsBoot(): SQLiteConnection
     return $connection;
 }
 
-test('tracking options read the given company settings without a company session', function () {
+test('tracking options read the given company settings regardless of session', function (?string $sessionCompany) {
     fleetopsTrackingOptionsBoot();
+    session(['company' => $sessionCompany]);
 
     $options = TrackingOptions::fromArray([], 'company-a');
 
@@ -51,7 +52,7 @@ test('tracking options read the given company settings without a company session
 
     // Explicit options still win over company settings
     expect(TrackingOptions::fromArray(['provider' => 'google'], 'company-a')->provider)->toBe('google');
-});
+})->with([null, 'company-b']);
 
 test('tracking options fall back to the session company when no company is given', function () {
     fleetopsTrackingOptionsBoot();
