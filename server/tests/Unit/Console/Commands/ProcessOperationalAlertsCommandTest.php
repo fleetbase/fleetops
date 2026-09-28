@@ -125,9 +125,9 @@ class FleetOpsProcessOperationalAlertsCommandProbe extends ProcessOperationalAle
         return $this->query;
     }
 
-    protected function alertSettings(): array
+    protected function alertSettings(Order $order): array
     {
-        $this->settingsCalls[] = session('company');
+        $this->settingsCalls[] = $order->company_uuid;
 
         return [
             'late_departures'     => ['enabled' => true],
