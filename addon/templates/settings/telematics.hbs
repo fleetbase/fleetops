@@ -91,7 +91,7 @@
                                     <th class="py-2 pr-3">{{t "settings.telematics.table"}}</th>
                                     <th class="py-2 pr-3 text-right">{{t "settings.telematics.rows"}}</th>
                                     <th class="py-2 pr-3 text-right">{{t "settings.telematics.estimated-size"}}</th>
-                                    <th class="py-2">{{t "settings.telematics.oldest"}}</th>
+                                    <th class="py-2 pl-6 text-left whitespace-nowrap">{{t "settings.telematics.oldest"}}</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -115,7 +115,7 @@
                                             {{/if}}
                                         </td>
                                         <td class="py-2 pr-3 text-right">{{#if (or row.estimated_bytes (eq row.estimated_bytes 0))}}{{format-bytes row.estimated_bytes}}{{else}}{{t "settings.telematics.not-available"}}{{/if}}</td>
-                                        <td class="py-2 text-xs">{{#if row.oldest}}{{row.oldest}}{{else}}{{t "settings.telematics.not-available"}}{{/if}}</td>
+                                        <td class="py-2 pl-6 text-left text-xs whitespace-nowrap">{{#if row.oldest}}{{row.oldest}}{{else}}{{t "settings.telematics.not-available"}}{{/if}}</td>
                                     </tr>
                                 {{/each}}
                             </tbody>
