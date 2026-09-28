@@ -17,6 +17,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
     @service hostRouter;
     @service universe;
     @service sidebar;
+    @service orderPresentation;
     @tracked routingControl;
     @tracked routingCompleted = false;
     @tracked realtimeOrderPublicId = null;
@@ -83,32 +84,45 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
         ];
     }
 
+    /** True when the order reached a terminal activity (default or configured lifecycle). */
+    get isClosed() {
+        const status = this.model.status;
+        const terminal = this.model.order_config?.meta?.lifecycle?.terminal;
+        return status === 'canceled' || (Array.isArray(terminal) && terminal.includes(status));
+    }
+
     get actionButtons() {
+        const isHidden = (id) => this.orderPresentation.isHidden(this.model, 'actions', id);
+
         return [
             {
                 items: [
                     {
+                        id: 'edit',
                         text: 'Edit details',
                         icon: 'pencil',
-                        disabled: this.model.status === 'canceled',
+                        disabled: this.isClosed,
                         fn: () => this.orderActions.editOrderDetails(this.model),
                     },
                     {
+                        id: 'update_activity',
                         text: 'Update activity',
                         icon: 'signal',
-                        disabled: this.model.status === 'canceled',
+                        disabled: this.isClosed,
                         fn: () =>
                             this.orderActions.updateActivity(this.model, {
                                 onFinish: this.handleActivityModalFinish,
                             }),
                     },
                     {
+                        id: 'assign_driver',
                         text: this.model.has_driver_assigned ? 'Unassign driver' : 'Assign driver',
                         icon: this.model.has_driver_assigned ? 'user-xmark' : 'edit',
                         disabled: this.model.has_driver_assigned ? !this.model.hasActiveStatus || !this.model.driver_assigned : !this.model.hasActiveStatus,
                         fn: () => (this.model.has_driver_assigned ? this.orderActions.unassignDriver(this.model) : this.orderActions.assignDriver(this.model)),
                     },
                     {
+                        id: 'view_label',
                         text: 'View order label',
                         icon: 'file-invoice',
                         fn: () => this.orderActions.viewLabel(this.model),
@@ -117,11 +131,13 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'socket_channel',
                         text: 'Listen to socket channel',
                         icon: 'headphones',
                         fn: () => this.hostRouter.transitionTo('console.developers.sockets.view', `order.${this.model.public_id}`),
                     },
                     {
+                        id: 'metadata',
                         text: 'View metadata',
                         icon: 'table',
                         fn: () => this.orderActions.viewMetadata(this.model),
@@ -130,13 +146,15 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'cancel',
                         text: 'Cancel order',
                         icon: 'ban',
                         class: 'text-danger',
-                        disabled: this.model.status === 'canceled',
+                        disabled: this.isClosed,
                         fn: () => this.orderActions.cancel(this.model),
                     },
                     {
+                        id: 'delete',
                         text: 'Delete order',
                         icon: 'trash',
                         class: 'text-danger',
@@ -149,7 +167,10 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                                 },
                             }),
                     },
-                ].filter(Boolean),
+                ]
+                    .filter(Boolean)
+                    .filter((item) => !item.id || !isHidden(item.id))
+                    .filter((item, index, items) => !(item.separator && (index === 0 || items[index - 1]?.separator))),
             },
         ];
     }

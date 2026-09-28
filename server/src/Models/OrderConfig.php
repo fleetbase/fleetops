@@ -381,6 +381,125 @@ class OrderConfig extends Model
     }
 
     /**
+     * Returns the configured lifecycle semantics stored under `meta.lifecycle`.
+     *
+     * A configured lifecycle is opt-in. When absent the default dispatch lifecycle
+     * (created -> dispatched -> ... -> completed / canceled) applies unchanged.
+     *
+     * Supported keys:
+     * - `initial` (string)            activity code new orders start at
+     * - `completed` (string)          activity code that completes an order
+     * - `canceled` (string)           activity code used when an order is canceled
+     * - `terminal` (string[])         activity codes after which no transition is allowed
+     * - `dispatch` (bool)             false disables dispatch for orders using this config
+     * - `strict_transitions` (bool)   true only allows moving to a configured child activity
+     */
+    public function lifecycle(): array
+    {
+        $lifecycle = data_get($this->meta, 'lifecycle');
+
+        return is_array($lifecycle) ? $lifecycle : [];
+    }
+
+    /**
+     * Determines if this config defines its own lifecycle semantics.
+     */
+    public function hasConfiguredLifecycle(): bool
+    {
+        return !empty($this->lifecycle());
+    }
+
+    /**
+     * Returns the activity new orders using this config start at.
+     *
+     * Without a configured lifecycle this is the `created` activity, if present in the flow.
+     */
+    public function getInitialActivity(): ?Activity
+    {
+        $initialCode = data_get($this->lifecycle(), 'initial');
+        if ($initialCode) {
+            return $this->getActivityByCode($initialCode);
+        }
+
+        return $this->getCreatedActivity();
+    }
+
+    /**
+     * Returns the status code new orders using this config start at.
+     */
+    public function getInitialStatusCode(): string
+    {
+        return data_get($this->lifecycle(), 'initial') ?: 'created';
+    }
+
+    /**
+     * Determines if orders using this config may be dispatched.
+     */
+    public function allowsDispatch(): bool
+    {
+        $dispatch = data_get($this->lifecycle(), 'dispatch', true);
+
+        return !in_array($dispatch, [false, 'false', 0, '0'], true);
+    }
+
+    /**
+     * Determines if activity updates must follow the configured flow graph.
+     */
+    public function hasStrictTransitions(): bool
+    {
+        return (bool) data_get($this->lifecycle(), 'strict_transitions', false);
+    }
+
+    /**
+     * Returns the terminal activity codes of this config.
+     */
+    public function getTerminalActivityCodes(): array
+    {
+        if (!$this->hasConfiguredLifecycle()) {
+            return ['completed', 'canceled'];
+        }
+
+        $terminal = data_get($this->lifecycle(), 'terminal', []);
+        $terminal = is_array($terminal) ? $terminal : [];
+        foreach (['completed', 'canceled'] as $semantic) {
+            $code = data_get($this->lifecycle(), $semantic);
+            if ($code) {
+                $terminal[] = $code;
+            }
+        }
+
+        return array_values(array_unique($terminal));
+    }
+
+    /**
+     * Determines if the given activity code is terminal for this config.
+     */
+    public function isTerminalActivityCode(?string $code): bool
+    {
+        return $code !== null && in_array($code, $this->getTerminalActivityCodes(), true);
+    }
+
+    /**
+     * Determines if the configured flow permits moving from one activity code to another.
+     *
+     * Only the configured graph is consulted: the target must be listed as a child of the
+     * source activity, and terminal activities permit no further transition.
+     */
+    public function canTransition(?string $fromCode, string $toCode): bool
+    {
+        if ($fromCode === null || $this->isTerminalActivityCode($fromCode)) {
+            return false;
+        }
+
+        $from = $this->getActivityByCode($fromCode);
+        if (!$from) {
+            return false;
+        }
+
+        return $from->children()->contains(fn ($activity) => $activity->code === $toCode);
+    }
+
+    /**
      * Creates an Activity instance representing a canceled order.
      *
      * This method constructs an Activity object with specific attributes
@@ -391,6 +510,11 @@ class OrderConfig extends Model
      */
     public function getCanceledActivity()
     {
+        $configuredCode = data_get($this->lifecycle(), 'canceled');
+        if ($configuredCode && ($configuredActivity = $this->getActivityByCode($configuredCode))) {
+            return $configuredActivity;
+        }
+
         $canceledActivity = $this->activities()->firstWhere('code', 'canceled');
         if ($canceledActivity) {
             return $canceledActivity;
@@ -416,6 +540,11 @@ class OrderConfig extends Model
      */
     public function getCompletedActivity()
     {
+        $configuredCode = data_get($this->lifecycle(), 'completed');
+        if ($configuredCode && ($configuredActivity = $this->getActivityByCode($configuredCode))) {
+            return $configuredActivity;
+        }
+
         $completedActivity = $this->activities()->firstWhere('code', 'completed');
         if ($completedActivity) {
             return $completedActivity;

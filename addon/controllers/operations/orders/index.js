@@ -7,6 +7,7 @@ import relationValue from '../../../utils/relation-value';
 
 export default class OperationsOrdersIndexController extends Controller {
     @service orderActions;
+    @service orderPresentation;
     @service driverActions;
     @service vehicleActions;
     @service store;
@@ -412,21 +413,21 @@ export default class OperationsOrdersIndexController extends Controller {
                         icon: 'paper-plane',
                         fn: this.orderActions.dispatch,
                         permission: 'fleet-ops dispatch order',
-                        isVisible: (order) => order.canBeDispatched,
+                        isVisible: (order) => order.canBeDispatched && !this.orderPresentation.isHidden(order, 'actions', 'dispatch'),
                     },
                     {
                         label: this.intl.t('common.assign-driver'),
                         icon: 'edit',
                         fn: this.orderActions.assignDriver,
                         permission: 'fleet-ops update order',
-                        isVisible: (order) => !order.has_driver_assigned,
+                        isVisible: (order) => !order.has_driver_assigned && !this.orderPresentation.isHidden(order, 'actions', 'assign_driver'),
                     },
                     {
                         label: this.intl.t('common.unassign-driver'),
                         icon: 'edit',
                         fn: this.orderActions.unassignDriver,
                         permission: 'fleet-ops update order',
-                        isVisible: (order) => order.has_driver_assigned,
+                        isVisible: (order) => order.has_driver_assigned && !this.orderPresentation.isHidden(order, 'actions', 'assign_driver'),
                     },
                     {
                         label: this.intl.t('common.cancel-resource', { resource: this.intl.t('resource.order') }),

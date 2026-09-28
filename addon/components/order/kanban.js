@@ -13,7 +13,9 @@ export default class OrderKanbanComponent extends Component {
     @service fetch;
     @service notifications;
     @service intl;
+    @service store;
     @tracked statuses = [];
+    @tracked orderConfigRecord = null;
     @tracked orders = this.args.orders ?? [];
     @tracked orderConfig = this.args.orderConfig ?? null;
 
@@ -23,6 +25,11 @@ export default class OrderKanbanComponent extends Component {
     };
 
     get columns() {
+        const lifecycleColumns = this.#lifecycleColumns();
+        if (lifecycleColumns) {
+            return lifecycleColumns;
+        }
+
         const start = this.#defaultStatuses.start ?? [];
         const end = this.#defaultStatuses.end ?? [];
         const loaded = isArray(this.statuses) ? this.statuses : [];
@@ -112,6 +119,64 @@ export default class OrderKanbanComponent extends Component {
         this.loadStatuses.perform();
     }
 
+    /**
+     * Columns for an order config with a configured lifecycle (`meta.lifecycle`): the flow's own
+     * activities in graph order from the initial activity, titled with their status labels.
+     * No default dispatch columns are injected. Returns null for configs without a lifecycle.
+     */
+    #lifecycleColumns() {
+        const config = this.orderConfigRecord;
+        const lifecycle = config?.meta?.lifecycle;
+        const flow = config?.flow;
+        if (!lifecycle || !flow || typeof flow !== 'object') {
+            return null;
+        }
+
+        const activities = Object.values(flow).filter((activity) => activity && activity.code);
+        const byKeyOrCode = new Map();
+        for (const activity of activities) {
+            byKeyOrCode.set(activity.key ?? activity.code, activity);
+            byKeyOrCode.set(activity.code, activity);
+        }
+
+        // Breadth-first walk from the initial activity, then any activities not reachable from it.
+        const ordered = [];
+        const seen = new Set();
+        const queue = [byKeyOrCode.get(lifecycle.initial)].filter(Boolean);
+        while (queue.length) {
+            const activity = queue.shift();
+            if (seen.has(activity.code)) continue;
+            seen.add(activity.code);
+            ordered.push(activity);
+            for (const child of activity.activities ?? []) {
+                const next = byKeyOrCode.get(typeof child === 'string' ? child : (child?.key ?? child?.code));
+                if (next && !seen.has(next.code)) queue.push(next);
+            }
+        }
+        for (const activity of activities.sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0))) {
+            if (!seen.has(activity.code)) {
+                seen.add(activity.code);
+                ordered.push(activity);
+            }
+        }
+
+        // Keep orders whose status is not part of the flow visible rather than silently dropping them.
+        const columns = ordered.map((activity) => ({ id: activity.code, title: this.#activityTitle(activity) }));
+        for (const status of isArray(this.statuses) ? this.statuses : []) {
+            if (status && !seen.has(status)) {
+                seen.add(status);
+                columns.push({ id: status, title: titleize(smartHumanize(status)) });
+            }
+        }
+
+        return columns.map((column, index) => ({ ...column, position: index, cards: this.#getOrdersByStatus(column.id, this.orders) }));
+    }
+
+    #activityTitle(activity) {
+        const label = typeof activity.status === 'string' ? activity.status.trim() : '';
+        return label && !label.includes('{') ? label : titleize(smartHumanize(activity.code));
+    }
+
     #getOrdersByStatus(status, orders = []) {
         let filteredOrders = orders.filter((order) => order.status === status);
         if (this.orderConfig) {
@@ -124,6 +189,13 @@ export default class OrderKanbanComponent extends Component {
     @task *loadStatuses() {
         const params = {};
         if (this.orderConfig) params.order_config_uuid = this.orderConfig;
+
+        try {
+            this.orderConfigRecord = this.orderConfig ? yield this.store.findRecord('order-config', this.orderConfig) : null;
+        } catch (err) {
+            this.orderConfigRecord = null;
+            debug('Unable to load order config for board: ' + err.message);
+        }
 
         try {
             const statuses = yield this.fetch.get('orders/statuses', params);
