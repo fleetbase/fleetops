@@ -383,11 +383,14 @@ test('sensor and service area controllers export selections and eager load query
 });
 
 test('service area zone and getting started controllers expose small lifecycle contracts', function () {
-    $serviceArea = new FleetOpsControllerCustomFieldModelFake();
-    (new ServiceAreaController())->afterSave(new Request([
-        'service_area' => ['custom_field_values' => [['key' => 'area_code', 'value' => 'A1']]],
-    ]), $serviceArea);
-    (new ServiceAreaController())->afterSave(new Request(['service_area' => ['custom_field_values' => []]]), $serviceArea);
+    $serviceArea        = new FleetOpsControllerCustomFieldModelFake();
+    $serviceAreaRequest = new Request([
+        'serviceArea' => ['custom_field_values' => [['key' => 'area_code', 'value' => 'raw-request-value']]],
+    ]);
+    (new ServiceAreaController())->afterSave($serviceAreaRequest, $serviceArea, [
+        'custom_field_values' => [['key' => 'area_code', 'value' => 'A1']],
+    ]);
+    (new ServiceAreaController())->afterSave($serviceAreaRequest, $serviceArea, ['custom_field_values' => []]);
 
     $zone = new FleetOpsControllerZoneFake();
     (new ZoneController())->afterSave(new Request([
