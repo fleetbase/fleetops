@@ -814,6 +814,12 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                         $router->post('orchestrator-settings', 'SettingController@saveOrchestratorSettings');
                                         $router->get('orchestrator-card-fields', 'SettingController@getOrchestratorCardFields');
                                         $router->post('orchestrator-card-fields', 'SettingController@saveOrchestratorCardFields');
+                                        $router->get('telematics-settings', 'SettingController@getTelematicsSettings');
+                                        $router->post('telematics-settings', 'SettingController@saveTelematicsSettings');
+                                        $router->get('admin-telematics-settings', 'SettingController@getAdminTelematicsSettings');
+                                        $router->post('admin-telematics-settings', 'SettingController@saveAdminTelematicsSettings');
+                                        $router->get('telematics-storage-usage', 'SettingController@getTelematicsStorageUsage');
+                                        $router->post('telematics-retention/run', 'SettingController@runTelematicsRetention');
                                     }
                                 );
                                 $router->group(

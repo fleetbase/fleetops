@@ -114,6 +114,7 @@ menu:
     maintenances: Maintenances
     orchestrator: Orchestrator
     orchestrator-settings: Orchestrator Settings
+    telematics-settings: Telematics Data
 
 trailer:
     navigation-description: Manage towed assets, towing connections, equipment, and telematics.
@@ -2723,6 +2724,48 @@ route-list:
     more-waypoints: more waypoints
 
 settings:
+    telematics:
+        telematics-settings: Telematics Data Retention
+        intro: Telematics polling writes a device event, a position and a delivery envelope for every reporting device on every poll. These rules bound how long each kind of row is kept so storage stays predictable. A value of 0 keeps rows forever.
+        device-events: Device Events
+        event-retention-days: Keep device events for (days)
+        event-retention-days-help: Events older than this are permanently deleted. Applies to telemetry updates and provider alerts alike.
+        event-compact-after-days: Strip raw payloads after (days)
+        event-compact-after-days-help: Events older than this keep their type, severity, location and normalized data, but the raw provider payload is removed. Raw payloads are the bulk of each event's size.
+        compaction-warning: Raw payloads are only stripped from events that are kept. Set this lower than the event retention or set it to 0 to disable compaction.
+        positions: Positions
+        position-retention-days: Keep positions for (days)
+        position-retention-days-help: Vehicle and trailer position history older than this is permanently deleted. Route replay and history views only reach back this far.
+        inbox: Delivery Inbox & Sync Runs
+        processed-retention-hours: Keep processed deliveries for (hours)
+        processed-retention-hours-help: Raw provider batches are stored encrypted until processed and kept briefly for replay and diagnostics. Each batch can be close to a megabyte.
+        quarantine-retention-days: Keep quarantined deliveries for (days)
+        quarantine-retention-days-help: Batches that could not be processed stay available for inspection and replay for this long.
+        sync-run-retention-days: Keep sync run diagnostics for (days)
+        sync-run-retention-days-help: One sync run row is recorded per connection per poll. In-flight runs are never removed.
+        activity-logging: Activity Logging
+        log-telemetry-activity: Log telemetry activity
+        log-telemetry-activity-help: Write telemetry-driven device, event and vehicle saves to the activity log. Off by default; every poll otherwise adds several activity rows per device.
+        storage-usage: Storage Usage
+        table: Table
+        rows: Rows
+        estimated-size: Estimated size
+        oldest: Oldest row
+        not-available: n/a
+        raw-payload-rows: "{count} rows still carry raw payloads, {compactable} eligible for compaction now"
+        refresh: Refresh
+        run-cleanup: Run cleanup now
+        run-cleanup-confirm: This queues a retention run for your organization using the rules above. Rows outside the retention windows are permanently deleted and cannot be recovered. Continue?
+        cleanup-queued: Telematics cleanup has been queued. Usage refreshes shortly.
+        usage-unavailable: Storage usage is not available right now.
+        space-reclaim-note: Sizes are estimates from average row length. Deleting rows frees space inside the database files; run OPTIMIZE TABLE during a maintenance window to return it to the operating system.
+        admin-defaults: System Defaults (administrators)
+        settings-saved: Telematics data settings saved.
+        tables:
+            device_events: Device events
+            positions: Positions
+            telematic_deliveries: Delivery inbox
+            telematic_sync_runs: Sync runs
     avatar-management: Avatar Management
     custom-fields: Custom Fields
     notifications:

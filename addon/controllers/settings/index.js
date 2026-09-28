@@ -28,6 +28,7 @@ export default class SettingsIndexController extends Controller {
             description: 'Keep commerce, metadata, and visual conventions aligned.',
             links: [
                 { label: 'Payments', route: 'settings.payments', icon: 'cash-register', description: 'Payment setup for operational commerce workflows.' },
+                { label: 'Telematics Data', route: 'settings.telematics', icon: 'database', description: 'Retention and storage for telemetry events, positions, and delivery history.' },
                 { label: 'Custom Fields', route: 'settings.custom-fields', icon: 'pen-to-square', description: 'Operational metadata fields for Fleet-Ops records.' },
                 { label: 'Avatars', route: 'settings.avatars', icon: 'icons', description: 'Visual assets for driver, vehicle, and map displays.' },
             ],
@@ -112,6 +113,13 @@ export default class SettingsIndexController extends Controller {
             slug: 'fleet-ops/settings/scheduling',
             title: 'Scheduling settings',
             description: 'Manage schedule templates and timing rules for planned work.',
+        },
+        {
+            label: 'Telematics Data',
+            icon: 'database',
+            slug: 'fleet-ops/settings/telematics',
+            title: 'Telematics data settings',
+            description: 'Control how long telemetry events, positions, and delivery history are kept.',
         },
         {
             label: 'Custom Fields',
