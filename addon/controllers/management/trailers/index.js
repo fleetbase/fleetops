@@ -16,7 +16,7 @@ export default class ManagementTrailersIndexController extends Controller {
     @service store;
 
     /** query params */
-    @tracked queryParams = [
+    @tracked queryParams = this.trailerActions.queryParamsFor([
         'page',
         'limit',
         'sort',
@@ -42,7 +42,7 @@ export default class ManagementTrailersIndexController extends Controller {
         'last_online_at',
         'created_at',
         'updated_at',
-    ];
+    ]);
     @tracked query = null;
     @tracked page = 1;
     @tracked limit;
@@ -75,16 +75,19 @@ export default class ManagementTrailersIndexController extends Controller {
     get actionButtons() {
         return [
             {
+                id: 'more',
                 component: 'dropdown-button',
                 icon: 'display',
                 size: 'xs',
                 items: [
                     {
+                        id: 'table-view',
                         label: this.intl.t('common.table-view'),
                         icon: 'table-list',
                         onClick: () => this.setLayout('table'),
                     },
                     {
+                        id: 'grid-view',
                         label: this.intl.t('common.grid-view'),
                         icon: 'grip',
                         onClick: () => this.setLayout('grid'),
@@ -94,11 +97,13 @@ export default class ManagementTrailersIndexController extends Controller {
                 helpText: this.intl.t('common.change-layout'),
             },
             {
+                id: 'refresh',
                 icon: 'refresh',
                 onClick: this.trailerActions.refresh,
                 helpText: this.intl.t('common.refresh'),
             },
             {
+                id: 'create',
                 text: this.intl.t('common.new'),
                 type: 'primary',
                 icon: 'plus',
@@ -106,6 +111,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 permission: 'fleet-ops create trailer',
             },
             {
+                id: 'import',
                 text: this.intl.t('common.import'),
                 type: 'magic',
                 icon: 'upload',
@@ -113,6 +119,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 permission: 'fleet-ops import trailer',
             },
             {
+                id: 'export',
                 text: this.intl.t('common.export'),
                 icon: 'long-arrow-up',
                 iconClass: 'rotate-icon-45',
@@ -129,6 +136,7 @@ export default class ManagementTrailersIndexController extends Controller {
 
         return [
             {
+                id: 'bulk-delete',
                 label: this.intl.t('common.delete-selected-count', { count: selected.length }),
                 class: 'text-red-500',
                 fn: this.trailerActions.bulkDelete,
@@ -161,6 +169,7 @@ export default class ManagementTrailersIndexController extends Controller {
     get columns() {
         return [
             {
+                id: 'display-name',
                 sticky: true,
                 label: this.intl.t('trailer.columns.name'),
                 valuePath: 'displayName',
@@ -175,6 +184,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterParam: 'name',
             },
             {
+                id: 'type',
                 label: this.intl.t('trailer.columns.type'),
                 valuePath: 'type',
                 cellComponent: 'cell/translated-value',
@@ -190,6 +200,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 width: 130,
             },
             {
+                id: 'plate-number',
                 label: this.intl.t('trailer.columns.plate-number'),
                 valuePath: 'plate_number',
                 cellComponent: 'table/cell/base',
@@ -201,6 +212,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterParam: 'plate_number',
             },
             {
+                id: 'code',
                 label: this.intl.t('trailer.columns.code'),
                 valuePath: 'code',
                 cellComponent: 'table/cell/base',
@@ -211,6 +223,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterParam: 'code',
             },
             {
+                id: 'current-vehicle-name',
                 label: this.intl.t('trailer.columns.vehicle'),
                 valuePath: 'current_vehicle_name',
                 cellComponent: 'cell/vehicle-identity',
@@ -232,6 +245,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 model: 'vehicle',
             },
             {
+                id: 'attachment-state',
                 label: this.intl.t('trailer.columns.attachment-state'),
                 valuePath: 'attachment_state',
                 cellComponent: 'cell/translated-value',
@@ -248,6 +262,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 width: 120,
             },
             {
+                id: 'status',
                 label: this.intl.t('trailer.columns.status'),
                 valuePath: 'status',
                 cellComponent: 'cell/translated-value',
@@ -264,6 +279,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 width: 120,
             },
             {
+                id: 'connectivity-status',
                 label: this.intl.t('trailer.columns.connectivity'),
                 valuePath: 'connectivity_status',
                 cellComponent: 'cell/translated-value',
@@ -279,6 +295,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 width: 140,
             },
             {
+                id: 'last-online-at',
                 label: this.intl.t('trailer.columns.last-online'),
                 valuePath: 'lastOnlineAt',
                 sortParam: 'last_online_at',
@@ -290,6 +307,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'location',
                 label: this.intl.t('trailer.columns.location'),
                 valuePath: 'location',
                 cellComponent: 'table/cell/point',
@@ -300,6 +318,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 sortable: false,
             },
             {
+                id: 'devices-count',
                 label: this.intl.t('trailer.columns.devices'),
                 valuePath: 'devices_count',
                 cellComponent: 'table/cell/base',
@@ -309,6 +328,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 width: 90,
             },
             {
+                id: 'equipment-count',
                 label: this.intl.t('trailer.columns.equipment'),
                 valuePath: 'equipment_count',
                 cellComponent: 'table/cell/base',
@@ -318,6 +338,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 width: 100,
             },
             {
+                id: 'public-id',
                 label: this.intl.t('trailer.columns.id'),
                 valuePath: 'public_id',
                 cellComponent: 'click-to-copy',
@@ -329,6 +350,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterParam: 'public_id',
             },
             {
+                id: 'vin',
                 label: this.intl.t('trailer.columns.vin'),
                 valuePath: 'vin',
                 cellComponent: 'table/cell/base',
@@ -340,6 +362,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterParam: 'vin',
             },
             {
+                id: 'serial-number',
                 label: this.intl.t('trailer.columns.serial-number'),
                 valuePath: 'serial_number',
                 cellComponent: 'table/cell/base',
@@ -351,6 +374,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterParam: 'serial_number',
             },
             {
+                id: 'make',
                 label: this.intl.t('trailer.columns.make'),
                 valuePath: 'make',
                 cellComponent: 'table/cell/base',
@@ -362,6 +386,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterParam: 'trailer_make',
             },
             {
+                id: 'model',
                 label: this.intl.t('trailer.columns.model'),
                 valuePath: 'model',
                 cellComponent: 'table/cell/base',
@@ -373,6 +398,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterParam: 'trailer_model',
             },
             {
+                id: 'year',
                 label: this.intl.t('trailer.columns.year'),
                 valuePath: 'year',
                 cellComponent: 'table/cell/base',
@@ -384,6 +410,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterParam: 'trailer_year',
             },
             {
+                id: 'vendor-name',
                 label: this.intl.t('trailer.columns.vendor'),
                 valuePath: 'vendor_name',
                 cellComponent: 'cell/vendor-identity',
@@ -401,6 +428,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 model: 'vendor',
             },
             {
+                id: 'ownership-type',
                 label: this.intl.t('trailer.columns.ownership'),
                 valuePath: 'ownership_type',
                 cellComponent: 'cell/translated-value',
@@ -416,6 +444,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterOptionValue: 'value',
             },
             {
+                id: 'axle-count',
                 label: this.intl.t('trailer.columns.axles'),
                 valuePath: 'axle_count',
                 cellComponent: 'table/cell/base',
@@ -426,6 +455,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 width: 90,
             },
             {
+                id: 'gvwr',
                 label: this.intl.t('trailer.columns.gvwr'),
                 valuePath: 'gvwr',
                 cellComponent: 'table/cell/base',
@@ -435,6 +465,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterable: false,
             },
             {
+                id: 'payload-capacity',
                 label: this.intl.t('trailer.columns.payload-capacity'),
                 valuePath: 'payload_capacity',
                 cellComponent: 'table/cell/base',
@@ -444,6 +475,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterable: false,
             },
             {
+                id: 'length',
                 label: this.intl.t('trailer.columns.length'),
                 valuePath: 'length',
                 cellComponent: 'table/cell/base',
@@ -453,6 +485,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterable: false,
             },
             {
+                id: 'created-at',
                 label: this.intl.t('trailer.columns.created-at'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
@@ -464,6 +497,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'updated-at',
                 label: this.intl.t('trailer.columns.updated-at'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
@@ -476,6 +510,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -488,16 +523,19 @@ export default class ManagementTrailersIndexController extends Controller {
                 width: 60,
                 actions: [
                     {
+                        id: 'view',
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.trailer') }),
                         fn: this.trailerActions.transition.view,
                         permission: 'fleet-ops view trailer',
                     },
                     {
+                        id: 'edit',
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.trailer') }),
                         fn: this.trailerActions.transition.edit,
                         permission: 'fleet-ops update trailer',
                     },
                     {
+                        id: 'locate',
                         label: this.intl.t('trailer.actions.locate'),
                         fn: this.trailerActions.locate,
                         permission: 'fleet-ops view trailer',
@@ -507,23 +545,27 @@ export default class ManagementTrailersIndexController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'attach-vehicle',
                         label: this.intl.t('trailer.actions.attach-vehicle'),
                         fn: this.trailerActions.attachVehicle,
                         permission: 'fleet-ops attach-vehicle-for trailer',
                         isVisible: (trailer) => trailer.attachment_state !== 'attached',
                     },
                     {
+                        id: 'detach-vehicle',
                         label: this.intl.t('trailer.actions.detach-vehicle'),
                         fn: this.trailerActions.detachVehicle,
                         permission: 'fleet-ops detach-vehicle-for trailer',
                         isVisible: (trailer) => trailer.attachment_state === 'attached',
                     },
                     {
+                        id: 'attach-device',
                         label: this.intl.t('trailer.actions.attach-device'),
                         fn: this.trailerActions.attachDevice,
                         permission: 'fleet-ops attach-device-for trailer',
                     },
                     {
+                        id: 'attach-equipment',
                         label: this.intl.t('trailer.actions.attach-equipment'),
                         fn: this.trailerActions.attachEquipment,
                         permission: 'fleet-ops attach-equipment-for trailer',
@@ -532,16 +574,19 @@ export default class ManagementTrailersIndexController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'schedule-maintenance',
                         label: this.intl.t('trailer.actions.schedule-maintenance'),
                         fn: this.trailerActions.scheduleMaintenance,
                         permission: 'fleet-ops create maintenance-schedule',
                     },
                     {
+                        id: 'create-work-order',
                         label: this.intl.t('trailer.actions.create-work-order'),
                         fn: this.trailerActions.createWorkOrder,
                         permission: 'fleet-ops create work-order',
                     },
                     {
+                        id: 'log-maintenance',
                         label: this.intl.t('trailer.actions.log-maintenance'),
                         fn: this.trailerActions.logMaintenance,
                         permission: 'fleet-ops create maintenance',
@@ -550,6 +595,7 @@ export default class ManagementTrailersIndexController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'delete',
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.trailer') }),
                         fn: this.trailerActions.delete,
                         permission: 'fleet-ops delete trailer',
@@ -562,6 +608,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 searchable: false,
             },
             {
+                id: 'devices',
                 label: this.intl.t('resource.devices'),
                 valuePath: 'devices',
                 cellComponent: 'cell/resource-list',
@@ -575,6 +622,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 modelNamePath: 'displayName',
             },
             {
+                id: 'refrigerated',
                 label: this.intl.t('trailer.columns.refrigerated'),
                 valuePath: 'refrigerated',
                 cellComponent: 'table/cell/checkbox',

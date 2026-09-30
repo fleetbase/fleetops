@@ -41,6 +41,7 @@ export default class ServiceAreaActionsService extends ResourceActionService {
         },
         view: (serviceArea, options = {}) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 serviceArea,
                 title: serviceArea?.name,
                 actionButtons: [

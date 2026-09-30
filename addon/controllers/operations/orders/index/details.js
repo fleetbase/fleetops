@@ -89,6 +89,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
             {
                 items: [
                     {
+                        id: 'edit-order-details',
                         text: 'Edit details',
                         icon: 'pencil',
                         permission: 'fleet-ops update order',
@@ -96,6 +97,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         fn: () => this.orderActions.editOrderDetails(this.model),
                     },
                     {
+                        id: 'update-activity',
                         text: 'Update activity',
                         icon: 'signal',
                         permission: 'fleet-ops update order',
@@ -113,6 +115,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         fn: () => (this.model.has_driver_assigned ? this.orderActions.unassignDriver(this.model) : this.orderActions.assignDriver(this.model)),
                     },
                     {
+                        id: 'view-label',
                         text: 'View order label',
                         icon: 'file-invoice',
                         permission: 'fleet-ops view order',
@@ -122,11 +125,13 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'listen-to-socket-channel',
                         text: 'Listen to socket channel',
                         icon: 'headphones',
                         fn: () => this.hostRouter.transitionTo('console.developers.sockets.view', `order.${this.model.public_id}`),
                     },
                     {
+                        id: 'view-metadata',
                         text: 'View metadata',
                         icon: 'table',
                         fn: () => this.orderActions.viewMetadata(this.model),
@@ -135,6 +140,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'cancel',
                         text: 'Cancel order',
                         icon: 'ban',
                         class: 'text-danger',
@@ -143,6 +149,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         fn: () => this.orderActions.cancel(this.model),
                     },
                     {
+                        id: 'delete',
                         text: 'Delete order',
                         icon: 'trash',
                         class: 'text-danger',

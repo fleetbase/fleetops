@@ -43,6 +43,7 @@ export default class VendorActionsService extends ResourceActionService {
         },
         view: (vendor, options = {}) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 vendor,
                 title: vendor?.name,
                 header: 'vendor/panel-header',

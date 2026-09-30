@@ -41,6 +41,7 @@ export default class TelematicActionsService extends ResourceActionService {
         },
         view: (telematic) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 telematic,
                 tabs: [
                     {

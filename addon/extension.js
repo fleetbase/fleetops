@@ -162,6 +162,38 @@ export default {
 
         // Create registries
         this.createRegistries(registryService);
+
+        // Declare the registries extensions can add table columns, actions and
+        // buttons to, e.g. `fleet-ops:table:driver:columns` or `fleet-ops:details:order:menu`.
+        universe
+            .getService('universe/resource-view-service')
+            ?.declare('fleet-ops', [
+                'contact',
+                'customer',
+                'device',
+                'device-event',
+                'driver',
+                'equipment',
+                'fleet',
+                'fuel-report',
+                'fuel-transaction',
+                'inspection-form',
+                'inspection-submission',
+                'integrated-vendor',
+                'issue',
+                'maintenance',
+                'order',
+                'part',
+                'place',
+                'report',
+                'schedule',
+                'sensor',
+                'service-rate',
+                'trailer',
+                'vehicle',
+                'vendor',
+                'work-order',
+            ]);
         registryService.registerRenderableComponent('ai:action-preview:fleet-ops.create_order', new ExtensionComponent('@fleetbase/fleetops-engine', 'ai/create-order-preview'));
 
         // // Register console home guidance

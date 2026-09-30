@@ -46,6 +46,7 @@ export default class PartActionsService extends ResourceActionService {
         },
         view: (part, options = {}) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 part,
                 title: part?.name,
                 header: 'part/panel-header',

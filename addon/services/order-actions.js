@@ -54,6 +54,7 @@ export default class OrderActionsService extends ResourceActionService {
         },
         view: (order, options = {}) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 order,
                 tabs: [
                     {

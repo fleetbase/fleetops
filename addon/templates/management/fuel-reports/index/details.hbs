@@ -1,4 +1,5 @@
 <Layout::Resource::Panel
+    @registry="fleet-ops:details:fuel-report"
     @resource={{@model}}
     @controller={{this}}
     @headerTitle={{or @model.name (concat "Fuel reported on " @model.createdAt)}}

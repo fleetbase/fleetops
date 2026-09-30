@@ -42,6 +42,7 @@ export default class FleetActionsService extends ResourceActionService {
         },
         view: (fleet, options = {}) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 fleet,
                 title: fleet?.name,
                 actionButtons: [
