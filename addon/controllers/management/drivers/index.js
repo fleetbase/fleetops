@@ -103,12 +103,14 @@ export default class ManagementDriversIndexController extends Controller {
                 type: 'primary',
                 icon: 'plus',
                 onClick: this.driverActions.transition.create,
+                permission: 'fleet-ops create driver',
             },
             {
                 text: this.intl.t('common.import'),
                 type: 'magic',
                 icon: 'upload',
                 onClick: this.driverActions.import,
+                permission: 'fleet-ops import driver',
             },
             {
                 text: this.intl.t('common.export'),
@@ -116,6 +118,7 @@ export default class ManagementDriversIndexController extends Controller {
                 iconClass: 'rotate-icon-45',
                 wrapperClass: 'hidden md:flex',
                 onClick: this.driverActions.export,
+                permission: 'fleet-ops export driver',
             },
         ];
     }
@@ -129,6 +132,7 @@ export default class ManagementDriversIndexController extends Controller {
                 label: this.intl.t('common.delete-selected-count', { count: selected.length }),
                 class: 'text-red-500',
                 fn: this.driverActions.bulkDelete,
+                permission: 'fleet-ops delete driver',
             },
         ];
     }

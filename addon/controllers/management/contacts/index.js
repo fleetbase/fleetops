@@ -62,12 +62,14 @@ export default class ManagementContactsIndexController extends Controller {
                 type: 'primary',
                 icon: 'plus',
                 onClick: this.contactActions.transition.create,
+                permission: 'fleet-ops create contact',
             },
             {
                 text: this.intl.t('common.import'),
                 type: 'magic',
                 icon: 'upload',
                 onClick: this.contactActions.import,
+                permission: 'fleet-ops import contact',
             },
             {
                 text: this.intl.t('common.export'),
@@ -75,6 +77,7 @@ export default class ManagementContactsIndexController extends Controller {
                 iconClass: 'rotate-icon-45',
                 wrapperClass: 'hidden md:flex',
                 onClick: this.contactActions.export,
+                permission: 'fleet-ops export contact',
             },
         ];
     }
@@ -88,6 +91,7 @@ export default class ManagementContactsIndexController extends Controller {
                 label: this.intl.t('common.delete-selected-count', { count: selected.length }),
                 class: 'text-red-500',
                 fn: this.contactActions.bulkDelete,
+                permission: 'fleet-ops delete contact',
             },
         ];
     }

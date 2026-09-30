@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Exports\VendorExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Resources\v1\Contact as ContactResource;
@@ -19,6 +20,18 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class VendorController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'assignDriver'          => 'update vendor',
+        'removeDriver'          => 'update vendor',
+        'addVendorPersonnel'    => 'update vendor',
+        'removeVendorPersonnel' => 'update vendor',
+    ];
+
     /**
      * The resource to query.
      *
@@ -128,6 +141,7 @@ class VendorController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response
      */
+    #[SkipAuthorizationCheck]
     public function assignDriver(string $id, Request $request)
     {
         // Validate only param
@@ -160,6 +174,7 @@ class VendorController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response
      */
+    #[SkipAuthorizationCheck]
     public function removeDriver(string $id, Request $request)
     {
         // Validate only param
@@ -197,6 +212,7 @@ class VendorController extends FleetOpsController
         return response()->json(['personnels' => $personnels->values()]);
     }
 
+    #[SkipAuthorizationCheck]
     public function addVendorPersonnel(Request $request, string $vendorId)
     {
         $vendor  = $this->findVendorByIdOrFail($vendorId);
@@ -220,6 +236,7 @@ class VendorController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function removeVendorPersonnel(string $vendorId, string $contactId)
     {
         $vendor  = $this->findVendorByIdOrFail($vendorId);

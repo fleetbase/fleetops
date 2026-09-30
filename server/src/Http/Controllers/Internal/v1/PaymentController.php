@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Models\PurchaseRate;
 use Fleetbase\FleetOps\Support\Payment;
+use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Auth;
@@ -12,6 +13,18 @@ use Illuminate\Support\Str;
 
 class PaymentController extends Controller
 {
+    use AuthorizesMethods;
+
+    public function __construct()
+    {
+        $this->authorizeMethods([
+            'hasStripeConnectAccount'        => 'view payments',
+            'getStripeAccount'               => 'onboard payments',
+            'getStripeAccountSession'        => 'onboard payments',
+            'getCompanyReceivedPayments'     => 'view payments',
+        ]);
+    }
+
     /**
      * Checks if the currently authenticated company has an associated Stripe Connect account.
      *

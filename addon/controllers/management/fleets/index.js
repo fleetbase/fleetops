@@ -42,12 +42,14 @@ export default class ManagementFleetsIndexController extends Controller {
                 type: 'primary',
                 icon: 'plus',
                 onClick: this.fleetActions.transition.create,
+                permission: 'fleet-ops create fleet',
             },
             {
                 text: this.intl.t('common.import'),
                 type: 'magic',
                 icon: 'upload',
                 onClick: this.fleetActions.import,
+                permission: 'fleet-ops import fleet',
             },
             {
                 text: this.intl.t('common.export'),
@@ -55,6 +57,7 @@ export default class ManagementFleetsIndexController extends Controller {
                 iconClass: 'rotate-icon-45',
                 wrapperClass: 'hidden md:flex',
                 onClick: this.fleetActions.export,
+                permission: 'fleet-ops export fleet',
             },
         ];
     }
@@ -68,6 +71,7 @@ export default class ManagementFleetsIndexController extends Controller {
                 label: this.intl.t('common.delete-selected-count', { count: selected.length }),
                 class: 'text-red-500',
                 fn: this.fleetActions.bulkDelete,
+                permission: 'fleet-ops delete fleet',
             },
         ];
     }

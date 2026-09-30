@@ -675,3 +675,34 @@ test('maintenance schedule reminder mail exposes schedule context', function () 
             'offsetDays' => 7,
         ]);
 });
+
+test('customer credentials mail reads the portal slug from the customer company regardless of session', function (?string $sessionCompany) {
+    app('config')->set('fleetbase.console.host', 'console.fleetbase.test');
+    app('config')->set('fleetbase.console.secure', true);
+    app('config')->set('fleetbase.console.subdomain', null);
+    app('session.store')->put('company', $sessionCompany);
+
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    $connection->getSchemaBuilder()->create('settings', function ($blueprint) {
+        $blueprint->increments('id');
+        $blueprint->string('key')->nullable();
+        $blueprint->text('value')->nullable();
+        $blueprint->timestamps();
+    });
+    $connection->table('settings')->insert([
+        ['key' => 'company.company-portal.customer-portal-config', 'value' => json_encode(['accessUrlSlug' => 'acme-portal'])],
+        ['key' => 'company.other-company.customer-portal-config', 'value' => json_encode(['accessUrlSlug' => 'other-portal'])],
+    ]);
+
+    $customer              = new FleetOpsNotificationContactFake();
+    $customer->userForTest = new User();
+    $customer->userForTest->setRawAttributes(['email' => 'customer@example.test'], true);
+    $customer->setRawAttributes(['company_uuid' => 'company-portal'], true);
+
+    $content = fleetOpsNotificationWithEnvironment(fn () => (new CustomerCredentialsMail('plain-secret', $customer))->content());
+
+    expect($content->with['customerPortalUrl'])->toBe('https://console.fleetbase.test/acme-portal');
+})->with([null, 'other-company']);

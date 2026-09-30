@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Models\Manifest;
 use Fleetbase\FleetOps\Models\ManifestStop;
+use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,6 +24,20 @@ use Illuminate\Http\Request;
  */
 class ManifestController extends Controller
 {
+    use AuthorizesMethods;
+
+    public function __construct()
+    {
+        $this->authorizeMethods([
+            'index'      => 'list order',
+            'show'       => 'view order',
+            'cancel'     => 'cancel order',
+            'destroy'    => 'delete order',
+            'showStop'   => 'view order',
+            'updateStop' => 'update order',
+        ]);
+    }
+
     /**
      * List manifests for the current company.
      * Supports filtering by status, driver_id, vehicle_id, and scheduled_date.

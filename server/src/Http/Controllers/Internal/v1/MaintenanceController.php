@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Exports\MaintenanceExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Imports\MaintenanceImport;
@@ -15,6 +16,17 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class MaintenanceController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'addLineItem'    => 'update maintenance',
+        'updateLineItem' => 'update maintenance',
+        'removeLineItem' => 'update maintenance',
+    ];
+
     /**
      * The resource to query.
      *
@@ -67,6 +79,7 @@ class MaintenanceController extends FleetOpsController
      * Add a cost line item to a maintenance record.
      * POST /maintenances/{id}/line-items.
      */
+    #[SkipAuthorizationCheck]
     public function addLineItem(string $id, Request $request): JsonResponse
     {
         $maintenance = $this->findMaintenanceForLineItem($id);
@@ -89,6 +102,7 @@ class MaintenanceController extends FleetOpsController
      * Update a cost line item on a maintenance record.
      * PUT /maintenances/{id}/line-items/{index}.
      */
+    #[SkipAuthorizationCheck]
     public function updateLineItem(string $id, int $index, Request $request): JsonResponse
     {
         $maintenance = $this->findMaintenanceForLineItem($id);
@@ -121,6 +135,7 @@ class MaintenanceController extends FleetOpsController
      * Remove a cost line item from a maintenance record.
      * DELETE /maintenances/{id}/line-items/{index}.
      */
+    #[SkipAuthorizationCheck]
     public function removeLineItem(string $id, int $index): JsonResponse
     {
         $maintenance = $this->findMaintenanceForLineItem($id);

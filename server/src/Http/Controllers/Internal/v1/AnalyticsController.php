@@ -14,6 +14,7 @@ use Fleetbase\FleetOps\Support\Analytics\OperationsPulse;
 use Fleetbase\FleetOps\Support\Analytics\OrdersByStatus;
 use Fleetbase\FleetOps\Support\Analytics\RevenueTrend;
 use Fleetbase\FleetOps\Support\Analytics\TopDrivers;
+use Fleetbase\FleetOps\Support\Authorization;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
@@ -28,6 +29,16 @@ use Illuminate\Http\Request;
  */
 class AnalyticsController extends Controller
 {
+    public function __construct()
+    {
+        // Not a resource controller, so AuthorizationGuard cannot resolve a permission for it.
+        $this->middleware(function ($request, $next) {
+            Authorization::authorize('view analytics');
+
+            return $next($request);
+        });
+    }
+
     public function operationsPulse(Request $request)
     {
         return $this->run($request, OperationsPulse::class);

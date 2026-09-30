@@ -31,12 +31,14 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 type: 'primary',
                 icon: 'plus',
                 onClick: this.maintenanceActions.transition.create,
+                permission: 'fleet-ops create maintenance',
             },
             {
                 text: this.intl.t('common.import'),
                 type: 'magic',
                 icon: 'upload',
                 onClick: this.maintenanceActions.import,
+                permission: 'fleet-ops import maintenance',
             },
             {
                 text: this.intl.t('common.export'),
@@ -44,6 +46,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 iconClass: 'rotate-icon-45',
                 wrapperClass: 'hidden md:flex',
                 onClick: this.maintenanceActions.export,
+                permission: 'fleet-ops export maintenance',
             },
         ];
     }
@@ -55,6 +58,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 label: 'Delete selected...',
                 class: 'text-red-500',
                 fn: this.maintenanceActions.bulkDelete,
+                permission: 'fleet-ops delete maintenance',
             },
         ];
     }

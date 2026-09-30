@@ -56,12 +56,14 @@ export default class ManagementFuelReportsIndexController extends Controller {
                 type: 'primary',
                 icon: 'plus',
                 onClick: this.fuelReportActions.transition.create,
+                permission: 'fleet-ops create fuel-report',
             },
             {
                 text: this.intl.t('common.import'),
                 type: 'magic',
                 icon: 'upload',
                 onClick: this.fuelReportActions.import,
+                permission: 'fleet-ops import fuel-report',
             },
             {
                 text: this.intl.t('common.export'),
@@ -69,6 +71,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
                 iconClass: 'rotate-icon-45',
                 wrapperClass: 'hidden md:flex',
                 onClick: this.fuelReportActions.export,
+                permission: 'fleet-ops export fuel-report',
             },
         ];
     }
@@ -82,6 +85,7 @@ export default class ManagementFuelReportsIndexController extends Controller {
                 label: this.intl.t('common.delete-selected-count', { count: selected.length }),
                 class: 'text-red-500',
                 fn: this.fuelReportActions.bulkDelete,
+                permission: 'fleet-ops delete fuel-report',
             },
         ];
     }

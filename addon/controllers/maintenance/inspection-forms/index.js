@@ -17,12 +17,12 @@ export default class MaintenanceInspectionFormsIndexController extends Controlle
     get actionButtons() {
         return [
             { icon: 'refresh', onClick: this.inspectionFormActions.refresh, helpText: this.intl.t('common.refresh') },
-            { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.inspectionFormActions.transition.create },
+            { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.inspectionFormActions.transition.create, permission: 'fleet-ops create inspection-form' },
         ];
     }
 
     get bulkActions() {
-        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.inspectionFormActions.bulkDelete }];
+        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.inspectionFormActions.bulkDelete, permission: 'fleet-ops delete inspection-form' }];
     }
 
     get columns() {

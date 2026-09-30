@@ -18,7 +18,7 @@ class TrackingIntelligenceService
 
     public function track(Order $order, array|TrackingOptions $options = []): array
     {
-        $options  = $options instanceof TrackingOptions ? $options : TrackingOptions::fromArray($options);
+        $options  = $options instanceof TrackingOptions ? $options : TrackingOptions::fromArray($options, $order->company_uuid);
         $context  = $this->contextBuilder->build($order, $options);
         $cacheKey = $this->cacheKey($context, $options);
 

@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\Exceptions\FleetbaseRequestValidationException;
 use Fleetbase\FleetOps\Events\EntityActivityChanged;
 use Fleetbase\FleetOps\Events\EntityCompleted;
@@ -53,6 +54,20 @@ use Maatwebsite\Excel\Facades\Excel;
 class OrderController extends FleetOpsController
 {
     use ResolvesOrderServiceStops;
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'editOrderRoute'   => 'update-route-for order',
+        'importFromFiles'  => 'import order',
+        'bulkCancel'       => 'cancel order',
+        'bulkDispatch'     => 'dispatch order',
+        'bulkAssignDriver' => 'assign-driver-for order',
+        'dispatchOrder'    => 'dispatch order',
+        'scheduleOrder'    => 'schedule order',
+    ];
 
     /**
      * The resource to query.
@@ -280,6 +295,7 @@ class OrderController extends FleetOpsController
      *
      * @return Response
      */
+    #[SkipAuthorizationCheck]
     public function editOrderRoute(string $id, Request $request)
     {
         $pickup            = $request->input('pickup');
@@ -350,6 +366,7 @@ class OrderController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response
      */
+    #[SkipAuthorizationCheck]
     public function importFromFiles(Request $request)
     {
         $info    = Utils::lookupIp();
@@ -422,6 +439,7 @@ class OrderController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response
      */
+    #[SkipAuthorizationCheck]
     public function bulkCancel(Request $request)
     {
         $request->validate([
@@ -467,6 +485,7 @@ class OrderController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response
      */
+    #[SkipAuthorizationCheck]
     public function bulkDispatch(BulkDispatchRequest $request)
     {
         /** @var Order */
@@ -515,6 +534,7 @@ class OrderController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response
      */
+    #[SkipAuthorizationCheck]
     public function bulkAssignDriver(Request $request)
     {
         // Validate Inputs
@@ -591,6 +611,7 @@ class OrderController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response
      */
+    #[SkipAuthorizationCheck]
     public function dispatchOrder(Request $request)
     {
         /**
@@ -1936,6 +1957,7 @@ class OrderController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response
      */
+    #[SkipAuthorizationCheck]
     public function scheduleOrder(Request $request)
     {
         $orderId     = $request->input('order');

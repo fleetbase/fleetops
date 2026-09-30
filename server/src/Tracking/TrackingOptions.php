@@ -19,7 +19,7 @@ class TrackingOptions
     ) {
     }
 
-    public static function fromArray(array $options = []): self
+    public static function fromArray(array $options = [], ?string $companyUuid = null): self
     {
         try {
             $systemSettings = Setting::lookup('fleet-ops.tracking-settings', []);
@@ -30,7 +30,7 @@ class TrackingOptions
         $config          = array_merge(config('fleetops.tracking', []), is_array($systemSettings) ? $systemSettings : []);
         $companySettings = [];
         try {
-            $companySettings = Setting::lookupCompany('tracking', []);
+            $companySettings = Setting::lookupForCompany($companyUuid ?? session('company'), 'tracking', []);
         } catch (\Throwable) {
             $companySettings = [];
         }

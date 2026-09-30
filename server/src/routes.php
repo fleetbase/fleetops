@@ -405,8 +405,10 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->group(
                     ['prefix' => 'v1/fleet-ops/navigator', 'namespace' => 'v1'],
                     function ($router) {
-                        $router->get('get-link-app', 'NavigatorController@getLinkAppUrl');
+                        // Opened from the Navigator app's QR scan without a session;
+                        // NavigatorController::linkApp() requires a valid signature.
                         $router->get('link-app', 'NavigatorController@linkApp');
+                        $router->get('get-link-app', 'NavigatorController@getLinkAppUrl')->middleware(['fleetbase.protected']);
                     }
                 );
 
@@ -814,6 +816,12 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                         $router->post('orchestrator-settings', 'SettingController@saveOrchestratorSettings');
                                         $router->get('orchestrator-card-fields', 'SettingController@getOrchestratorCardFields');
                                         $router->post('orchestrator-card-fields', 'SettingController@saveOrchestratorCardFields');
+                                        $router->get('telematics-settings', 'SettingController@getTelematicsSettings');
+                                        $router->post('telematics-settings', 'SettingController@saveTelematicsSettings');
+                                        $router->get('admin-telematics-settings', 'SettingController@getAdminTelematicsSettings');
+                                        $router->post('admin-telematics-settings', 'SettingController@saveAdminTelematicsSettings');
+                                        $router->get('telematics-storage-usage', 'SettingController@getTelematicsStorageUsage');
+                                        $router->post('telematics-retention/run', 'SettingController@runTelematicsRetention');
                                     }
                                 );
                                 $router->group(

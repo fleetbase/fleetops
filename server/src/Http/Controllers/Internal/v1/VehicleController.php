@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Exceptions\DeviceAlreadyAttachedException;
 use Fleetbase\FleetOps\Exports\VehicleExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
@@ -25,6 +26,20 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class VehicleController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'unassignDriver'  => 'assign-driver-for vehicle',
+        'unassignOrders'  => 'update vehicle',
+        'attachDevice'    => 'update vehicle',
+        'detachDevice'    => 'update vehicle',
+        'attachEquipment' => 'update vehicle',
+        'detachEquipment' => 'update vehicle',
+    ];
+
     /**
      * The resource to query.
      *
@@ -111,6 +126,7 @@ class VehicleController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function unassignDriver(string $id): JsonResponse
     {
         $vehicle = $this->findVehicle($id);
@@ -143,6 +159,7 @@ class VehicleController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function unassignOrders(Request $request, string $id): JsonResponse
     {
         $request->validate([
@@ -179,6 +196,7 @@ class VehicleController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function attachDevice(Request $request, string $id): JsonResponse
     {
         $request->validate(['device' => 'required|string']);
@@ -219,6 +237,7 @@ class VehicleController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function detachDevice(Request $request, string $id): JsonResponse
     {
         $request->validate(['device' => 'required|string']);
@@ -265,6 +284,7 @@ class VehicleController extends FleetOpsController
      * Attach equipment to the vehicle. Equipment can only be equipped to one asset at a
      * time, so attaching moves it from any previous vehicle or trailer.
      */
+    #[SkipAuthorizationCheck]
     public function attachEquipment(Request $request, string $id): JsonResponse
     {
         $request->validate(['equipment' => 'required|string']);
@@ -292,6 +312,7 @@ class VehicleController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function detachEquipment(Request $request, string $id): JsonResponse
     {
         $request->validate(['equipment' => 'required|string']);

@@ -60,7 +60,7 @@ class ProcessOperationalAlerts extends Command
 
                 foreach ($orders as $order) {
                     session(['company' => $order->company_uuid]);
-                    $settings = $this->alertSettings();
+                    $settings = $this->alertSettings($order);
 
                     if ($this->processLateDeparture($order, $settings, $dryRun)) {
                         $triggered++;
@@ -256,9 +256,9 @@ class ProcessOperationalAlerts extends Command
             ->min() ?? 0;
     }
 
-    protected function alertSettings(): array
+    protected function alertSettings(Order $order): array
     {
-        $settings = Setting::lookupCompany('tracking', []);
+        $settings = Setting::lookupForCompany($order->company_uuid, 'tracking', []);
         $alerts   = data_get($settings, 'alerts', []);
 
         return [

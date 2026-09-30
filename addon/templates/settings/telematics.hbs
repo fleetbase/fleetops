@@ -1,0 +1,70 @@
+<Layout::Section::Header @title={{t "settings.telematics.telematics-settings"}}>
+    <Button
+        @type="primary"
+        @size="sm"
+        @icon="save"
+        @text={{t "common.save-changes"}}
+        @onClick={{perform this.saveSettings}}
+        @disabled={{or this.saveSettings.isRunning this.getSettings.isRunning (not this.settingsLoaded)}}
+        @isLoading={{or this.saveSettings.isRunning this.getSettings.isRunning}}
+        @permission="fleet-ops update telematics-settings"
+    />
+</Layout::Section::Header>
+<Layout::Section::Body class="overflow-y-scroll-i h-full">
+    <div class="container mx-auto">
+        <div class="max-w-3xl my-10 mx-auto space-y-6">
+            <InfoBlock @type="info" @icon="circle-info">
+                {{t "settings.telematics.intro"}}
+            </InfoBlock>
+
+            <ContentPanel @title={{t "settings.telematics.device-events"}} @open={{true}} @wrapperClass="bordered-classic">
+                <InputGroup>
+                    <Toggle
+                        @label={{t "settings.telematics.use-system-default"}}
+                        @isToggled={{this.useDefaultEventRetention}}
+                        @onToggle={{this.setUseDefaultEventRetention}}
+                        @disabled={{not this.settingsLoaded}}
+                    />
+                </InputGroup>
+                <InputGroup @name={{t "settings.telematics.event-retention-days"}} @helpText={{t "settings.telematics.event-retention-days-help"}}>
+                    <Input
+                        @type="number"
+                        @value={{this.eventRetentionDays}}
+                        min={{this.eventRetentionMinimum}}
+                        max={{this.eventRetentionMaximum}}
+                        disabled={{or this.useDefaultEventRetention (not this.settingsLoaded)}}
+                        class="w-full form-input"
+                    />
+                </InputGroup>
+                {{#if this.settingsLoaded}}
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{this.eventRetentionPolicyHelp}}</p>
+                {{/if}}
+            </ContentPanel>
+
+            <ContentPanel @title={{t "settings.telematics.positions"}} @open={{true}} @wrapperClass="bordered-classic">
+                <InputGroup>
+                    <Toggle
+                        @label={{t "settings.telematics.use-system-default"}}
+                        @isToggled={{this.useDefaultPositionRetention}}
+                        @onToggle={{this.setUseDefaultPositionRetention}}
+                        @disabled={{not this.settingsLoaded}}
+                    />
+                </InputGroup>
+                <InputGroup @name={{t "settings.telematics.position-retention-days"}} @helpText={{t "settings.telematics.position-retention-days-help"}}>
+                    <Input
+                        @type="number"
+                        @value={{this.positionRetentionDays}}
+                        min={{this.positionRetentionMinimum}}
+                        max={{this.positionRetentionMaximum}}
+                        disabled={{or this.useDefaultPositionRetention (not this.settingsLoaded)}}
+                        class="w-full form-input"
+                    />
+                </InputGroup>
+                {{#if this.settingsLoaded}}
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{this.positionRetentionPolicyHelp}}</p>
+                {{/if}}
+            </ContentPanel>
+        </div>
+    </div>
+    <Spacer @height="200px" />
+</Layout::Section::Body>

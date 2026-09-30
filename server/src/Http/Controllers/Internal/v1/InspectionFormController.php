@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Resources\v1\InspectionLink as InspectionLinkResource;
 use Fleetbase\FleetOps\Models\Driver;
@@ -16,6 +17,17 @@ use Illuminate\Http\Request;
 
 class InspectionFormController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'generateLink' => 'publish inspection-form',
+        'revokeLink'   => 'publish inspection-form',
+        'sendPin'      => 'publish inspection-form',
+    ];
+
     /**
      * The resource to query.
      *
@@ -107,6 +119,7 @@ class InspectionFormController extends FleetOpsController
         ]);
     }
 
+    #[SkipAuthorizationCheck]
     public function generateLink(Request $request, string $id): JsonResponse
     {
         $form = $this->resolveForm($id)
@@ -215,6 +228,7 @@ class InspectionFormController extends FleetOpsController
     }
 
     /** Take a link out of use, leaving the record of it in the list. */
+    #[SkipAuthorizationCheck]
     public function revokeLink(Request $request, string $id, string $linkId): JsonResponse
     {
         $form = $this->resolveForm($id)->firstOrFail();
@@ -243,6 +257,7 @@ class InspectionFormController extends FleetOpsController
      * A failed delivery answers 200 with `pin_delivery.sent` false and why, so
      * the console shows it as a warning rather than an error.
      */
+    #[SkipAuthorizationCheck]
     public function sendPin(Request $request, string $id, string $linkId): JsonResponse
     {
         $form      = $this->resolveForm($id)->firstOrFail();

@@ -16,6 +16,7 @@ use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Orchestration\Engines\DriverAssignmentEngine;
 use Fleetbase\FleetOps\Orchestration\Engines\RouteSequencingEngine;
 use Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry;
+use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
 use Illuminate\Http\JsonResponse;
@@ -39,8 +40,19 @@ use Illuminate\Support\Str;
  */
 class OrchestrationController extends Controller
 {
+    use AuthorizesMethods;
+
     public function __construct(protected OrchestrationEngineRegistry $registry)
     {
+        $this->authorizeMethods([
+            'orders'                => 'list order',
+            'run'                   => 'optimize order',
+            'preview'               => 'list order',
+            'commit'                => 'assign-driver-for order',
+            'engines'               => 'list order',
+            'orderConfigFields'     => 'list order',
+            'importOrders'          => 'import order',
+        ]);
     }
 
     /**

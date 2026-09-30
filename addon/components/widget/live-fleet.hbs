@@ -28,7 +28,8 @@
 
                 {{#if this.load.isIdle}}
                     {{! Drivers — fleetops' rotating tracking-marker matches the operational
-                         live-map's look and animates on heading changes. }}
+                         live-map's look and animates on heading changes. The popup and tooltip
+                         are the live map's own cards, fed from each marker's index-resource card. }}
                     {{#each this.drivers as |driver|}}
                         <layers.tracking-marker
                             @id={{driver.uuid}}
@@ -39,28 +40,11 @@
                             @draggable={{false}}
                             as |marker|
                         >
-                            <marker.popup @maxWidth="240" @minWidth="180">
-                                <div class="flex flex-row gap-2">
-                                    <div class="w-9 h-9 flex-shrink-0">
-                                        <img src={{or driver.avatar_url driver.vehicle_avatar}} alt={{driver.name}} class="rounded-md w-9 h-9 object-cover shadow-sm" />
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="text-xs font-semibold truncate">{{or driver.name "Driver"}}</div>
-                                        <div class="text-[11px]">
-                                            {{#if driver.current_order_uuid}}
-                                                <span class="text-blue-500"><FaIcon @icon="bolt" class="mr-1" />On order</span>
-                                            {{else if driver.online}}
-                                                <span class="text-green-500"><FaIcon @icon="circle" @size="2xs" class="mr-1" />Online</span>
-                                            {{else}}
-                                                <span class="text-gray-400"><FaIcon @icon="circle" @size="2xs" class="mr-1" />Offline</span>
-                                            {{/if}}
-                                        </div>
-                                        <div class="text-[10px] text-gray-400 mt-0.5 truncate">{{driver.lat}}, {{driver.lng}}</div>
-                                    </div>
-                                </div>
+                            <marker.popup @maxWidth="500" @minWidth="225">
+                                <Map::MarkerCard::Driver @driver={{or driver.card driver}} />
                             </marker.popup>
                             <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
-                                <div class="text-[11px] font-semibold">{{or driver.name "Driver"}}</div>
+                                <Map::MarkerCard::Driver @driver={{or driver.card driver}} @variant="tooltip" />
                             </marker.tooltip>
                         </layers.tracking-marker>
                     {{/each}}
@@ -77,27 +61,11 @@
                             @draggable={{false}}
                             as |marker|
                         >
-                            <marker.popup @maxWidth="240" @minWidth="180">
-                                <div class="flex flex-row gap-2">
-                                    <div class="w-9 h-9 flex-shrink-0">
-                                        <img src={{or vehicle.photo_url vehicle.avatar_url}} alt={{vehicle.name}} class="rounded-md w-9 h-9 object-cover shadow-sm" />
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="text-xs font-semibold truncate">{{or vehicle.name "Vehicle"}}</div>
-                                        {{#if vehicle.plate_number}}
-                                            <div class="text-[10px] text-gray-500 truncate">{{vehicle.plate_number}}</div>
-                                        {{/if}}
-                                        {{#if vehicle.driver_name}}
-                                            <div class="text-[11px] text-gray-600 dark:text-gray-300 truncate">
-                                                <FaIcon @icon="id-card" class="mr-1 text-gray-400" />{{vehicle.driver_name}}
-                                            </div>
-                                        {{/if}}
-                                        <div class="text-[10px] text-gray-400 mt-0.5 truncate">{{vehicle.lat}}, {{vehicle.lng}}</div>
-                                    </div>
-                                </div>
+                            <marker.popup @maxWidth="500" @minWidth="225">
+                                <Map::MarkerCard::Vehicle @vehicle={{or vehicle.card vehicle}} />
                             </marker.popup>
                             <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
-                                <div class="text-[11px] font-semibold">{{or vehicle.name "Vehicle"}}</div>
+                                <Map::MarkerCard::Vehicle @vehicle={{or vehicle.card vehicle}} @variant="tooltip" />
                             </marker.tooltip>
                         </layers.tracking-marker>
                     {{/each}}

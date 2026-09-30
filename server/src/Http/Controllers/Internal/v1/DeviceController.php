@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\Attributes\SkipAuthorizationCheck;
 use Fleetbase\FleetOps\Exceptions\DeviceAlreadyAttachedException;
 use Fleetbase\FleetOps\Exports\DeviceExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
@@ -17,6 +18,16 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class DeviceController extends FleetOpsController
 {
+    /**
+     * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
+     *
+     * @var array<string, string|string[]>
+     */
+    protected array $methodPermissions = [
+        'attach' => 'update device',
+        'detach' => 'update device',
+    ];
+
     /**
      * The resource to query.
      *
@@ -110,6 +121,7 @@ class DeviceController extends FleetOpsController
     /**
      * Attach a device to a supported FleetOps resource.
      */
+    #[SkipAuthorizationCheck]
     public function attach(Request $request, string $id): JsonResponse
     {
         $request->validate([
@@ -152,6 +164,7 @@ class DeviceController extends FleetOpsController
     /**
      * Detach a device from its current FleetOps resource.
      */
+    #[SkipAuthorizationCheck]
     public function detach(string $id): JsonResponse
     {
         $device = $this->resolveDevice($id);

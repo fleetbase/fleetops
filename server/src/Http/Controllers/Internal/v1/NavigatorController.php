@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Http\Resources\Organization;
 use Fleetbase\Models\ApiCredential;
@@ -15,6 +16,19 @@ use Illuminate\Support\Str;
 
 class NavigatorController extends Controller
 {
+    use AuthorizesMethods;
+    /**
+     * How long a Navigator link issued from the console stays valid.
+     */
+    public const LINK_TTL_MINUTES = 30;
+
+    public function __construct()
+    {
+        $this->authorizeMethods([
+            'getLinkAppUrl' => 'admin',
+        ]);
+    }
+
     /**
      * Redirects to the Fleetbase Navigator app using a deep link.
      * Automatically detects the platform (iOS or Android) and uses the correct URI scheme.
@@ -23,6 +37,12 @@ class NavigatorController extends Controller
      */
     public function linkApp(Request $request)
     {
+        // This route is opened from a phone without a console session, so it is
+        // authorised by the short-lived signature issued by getLinkAppUrl().
+        if (!$this->hasValidLinkSignature($request)) {
+            return response()->error('This Navigator link is invalid or has expired. Generate a new one from the console.', 403);
+        }
+
         $adminUser = $this->findAdminUser();
 
         if (!$adminUser || !$adminUser->company) {
@@ -67,8 +87,13 @@ class NavigatorController extends Controller
      */
     public function getLinkAppUrl()
     {
+        $expires = now()->addMinutes(static::LINK_TTL_MINUTES)->getTimestamp();
+
         return response()->json([
-            'linkUrl' => url('int/v1/fleet-ops/navigator/link-app'),
+            'linkUrl' => url('int/v1/fleet-ops/navigator/link-app') . '?' . http_build_query([
+                'expires'   => $expires,
+                'signature' => static::linkSignature($expires),
+            ]),
         ]);
     }
 
@@ -188,5 +213,21 @@ class NavigatorController extends Controller
     protected function driverOnboardSettings(): mixed
     {
         return Setting::where('key', 'fleet-ops.driver-onboard')->value('value');
+    }
+
+    /**
+     * HMAC signature for a Navigator link expiring at the given unix timestamp.
+     */
+    public static function linkSignature(int $expires): string
+    {
+        return hash_hmac('sha256', 'fleet-ops.navigator.link-app|' . $expires, (string) config('app.key'));
+    }
+
+    protected function hasValidLinkSignature(Request $request): bool
+    {
+        $expires   = (int) $request->query('expires');
+        $signature = (string) $request->query('signature');
+
+        return $signature !== '' && $expires >= time() && hash_equals(static::linkSignature($expires), $signature);
     }
 }

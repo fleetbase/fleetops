@@ -18,6 +18,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
     @service universe;
     @service sidebar;
     @service orderPresentation;
+    @service abilities;
     @tracked routingControl;
     @tracked routingCompleted = false;
     @tracked realtimeOrderPublicId = null;
@@ -102,6 +103,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         text: 'Edit details',
                         icon: 'pencil',
                         disabled: this.isClosed,
+                        permission: 'fleet-ops update order',
                         fn: () => this.orderActions.editOrderDetails(this.model),
                     },
                     {
@@ -109,6 +111,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         text: 'Update activity',
                         icon: 'signal',
                         disabled: this.isClosed,
+                        permission: 'fleet-ops update order',
                         fn: () =>
                             this.orderActions.updateActivity(this.model, {
                                 onFinish: this.handleActivityModalFinish,
@@ -118,6 +121,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         id: 'assign_driver',
                         text: this.model.has_driver_assigned ? 'Unassign driver' : 'Assign driver',
                         icon: this.model.has_driver_assigned ? 'user-xmark' : 'edit',
+                        permission: 'fleet-ops assign-driver-for order',
                         disabled: this.model.has_driver_assigned ? !this.model.hasActiveStatus || !this.model.driver_assigned : !this.model.hasActiveStatus,
                         fn: () => (this.model.has_driver_assigned ? this.orderActions.unassignDriver(this.model) : this.orderActions.assignDriver(this.model)),
                     },
@@ -125,6 +129,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         id: 'view_label',
                         text: 'View order label',
                         icon: 'file-invoice',
+                        permission: 'fleet-ops view order',
                         fn: () => this.orderActions.viewLabel(this.model),
                     },
                     {
@@ -151,6 +156,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         icon: 'ban',
                         class: 'text-danger',
                         disabled: this.isClosed,
+                        permission: 'fleet-ops cancel order',
                         fn: () => this.orderActions.cancel(this.model),
                     },
                     {
@@ -158,6 +164,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         text: 'Delete order',
                         icon: 'trash',
                         class: 'text-danger',
+                        permission: 'fleet-ops delete order',
                         fn: () =>
                             this.orderActions.delete(this.model, {
                                 taskOptions: {
@@ -172,7 +179,29 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                     .filter((item) => !item.id || !isHidden(item.id))
                     .filter((item, index, items) => !(item.separator && (index === 0 || items[index - 1]?.separator))),
             },
-        ];
+        ].map((actionButton) => ({ ...actionButton, items: this.permittedMenuItems(actionButton.items) }));
+    }
+
+    /**
+     * The panel header dropdown renders `items` as-is and ignores `permission`, so items the
+     * user is not permitted to use are removed here, along with any separators left dangling.
+     */
+    permittedMenuItems(items = []) {
+        const permitted = items.filter((item) => !item.permission || this.abilities.can(item.permission));
+        const result = permitted.reduce((list, item) => {
+            if (item.separator && (list.length === 0 || list[list.length - 1].separator)) {
+                return list;
+            }
+
+            list.push(item);
+            return list;
+        }, []);
+
+        if (result.length && result[result.length - 1].separator) {
+            result.pop();
+        }
+
+        return result;
     }
 
     @action handleActivityModalFinish(options) {
