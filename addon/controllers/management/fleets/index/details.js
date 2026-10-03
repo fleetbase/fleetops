@@ -35,6 +35,7 @@ export default class ManagementFleetsIndexDetailsController extends Controller {
                 permission: 'fleet-ops update fleet',
             },
             {
+                id: 'more',
                 icon: 'ellipsis-h',
                 iconPrefix: 'fas',
                 renderInPlace: true,

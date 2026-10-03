@@ -8,7 +8,21 @@ export default class ManagementPlacesIndexController extends Controller {
     @service intl;
 
     /** query params */
-    @tracked queryParams = ['name', 'page', 'limit', 'sort', 'query', 'public_id', 'country', 'phone', 'created_at', 'updated_at', 'city', 'neighborhood', 'state'];
+    @tracked queryParams = this.placeActions.queryParamsFor([
+        'name',
+        'page',
+        'limit',
+        'sort',
+        'query',
+        'public_id',
+        'country',
+        'phone',
+        'created_at',
+        'updated_at',
+        'city',
+        'neighborhood',
+        'state',
+    ]);
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -25,11 +39,13 @@ export default class ManagementPlacesIndexController extends Controller {
     get actionButtons() {
         return [
             {
+                id: 'refresh',
                 icon: 'refresh',
                 onClick: this.placeActions.refresh,
                 helpText: this.intl.t('common.refresh'),
             },
             {
+                id: 'create',
                 text: this.intl.t('common.new'),
                 type: 'primary',
                 icon: 'plus',
@@ -37,6 +53,7 @@ export default class ManagementPlacesIndexController extends Controller {
                 permission: 'fleet-ops create place',
             },
             {
+                id: 'import',
                 text: this.intl.t('common.import'),
                 type: 'magic',
                 icon: 'upload',
@@ -44,6 +61,7 @@ export default class ManagementPlacesIndexController extends Controller {
                 permission: 'fleet-ops import place',
             },
             {
+                id: 'export',
                 text: this.intl.t('common.export'),
                 icon: 'long-arrow-up',
                 iconClass: 'rotate-icon-45',
@@ -60,6 +78,7 @@ export default class ManagementPlacesIndexController extends Controller {
 
         return [
             {
+                id: 'bulk-delete',
                 label: this.intl.t('common.delete-selected-count', { count: selected.length }),
                 class: 'text-red-500',
                 fn: this.placeActions.bulkDelete,
@@ -72,6 +91,7 @@ export default class ManagementPlacesIndexController extends Controller {
     get columns() {
         return [
             {
+                id: 'name',
                 sticky: true,
                 label: this.intl.t('column.name'),
                 valuePath: 'name',
@@ -87,6 +107,7 @@ export default class ManagementPlacesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'address',
                 sticky: true,
                 label: this.intl.t('column.address'),
                 valuePath: 'address',
@@ -100,6 +121,7 @@ export default class ManagementPlacesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'public-id',
                 label: this.intl.t('column.id'),
                 valuePath: 'public_id',
                 cellComponent: 'click-to-copy',
@@ -110,6 +132,7 @@ export default class ManagementPlacesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'city',
                 label: this.intl.t('column.city'),
                 valuePath: 'city',
                 cellComponent: 'table/cell/anchor',
@@ -124,6 +147,7 @@ export default class ManagementPlacesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'state',
                 label: this.intl.t('column.state'),
                 valuePath: 'state',
                 cellComponent: 'table/cell/anchor',
@@ -138,6 +162,7 @@ export default class ManagementPlacesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'postal-code',
                 label: this.intl.t('column.postal-code'),
                 valuePath: 'postal_code',
                 cellComponent: 'table/cell/anchor',
@@ -149,6 +174,7 @@ export default class ManagementPlacesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'country-name',
                 label: this.intl.t('column.country'),
                 valuePath: 'country_name',
                 cellComponent: 'table/cell/base',
@@ -160,6 +186,7 @@ export default class ManagementPlacesIndexController extends Controller {
                 filterParam: 'country',
             },
             {
+                id: 'neighborhood',
                 label: this.intl.t('column.neighborhood'),
                 valuePath: 'neighborhood',
                 cellComponent: 'table/cell/anchor',
@@ -174,6 +201,7 @@ export default class ManagementPlacesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'phone',
                 label: this.intl.t('column.phone'),
                 valuePath: 'phone',
                 cellComponent: 'table/cell/base',
@@ -184,6 +212,7 @@ export default class ManagementPlacesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'created-at',
                 label: this.intl.t('column.created-at'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
@@ -193,6 +222,7 @@ export default class ManagementPlacesIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'updated-at',
                 label: this.intl.t('column.updated-at'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
@@ -204,6 +234,7 @@ export default class ManagementPlacesIndexController extends Controller {
             },
 
             {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -216,11 +247,13 @@ export default class ManagementPlacesIndexController extends Controller {
                 width: 60,
                 actions: [
                     {
+                        id: 'view',
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.place') }),
                         fn: this.placeActions.transition.view,
                         permission: 'fleet-ops view place',
                     },
                     {
+                        id: 'edit',
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.place') }),
                         fn: this.placeActions.transition.edit,
                         permission: 'fleet-ops update place',
@@ -229,6 +262,7 @@ export default class ManagementPlacesIndexController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'locate',
                         label: this.intl.t('place.actions.locate-place', { resource: this.intl.t('resource.place') }),
                         fn: this.placeActions.locate,
                         permission: 'fleet-ops view place',
@@ -237,6 +271,7 @@ export default class ManagementPlacesIndexController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'delete',
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.place') }),
                         fn: this.placeActions.delete,
                         permission: 'fleet-ops delete place',

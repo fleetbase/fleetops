@@ -32,6 +32,7 @@ export default class ManagementTrailersIndexDetailsController extends Controller
                 permission: 'fleet-ops update trailer',
             },
             {
+                id: 'more',
                 // Actions dropdown — shared with the trailer context panel
                 icon: 'ellipsis-h',
                 iconPrefix: 'fas',

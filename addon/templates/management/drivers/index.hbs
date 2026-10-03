@@ -1,5 +1,6 @@
 {{#if (eq this.layout "table")}}
     <Layout::Resource::Tabular
+        @registry="fleet-ops:table:driver"
         @resource="driver"
         @title={{t "resource.drivers"}}
         @searchQuery={{this.query}}
@@ -34,6 +35,7 @@
 {{else}}
     <Layout::Section::Header @title={{t "resource.drivers"}} @actionsWrapperClass="space-x-1">
         <Layout::Resource::TabularActions
+            @registry="fleet-ops:table:driver"
             @searchQuery={{this.query}}
             @onSearch={{perform this.driverActions.controllerSearchTask this}}
             @columns={{this.columns}}

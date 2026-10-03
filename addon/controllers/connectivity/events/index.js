@@ -78,7 +78,20 @@ export default class ConnectivityEventsIndexController extends Controller {
     @service telematicActions;
 
     /** query params */
-    @tracked queryParams = ['page', 'limit', 'sort', 'query', 'telematic', 'device', 'event_type', 'severity', 'processed', 'occurred_at', 'created_at', 'updated_at'];
+    @tracked queryParams = this.deviceEventActions.queryParamsFor([
+        'page',
+        'limit',
+        'sort',
+        'query',
+        'telematic',
+        'device',
+        'event_type',
+        'severity',
+        'processed',
+        'occurred_at',
+        'created_at',
+        'updated_at',
+    ]);
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -95,6 +108,7 @@ export default class ConnectivityEventsIndexController extends Controller {
     /** action buttons */
     @tracked actionButtons = [
         {
+            id: 'refresh',
             icon: 'refresh',
             onClick: this.deviceEventActions.refresh,
             helpText: this.intl.t('common.refresh'),
@@ -107,6 +121,7 @@ export default class ConnectivityEventsIndexController extends Controller {
     /** columns */
     @tracked columns = [
         {
+            id: 'event-type',
             sticky: true,
             label: 'Event',
             valuePath: 'event_type',
@@ -121,6 +136,7 @@ export default class ConnectivityEventsIndexController extends Controller {
             filterComponent: 'filter/string',
         },
         {
+            id: 'device-display-name',
             label: 'Device',
             valuePath: 'device.displayName',
             cellComponent: 'cell/device-identity',
@@ -137,6 +153,7 @@ export default class ConnectivityEventsIndexController extends Controller {
             modelNamePath: 'displayName',
         },
         {
+            id: 'provider',
             label: 'Provider',
             valuePath: 'provider',
             cellComponent: 'cell/telematic-identity',
@@ -152,6 +169,7 @@ export default class ConnectivityEventsIndexController extends Controller {
             model: 'telematic',
         },
         {
+            id: 'severity',
             label: 'Severity',
             valuePath: 'severity',
             cellComponent: 'table/cell/status',
@@ -165,12 +183,14 @@ export default class ConnectivityEventsIndexController extends Controller {
             filterOptionValue: 'value',
         },
         {
+            id: 'message',
             label: 'Message',
             valuePath: 'message',
             resizable: true,
             sortable: false,
         },
         {
+            id: 'code',
             label: 'Code',
             valuePath: 'code',
             resizable: true,
@@ -180,6 +200,7 @@ export default class ConnectivityEventsIndexController extends Controller {
             filterComponent: 'filter/string',
         },
         {
+            id: 'ident',
             label: 'IDENT',
             valuePath: 'ident',
             hidden: true,
@@ -187,6 +208,7 @@ export default class ConnectivityEventsIndexController extends Controller {
             sortable: true,
         },
         {
+            id: 'protocol',
             label: 'Protocol',
             valuePath: 'protocol',
             hidden: true,
@@ -194,6 +216,7 @@ export default class ConnectivityEventsIndexController extends Controller {
             sortable: true,
         },
         {
+            id: 'state',
             label: 'State',
             valuePath: 'state',
             hidden: true,
@@ -201,6 +224,7 @@ export default class ConnectivityEventsIndexController extends Controller {
             sortable: true,
         },
         {
+            id: 'processed-at',
             label: 'Processed',
             valuePath: 'processedAt',
             sortParam: 'processed_at',
@@ -214,6 +238,7 @@ export default class ConnectivityEventsIndexController extends Controller {
             filterOptionValue: 'value',
         },
         {
+            id: 'occurred-at',
             label: 'Occurred',
             valuePath: 'occurredAt',
             sortParam: 'occurred_at',
@@ -224,6 +249,7 @@ export default class ConnectivityEventsIndexController extends Controller {
             filterComponent: 'filter/date',
         },
         {
+            id: 'created-at',
             label: this.intl.t('column.created-at'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
@@ -234,6 +260,7 @@ export default class ConnectivityEventsIndexController extends Controller {
             filterComponent: 'filter/date',
         },
         {
+            id: 'updated-at',
             label: this.intl.t('column.updated-at'),
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
@@ -245,6 +272,7 @@ export default class ConnectivityEventsIndexController extends Controller {
             hidden: true,
         },
         {
+            id: 'row-actions',
             label: '',
             cellComponent: 'table/cell/dropdown',
             ddButtonText: false,
@@ -257,11 +285,13 @@ export default class ConnectivityEventsIndexController extends Controller {
             width: 60,
             actions: [
                 {
+                    id: 'view',
                     label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.device-event') }),
                     fn: this.deviceEventActions.transition.view,
                     permission: 'fleet-ops view device-event',
                 },
                 {
+                    id: 'mark-processed',
                     label: 'Mark processed',
                     fn: this.markProcessed,
                     permission: 'fleet-ops update device-event',

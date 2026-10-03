@@ -51,6 +51,7 @@ export default class ServiceRateActionsService extends ResourceActionService {
         },
         view: (serviceRate) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 serviceRate,
                 tabs: [
                     {

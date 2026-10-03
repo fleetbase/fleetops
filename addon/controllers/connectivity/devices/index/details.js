@@ -39,6 +39,7 @@ export default class ConnectivityDevicesIndexDetailsController extends Controlle
                 permission: 'fleet-ops update device',
             },
             {
+                id: 'more',
                 icon: 'ellipsis-h',
                 iconPrefix: 'fas',
                 renderInPlace: true,

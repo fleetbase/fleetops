@@ -7,7 +7,7 @@ export default class MaintenancePartsIndexController extends Controller {
     @service intl;
     @service appCache;
 
-    @tracked queryParams = ['type', 'status', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
+    @tracked queryParams = this.partActions.queryParamsFor(['type', 'status', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at']);
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -21,6 +21,7 @@ export default class MaintenancePartsIndexController extends Controller {
     get actionButtons() {
         return [
             {
+                id: 'more',
                 component: 'dropdown-button',
                 icon: 'display',
                 size: 'xs',
@@ -45,10 +46,11 @@ export default class MaintenancePartsIndexController extends Controller {
                 renderInPlace: true,
                 helpText: 'Change the layout',
             },
-            { icon: 'refresh', onClick: this.partActions.refresh, helpText: this.intl.t('common.refresh') },
-            { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.partActions.transition.create, permission: 'fleet-ops create part' },
-            { text: this.intl.t('common.import'), type: 'magic', icon: 'upload', onClick: this.partActions.import, permission: 'fleet-ops import part' },
+            { id: 'refresh', icon: 'refresh', onClick: this.partActions.refresh, helpText: this.intl.t('common.refresh') },
+            { id: 'create', text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.partActions.transition.create, permission: 'fleet-ops create part' },
+            { id: 'import', text: this.intl.t('common.import'), type: 'magic', icon: 'upload', onClick: this.partActions.import, permission: 'fleet-ops import part' },
             {
+                id: 'export',
                 text: this.intl.t('common.export'),
                 icon: 'long-arrow-up',
                 iconClass: 'rotate-icon-45',
@@ -60,12 +62,13 @@ export default class MaintenancePartsIndexController extends Controller {
     }
 
     get bulkActions() {
-        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.partActions.bulkDelete, permission: 'fleet-ops delete part' }];
+        return [{ id: 'bulk-delete', label: 'Delete selected...', class: 'text-red-500', fn: this.partActions.bulkDelete, permission: 'fleet-ops delete part' }];
     }
 
     get columns() {
         return [
             {
+                id: 'name',
                 label: this.intl.t('column.name'),
                 valuePath: 'name',
                 cellComponent: 'cell/part-identity',
@@ -78,6 +81,7 @@ export default class MaintenancePartsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'sku',
                 label: this.intl.t('column.part-number'),
                 valuePath: 'sku',
                 resizable: true,
@@ -87,6 +91,7 @@ export default class MaintenancePartsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'type',
                 label: this.intl.t('column.type'),
                 valuePath: 'type',
                 cellComponent: 'table/cell/base',
@@ -98,6 +103,7 @@ export default class MaintenancePartsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'status',
                 label: this.intl.t('column.status'),
                 valuePath: 'status',
                 cellComponent: 'table/cell/status',
@@ -107,10 +113,20 @@ export default class MaintenancePartsIndexController extends Controller {
                 filterParam: 'status',
                 filterComponent: 'filter/string',
             },
-            { label: this.intl.t('column.quantity-on-hand'), valuePath: 'quantity_on_hand', resizable: true, sortable: true },
-            { label: this.intl.t('column.unit-cost'), valuePath: 'unit_cost', cellComponent: 'table/cell/currency', resizable: true, sortable: true },
-            { label: this.intl.t('column.created-at'), valuePath: 'createdAt', sortParam: 'created_at', resizable: true, sortable: true, filterable: true, filterComponent: 'filter/date' },
+            { id: 'quantity-on-hand', label: this.intl.t('column.quantity-on-hand'), valuePath: 'quantity_on_hand', resizable: true, sortable: true },
+            { id: 'unit-cost', label: this.intl.t('column.unit-cost'), valuePath: 'unit_cost', cellComponent: 'table/cell/currency', resizable: true, sortable: true },
             {
+                id: 'created-at',
+                label: this.intl.t('column.created-at'),
+                valuePath: 'createdAt',
+                sortParam: 'created_at',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/date',
+            },
+            {
+                id: 'updated-at',
                 label: this.intl.t('column.updated-at'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
@@ -121,6 +137,7 @@ export default class MaintenancePartsIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -131,17 +148,20 @@ export default class MaintenancePartsIndexController extends Controller {
                 wrapperClass: 'flex items-center justify-end mx-2',
                 actions: [
                     {
+                        id: 'view',
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.part') }),
                         fn: this.partActions.transition.view,
                         permission: 'fleet-ops view part',
                     },
                     {
+                        id: 'edit',
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.part') }),
                         fn: this.partActions.transition.edit,
                         permission: 'fleet-ops update part',
                     },
                     { separator: true },
                     {
+                        id: 'delete',
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.part') }),
                         fn: this.partActions.delete,
                         permission: 'fleet-ops delete part',

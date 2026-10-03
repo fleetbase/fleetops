@@ -17,7 +17,7 @@ export default class ConnectivityDevicesIndexController extends Controller {
     @service trailerActions;
 
     /** query params */
-    @tracked queryParams = [
+    @tracked queryParams = this.deviceActions.queryParamsFor([
         'name',
         'status',
         'attachment_state',
@@ -36,7 +36,7 @@ export default class ConnectivityDevicesIndexController extends Controller {
         'public_id',
         'created_at',
         'updated_at',
-    ];
+    ]);
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -56,11 +56,13 @@ export default class ConnectivityDevicesIndexController extends Controller {
     /** action buttons */
     @tracked actionButtons = [
         {
+            id: 'refresh',
             icon: 'refresh',
             onClick: this.deviceActions.refresh,
             helpText: this.intl.t('common.refresh'),
         },
         {
+            id: 'create',
             text: this.intl.t('common.new'),
             type: 'primary',
             icon: 'plus',
@@ -68,6 +70,7 @@ export default class ConnectivityDevicesIndexController extends Controller {
             permission: 'fleet-ops create device',
         },
         {
+            id: 'import',
             text: this.intl.t('common.import'),
             type: 'magic',
             icon: 'upload',
@@ -75,6 +78,7 @@ export default class ConnectivityDevicesIndexController extends Controller {
             permission: 'fleet-ops import device',
         },
         {
+            id: 'export',
             text: this.intl.t('common.export'),
             icon: 'long-arrow-up',
             iconClass: 'rotate-icon-45',
@@ -87,6 +91,7 @@ export default class ConnectivityDevicesIndexController extends Controller {
     /** bulk action buttons */
     @tracked bulkActions = [
         {
+            id: 'bulk-delete',
             label: 'Delete selected...',
             class: 'text-red-500',
             fn: this.deviceActions.bulkDelete,
@@ -111,6 +116,7 @@ export default class ConnectivityDevicesIndexController extends Controller {
                 separator: true,
             },
             {
+                id: 'delete',
                 label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.device') }),
                 fn: this.deviceActions.delete,
                 permission: 'fleet-ops delete device',

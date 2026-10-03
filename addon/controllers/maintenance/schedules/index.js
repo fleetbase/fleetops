@@ -33,7 +33,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
         return this.maintenanceScheduleActions;
     }
 
-    @tracked queryParams = ['status', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
+    @tracked queryParams = this.maintenanceScheduleActions.queryParamsFor(['status', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at']);
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -132,16 +132,19 @@ export default class MaintenanceSchedulesIndexController extends Controller {
     get actionButtons() {
         return [
             {
+                id: 'more',
                 component: 'dropdown-button',
                 icon: 'display',
                 size: 'xs',
                 items: [
                     {
+                        id: 'list-view',
                         label: this.intl.t('common.table-view'),
                         icon: 'table-list',
                         onClick: this.setLayoutList,
                     },
                     {
+                        id: 'calendar-view',
                         label: this.intl.t('common.calendar-view'),
                         icon: 'calendar',
                         onClick: this.setLayoutCalendar,
@@ -150,16 +153,25 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                 renderInPlace: true,
                 helpText: this.intl.t('common.change-layout'),
             },
-            { icon: 'refresh', onClick: this.maintenanceScheduleActions.refresh, helpText: this.intl.t('common.refresh') },
+            { id: 'refresh', icon: 'refresh', onClick: this.maintenanceScheduleActions.refresh, helpText: this.intl.t('common.refresh') },
             {
+                id: 'create',
                 text: this.intl.t('common.new'),
                 type: 'primary',
                 icon: 'plus',
                 onClick: this.maintenanceScheduleActions.transition.create,
                 permission: 'fleet-ops create maintenance-schedule',
             },
-            { text: this.intl.t('common.import'), type: 'magic', icon: 'upload', onClick: this.maintenanceScheduleActions.import, permission: 'fleet-ops import maintenance-schedule' },
             {
+                id: 'import',
+                text: this.intl.t('common.import'),
+                type: 'magic',
+                icon: 'upload',
+                onClick: this.maintenanceScheduleActions.import,
+                permission: 'fleet-ops import maintenance-schedule',
+            },
+            {
+                id: 'export',
                 text: this.intl.t('common.export'),
                 icon: 'long-arrow-up',
                 iconClass: 'rotate-icon-45',
@@ -171,12 +183,15 @@ export default class MaintenanceSchedulesIndexController extends Controller {
     }
 
     get bulkActions() {
-        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.maintenanceScheduleActions.bulkDelete, permission: 'fleet-ops delete maintenance-schedule' }];
+        return [
+            { id: 'bulk-delete', label: 'Delete selected...', class: 'text-red-500', fn: this.maintenanceScheduleActions.bulkDelete, permission: 'fleet-ops delete maintenance-schedule' },
+        ];
     }
 
     get columns() {
         return [
             {
+                id: 'public-id',
                 label: this.intl.t('column.id'),
                 valuePath: 'public_id',
                 cellComponent: 'table/cell/anchor',
@@ -190,6 +205,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'name',
                 label: this.intl.t('column.name'),
                 valuePath: 'name',
                 resizable: true,
@@ -199,6 +215,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'subject-name',
                 label: this.intl.t('column.subject'),
                 valuePath: 'subject.name',
                 cellComponent: 'cell/maintenance-subject-identity',
@@ -208,6 +225,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                 sortable: false,
             },
             {
+                id: 'default-assignee-name',
                 label: this.intl.t('column.assignee'),
                 valuePath: 'default_assignee_name',
                 cellComponent: 'cell/facilitator-identity',
@@ -218,6 +236,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                 hidden: true,
             },
             {
+                id: 'type',
                 label: this.intl.t('column.type'),
                 valuePath: 'type',
                 cellComponent: 'table/cell/base',
@@ -229,6 +248,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'status',
                 label: this.intl.t('column.status'),
                 valuePath: 'status',
                 cellComponent: 'table/cell/status',
@@ -239,6 +259,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'next-due-at-short',
                 label: this.intl.t('column.next-due'),
                 valuePath: 'nextDueAtShort',
                 sortParam: 'next_due_date',
@@ -248,6 +269,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'created-at',
                 label: this.intl.t('column.created-at'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
@@ -257,6 +279,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -267,33 +290,39 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                 wrapperClass: 'flex items-center justify-end mx-2',
                 actions: [
                     {
+                        id: 'view',
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.maintenance-schedule') }),
                         fn: this.maintenanceScheduleActions.transition.view,
                         permission: 'fleet-ops view maintenance-schedule',
                     },
                     {
+                        id: 'edit',
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.maintenance-schedule') }),
                         fn: this.maintenanceScheduleActions.transition.edit,
                         permission: 'fleet-ops update maintenance-schedule',
                     },
                     {
+                        id: 'trigger-now',
                         label: this.intl.t('maintenance-schedule.actions.trigger-now'),
                         fn: this.maintenanceScheduleActions.triggerNow,
                         permission: 'fleet-ops update maintenance-schedule',
                     },
                     { separator: true },
                     {
+                        id: 'pause',
                         label: this.intl.t('maintenance-schedule.actions.pause'),
                         fn: this.maintenanceScheduleActions.pause,
                         permission: 'fleet-ops update maintenance-schedule',
                     },
                     {
+                        id: 'resume',
                         label: this.intl.t('maintenance-schedule.actions.resume'),
                         fn: this.maintenanceScheduleActions.resume,
                         permission: 'fleet-ops update maintenance-schedule',
                     },
                     { separator: true },
                     {
+                        id: 'delete',
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.maintenance-schedule') }),
                         fn: this.maintenanceScheduleActions.delete,
                         permission: 'fleet-ops delete maintenance-schedule',

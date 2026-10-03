@@ -10,7 +10,7 @@ export default class OperationsServiceRatesIndexController extends Controller {
     @service intl;
 
     /** query params */
-    @tracked queryParams = ['page', 'query', 'limit', 'sort', 'zone', 'service_area'];
+    @tracked queryParams = this.serviceRateActions.queryParamsFor(['page', 'query', 'limit', 'sort', 'zone', 'service_area']);
     @tracked page = 1;
     @tracked limit;
     @tracked query;
@@ -20,11 +20,13 @@ export default class OperationsServiceRatesIndexController extends Controller {
     get actionButtons() {
         return [
             {
+                id: 'refresh',
                 icon: 'refresh',
                 onClick: this.serviceRateActions.refresh,
                 helpText: this.intl.t('common.refresh'),
             },
             {
+                id: 'create',
                 text: this.intl.t('common.new'),
                 type: 'primary',
                 icon: 'plus',
@@ -32,6 +34,7 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 permission: 'fleet-ops create service-rate',
             },
             {
+                id: 'export',
                 text: this.intl.t('common.export'),
                 icon: 'long-arrow-up',
                 iconClass: 'rotate-icon-45',
@@ -46,6 +49,7 @@ export default class OperationsServiceRatesIndexController extends Controller {
     get bulkActions() {
         return [
             {
+                id: 'bulk-delete',
                 label: 'Delete selected...',
                 class: 'text-red-500',
                 fn: this.serviceRateActions.bulkDelete,
@@ -58,6 +62,7 @@ export default class OperationsServiceRatesIndexController extends Controller {
     get columns() {
         return [
             {
+                id: 'public-id',
                 sticky: true,
                 label: this.intl.t('column.id'),
                 valuePath: 'public_id',
@@ -70,6 +75,7 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'service-name',
                 label: this.intl.t('column.service'),
                 valuePath: 'service_name',
                 cellComponent: 'table/cell/base',
@@ -78,6 +84,7 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 filterable: false,
             },
             {
+                id: 'service-area-name',
                 label: this.intl.t('column.service-area'),
                 valuePath: 'service_area.name',
                 cellComponent: 'cell/service-area-identity',
@@ -93,6 +100,7 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 model: 'service-area',
             },
             {
+                id: 'zone-name',
                 label: this.intl.t('column.zone'),
                 valuePath: 'zone.name',
                 cellComponent: 'cell/zone-identity',
@@ -107,6 +115,7 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 model: 'zone',
             },
             {
+                id: 'created-at',
                 label: this.intl.t('column.created-at'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
@@ -116,6 +125,7 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'updated-at',
                 label: this.intl.t('column.updated-at'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
@@ -126,6 +136,7 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -137,18 +148,21 @@ export default class OperationsServiceRatesIndexController extends Controller {
                 width: 60,
                 actions: [
                     {
+                        id: 'view',
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.service-rate') }),
                         icon: 'eye',
                         fn: this.serviceRateActions.transition.view,
                         permission: 'fleet-ops view service-rate',
                     },
                     {
+                        id: 'edit',
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.service-rate') }),
                         icon: 'pencil',
                         fn: this.serviceRateActions.transition.edit,
                         permission: 'fleet-ops view service-rate',
                     },
                     {
+                        id: 'delete',
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.service-rate') }),
                         icon: 'trash',
                         fn: this.serviceRateActions.delete,

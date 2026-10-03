@@ -52,6 +52,7 @@ export default class PlaceActionsService extends ResourceActionService {
             }
 
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 place,
                 title: place?.name ?? place?.street1,
                 actionButtons: [{ icon: 'pencil', permission: 'fleet-ops update place', fn: () => closePanelsThen(this.resourceContextPanel, () => this.panel.edit(place)) }],

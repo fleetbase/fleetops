@@ -32,6 +32,7 @@ export default class InspectionSubmissionActionsService extends ResourceActionSe
             const service = this;
 
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 submission,
                 title: this.panelTitle(submission),
                 actionButtons: [

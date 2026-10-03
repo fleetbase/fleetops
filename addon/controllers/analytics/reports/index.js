@@ -8,7 +8,7 @@ export default class AnalyticsReportsIndexController extends Controller {
     @service intl;
 
     /** query params */
-    @tracked queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'name', 'created_at'];
+    @tracked queryParams = this.reportActions.queryParamsFor(['page', 'limit', 'sort', 'query', 'public_id', 'name', 'created_at']);
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -20,11 +20,13 @@ export default class AnalyticsReportsIndexController extends Controller {
     get actionButtons() {
         return [
             {
+                id: 'refresh',
                 icon: 'refresh',
                 onClick: this.reportActions.refresh,
                 helpText: this.intl.t('common.refresh'),
             },
             {
+                id: 'create',
                 text: this.intl.t('common.new'),
                 type: 'primary',
                 icon: 'plus',
@@ -37,6 +39,7 @@ export default class AnalyticsReportsIndexController extends Controller {
     get bulkActions() {
         return [
             {
+                id: 'bulk-delete',
                 label: 'Delete selected...',
                 class: 'text-red-500',
                 fn: this.reportActions.bulkDelete,
@@ -48,6 +51,7 @@ export default class AnalyticsReportsIndexController extends Controller {
     get columns() {
         return [
             {
+                id: 'title',
                 sticky: true,
                 label: 'Title',
                 valuePath: 'title',
@@ -59,6 +63,7 @@ export default class AnalyticsReportsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'public-id',
                 label: 'ID',
                 valuePath: 'public_id',
                 cellComponent: 'click-to-copy',
@@ -69,6 +74,7 @@ export default class AnalyticsReportsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -81,11 +87,13 @@ export default class AnalyticsReportsIndexController extends Controller {
                 width: 60,
                 actions: [
                     {
+                        id: 'view',
                         label: 'View report...',
                         fn: this.reportActions.transition.view,
                         permission: 'iam view report',
                     },
                     {
+                        id: 'edit',
                         label: 'Edit report...',
                         fn: this.reportActions.transition.edit,
                         permission: 'iam update report',
@@ -94,6 +102,7 @@ export default class AnalyticsReportsIndexController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'delete',
                         label: 'Delete report...',
                         fn: this.reportActions.delete,
                         permission: 'iam delete report',
