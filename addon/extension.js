@@ -164,7 +164,7 @@ export default {
         this.createRegistries(registryService);
 
         // Declare the registries extensions can add table columns, actions and
-        // buttons to, e.g. `fleet-ops:table:driver:columns` or `fleet-ops:details:order:menu`.
+        // buttons to, e.g. `fleet-ops:driver:table:columns` or `fleet-ops:order:details:menu`.
         universe
             .getService('universe/resource-view-service')
             ?.declare('fleet-ops', [

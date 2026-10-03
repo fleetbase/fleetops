@@ -1,6 +1,6 @@
 {{#if (eq this.layout "table")}}
     <Layout::Resource::Tabular
-        @registry="fleet-ops:table:part"
+        @registry="fleet-ops:part:table"
         @resource="part"
         @title={{t "resource.parts"}}
         @searchQuery={{this.query}}
@@ -35,7 +35,7 @@
 {{else}}
     <Layout::Section::Header @title={{t "resource.parts"}} @actionsWrapperClass="space-x-1">
         <Layout::Resource::TabularActions
-            @registry="fleet-ops:table:part"
+            @registry="fleet-ops:part:table"
             @searchQuery={{this.query}}
             @onSearch={{perform this.partActions.controllerSearchTask this}}
             @columns={{this.columns}}

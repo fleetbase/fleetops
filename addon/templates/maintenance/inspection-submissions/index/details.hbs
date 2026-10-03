@@ -1,5 +1,5 @@
 <Layout::Resource::Panel
-    @registry="fleet-ops:details:inspection-submission"
+    @registry="fleet-ops:inspection-submission:details"
     @resource={{@model}}
     @controller={{this}}
     @headerTitle={{if (or @model.form.name @model.form_name) (t "inspection.record.submission-title" form=(or @model.form.name @model.form_name)) (or @model.public_id (t "inspection.record.inspection"))}}

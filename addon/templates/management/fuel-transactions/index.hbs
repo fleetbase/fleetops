@@ -2,7 +2,7 @@
     <div class="flex h-full flex-col bg-white dark:bg-gray-900">
         <div class="min-h-0 flex-1 overflow-y-auto">
             <Layout::Resource::Tabular
-                @registry="fleet-ops:table:fuel-transaction"
+                @registry="fleet-ops:fuel-transaction:table"
                 @resource="fuel-provider-transaction"
                 @title={{t "menu.fuel-transactions"}}
                 @searchQuery={{this.query}}

@@ -13,7 +13,7 @@ export default class ManagementContactsIndexController extends Controller {
 
     /** query params */
     /**
-     * This tab's table registry, e.g. `fleet-ops:table:contact`. The contacts
+     * This tab's table registry, e.g. `fleet-ops:contact:table`. The contacts
      * header (`management/contacts.hbs`) renders for whichever tab is open.
      */
     get tableRegistry() {
