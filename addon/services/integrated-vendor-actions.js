@@ -37,6 +37,7 @@ export default class IntegratedVendorActionsService extends ResourceActionServic
         },
         view: (integratedVendor, options = {}) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 integratedVendor,
                 tabs: [
                     {

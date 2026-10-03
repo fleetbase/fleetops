@@ -2,6 +2,7 @@
     <:actions>
         <div class="flex flex-row items-center space-x-1 pr-4">
             <Layout::Resource::TabularActions
+                @registry={{this.childController.tableRegistry}}
                 @columns={{this.childController.columns}}
                 @actionButtons={{this.childController.actionButtons}}
                 @bulkActions={{this.childController.bulkActions}}

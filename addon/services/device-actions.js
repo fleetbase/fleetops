@@ -48,6 +48,7 @@ export default class DeviceActionsService extends ResourceActionService {
             const service = this;
 
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 device,
                 header: 'device/panel-header',
                 title: device.name ?? device.serial_number,

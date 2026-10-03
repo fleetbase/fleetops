@@ -2,9 +2,7 @@ import ResourceActionService, { inject as service } from '@fleetbase/ember-core/
 import leafletIcon from '@fleetbase/ember-core/utils/leaflet-icon';
 import config from 'ember-get-config';
 import { action } from '@ember/object';
-import { isArray } from '@ember/array';
-import { dasherize } from '@ember/string';
-import { PANEL_DEFAULTS, closePanelsThen } from '../utils/context-panel';
+import { PANEL_DEFAULTS, closePanelsThen, registeredPanelTabs } from '../utils/context-panel';
 import { confirmLoginAction, hasInactiveLogin, hasManagedLogin } from '../utils/profile-login-actions';
 
 export default class DriverActionsService extends ResourceActionService {
@@ -13,16 +11,8 @@ export default class DriverActionsService extends ResourceActionService {
     @service issueActions;
 
     get registeredTabs() {
-        const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:driver:details');
-        return (isArray(registeredTabs) ? registeredTabs : [])
-            .map((tab) => {
-                delete tab.route;
-                if (!tab.key) {
-                    tab.key = tab.id ?? dasherize(tab.label ?? tab.title);
-                }
-                return tab;
-            })
-            .filter((tab) => !tab.component);
+        // Copies, so the shared registry items keep the \`route\` their routed details view needs.
+        return registeredPanelTabs(this.menuService, 'fleet-ops:component:driver:details');
     }
 
     get panelTabs() {
@@ -125,6 +115,7 @@ export default class DriverActionsService extends ResourceActionService {
             const service = this;
 
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 driver,
                 header: 'driver/panel-header',
                 actionButtons: [

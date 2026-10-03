@@ -13,7 +13,7 @@ export default class ManagementVendorsIndexController extends Controller {
     @service appCache;
 
     /** query params */
-    @tracked queryParams = [
+    @tracked queryParams = this.vendorActions.queryParamsFor([
         'page',
         'limit',
         'sort',
@@ -30,7 +30,7 @@ export default class ManagementVendorsIndexController extends Controller {
         'country',
         'address',
         'website_url',
-    ];
+    ]);
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -55,16 +55,19 @@ export default class ManagementVendorsIndexController extends Controller {
     get actionButtons() {
         return [
             {
+                id: 'more',
                 component: 'dropdown-button',
                 icon: 'display',
                 size: 'xs',
                 items: [
                     {
+                        id: 'table-view',
                         label: this.intl.t('common.table-view'),
                         icon: 'table-list',
                         onClick: () => this.setLayout('table'),
                     },
                     {
+                        id: 'grid-view',
                         label: this.intl.t('common.grid-view'),
                         icon: 'grip',
                         onClick: () => this.setLayout('grid'),
@@ -74,11 +77,13 @@ export default class ManagementVendorsIndexController extends Controller {
                 helpText: this.intl.t('common.change-layout'),
             },
             {
+                id: 'refresh',
                 icon: 'refresh',
                 onClick: this.vendorActions.refresh,
                 helpText: this.intl.t('common.refresh'),
             },
             {
+                id: 'create',
                 text: this.intl.t('common.new'),
                 type: 'primary',
                 icon: 'plus',
@@ -86,6 +91,7 @@ export default class ManagementVendorsIndexController extends Controller {
                 permission: 'fleet-ops create vendor',
             },
             {
+                id: 'import',
                 text: this.intl.t('common.import'),
                 type: 'magic',
                 icon: 'upload',
@@ -93,6 +99,7 @@ export default class ManagementVendorsIndexController extends Controller {
                 permission: 'fleet-ops import vendor',
             },
             {
+                id: 'export',
                 text: this.intl.t('common.export'),
                 icon: 'long-arrow-up',
                 iconClass: 'rotate-icon-45',
@@ -109,6 +116,7 @@ export default class ManagementVendorsIndexController extends Controller {
 
         return [
             {
+                id: 'bulk-delete',
                 label: this.intl.t('common.delete-selected-count', { count: selected.length }),
                 class: 'text-red-500',
                 fn: this.vendorActions.bulkDelete,
@@ -121,6 +129,7 @@ export default class ManagementVendorsIndexController extends Controller {
     get columns() {
         return [
             {
+                id: 'name',
                 sticky: true,
                 label: this.intl.t('column.name'),
                 valuePath: 'name',
@@ -134,6 +143,7 @@ export default class ManagementVendorsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'public-id',
                 label: this.intl.t('column.id'),
                 valuePath: 'public_id',
                 cellComponent: 'click-to-copy',
@@ -143,6 +153,7 @@ export default class ManagementVendorsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'internal-id',
                 label: this.intl.t('column.internal-id'),
                 valuePath: 'internal_id',
                 cellComponent: 'click-to-copy',
@@ -152,6 +163,7 @@ export default class ManagementVendorsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'email',
                 label: this.intl.t('column.email'),
                 valuePath: 'email',
                 cellComponent: 'click-to-copy',
@@ -162,6 +174,7 @@ export default class ManagementVendorsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'website-url',
                 label: this.intl.t('column.website-url'),
                 valuePath: 'website_url',
                 cellComponent: 'click-to-copy',
@@ -172,6 +185,7 @@ export default class ManagementVendorsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'phone',
                 label: this.intl.t('column.phone'),
                 valuePath: 'phone',
                 cellComponent: 'click-to-copy',
@@ -182,6 +196,7 @@ export default class ManagementVendorsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'address',
                 label: this.intl.t('column.address'),
                 valuePath: 'address',
                 cellComponent: 'cell/place-identity',
@@ -194,6 +209,7 @@ export default class ManagementVendorsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'pretty-type',
                 label: this.intl.t('column.type'),
                 valuePath: 'prettyType',
                 humanize: true,
@@ -204,6 +220,7 @@ export default class ManagementVendorsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'country',
                 label: this.intl.t('column.country'),
                 valuePath: 'country',
                 cellComponent: 'table/cell/base',
@@ -216,6 +233,7 @@ export default class ManagementVendorsIndexController extends Controller {
                 filterParam: 'country',
             },
             {
+                id: 'created-at',
                 label: this.intl.t('column.created-at'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
@@ -225,6 +243,7 @@ export default class ManagementVendorsIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'updated-at',
                 label: this.intl.t('column.updated-at'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
@@ -235,6 +254,7 @@ export default class ManagementVendorsIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'status',
                 label: this.intl.t('column.status'),
                 valuePath: 'status',
                 cellComponent: 'table/cell/status',
@@ -247,6 +267,7 @@ export default class ManagementVendorsIndexController extends Controller {
                 filterOptions: fleetOpsOptions('vendorStatuses'),
             },
             {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -259,11 +280,13 @@ export default class ManagementVendorsIndexController extends Controller {
                 width: 60,
                 actions: [
                     {
+                        id: 'view',
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.vendor') }),
                         fn: this.vendorActions.transition.view,
                         permission: 'fleet-ops view vendor',
                     },
                     {
+                        id: 'edit',
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.vendor') }),
                         fn: this.vendorActions.transition.edit,
                         permission: 'fleet-ops update vendor',
@@ -272,6 +295,7 @@ export default class ManagementVendorsIndexController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'delete',
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.vendor') }),
                         fn: this.vendorActions.delete,
                         permission: 'fleet-ops delete vendor',

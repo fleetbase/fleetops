@@ -9,7 +9,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
     @service intl;
 
     /** query params */
-    @tracked queryParams = ['type', 'status', 'priority', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
+    @tracked queryParams = this.maintenanceActions.queryParamsFor(['type', 'status', 'priority', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at']);
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -22,11 +22,13 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
     get actionButtons() {
         return [
             {
+                id: 'refresh',
                 icon: 'refresh',
                 onClick: this.maintenanceActions.refresh,
                 helpText: this.intl.t('common.refresh'),
             },
             {
+                id: 'create',
                 text: this.intl.t('common.new'),
                 type: 'primary',
                 icon: 'plus',
@@ -34,6 +36,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 permission: 'fleet-ops create maintenance',
             },
             {
+                id: 'import',
                 text: this.intl.t('common.import'),
                 type: 'magic',
                 icon: 'upload',
@@ -41,6 +44,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 permission: 'fleet-ops import maintenance',
             },
             {
+                id: 'export',
                 text: this.intl.t('common.export'),
                 icon: 'long-arrow-up',
                 iconClass: 'rotate-icon-45',
@@ -55,6 +59,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
     get bulkActions() {
         return [
             {
+                id: 'bulk-delete',
                 label: 'Delete selected...',
                 class: 'text-red-500',
                 fn: this.maintenanceActions.bulkDelete,
@@ -67,6 +72,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
     get columns() {
         return [
             {
+                id: 'summary',
                 label: this.intl.t('column.summary'),
                 valuePath: 'summary',
                 cellComponent: 'table/cell/anchor',
@@ -80,6 +86,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'maintainable-name',
                 label: this.intl.t('column.asset'),
                 valuePath: 'maintainable.name',
                 cellComponent: 'cell/maintenance-subject-identity',
@@ -88,6 +95,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 sortable: true,
             },
             {
+                id: 'performed-by-name',
                 label: this.intl.t('column.performed-by'),
                 valuePath: 'performed_by.name',
                 cellComponent: 'cell/facilitator-identity',
@@ -96,6 +104,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 sortable: true,
             },
             {
+                id: 'type',
                 label: this.intl.t('column.type'),
                 valuePath: 'type',
                 cellComponent: 'table/cell/base',
@@ -107,6 +116,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'status',
                 label: this.intl.t('column.status'),
                 valuePath: 'status',
                 cellComponent: 'table/cell/status',
@@ -117,6 +127,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'priority',
                 label: this.intl.t('column.priority'),
                 valuePath: 'priority',
                 cellComponent: 'table/cell/base',
@@ -128,6 +139,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'scheduled-at',
                 label: this.intl.t('column.scheduled-at'),
                 valuePath: 'scheduledAt',
                 sortParam: 'scheduled_at',
@@ -137,6 +149,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'total-cost',
                 label: this.intl.t('column.total-cost'),
                 valuePath: 'total_cost',
                 cellComponent: 'table/cell/currency',
@@ -144,6 +157,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 sortable: true,
             },
             {
+                id: 'created-at',
                 label: this.intl.t('column.created-at'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
@@ -153,6 +167,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'updated-at',
                 label: this.intl.t('column.updated-at'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
@@ -163,6 +178,7 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -173,17 +189,20 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
                 wrapperClass: 'flex items-center justify-end mx-2',
                 actions: [
                     {
+                        id: 'view',
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.maintenance') }),
                         fn: this.maintenanceActions.transition.view,
                         permission: 'fleet-ops view maintenance',
                     },
                     {
+                        id: 'edit',
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.maintenance') }),
                         fn: this.maintenanceActions.transition.edit,
                         permission: 'fleet-ops update maintenance',
                     },
                     { separator: true },
                     {
+                        id: 'delete',
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.maintenance') }),
                         fn: this.maintenanceActions.delete,
                         permission: 'fleet-ops delete maintenance',

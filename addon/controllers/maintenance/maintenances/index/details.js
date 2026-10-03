@@ -27,11 +27,13 @@ export default class MaintenanceMaintenancesIndexDetailsController extends Contr
     get actionButtons() {
         return [
             {
+                id: 'edit',
                 icon: 'edit',
                 fn: this.edit,
                 permission: 'fleet-ops update maintenance',
             },
             {
+                id: 'delete',
                 icon: 'trash',
                 fn: this.delete,
                 type: 'danger',

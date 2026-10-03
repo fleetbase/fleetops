@@ -59,6 +59,7 @@ export default class InspectionFormActionsService extends ResourceActionService 
             const service = this;
 
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 form,
                 title: form?.name,
                 get actionButtons() {

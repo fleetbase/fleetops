@@ -9,7 +9,20 @@ export default class MaintenanceInspectionSubmissionsIndexController extends Con
     @service inspectionSubmissionActions;
     @service intl;
 
-    @tracked queryParams = ['status', 'result', 'type', 'page', 'limit', 'sort', 'query', 'public_id', 'vehicle', 'driver', 'created_at', 'updated_at'];
+    @tracked queryParams = this.inspectionSubmissionActions.queryParamsFor([
+        'status',
+        'result',
+        'type',
+        'page',
+        'limit',
+        'sort',
+        'query',
+        'public_id',
+        'vehicle',
+        'driver',
+        'created_at',
+        'updated_at',
+    ]);
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -22,8 +35,9 @@ export default class MaintenanceInspectionSubmissionsIndexController extends Con
 
     get actionButtons() {
         return [
-            { icon: 'refresh', onClick: this.inspectionSubmissionActions.refresh, helpText: this.intl.t('common.refresh') },
+            { id: 'refresh', icon: 'refresh', onClick: this.inspectionSubmissionActions.refresh, helpText: this.intl.t('common.refresh') },
             {
+                id: 'create',
                 text: this.intl.t('common.new'),
                 type: 'primary',
                 icon: 'plus',
@@ -34,12 +48,15 @@ export default class MaintenanceInspectionSubmissionsIndexController extends Con
     }
 
     get bulkActions() {
-        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.inspectionSubmissionActions.bulkDelete, permission: 'fleet-ops delete inspection-submission' }];
+        return [
+            { id: 'bulk-delete', label: 'Delete selected...', class: 'text-red-500', fn: this.inspectionSubmissionActions.bulkDelete, permission: 'fleet-ops delete inspection-submission' },
+        ];
     }
 
     get columns() {
         return [
             {
+                id: 'public-id',
                 label: 'Inspection',
                 valuePath: 'public_id',
                 cellComponent: 'table/cell/anchor',
@@ -52,6 +69,7 @@ export default class MaintenanceInspectionSubmissionsIndexController extends Con
                 filterComponent: 'filter/string',
             },
             {
+                id: 'form-name',
                 label: 'Form',
                 valuePath: 'form_name',
                 cellComponent: 'cell/inspection-form-identity',
@@ -61,6 +79,7 @@ export default class MaintenanceInspectionSubmissionsIndexController extends Con
                 sortable: false,
             },
             {
+                id: 'vehicle-name',
                 label: 'Vehicle',
                 valuePath: 'vehicle_name',
                 cellComponent: 'cell/vehicle-identity',
@@ -72,6 +91,7 @@ export default class MaintenanceInspectionSubmissionsIndexController extends Con
                 sortable: false,
             },
             {
+                id: 'driver-name',
                 label: 'Driver',
                 valuePath: 'driver_name',
                 cellComponent: 'cell/driver-identity',
@@ -83,6 +103,7 @@ export default class MaintenanceInspectionSubmissionsIndexController extends Con
                 sortable: false,
             },
             {
+                id: 'result',
                 label: 'Result',
                 valuePath: 'result',
                 cellComponent: 'table/cell/status',
@@ -92,9 +113,19 @@ export default class MaintenanceInspectionSubmissionsIndexController extends Con
                 filterParam: 'result',
                 filterComponent: 'filter/string',
             },
-            { label: 'Failed', valuePath: 'failed_items', resizable: true, sortable: true },
-            { label: 'Submitted', valuePath: 'submittedAt', sortParam: 'submitted_at', resizable: true, sortable: true, filterable: true, filterComponent: 'filter/date' },
+            { id: 'failed-items', label: 'Failed', valuePath: 'failed_items', resizable: true, sortable: true },
             {
+                id: 'submitted-at',
+                label: 'Submitted',
+                valuePath: 'submittedAt',
+                sortParam: 'submitted_at',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/date',
+            },
+            {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -103,8 +134,8 @@ export default class MaintenanceInspectionSubmissionsIndexController extends Con
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
                 actions: [
-                    { label: 'View inspection', fn: this.inspectionSubmissionActions.transition.view, permission: 'fleet-ops view inspection-submission' },
-                    { label: 'Edit inspection', fn: this.inspectionSubmissionActions.transition.edit, permission: 'fleet-ops update inspection-submission' },
+                    { id: 'view', label: 'View inspection', fn: this.inspectionSubmissionActions.transition.view, permission: 'fleet-ops view inspection-submission' },
+                    { id: 'edit', label: 'Edit inspection', fn: this.inspectionSubmissionActions.transition.edit, permission: 'fleet-ops update inspection-submission' },
                     {
                         separator: true,
                         // Everything below this rule is conditional. On a row
@@ -114,6 +145,7 @@ export default class MaintenanceInspectionSubmissionsIndexController extends Con
                         isVisible: (row) => row?.status === 'draft' || row?.status !== 'resolved' || Boolean(row?.has_failures && (!row?.issue_uuid || !row?.work_order_uuid)),
                     },
                     {
+                        id: 'submit',
                         label: 'Submit',
                         fn: this.inspectionSubmissionActions.submit,
                         permission: 'fleet-ops submit inspection-submission',
@@ -123,20 +155,28 @@ export default class MaintenanceInspectionSubmissionsIndexController extends Con
                         isVisible: (row) => row?.status === 'draft',
                     },
                     {
+                        id: 'create-issue',
                         label: 'Create issue',
                         fn: this.inspectionSubmissionActions.createIssue,
                         permission: 'fleet-ops create-issue inspection-submission',
                         isVisible: (row) => row?.has_failures && !row?.issue_uuid,
                     },
                     {
+                        id: 'create-work-order',
                         label: 'Create work order',
                         fn: this.inspectionSubmissionActions.createWorkOrder,
                         permission: 'fleet-ops create-work-order inspection-submission',
                         isVisible: (row) => row?.has_failures && !row?.work_order_uuid,
                     },
-                    { label: 'Resolve', fn: this.inspectionSubmissionActions.resolve, permission: 'fleet-ops resolve inspection-submission', isVisible: (row) => row?.status !== 'resolved' },
+                    {
+                        id: 'resolve',
+                        label: 'Resolve',
+                        fn: this.inspectionSubmissionActions.resolve,
+                        permission: 'fleet-ops resolve inspection-submission',
+                        isVisible: (row) => row?.status !== 'resolved',
+                    },
                     { separator: true },
-                    { label: 'Delete inspection', fn: this.inspectionSubmissionActions.delete, class: 'text-red-500', permission: 'fleet-ops delete inspection-submission' },
+                    { id: 'delete', label: 'Delete inspection', fn: this.inspectionSubmissionActions.delete, class: 'text-red-500', permission: 'fleet-ops delete inspection-submission' },
                 ],
                 sortable: false,
                 filterable: false,

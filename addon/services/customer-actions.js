@@ -4,7 +4,7 @@ import { PANEL_DEFAULTS, registeredPanelTabs } from '../utils/context-panel';
 export default class CustomerActionsService extends ContactActionsService {
     constructor() {
         super(...arguments);
-        this.initialize('contact', { defaultAttributes: { type: 'customer', status: 'active' } });
+        this.initialize('contact', { defaultAttributes: { type: 'customer', status: 'active' }, registryResource: 'customer' });
     }
 
     transition = {
@@ -38,6 +38,7 @@ export default class CustomerActionsService extends ContactActionsService {
         },
         view: (customer, options = {}) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 customer,
                 title: customer?.name,
                 header: 'contact/panel-header',
