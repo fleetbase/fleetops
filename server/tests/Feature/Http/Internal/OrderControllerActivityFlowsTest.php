@@ -664,7 +664,7 @@ test('set destination and next activity guard missing orders and configs', funct
 
 function fleetopsInternalActivityUseLifecycle(SQLiteConnection $connection, array $lifecycle = []): void
 {
-    $activity = fn (string $code, array $children = []) => ['key' => $code, 'code' => $code, 'status' => ucfirst($code), 'details' => ucfirst($code) . ' loan', 'activities' => $children];
+    $activity = fn (string $code, array $children = []) => ['key' => $code, 'code' => $code, 'status' => ucfirst($code), 'details' => ucfirst($code) . ' loan', 'activities' => $children, 'logic' => [], 'events' => [], 'complete' => $code === 'completed'];
 
     $connection->table('order_configs')->where('uuid', 'config-1')->update([
         'flow' => json_encode([
@@ -701,7 +701,7 @@ test('strict transitions reject activities outside the configured flow and use t
 
     // A configured child is accepted, with the server-side definition replacing the client's
     $assigned = $controller->updateActivity('order_internal', Request::create('/x', 'POST', ['activity' => ['key' => 'assigned', 'code' => 'assigned', 'status' => 'Tampered'], 'bypass_proof' => 1]));
-    expect($assigned->getStatusCode())->not->toBe(422)
+    expect($assigned)->toBeInstanceOf(Fleetbase\FleetOps\Http\Resources\v1\Order::class)
         ->and($connection->table('tracking_statuses')->where('code', 'ASSIGNED')->value('status'))->toBe('Assigned');
 });
 
