@@ -11,11 +11,25 @@ export default class OrderFormComponent extends Component {
     @service customFieldsRegistry;
     @service mapManager;
     @service currentUser;
+    @service orderPresentation;
     @tracked customFields;
 
     constructor() {
         super(...arguments);
         this.orderConfigActions.loadAll.perform();
+    }
+
+    /** The extension presentation profile applying to this order's config, if any. */
+    get profile() {
+        return this.orderPresentation.profileFor(this.args.resource);
+    }
+
+    get profileSections() {
+        return this.orderPresentation.renderableSectionsFor(this.profile, 'form');
+    }
+
+    get hiddenFields() {
+        return this.orderPresentation.hiddenFieldsFor(this.args.resource);
     }
 
     @action selectFacilitator(model) {

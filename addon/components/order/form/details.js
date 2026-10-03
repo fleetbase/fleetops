@@ -13,11 +13,46 @@ export default class OrderFormDetailsComponent extends Component {
     @service leafletMapManager;
     @service leafletLayerVisibilityManager;
     @service currentUser;
+    @service orderPresentation;
     @tracked customFields;
 
     constructor() {
         super(...arguments);
         this.orderConfigActions.loadAll.perform();
+    }
+
+    /** The presentation profile applying to the order's current config, if any. */
+    get profile() {
+        return this.orderPresentation.profileFor(this.args.resource);
+    }
+
+    /** Extension fields rendered inside the details grid when a profile applies. */
+    get profileDetailFields() {
+        return this.profile?.form?.detailFields ?? null;
+    }
+
+    /** A persisted order keeps its profiled order type; reclassification is not supported. */
+    get orderTypeLocked() {
+        return Boolean(this.profile) && this.args.resource?.isNew === false;
+    }
+
+    /** Field visibility; everything is visible unless a presentation profile hides it. */
+    get show() {
+        const hidden = this.args.hiddenFields ?? this.orderPresentation.hiddenFieldsFor(this.args.resource);
+        const visible = (key) => !hidden.includes(key);
+
+        return {
+            internalId: visible('internal-id'),
+            schedule: visible('schedule'),
+            customer: visible('customer'),
+            facilitator: visible('facilitator'),
+            serviceType: visible('service-type'),
+            driver: visible('driver'),
+            vehicle: visible('vehicle'),
+            pod: visible('pod'),
+            adhoc: visible('adhoc'),
+            dispatch: visible('dispatch'),
+        };
     }
 
     get integratedVendorServiceType() {
@@ -38,12 +73,23 @@ export default class OrderFormDetailsComponent extends Component {
 
     @task *selectOrderConfig(orderConfig) {
         if (!orderConfig) return;
+        const previousProfile = this.orderPresentation.profileFor(this.args.resource);
         this.args.resource.setProperties({
             order_config_uuid: orderConfig.id,
             order_config: orderConfig,
             type: orderConfig.key,
         });
         this.args.resource.payload.set('type', orderConfig.key);
+
+        // Let presentation profiles clean up or prepare the draft when the order type changes.
+        const nextProfile = this.orderPresentation.profileFor(this.args.resource);
+        if (previousProfile && previousProfile !== nextProfile && typeof previousProfile.release === 'function') {
+            previousProfile.release(this.args.resource);
+        }
+        if (nextProfile && nextProfile !== previousProfile) {
+            this.orderPresentation.prepare(this.args.resource);
+        }
+
         this.requestServiceQuoteRefresh('details.order_config.changed');
 
         try {

@@ -1346,10 +1346,11 @@ class Order extends Model
      */
     public function cancel()
     {
-        $this->status = 'canceled';
-
+        // The canceled activity comes from the order config, which may define its own code.
         $this->loadMissing('orderConfig');
-        $canceledActivity = $this->orderConfig->getCanceledActivity();
+        $orderConfig      = $this->orderConfig ?? $this->config();
+        $canceledActivity = $orderConfig->getCanceledActivity();
+        $this->status     = $canceledActivity->code ?? 'canceled';
         $this->updateActivity($canceledActivity);
 
         if ($this->isIntegratedVendorOrder()) {
@@ -1781,6 +1782,37 @@ class Order extends Model
     public function getAdhocPingDistance(): int
     {
         return (int) Utils::get($this, 'adhoc_distance', Utils::get($this, 'company.options.fleetops.adhoc_distance', 6000));
+    }
+
+    /**
+     * Returns the initial tracking status for a newly created order.
+     *
+     * Used by the tracking number on creation. Orders whose config defines its own
+     * lifecycle start at the configured initial activity instead of `created`.
+     *
+     * @return array|null ['code', 'status', 'details'] or null to use the default created status
+     */
+    public function getInitialTrackingStatus(): ?array
+    {
+        if (!$this->order_config_uuid) {
+            return null;
+        }
+
+        $orderConfig = OrderConfig::where('uuid', $this->order_config_uuid)->first();
+        if (!$orderConfig || !$orderConfig->hasConfiguredLifecycle()) {
+            return null;
+        }
+
+        $activity = $orderConfig->getInitialActivity();
+        if (!$activity) {
+            return null;
+        }
+
+        return [
+            'code'    => $activity->code,
+            'status'  => $this->resolveActivityTemplateString((string) $activity->get('status', '')),
+            'details' => $this->resolveActivityTemplateString((string) $activity->get('details', '')),
+        ];
     }
 
     /**

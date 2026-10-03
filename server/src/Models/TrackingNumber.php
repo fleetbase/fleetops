@@ -291,13 +291,17 @@ class TrackingNumber extends Model
 
         $ownerTypeName = class_basename($values['owner_type']);
 
+        // owners may define their own initial status (e.g. orders with a configured lifecycle)
+        $initialStatus = $owner && method_exists($owner, 'getInitialTrackingStatus') ? $owner->getInitialTrackingStatus() : null;
+        $initialCode   = is_array($initialStatus) && !empty($initialStatus['code']) ? $initialStatus['code'] : null;
+
         // create initial status
         $trackingStatusId = static::createInitialTrackingStatus([
             'tracking_number_uuid' => $uuid,
-            'status'               => Str::title($ownerTypeName . ' created'),
-            'details'              => 'New ' . Str::lower($ownerTypeName) . ' created.',
+            'status'               => $initialCode ? $initialStatus['status'] : Str::title($ownerTypeName . ' created'),
+            'details'              => $initialCode ? $initialStatus['details'] : 'New ' . Str::lower($ownerTypeName) . ' created.',
             'location'             => $values['location'] ?? Utils::parsePointToWkt(new Point(0, 0)),
-            'code'                 => 'CREATED',
+            'code'                 => $initialCode ? TrackingStatus::prepareCode($initialCode) : 'CREATED',
         ]);
 
         // update status of tracking number
@@ -309,7 +313,7 @@ class TrackingNumber extends Model
             // $model->update([ 'status' => 'created' ]);
 
             // silent update
-            static::updateOwnerStatusColumn($owner, 'created');
+            static::updateOwnerStatusColumn($owner, $initialCode ?? 'created');
         }
 
         return $uuid;

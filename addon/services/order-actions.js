@@ -6,6 +6,7 @@ import { task } from 'ember-concurrency';
 
 export default class OrderActionsService extends ResourceActionService {
     @service store;
+    @service orderPresentation;
     modelNamePath = 'tracking';
 
     constructor() {
@@ -313,6 +314,11 @@ export default class OrderActionsService extends ResourceActionService {
 
     @action editOrderDetails(order, options = {}) {
         options = options === null ? {} : options;
+
+        // Orders with a presentation profile are edited in the profiled order form, not the fixed modal.
+        if (this.orderPresentation.profileFor(order)) {
+            return this.panel.edit(order, options);
+        }
 
         this.modalsManager.show('modals/order-form', {
             title: this.intl.t('order.actions.edit-order-details'),
