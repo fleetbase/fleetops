@@ -496,7 +496,7 @@ class OrderController extends FleetOpsController
         $successful = [];
 
         foreach ($orders as $order) {
-            if ($order->status !== 'created' || !$order->config()->allowsDispatch()) {
+            if ($order->status !== 'created' || $order->config()?->allowsDispatch() === false) {
                 $failed[] = $order->uuid;
                 continue;
             }

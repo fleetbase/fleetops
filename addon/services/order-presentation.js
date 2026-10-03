@@ -16,7 +16,7 @@ import { isArray } from '@ember/array';
  *       isEnabled() { return true; },
  *       form: { sections: ['details', 'route', new ExtensionComponent('@org/engine', 'my-section'), 'notes'] },
  *       details: { sections: [...] },
- *       hidden: { fields: ['driver', 'dispatch'], actions: ['dispatch', 'assign_driver'] },
+ *       hidden: { fields: ['driver', 'dispatch'], actions: ['dispatch', 'assign-driver'] },
  *       prepare(order) {},
  *   });
  *
@@ -24,6 +24,10 @@ import { isArray } from '@ember/array';
  * orchestrator-constraints, metadata, custom-fields. Details: activity, detail, custom-fields,
  * purchase-rate, tracking, proof, notes, integrated-vendor-details, route, payload,
  * documents, comments, metadata.
+ *
+ * `hidden.actions` takes built-in action ids, the same ids the order table and details use in
+ * the resource view registries: dispatch, assign-driver, unassign-driver, edit-order-details,
+ * update-activity, view-label, listen-to-socket-channel, view-metadata, cancel, delete.
  */
 export const ORDER_PRESENTATION_REGISTRY = 'fleet-ops:order-presentation';
 
@@ -86,7 +90,7 @@ export default class OrderPresentationService extends Service {
      *
      * @param {Object} orderOrConfig
      * @param {String} group "fields" or "actions"
-     * @param {String} key
+     * @param {String} key a field key, or a built-in action id
      */
     isHidden(orderOrConfig, group, key) {
         const profile = this.profileFor(orderOrConfig);

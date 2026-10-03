@@ -1785,20 +1785,6 @@ class Order extends Model
     }
 
     /**
-     * Retrieves the OrderConfig associated with this order.
-     *
-     * This function first attempts to load the 'orderConfig' relationship.
-     * If 'orderConfig' is already loaded and is an instance of OrderConfig,
-     * it returns this instance. If not, and if the 'order_config_uuid' is
-     * The orderConfig relation already includes trashed instances, so a
-     * soft-deleted config still resolves. Otherwise the company's default
-     * transport config is used, and null is returned when none can be made.
-     *
-     * @return OrderConfig|null the OrderConfig associated with this order, or null if not found
-     *
-     * @throws \Exception type of exceptions this function might throw, if any
-     */
-    /**
      * Returns the initial tracking status for a newly created order.
      *
      * Used by the tracking number on creation. Orders whose config defines its own
@@ -1829,6 +1815,20 @@ class Order extends Model
         ];
     }
 
+    /**
+     * Retrieves the OrderConfig associated with this order.
+     *
+     * This function first attempts to load the 'orderConfig' relationship.
+     * If 'orderConfig' is already loaded and is an instance of OrderConfig,
+     * it returns this instance. If not, and if the 'order_config_uuid' is
+     * The orderConfig relation already includes trashed instances, so a
+     * soft-deleted config still resolves. Otherwise the company's default
+     * transport config is used, and null is returned when none can be made.
+     *
+     * @return OrderConfig|null the OrderConfig associated with this order, or null if not found
+     *
+     * @throws \Exception type of exceptions this function might throw, if any
+     */
     public function config(): ?OrderConfig
     {
         $this->load(['orderConfig']);

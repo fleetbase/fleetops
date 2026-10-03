@@ -437,7 +437,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 wrapperClass: 'flex items-center justify-end mx-2',
                 sticky: 'right',
                 width: 60,
-                actions: [
+                actions: this.withPresentationProfile([
                     {
                         id: 'view',
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.order') }),
@@ -451,7 +451,7 @@ export default class OperationsOrdersIndexController extends Controller {
                         icon: 'paper-plane',
                         fn: this.orderActions.dispatch,
                         permission: 'fleet-ops dispatch order',
-                        isVisible: (order) => order.canBeDispatched && !this.orderPresentation.isHidden(order, 'actions', 'dispatch'),
+                        isVisible: (order) => order.canBeDispatched,
                     },
                     {
                         id: 'assign-driver',
@@ -459,7 +459,7 @@ export default class OperationsOrdersIndexController extends Controller {
                         icon: 'edit',
                         fn: this.orderActions.assignDriver,
                         permission: 'fleet-ops update order',
-                        isVisible: (order) => !order.has_driver_assigned && !this.orderPresentation.isHidden(order, 'actions', 'assign_driver'),
+                        isVisible: (order) => !order.has_driver_assigned,
                     },
                     {
                         id: 'unassign-driver',
@@ -467,7 +467,7 @@ export default class OperationsOrdersIndexController extends Controller {
                         icon: 'edit',
                         fn: this.orderActions.unassignDriver,
                         permission: 'fleet-ops update order',
-                        isVisible: (order) => order.has_driver_assigned && !this.orderPresentation.isHidden(order, 'actions', 'assign_driver'),
+                        isVisible: (order) => order.has_driver_assigned,
                     },
                     {
                         id: 'cancel',
@@ -486,13 +486,32 @@ export default class OperationsOrdersIndexController extends Controller {
                         fn: this.orderActions.delete,
                         permission: 'fleet-ops delete order',
                     },
-                ],
+                ]),
                 sortable: false,
                 filterable: false,
                 resizable: false,
                 searchable: false,
             },
         ];
+    }
+
+    /**
+     * Hides the row actions an order's presentation profile lists in `hidden.actions`, by id,
+     * the same way the details panel does.
+     */
+    withPresentationProfile(actions) {
+        return actions.map((item) => {
+            if (!item.id) {
+                return item;
+            }
+
+            const isVisible = item.isVisible;
+            const builtInVisible = (order, ...rest) => (typeof isVisible === 'function' ? isVisible(order, ...rest) : isVisible !== false);
+            return {
+                ...item,
+                isVisible: (order, ...rest) => !this.orderPresentation.isHidden(order, 'actions', item.id) && builtInVisible(order, ...rest),
+            };
+        });
     }
 
     constructor() {
