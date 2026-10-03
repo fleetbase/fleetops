@@ -4,6 +4,7 @@
     {{! FullCalendar v6 calls it automatically on render and navigation. }}
     <Layout::Section::Header @title={{t "resource.maintenance-schedules"}} @actionsWrapperClass="space-x-1">
         <Layout::Resource::TabularActions
+            @registry="fleet-ops:schedule:table"
             @searchQuery={{this.query}}
             @onSearch={{perform this.scheduleActions.controllerSearchTask this}}
             @columns={{this.columns}}
@@ -24,6 +25,7 @@
 {{else}}
     {{! ===== LIST VIEW (default) ===== }}
     <Layout::Resource::Tabular
+        @registry="fleet-ops:schedule:table"
         @resource="maintenance-schedule"
         @title={{t "resource.maintenance-schedules"}}
         @searchQuery={{this.query}}

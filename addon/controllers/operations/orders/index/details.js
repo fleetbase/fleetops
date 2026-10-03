@@ -88,8 +88,14 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
     /** True when the order reached a terminal activity (default or configured lifecycle). */
     get isClosed() {
         const status = this.model.status;
-        const terminal = this.model.order_config?.meta?.lifecycle?.terminal;
-        return status === 'canceled' || (Array.isArray(terminal) && terminal.includes(status));
+        const lifecycle = this.model.order_config?.meta?.lifecycle;
+        if (!lifecycle) {
+            return status === 'canceled';
+        }
+
+        // Matches OrderConfig::getTerminalActivityCodes(): `terminal` plus the configured completed and canceled codes.
+        const terminal = [...(Array.isArray(lifecycle.terminal) ? lifecycle.terminal : []), lifecycle.completed, lifecycle.canceled].filter(Boolean);
+        return status === 'canceled' || terminal.includes(status);
     }
 
     get actionButtons() {
@@ -99,7 +105,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
             {
                 items: [
                     {
-                        id: 'edit',
+                        id: 'edit-order-details',
                         text: 'Edit details',
                         icon: 'pencil',
                         disabled: this.isClosed,
@@ -107,7 +113,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         fn: () => this.orderActions.editOrderDetails(this.model),
                     },
                     {
-                        id: 'update_activity',
+                        id: 'update-activity',
                         text: 'Update activity',
                         icon: 'signal',
                         disabled: this.isClosed,
@@ -118,7 +124,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                             }),
                     },
                     {
-                        id: 'assign_driver',
+                        id: this.model.has_driver_assigned ? 'unassign-driver' : 'assign-driver',
                         text: this.model.has_driver_assigned ? 'Unassign driver' : 'Assign driver',
                         icon: this.model.has_driver_assigned ? 'user-xmark' : 'edit',
                         permission: 'fleet-ops assign-driver-for order',
@@ -126,7 +132,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         fn: () => (this.model.has_driver_assigned ? this.orderActions.unassignDriver(this.model) : this.orderActions.assignDriver(this.model)),
                     },
                     {
-                        id: 'view_label',
+                        id: 'view-label',
                         text: 'View order label',
                         icon: 'file-invoice',
                         permission: 'fleet-ops view order',
@@ -136,13 +142,13 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         separator: true,
                     },
                     {
-                        id: 'socket_channel',
+                        id: 'listen-to-socket-channel',
                         text: 'Listen to socket channel',
                         icon: 'headphones',
                         fn: () => this.hostRouter.transitionTo('console.developers.sockets.view', `order.${this.model.public_id}`),
                     },
                     {
-                        id: 'metadata',
+                        id: 'view-metadata',
                         text: 'View metadata',
                         icon: 'table',
                         fn: () => this.orderActions.viewMetadata(this.model),

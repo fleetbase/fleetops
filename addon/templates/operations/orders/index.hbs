@@ -29,6 +29,7 @@
 
 {{#if (eq this.layout "table")}}
     <Layout::Resource::Tabular
+        @registry="fleet-ops:order:table"
         @resource="order"
         @title={{t "resource.orders"}}
         @searchQuery={{this.query}}

@@ -69,6 +69,28 @@ module('Unit | Service | trailer-actions', function (hooks) {
         assert.strictEqual(service.panelTabs.find((tab) => tab.key === 'devices').component, 'device/manager');
     });
 
+    test('registered tabs that render a component join the context panel without losing their route', function (assert) {
+        const componentTab = { id: 'safety', label: 'Safety', route: 'management.trailers.index.details.virtual', component: 'acme/safety' };
+        const routeOnlyTab = { id: 'history', label: 'History', route: 'management.trailers.index.details.virtual' };
+        this.owner.register(
+            'service:universe/menu-service',
+            class extends Service {
+                getMenuItems(registry) {
+                    return registry === 'fleet-ops:component:trailer:details' ? [componentTab, routeOnlyTab] : [];
+                }
+            }
+        );
+        const service = this.owner.lookup('service:trailer-actions');
+
+        const safety = service.panelTabs.find((tab) => tab.key === 'safety');
+        assert.ok(safety, 'a tab with a component renders in the panel');
+        assert.notOk(
+            service.panelTabs.find((tab) => tab.key === 'history'),
+            'a route-only tab has nothing to render there'
+        );
+        assert.strictEqual(componentTab.route, 'management.trailers.index.details.virtual', 'the registered item keeps its route for the routed details view');
+    });
+
     test('attaching to a vehicle posts the trailer endpoint with the vehicle and towing position', async function (assert) {
         const service = this.owner.lookup('service:trailer-actions');
         const fetch = this.owner.lookup('service:fetch');

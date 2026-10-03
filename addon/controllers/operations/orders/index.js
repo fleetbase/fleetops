@@ -19,7 +19,7 @@ export default class OperationsOrdersIndexController extends Controller {
     @service intl;
 
     /** query params */
-    @tracked queryParams = [
+    @tracked queryParams = this.orderActions.queryParamsFor([
         'page',
         'limit',
         'sort',
@@ -47,7 +47,7 @@ export default class OperationsOrdersIndexController extends Controller {
         'drawerOpen',
         'drawerTab',
         'orderPanelOpen',
-    ];
+    ]);
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -78,11 +78,13 @@ export default class OperationsOrdersIndexController extends Controller {
     get actionButtons() {
         return [
             {
+                id: 'refresh',
                 icon: 'refresh',
                 onClick: this.orderActions.refresh,
                 helpText: this.intl.t('common.refresh'),
             },
             {
+                id: 'create',
                 text: this.intl.t('common.new'),
                 type: 'primary',
                 icon: 'plus',
@@ -90,6 +92,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 permission: 'fleet-ops create order',
             },
             {
+                id: 'export',
                 text: this.intl.t('common.export'),
                 icon: 'long-arrow-up',
                 iconClass: 'rotate-icon-45',
@@ -98,6 +101,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 permission: 'fleet-ops export order',
             },
             {
+                id: 'import-orders',
                 text: this.intl.t('common.import'),
                 icon: 'file-import',
                 wrapperClass: 'hidden md:flex',
@@ -111,12 +115,14 @@ export default class OperationsOrdersIndexController extends Controller {
     get bulkActions() {
         return [
             {
+                id: 'bulk-cancel',
                 label: this.intl.t('common.cancel-resource', { resource: this.intl.t('resource.orders') }),
                 icon: 'ban',
                 fn: this.orderActions.bulkCancel,
                 permission: 'fleet-ops cancel order',
             },
             {
+                id: 'bulk-delete',
                 label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.orders') }),
                 icon: 'trash',
                 class: 'text-red-500',
@@ -125,12 +131,14 @@ export default class OperationsOrdersIndexController extends Controller {
             },
             { separator: true },
             {
+                id: 'bulk-dispatch',
                 label: this.intl.t('common.dispatch-orders'),
                 icon: 'rocket',
                 fn: this.orderActions.bulkDispatch,
                 permission: 'fleet-ops dispatch order',
             },
             {
+                id: 'bulk-assign-driver',
                 label: this.intl.t('common.assign-drivers'),
                 icon: 'user-plus',
                 fn: this.orderActions.bulkAssignDriver,
@@ -143,6 +151,7 @@ export default class OperationsOrdersIndexController extends Controller {
     get columns() {
         return [
             {
+                id: 'public-id',
                 sticky: true,
                 label: this.intl.t('column.id'),
                 valuePath: 'public_id',
@@ -156,6 +165,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'payload-waypoints-length',
                 label: this.intl.t('column.route-type'),
                 valuePath: 'payload.waypoints.length',
                 cellComponent: 'cell/order-route-type',
@@ -163,6 +173,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 resizable: true,
             },
             {
+                id: 'internal-id',
                 label: this.intl.t('column.internal-id'),
                 valuePath: 'internal_id',
                 cellComponent: 'click-to-copy',
@@ -175,6 +186,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 filterComponentPlaceholder: this.intl.t('order.placeholders.filter-internal-id'),
             },
             {
+                id: 'payload-public-id',
                 label: this.intl.t('column.payload'),
                 valuePath: 'payload.public_id',
                 cellComponent: 'cell/payload-identity',
@@ -187,6 +199,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'driver-assigned',
                 label: this.intl.t('column.driver-assigned'),
                 cellComponent: 'cell/driver-identity',
                 valuePath: 'driver_assigned',
@@ -204,6 +217,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 model: 'driver',
             },
             {
+                id: 'pickup-name',
                 label: this.intl.t('column.pickup'),
                 valuePath: 'pickupName',
                 cellComponent: 'cell/place-identity',
@@ -220,6 +234,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 model: 'place',
             },
             {
+                id: 'dropoff-name',
                 label: this.intl.t('column.dropoff'),
                 valuePath: 'dropoffName',
                 cellComponent: 'cell/place-identity',
@@ -235,6 +250,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 model: 'place',
             },
             {
+                id: 'customer-name',
                 label: this.intl.t('column.customer'),
                 valuePath: 'customer.name',
                 cellComponent: 'cell/customer-identity',
@@ -249,6 +265,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 model: 'customer',
             },
             {
+                id: 'vehicle-assigned-display-name',
                 label: this.intl.t('column.vehicle-assigned'),
                 cellComponent: 'cell/vehicle-identity',
                 valuePath: 'vehicle_assigned.display_name',
@@ -272,6 +289,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 model: 'vehicle',
             },
             {
+                id: 'facilitator-name',
                 label: this.intl.t('column.facilitator'),
                 valuePath: 'facilitator.name',
                 cellComponent: 'cell/facilitator-identity',
@@ -286,6 +304,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 model: 'vendor',
             },
             {
+                id: 'scheduled-at',
                 label: this.intl.t('column.scheduled-at'),
                 valuePath: 'scheduledAt',
                 sortParam: 'scheduled_at',
@@ -296,6 +315,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'item-count',
                 label: this.intl.t('column.items'),
                 cellComponent: 'table/cell/base',
                 valuePath: 'item_count',
@@ -303,6 +323,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 hidden: true,
             },
             {
+                id: 'transaction-amount',
                 label: this.intl.t('column.transaction'),
                 cellComponent: 'table/cell/currency',
                 valuePath: 'transaction_amount',
@@ -311,6 +332,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 sortable: true,
             },
             {
+                id: 'tracking-number-tracking-number',
                 label: this.intl.t('column.tracking'),
                 valuePath: 'tracking_number.tracking_number',
                 cellComponent: 'click-to-copy',
@@ -320,6 +342,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'type',
                 label: this.intl.t('column.type'),
                 valuePath: 'type',
                 resizable: true,
@@ -331,6 +354,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 filterComponentPlaceholder: 'Filter by order config',
             },
             {
+                id: 'status',
                 label: this.intl.t('column.status'),
                 valuePath: 'status',
                 cellComponent: 'table/cell/status',
@@ -341,6 +365,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 fetchUri: 'orders/statuses',
             },
             {
+                id: 'created-at',
                 label: this.intl.t('column.created-at'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
@@ -351,6 +376,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'updated-at',
                 label: this.intl.t('column.updated-at'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
@@ -362,6 +388,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'created-by-name',
                 label: this.intl.t('column.created-by'),
                 valuePath: 'created_by_name',
                 cellComponent: 'table/cell/user-identity',
@@ -375,6 +402,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 model: 'user',
             },
             {
+                id: 'updated-by-name',
                 label: this.intl.t('column.updated-by'),
                 valuePath: 'updated_by_name',
                 cellComponent: 'table/cell/user-identity',
@@ -398,6 +426,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 hidden: true,
             },
             {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -410,12 +439,14 @@ export default class OperationsOrdersIndexController extends Controller {
                 width: 60,
                 actions: [
                     {
+                        id: 'view',
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.order') }),
                         icon: 'eye',
                         fn: this.orderActions.transition.view,
                         permission: 'fleet-ops view order',
                     },
                     {
+                        id: 'dispatch',
                         label: this.intl.t('common.dispatch-order'),
                         icon: 'paper-plane',
                         fn: this.orderActions.dispatch,
@@ -423,6 +454,7 @@ export default class OperationsOrdersIndexController extends Controller {
                         isVisible: (order) => order.canBeDispatched && !this.orderPresentation.isHidden(order, 'actions', 'dispatch'),
                     },
                     {
+                        id: 'assign-driver',
                         label: this.intl.t('common.assign-driver'),
                         icon: 'edit',
                         fn: this.orderActions.assignDriver,
@@ -430,6 +462,7 @@ export default class OperationsOrdersIndexController extends Controller {
                         isVisible: (order) => !order.has_driver_assigned && !this.orderPresentation.isHidden(order, 'actions', 'assign_driver'),
                     },
                     {
+                        id: 'unassign-driver',
                         label: this.intl.t('common.unassign-driver'),
                         icon: 'edit',
                         fn: this.orderActions.unassignDriver,
@@ -437,6 +470,7 @@ export default class OperationsOrdersIndexController extends Controller {
                         isVisible: (order) => order.has_driver_assigned && !this.orderPresentation.isHidden(order, 'actions', 'assign_driver'),
                     },
                     {
+                        id: 'cancel',
                         label: this.intl.t('common.cancel-resource', { resource: this.intl.t('resource.order') }),
                         icon: 'ban',
                         fn: this.orderActions.cancel,
@@ -446,6 +480,7 @@ export default class OperationsOrdersIndexController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'delete',
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.order') }),
                         icon: 'trash',
                         fn: this.orderActions.delete,

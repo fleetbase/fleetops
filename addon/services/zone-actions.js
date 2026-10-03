@@ -36,6 +36,7 @@ export default class ZoneActionsService extends ResourceActionService {
         },
         view: (zone, options = {}) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 zone,
                 title: zone?.name,
                 actionButtons: [

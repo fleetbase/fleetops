@@ -7,7 +7,7 @@ export default class ConnectivitySensorsIndexDetailsController extends Controlle
     @service hostRouter;
 
     get tabs() {
-        const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:place:details');
+        const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:sensor:details');
         return [
             {
                 route: 'connectivity.sensors.index.details.index',

@@ -6,7 +6,7 @@ export default class MaintenanceInspectionFormsIndexController extends Controlle
     @service inspectionFormActions;
     @service intl;
 
-    @tracked queryParams = ['status', 'type', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
+    @tracked queryParams = this.inspectionFormActions.queryParamsFor(['status', 'type', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at']);
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -16,18 +16,26 @@ export default class MaintenanceInspectionFormsIndexController extends Controlle
 
     get actionButtons() {
         return [
-            { icon: 'refresh', onClick: this.inspectionFormActions.refresh, helpText: this.intl.t('common.refresh') },
-            { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.inspectionFormActions.transition.create, permission: 'fleet-ops create inspection-form' },
+            { id: 'refresh', icon: 'refresh', onClick: this.inspectionFormActions.refresh, helpText: this.intl.t('common.refresh') },
+            {
+                id: 'create',
+                text: this.intl.t('common.new'),
+                type: 'primary',
+                icon: 'plus',
+                onClick: this.inspectionFormActions.transition.create,
+                permission: 'fleet-ops create inspection-form',
+            },
         ];
     }
 
     get bulkActions() {
-        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.inspectionFormActions.bulkDelete, permission: 'fleet-ops delete inspection-form' }];
+        return [{ id: 'bulk-delete', label: 'Delete selected...', class: 'text-red-500', fn: this.inspectionFormActions.bulkDelete, permission: 'fleet-ops delete inspection-form' }];
     }
 
     get columns() {
         return [
             {
+                id: 'name',
                 label: 'Name',
                 valuePath: 'name',
                 cellComponent: 'table/cell/anchor',
@@ -40,6 +48,7 @@ export default class MaintenanceInspectionFormsIndexController extends Controlle
                 filterComponent: 'filter/string',
             },
             {
+                id: 'type',
                 label: 'Type',
                 valuePath: 'type',
                 cellComponent: 'table/cell/fleet-ops-option',
@@ -51,6 +60,7 @@ export default class MaintenanceInspectionFormsIndexController extends Controlle
                 filterComponent: 'filter/string',
             },
             {
+                id: 'status',
                 label: 'Status',
                 valuePath: 'status',
                 cellComponent: 'table/cell/status',
@@ -60,9 +70,19 @@ export default class MaintenanceInspectionFormsIndexController extends Controlle
                 filterParam: 'status',
                 filterComponent: 'filter/string',
             },
-            { label: 'Items', valuePath: 'item_count', resizable: true, sortable: false },
-            { label: this.intl.t('column.created-at'), valuePath: 'createdAt', sortParam: 'created_at', resizable: true, sortable: true, filterable: true, filterComponent: 'filter/date' },
+            { id: 'item-count', label: 'Items', valuePath: 'item_count', resizable: true, sortable: false },
             {
+                id: 'created-at',
+                label: this.intl.t('column.created-at'),
+                valuePath: 'createdAt',
+                sortParam: 'created_at',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/date',
+            },
+            {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -71,14 +91,14 @@ export default class MaintenanceInspectionFormsIndexController extends Controlle
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
                 actions: [
-                    { label: 'View form', fn: this.inspectionFormActions.transition.view, permission: 'fleet-ops view inspection-form' },
-                    { label: 'Edit form', fn: this.inspectionFormActions.transition.edit, permission: 'fleet-ops update inspection-form' },
+                    { id: 'view', label: 'View form', fn: this.inspectionFormActions.transition.view, permission: 'fleet-ops view inspection-form' },
+                    { id: 'edit', label: 'Edit form', fn: this.inspectionFormActions.transition.edit, permission: 'fleet-ops update inspection-form' },
                     { separator: true },
-                    { label: 'Publish', fn: this.inspectionFormActions.publish, permission: 'fleet-ops publish inspection-form' },
-                    { label: 'Archive', fn: this.inspectionFormActions.archive, permission: 'fleet-ops archive inspection-form' },
-                    { label: 'Generate inspection link', fn: this.inspectionFormActions.generateLink, permission: 'fleet-ops view inspection-form' },
+                    { id: 'publish', label: 'Publish', fn: this.inspectionFormActions.publish, permission: 'fleet-ops publish inspection-form' },
+                    { id: 'archive', label: 'Archive', fn: this.inspectionFormActions.archive, permission: 'fleet-ops archive inspection-form' },
+                    { id: 'generate-link', label: 'Generate inspection link', fn: this.inspectionFormActions.generateLink, permission: 'fleet-ops view inspection-form' },
                     { separator: true },
-                    { label: 'Delete form', fn: this.inspectionFormActions.delete, class: 'text-red-500', permission: 'fleet-ops delete inspection-form' },
+                    { id: 'delete', label: 'Delete form', fn: this.inspectionFormActions.delete, class: 'text-red-500', permission: 'fleet-ops delete inspection-form' },
                 ],
                 sortable: false,
                 filterable: false,

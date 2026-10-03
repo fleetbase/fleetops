@@ -17,7 +17,7 @@ export default class ManagementDriversIndexController extends Controller {
     @service appCache;
 
     /** query params */
-    @tracked queryParams = [
+    @tracked queryParams = this.driverActions.queryParamsFor([
         'page',
         'limit',
         'sort',
@@ -34,7 +34,7 @@ export default class ManagementDriversIndexController extends Controller {
         'created_at',
         'updated_at',
         'status',
-    ];
+    ]);
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -75,16 +75,19 @@ export default class ManagementDriversIndexController extends Controller {
     get actionButtons() {
         return [
             {
+                id: 'more',
                 component: 'dropdown-button',
                 icon: 'display',
                 size: 'xs',
                 items: [
                     {
+                        id: 'table-view',
                         label: this.intl.t('common.table-view'),
                         icon: 'table-list',
                         onClick: () => this.changeLayout('table'),
                     },
                     {
+                        id: 'grid-view',
                         label: this.intl.t('common.grid-view'),
                         icon: 'grip',
                         onClick: () => this.changeLayout('grid'),
@@ -94,11 +97,13 @@ export default class ManagementDriversIndexController extends Controller {
                 helpText: 'Change the layout',
             },
             {
+                id: 'refresh',
                 icon: 'refresh',
                 onClick: this.driverActions.refresh,
                 helpText: this.intl.t('common.refresh'),
             },
             {
+                id: 'create',
                 text: this.intl.t('common.new'),
                 type: 'primary',
                 icon: 'plus',
@@ -106,6 +111,7 @@ export default class ManagementDriversIndexController extends Controller {
                 permission: 'fleet-ops create driver',
             },
             {
+                id: 'import',
                 text: this.intl.t('common.import'),
                 type: 'magic',
                 icon: 'upload',
@@ -113,6 +119,7 @@ export default class ManagementDriversIndexController extends Controller {
                 permission: 'fleet-ops import driver',
             },
             {
+                id: 'export',
                 text: this.intl.t('common.export'),
                 icon: 'long-arrow-up',
                 iconClass: 'rotate-icon-45',
@@ -129,6 +136,7 @@ export default class ManagementDriversIndexController extends Controller {
 
         return [
             {
+                id: 'bulk-delete',
                 label: this.intl.t('common.delete-selected-count', { count: selected.length }),
                 class: 'text-red-500',
                 fn: this.driverActions.bulkDelete,
@@ -141,6 +149,7 @@ export default class ManagementDriversIndexController extends Controller {
     get columns() {
         return [
             {
+                id: 'name',
                 sticky: true,
                 label: this.intl.t('column.name'),
                 valuePath: 'name',
@@ -153,6 +162,7 @@ export default class ManagementDriversIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'public-id',
                 label: this.intl.t('column.id'),
                 valuePath: 'public_id',
                 cellComponent: 'click-to-copy',
@@ -163,6 +173,7 @@ export default class ManagementDriversIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'phone',
                 label: this.intl.t('column.phone'),
                 valuePath: 'phone',
                 cellComponent: 'table/cell/base',
@@ -173,6 +184,7 @@ export default class ManagementDriversIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'drivers-license-number',
                 label: this.intl.t('column.license'),
                 valuePath: 'drivers_license_number',
                 cellComponent: 'table/cell/base',
@@ -182,6 +194,7 @@ export default class ManagementDriversIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'vehicle-display-name',
                 label: this.intl.t('column.vehicle'),
                 cellComponent: 'cell/vehicle-identity',
                 permission: 'fleet-ops view vehicle',
@@ -206,6 +219,7 @@ export default class ManagementDriversIndexController extends Controller {
                 model: 'vehicle',
             },
             {
+                id: 'internal-id',
                 label: this.intl.t('column.internal-id'),
                 valuePath: 'internal_id',
                 cellComponent: 'click-to-copy',
@@ -215,6 +229,7 @@ export default class ManagementDriversIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'vendor-name',
                 label: this.intl.t('column.vendor'),
                 cellComponent: 'cell/vendor-identity',
                 permission: 'fleet-ops view vendor',
@@ -233,6 +248,7 @@ export default class ManagementDriversIndexController extends Controller {
                 model: 'vendor',
             },
             {
+                id: 'fleets',
                 label: this.intl.t('column.fleet'),
                 cellComponent: 'table/cell/link-list',
                 cellComponentLabelPath: 'name',
@@ -247,6 +263,7 @@ export default class ManagementDriversIndexController extends Controller {
                 model: 'fleet',
             },
             {
+                id: 'country',
                 label: this.intl.t('column.country'),
                 valuePath: 'country',
                 cellComponent: 'table/cell/country',
@@ -264,6 +281,7 @@ export default class ManagementDriversIndexController extends Controller {
                 multiOptionSearchPlaceholder: this.intl.t('common.search-countries'),
             },
             {
+                id: 'status',
                 label: this.intl.t('column.status'),
                 valuePath: 'status',
                 cellComponent: 'table/cell/status',
@@ -274,6 +292,7 @@ export default class ManagementDriversIndexController extends Controller {
                 filterFetchOptions: 'drivers/statuses',
             },
             {
+                id: 'created-at',
                 label: this.intl.t('column.created-at'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
@@ -284,6 +303,7 @@ export default class ManagementDriversIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'updated-at',
                 label: this.intl.t('column.updated-at'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
@@ -295,6 +315,7 @@ export default class ManagementDriversIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -307,12 +328,14 @@ export default class ManagementDriversIndexController extends Controller {
                 width: 60,
                 actions: [
                     {
+                        id: 'view',
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.driver') }),
                         icon: 'eye',
                         fn: this.driverActions.transition.view,
                         permission: 'fleet-ops view driver',
                     },
                     {
+                        id: 'edit',
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.driver') }),
                         icon: 'pencil',
                         fn: this.driverActions.transition.edit,
@@ -322,18 +345,21 @@ export default class ManagementDriversIndexController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'assign-order',
                         label: this.intl.t('driver.actions.assign-order'),
                         icon: 'clipboard-list',
                         fn: this.driverActions.assignOrder,
                         permission: 'fleet-ops assign-order-for driver',
                     },
                     {
+                        id: 'assign-vehicle',
                         label: this.intl.t('driver.actions.assign-vehicle'),
                         icon: 'car',
                         fn: this.driverActions.assignVehicle,
                         permission: 'fleet-ops assign-vehicle-for driver',
                     },
                     {
+                        id: 'unassign-orders',
                         label: this.intl.t('driver.actions.unassign-orders'),
                         icon: 'user-minus',
                         fn: this.driverActions.unassignOrders,
@@ -341,6 +367,7 @@ export default class ManagementDriversIndexController extends Controller {
                         isVisible: (driver) => Number(driver.assigned_orders_count) > 0,
                     },
                     {
+                        id: 'unassign-vehicle',
                         label: this.intl.t('driver.actions.unassign-vehicle'),
                         icon: 'link-slash',
                         fn: this.driverActions.unassignVehicle,
@@ -348,12 +375,14 @@ export default class ManagementDriversIndexController extends Controller {
                         isVisible: (driver) => this.hasAssignedVehicle(driver),
                     },
                     {
+                        id: 'locate',
                         label: this.intl.t('driver.actions.locate-driver'),
                         icon: 'location-dot',
                         fn: this.driverActions.locate,
                         permission: 'fleet-ops view driver',
                     },
                     {
+                        id: 'create-issue',
                         label: this.intl.t('driver.actions.create-issue'),
                         icon: 'triangle-exclamation',
                         fn: this.createIssue,
@@ -367,6 +396,7 @@ export default class ManagementDriversIndexController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'delete',
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.driver') }),
                         icon: 'trash',
                         fn: this.driverActions.delete,

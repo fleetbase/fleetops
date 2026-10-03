@@ -12,7 +12,28 @@ export default class ManagementContactsIndexController extends Controller {
     @service appCache;
 
     /** query params */
-    @tracked queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'created_by', 'updated_by', 'status', 'title', 'email', 'phone'];
+    /**
+     * This tab's table registry, e.g. `fleet-ops:contact:table`. The contacts
+     * header (`management/contacts.hbs`) renders for whichever tab is open.
+     */
+    get tableRegistry() {
+        return this.contactActions.tableRegistry;
+    }
+
+    @tracked queryParams = this.contactActions.queryParamsFor([
+        'page',
+        'limit',
+        'sort',
+        'query',
+        'public_id',
+        'internal_id',
+        'created_by',
+        'updated_by',
+        'status',
+        'title',
+        'email',
+        'phone',
+    ]);
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -34,16 +55,19 @@ export default class ManagementContactsIndexController extends Controller {
     get actionButtons() {
         return [
             {
+                id: 'more',
                 component: 'dropdown-button',
                 icon: 'display',
                 size: 'xs',
                 items: [
                     {
+                        id: 'table-view',
                         label: this.intl.t('common.table-view'),
                         icon: 'table-list',
                         onClick: () => this.setLayout('table'),
                     },
                     {
+                        id: 'grid-view',
                         label: this.intl.t('common.grid-view'),
                         icon: 'grip',
                         onClick: () => this.setLayout('grid'),
@@ -53,11 +77,13 @@ export default class ManagementContactsIndexController extends Controller {
                 helpText: this.intl.t('common.change-layout'),
             },
             {
+                id: 'refresh',
                 icon: 'refresh',
                 onClick: this.contactActions.refresh,
                 helpText: this.intl.t('common.refresh'),
             },
             {
+                id: 'create',
                 text: this.intl.t('common.new'),
                 type: 'primary',
                 icon: 'plus',
@@ -65,6 +91,7 @@ export default class ManagementContactsIndexController extends Controller {
                 permission: 'fleet-ops create contact',
             },
             {
+                id: 'import',
                 text: this.intl.t('common.import'),
                 type: 'magic',
                 icon: 'upload',
@@ -72,6 +99,7 @@ export default class ManagementContactsIndexController extends Controller {
                 permission: 'fleet-ops import contact',
             },
             {
+                id: 'export',
                 text: this.intl.t('common.export'),
                 icon: 'long-arrow-up',
                 iconClass: 'rotate-icon-45',
@@ -88,6 +116,7 @@ export default class ManagementContactsIndexController extends Controller {
 
         return [
             {
+                id: 'bulk-delete',
                 label: this.intl.t('common.delete-selected-count', { count: selected.length }),
                 class: 'text-red-500',
                 fn: this.contactActions.bulkDelete,
@@ -100,6 +129,7 @@ export default class ManagementContactsIndexController extends Controller {
     get columns() {
         return [
             {
+                id: 'name',
                 sticky: true,
                 label: this.intl.t('column.name'),
                 valuePath: 'name',
@@ -112,6 +142,7 @@ export default class ManagementContactsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'public-id',
                 label: this.intl.t('column.id'),
                 valuePath: 'public_id',
                 cellComponent: 'click-to-copy',
@@ -121,6 +152,7 @@ export default class ManagementContactsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'internal-id',
                 label: this.intl.t('column.internal-id'),
                 valuePath: 'internal_id',
                 cellComponent: 'click-to-copy',
@@ -130,6 +162,7 @@ export default class ManagementContactsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'title',
                 label: this.intl.t('column.title'),
                 valuePath: 'title',
                 cellComponent: 'click-to-copy',
@@ -140,6 +173,7 @@ export default class ManagementContactsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'email',
                 label: this.intl.t('column.email'),
                 valuePath: 'email',
                 cellComponent: 'click-to-copy',
@@ -149,6 +183,7 @@ export default class ManagementContactsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'phone',
                 label: this.intl.t('column.phone'),
                 valuePath: 'phone',
                 cellComponent: 'click-to-copy',
@@ -158,6 +193,7 @@ export default class ManagementContactsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'address',
                 label: this.intl.t('column.address'),
                 valuePath: 'address',
                 cellComponent: 'cell/place-identity',
@@ -170,6 +206,7 @@ export default class ManagementContactsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'created-at',
                 label: this.intl.t('column.created'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
@@ -179,6 +216,7 @@ export default class ManagementContactsIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'updated-at',
                 label: this.intl.t('column.updated'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
@@ -189,6 +227,7 @@ export default class ManagementContactsIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -201,12 +240,14 @@ export default class ManagementContactsIndexController extends Controller {
                 width: 60,
                 actions: [
                     {
+                        id: 'view',
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.contact') }),
                         icon: 'eye',
                         fn: this.contactActions.transition.view,
                         permission: 'fleet-ops view contact',
                     },
                     {
+                        id: 'edit',
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.contact') }),
                         icon: 'pencil',
                         fn: this.contactActions.transition.edit,
@@ -220,6 +261,7 @@ export default class ManagementContactsIndexController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'delete',
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.contact') }),
                         icon: 'trash',
                         fn: this.contactActions.delete,

@@ -46,7 +46,13 @@ export default class OrderFormComponent extends Component {
         });
         this.args.resource.payload.set('type', orderConfig.key);
 
-        this.customFields = yield this.customFieldsRegistry.loadSubjectCustomFields.perform(orderConfig);
+        // loadSubjectCustomFields rejects when the custom fields cannot be loaded (ember-core 0.3.25).
+        try {
+            this.customFields = yield this.customFieldsRegistry.loadSubjectCustomFields.perform(orderConfig);
+        } catch (err) {
+            this.customFields = undefined;
+            debug('Unable to load order custom fields: ' + err.message);
+        }
     }
 
     @task *selectDriver(driver) {

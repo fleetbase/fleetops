@@ -63,11 +63,13 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
     get actionButtons() {
         return [
             {
+                id: 'refresh',
                 icon: 'refresh',
                 onClick: this.refresh,
                 helpText: 'Refresh',
             },
             {
+                id: 'fuel-integrations',
                 icon: 'gas-pump',
                 text: 'Fuel Integrations',
                 onClick: () => this.hostRouter.transitionTo('console.fleet-ops.connectivity.fuel-providers.index'),
@@ -85,6 +87,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
 
         return [
             {
+                id: 'bulk-reprocess',
                 label: `Reprocess ${selected.length} selected`,
                 fn: () => this.confirmAction('reprocess', selected),
                 permission: 'fleet-ops update fuel-provider-transaction',
@@ -95,6 +98,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
     get columns() {
         return [
             {
+                id: 'provider-transaction-id',
                 sticky: true,
                 label: 'Transaction',
                 valuePath: 'provider_transaction_id',
@@ -107,6 +111,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
                 filterComponent: 'filter/string',
             },
             {
+                id: 'provider',
                 label: 'Provider',
                 valuePath: 'provider',
                 resizable: true,
@@ -115,6 +120,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
                 filterComponent: 'filter/string',
             },
             {
+                id: 'sync-status',
                 label: 'Status',
                 valuePath: 'sync_status',
                 cellComponent: 'fuel-transaction-status',
@@ -125,6 +131,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
                 filterOptions: ['imported', 'matched', 'unmatched', 'reviewed', 'ignored', 'duplicate', 'error'],
             },
             {
+                id: 'vehicle-name',
                 label: 'Vehicle',
                 valuePath: 'vehicle_name',
                 cellComponent: 'cell/vehicle-identity',
@@ -139,28 +146,33 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
                 modelNamePath: 'displayName',
             },
             {
+                id: 'vehicle-card-id',
                 label: 'Card / Internal',
                 valuePath: 'vehicle_card_id',
                 resizable: true,
             },
             {
+                id: 'trip-number',
                 label: 'Trip',
                 valuePath: 'trip_number',
                 resizable: true,
                 hidden: true,
             },
             {
+                id: 'station-name',
                 label: 'Station',
                 valuePath: 'station_name',
                 resizable: true,
             },
             {
+                id: 'volume',
                 label: 'Liters',
                 valuePath: 'volume',
                 resizable: true,
                 sortable: true,
             },
             {
+                id: 'amount',
                 label: 'Amount',
                 valuePath: 'amount',
                 cellComponent: 'table/cell/currency',
@@ -168,6 +180,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
                 sortable: true,
             },
             {
+                id: 'fuel-report-id',
                 label: 'Fuel Report',
                 valuePath: 'fuel_report_id',
                 cellComponent: 'cell/fuel-report-identity',
@@ -177,6 +190,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
                 resizable: true,
             },
             {
+                id: 'transaction-at',
                 label: 'Date',
                 valuePath: 'transactionAt',
                 sortParam: 'transaction_at',
@@ -187,6 +201,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
                 filterComponent: 'filter/date',
             },
             {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -198,14 +213,35 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
                 sticky: 'right',
                 width: 60,
                 actions: [
-                    { label: 'Review Details', fn: this.openDetails, permission: 'fleet-ops view fuel-provider-transaction' },
-                    { label: 'Open Fuel Report', fn: this.openFuelReport, isVisible: (transaction) => Boolean(transaction.fuel_report_id), permission: 'fleet-ops view fuel-report' },
+                    { id: 'open-details', label: 'Review Details', fn: this.openDetails, permission: 'fleet-ops view fuel-provider-transaction' },
+                    {
+                        id: 'open-fuel-report',
+                        label: 'Open Fuel Report',
+                        fn: this.openFuelReport,
+                        isVisible: (transaction) => Boolean(transaction.fuel_report_id),
+                        permission: 'fleet-ops view fuel-report',
+                    },
                     { separator: true },
-                    { label: 'Match to Vehicle', fn: this.matchVehicle, permission: 'fleet-ops update fuel-provider-transaction' },
-                    { label: 'Match to Order', fn: this.matchOrder, permission: 'fleet-ops update fuel-provider-transaction' },
-                    { label: 'Reprocess / Rematch', fn: (transaction) => this.confirmAction('reprocess', transaction), permission: 'fleet-ops update fuel-provider-transaction' },
-                    { label: 'Ignore Transaction', fn: (transaction) => this.confirmAction('ignored', transaction), permission: 'fleet-ops review fuel-provider-transaction' },
-                    { label: 'Mark Reviewed', fn: (transaction) => this.confirmAction('reviewed', transaction), permission: 'fleet-ops review fuel-provider-transaction' },
+                    { id: 'match-vehicle', label: 'Match to Vehicle', fn: this.matchVehicle, permission: 'fleet-ops update fuel-provider-transaction' },
+                    { id: 'match-order', label: 'Match to Order', fn: this.matchOrder, permission: 'fleet-ops update fuel-provider-transaction' },
+                    {
+                        id: 'reprocess',
+                        label: 'Reprocess / Rematch',
+                        fn: (transaction) => this.confirmAction('reprocess', transaction),
+                        permission: 'fleet-ops update fuel-provider-transaction',
+                    },
+                    {
+                        id: 'ignore',
+                        label: 'Ignore Transaction',
+                        fn: (transaction) => this.confirmAction('ignored', transaction),
+                        permission: 'fleet-ops review fuel-provider-transaction',
+                    },
+                    {
+                        id: 'mark-reviewed',
+                        label: 'Mark Reviewed',
+                        fn: (transaction) => this.confirmAction('reviewed', transaction),
+                        permission: 'fleet-ops review fuel-provider-transaction',
+                    },
                 ],
                 sortable: false,
                 filterable: false,
