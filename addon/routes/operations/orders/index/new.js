@@ -10,7 +10,11 @@ export default class OperationsOrdersIndexNewRoute extends Route {
     @service sidebar;
 
     @action willTransition() {
-        if (this.controller) {
+        const orderNewRoute = 'operations.orders.index.new';
+        const toName = transition?.to?.name ?? transition?.targetName;
+        const isLeavingNewRoute = Boolean(toName && !toName.includes(orderNewRoute));
+
+        if (isLeavingNewRoute && this.controller) {
             this.controller.reset();
         }
     }

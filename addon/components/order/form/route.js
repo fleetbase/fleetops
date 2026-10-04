@@ -195,7 +195,33 @@ export default class OrderFormRouteComponent extends Component {
     }
 
     @action editPlace(place) {
-        this.placeActions.modal.edit(place);
+        this.placeActions.modal.edit(place,
+            {},
+            {
+                refresh: false,
+                callback: (savedPlace) => {
+                    const placeToSync = savedPlace || place;
+                    const waypoints = this.args.resource?.payload?.waypoints ??
+    [];
+                    waypoints.forEach((waypoint) => {
+                        if (waypoint.place === place || waypoint.place?.id === placeToSync.id) {
+                            waypoint.setProperties({
+                                street1: placeToSync.street1,
+                                street2: placeToSync.street2,
+                                city: placeToSync.city,
+                                province: placeToSync.province,
+                                postal_code: placeToSync.postal_code,
+                                country: placeToSync.country,
+                                location: placeToSync.location,
+                            });
+                        }
+                    });
+
+                    this.previewRoute();
+                    this.requestServiceQuoteRefresh('route.place.updated');
+                },
+            }
+        );
     }
 
     @action async previewRoute() {
