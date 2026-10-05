@@ -5,9 +5,11 @@
     @isLoading={{or @isLoadingActivity this.loadActivity.isRunning @isLoading}}
     @wrapperClass="bordered-top"
 >
-    {{#if (eq this.layout "timeline")}}
-        <Order::ActivityTimeline @resource={{@resource}} @activity={{this.parentOrderActivity}} />
-    {{else}}
-        <Order::ActivityList @resource={{@resource}} @activity={{this.parentOrderActivity}} />
-    {{/if}}
+    <div {{did-update this.onStatusChanged @resource.status}}>
+        {{#if (eq this.layout "timeline")}}
+            <Order::ActivityTimeline @resource={{@resource}} @activity={{this.parentOrderActivity}} />
+        {{else}}
+            <Order::ActivityList @resource={{@resource}} @activity={{this.parentOrderActivity}} />
+        {{/if}}
+    </div>
 </ContentPanel>

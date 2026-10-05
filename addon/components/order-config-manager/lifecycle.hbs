@@ -1,0 +1,175 @@
+<div class="px-6 py-2 space-y-4">
+    <ContentPanel @title={{t "order-config-manager.lifecycle.title"}} @open={{true}} @wrapperClass="bordered-classic">
+        <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">{{t "order-config-manager.lifecycle.description"}}</p>
+
+        <div class="mb-4">
+            <Toggle
+                @label={{t "order-config-manager.lifecycle.enable"}}
+                @helpText={{t "order-config-manager.lifecycle.enable-help"}}
+                @isToggled={{this.enabled}}
+                @disabled={{or (not this.canEdit) this.save.isRunning}}
+                @onToggle={{this.toggleEnabled}}
+            />
+        </div>
+
+        {{#if this.enabled}}
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-2">
+                <InputGroup @name={{t "order-config-manager.lifecycle.initial"}} @required={{true}} @helpText={{t "order-config-manager.lifecycle.initial-help"}}>
+                    <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                        <PowerSelect
+                            @options={{this.activities}}
+                            @selected={{this.selectedInitial}}
+                            @onChange={{fn this.setActivity "initial"}}
+                            @searchEnabled={{true}}
+                            @searchField="label"
+                            @placeholder={{t "order-config-manager.lifecycle.select-activity"}}
+                            @triggerClass="form-select form-input"
+                            @disabled={{not this.canEdit}}
+                            as |activity|
+                        >
+                            <span>{{activity.label}}</span>
+                            <span class="ml-2 text-xs text-gray-500">{{activity.code}}</span>
+                        </PowerSelect>
+                    </div>
+                </InputGroup>
+
+                <InputGroup @name={{t "order-config-manager.lifecycle.terminal"}} @helpText={{t "order-config-manager.lifecycle.terminal-help"}}>
+                    <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                        <PowerSelectMultiple
+                            @options={{this.activities}}
+                            @selected={{this.selectedTerminal}}
+                            @onChange={{this.setTerminal}}
+                            @searchEnabled={{true}}
+                            @searchField="label"
+                            @placeholder={{t "order-config-manager.lifecycle.select-activities"}}
+                            @triggerClass="form-select form-input"
+                            @disabled={{not this.canEdit}}
+                            as |activity|
+                        >
+                            {{activity.label}}
+                        </PowerSelectMultiple>
+                    </div>
+                </InputGroup>
+
+                <InputGroup @name={{t "order-config-manager.lifecycle.completed"}} @helpText={{t "order-config-manager.lifecycle.completed-help"}}>
+                    <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                        <PowerSelect
+                            @options={{this.activities}}
+                            @selected={{this.selectedCompleted}}
+                            @onChange={{fn this.setActivity "completed"}}
+                            @searchEnabled={{true}}
+                            @searchField="label"
+                            @allowClear={{true}}
+                            @placeholder={{t "order-config-manager.lifecycle.select-activity"}}
+                            @triggerClass="form-select form-input"
+                            @disabled={{not this.canEdit}}
+                            as |activity|
+                        >
+                            <span>{{activity.label}}</span>
+                            <span class="ml-2 text-xs text-gray-500">{{activity.code}}</span>
+                        </PowerSelect>
+                    </div>
+                </InputGroup>
+
+                <InputGroup @name={{t "order-config-manager.lifecycle.canceled"}} @helpText={{t "order-config-manager.lifecycle.canceled-help"}}>
+                    <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                        <PowerSelect
+                            @options={{this.activities}}
+                            @selected={{this.selectedCanceled}}
+                            @onChange={{fn this.setActivity "canceled"}}
+                            @searchEnabled={{true}}
+                            @searchField="label"
+                            @allowClear={{true}}
+                            @placeholder={{t "order-config-manager.lifecycle.select-activity"}}
+                            @triggerClass="form-select form-input"
+                            @disabled={{not this.canEdit}}
+                            as |activity|
+                        >
+                            <span>{{activity.label}}</span>
+                            <span class="ml-2 text-xs text-gray-500">{{activity.code}}</span>
+                        </PowerSelect>
+                    </div>
+                </InputGroup>
+
+                <div class="py-2">
+                    <Toggle
+                        @label={{t "order-config-manager.lifecycle.dispatch"}}
+                        @helpText={{t "order-config-manager.lifecycle.dispatch-help"}}
+                        @isToggled={{this.lifecycle.dispatch}}
+                        @disabled={{not this.canEdit}}
+                        @onToggle={{fn this.setFlag "dispatch"}}
+                    />
+                </div>
+                <div class="py-2">
+                    <Toggle
+                        @label={{t "order-config-manager.lifecycle.strict-transitions"}}
+                        @helpText={{t "order-config-manager.lifecycle.strict-transitions-help"}}
+                        @isToggled={{this.lifecycle.strict_transitions}}
+                        @disabled={{not this.canEdit}}
+                        @onToggle={{fn this.setFlag "strict_transitions"}}
+                    />
+                </div>
+            </div>
+
+            {{#if this.problems.length}}
+                <div class="mt-2 rounded-md border border-red-300 dark:border-red-700 px-3 py-2 text-sm">
+                    <div class="font-semibold text-red-700 dark:text-red-400 mb-1">{{t "order-config-manager.lifecycle.problems-title"}}</div>
+                    <ul class="list-disc pl-5 text-red-700 dark:text-red-400">
+                        {{#each this.problems as |problem|}}<li>{{problem}}</li>{{/each}}
+                    </ul>
+                </div>
+            {{/if}}
+        {{else}}
+            <p class="text-sm text-gray-600 dark:text-gray-300">{{t "order-config-manager.lifecycle.default-lifecycle"}}</p>
+        {{/if}}
+    </ContentPanel>
+
+    {{#if this.saved}}
+        <ContentPanel @title={{t "order-config-manager.lifecycle.summary"}} @open={{true}} @wrapperClass="bordered-classic">
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                <div class="flex"><dt class="w-40 shrink-0 text-gray-500">{{t "order-config-manager.lifecycle.summary-initial"}}</dt><dd>{{or
+                            (get (this.option this.saved.initial) "label")
+                            (t "order-config-manager.lifecycle.none")
+                        }}</dd></div>
+                <div class="flex"><dt class="w-40 shrink-0 text-gray-500">{{t "order-config-manager.lifecycle.summary-completed"}}</dt><dd>{{or
+                            (get (this.option this.saved.completed) "label")
+                            (t "order-config-manager.lifecycle.none")
+                        }}</dd></div>
+                <div class="flex"><dt class="w-40 shrink-0 text-gray-500">{{t "order-config-manager.lifecycle.summary-canceled"}}</dt><dd>{{or
+                            (get (this.option this.saved.canceled) "label")
+                            (t "order-config-manager.lifecycle.none")
+                        }}</dd></div>
+                <div class="flex"><dt class="w-40 shrink-0 text-gray-500">{{t "order-config-manager.lifecycle.summary-terminal"}}</dt><dd>{{#if this.saved.terminal.length}}{{#each
+                                this.saved.terminal
+                                as |code index|
+                            }}{{if index ", "}}{{get (this.option code) "label"}}{{/each}}{{else}}{{t "order-config-manager.lifecycle.none"}}{{/if}}</dd></div>
+                <div class="flex"><dt class="w-40 shrink-0 text-gray-500">{{t "order-config-manager.lifecycle.summary-dispatch"}}</dt><dd>{{if
+                            this.saved.dispatch
+                            (t "order-config-manager.lifecycle.yes")
+                            (t "order-config-manager.lifecycle.no")
+                        }}</dd></div>
+                <div class="flex"><dt class="w-40 shrink-0 text-gray-500">{{t "order-config-manager.lifecycle.summary-strict"}}</dt><dd>{{if
+                            this.saved.strict_transitions
+                            (t "order-config-manager.lifecycle.yes")
+                            (t "order-config-manager.lifecycle.no")
+                        }}</dd></div>
+            </dl>
+        </ContentPanel>
+    {{/if}}
+
+    {{#if this.canEdit}}
+        <ContentPanel @title={{t "order-config-manager.details.controls"}} @open={{true}}>
+            <div class="flex flex-row items-center py-2 space-x-4">
+                <Button
+                    @type="primary"
+                    @icon="save"
+                    @text={{t "common.save-changes"}}
+                    @onClick={{perform this.save}}
+                    @isLoading={{this.save.isRunning}}
+                    @disabled={{not this.canSave}}
+                    @permission="fleet-ops update order-config"
+                />
+            </div>
+        </ContentPanel>
+    {{/if}}
+</div>
