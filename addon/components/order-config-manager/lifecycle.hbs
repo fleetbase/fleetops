@@ -168,24 +168,23 @@
                     </div>
                 </InputGroup>
 
-                <div class="py-2">
-                    <Toggle
-                        @label={{t "order-config-manager.lifecycle.dispatch"}}
-                        @helpText={{t "order-config-manager.lifecycle.dispatch-help"}}
-                        @isToggled={{this.lifecycle.dispatch}}
-                        @disabled={{not this.canEdit}}
-                        @onToggle={{fn this.setFlag "dispatch"}}
-                    />
-                </div>
-                <div class="py-2">
-                    <Toggle
-                        @label={{t "order-config-manager.lifecycle.strict-transitions"}}
-                        @helpText={{t "order-config-manager.lifecycle.strict-transitions-help"}}
-                        @isToggled={{this.lifecycle.strict_transitions}}
-                        @disabled={{not this.canEdit}}
-                        @onToggle={{fn this.setFlag "strict_transitions"}}
-                    />
-                </div>
+            </div>
+
+            <div class="flex flex-col space-y-2 pt-2">
+                <Toggle
+                    @label={{t "order-config-manager.lifecycle.dispatch"}}
+                    @helpText={{t "order-config-manager.lifecycle.dispatch-help"}}
+                    @isToggled={{this.lifecycle.dispatch}}
+                    @disabled={{not this.canEdit}}
+                    @onToggle={{fn this.setFlag "dispatch"}}
+                />
+                <Toggle
+                    @label={{t "order-config-manager.lifecycle.strict-transitions"}}
+                    @helpText={{t "order-config-manager.lifecycle.strict-transitions-help"}}
+                    @isToggled={{this.lifecycle.strict_transitions}}
+                    @disabled={{not this.canEdit}}
+                    @onToggle={{fn this.setFlag "strict_transitions"}}
+                />
             </div>
 
             {{#if this.problems.length}}
