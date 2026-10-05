@@ -13,6 +13,83 @@
         </div>
 
         {{#if this.enabled}}
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-1">
+                    <div class="text-sm font-semibold dark:text-gray-100">{{t "order-config-manager.lifecycle.activities"}}</div>
+                    {{#if (and this.canEdit this.hasActivities)}}
+                        <button type="button" class="text-xs text-blue-600 dark:text-blue-400 hover:underline" {{on "click" this.startBlankFlow}}>{{t "order-config-manager.lifecycle.blank-flow"}}</button>
+                    {{/if}}
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">{{t "order-config-manager.lifecycle.activities-help"}}</p>
+
+                {{#if this.hasActivities}}
+                    <div class="space-y-2">
+                        {{#each this.activityRows as |activity|}}
+                            <div class="rounded-md border border-gray-200 dark:border-gray-700 p-3 grid grid-cols-1 lg:grid-cols-12 gap-2 items-end" data-activity-code={{activity.code}}>
+                                <InputGroup @name={{t "order-config-manager.lifecycle.activity-label"}} @wrapperClass="mb-0 lg:col-span-3">
+                                    <Input class="form-input w-full" @value={{activity.status}} disabled={{not this.canEdit}} {{on "input" (fn this.setActivityField activity.code "status")}} />
+                                </InputGroup>
+                                <InputGroup @name={{t "order-config-manager.lifecycle.activity-code"}} @wrapperClass="mb-0 lg:col-span-2">
+                                    <div class="form-input bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 truncate" title={{activity.code}}>{{activity.code}}{{#if activity.isInitial}} <span class="text-xs text-green-600 dark:text-green-400">({{t "order-config-manager.lifecycle.initial-short"}})</span>{{/if}}</div>
+                                </InputGroup>
+                                <InputGroup @name={{t "order-config-manager.lifecycle.activity-details"}} @wrapperClass="mb-0 lg:col-span-3">
+                                    <Input class="form-input w-full" @value={{activity.details}} disabled={{not this.canEdit}} {{on "input" (fn this.setActivityField activity.code "details")}} />
+                                </InputGroup>
+                                <InputGroup @name={{t "order-config-manager.lifecycle.activity-next"}} @wrapperClass="mb-0 lg:col-span-3">
+                                    <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                                        <PowerSelectMultiple
+                                            @options={{this.activities}}
+                                            @selected={{activity.next}}
+                                            @onChange={{fn this.setNextActivities activity.code}}
+                                            @searchEnabled={{true}}
+                                            @searchField="label"
+                                            @placeholder={{t "order-config-manager.lifecycle.select-activities"}}
+                                            @triggerClass="form-select form-input"
+                                            @disabled={{not this.canEdit}}
+                                            as |next|
+                                        >
+                                            {{next.label}}
+                                        </PowerSelectMultiple>
+                                    </div>
+                                </InputGroup>
+                                <div class="flex items-center justify-end space-x-2 lg:col-span-1">
+                                    <input type="color" value={{activity.color}} title={{t "order-config-manager.lifecycle.activity-color"}} class="h-9 w-9 rounded border border-gray-300 dark:border-gray-700 bg-transparent" disabled={{not this.canEdit}} {{on "input" (fn this.setActivityField activity.code "color")}} />
+                                    {{#if this.canEdit}}
+                                        <Button @type="danger" @size="sm" @icon="trash" @helpText={{t "order-config-manager.lifecycle.remove-activity"}} @onClick={{fn this.removeActivity activity.code}} />
+                                    {{/if}}
+                                </div>
+                            </div>
+                        {{/each}}
+                    </div>
+                {{else}}
+                    <div class="rounded-md border border-dashed border-gray-300 dark:border-gray-700 px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">{{t "order-config-manager.lifecycle.no-activities"}}</div>
+                {{/if}}
+
+                {{#if this.canEdit}}
+                    <div class="mt-3 rounded-md border border-blue-200 dark:border-blue-800 p-3">
+                        <div class="text-sm font-semibold mb-2">{{t "order-config-manager.lifecycle.add-activity"}}</div>
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-2 items-end">
+                            <InputGroup @name={{t "order-config-manager.lifecycle.activity-label"}} @required={{true}} @wrapperClass="mb-0 lg:col-span-3">
+                                <Input class="form-input w-full" placeholder={{t "order-config-manager.lifecycle.activity-label-placeholder"}} @value={{this.newActivity.status}} {{on "input" (fn this.setNewActivityField "status")}} />
+                            </InputGroup>
+                            <InputGroup @name={{t "order-config-manager.lifecycle.activity-code"}} @helpText={{t "order-config-manager.lifecycle.activity-code-help"}} @wrapperClass="mb-0 lg:col-span-2">
+                                <Input class="form-input w-full" placeholder={{or this.newActivityCode (t "order-config-manager.lifecycle.activity-code-placeholder")}} @value={{this.newActivity.code}} {{on "input" (fn this.setNewActivityField "code")}} />
+                            </InputGroup>
+                            <InputGroup @name={{t "order-config-manager.lifecycle.activity-details"}} @wrapperClass="mb-0 lg:col-span-4">
+                                <Input class="form-input w-full" placeholder={{t "order-config-manager.lifecycle.activity-details-placeholder"}} @value={{this.newActivity.details}} {{on "input" (fn this.setNewActivityField "details")}} />
+                            </InputGroup>
+                            <div class="flex items-center justify-end space-x-2 lg:col-span-3">
+                                <input type="color" value={{this.newActivity.color}} title={{t "order-config-manager.lifecycle.activity-color"}} class="h-9 w-9 rounded border border-gray-300 dark:border-gray-700 bg-transparent" {{on "input" (fn this.setNewActivityField "color")}} />
+                                <Button @type="primary" @icon="plus" @text={{t "order-config-manager.lifecycle.add-activity"}} @disabled={{not this.canAddActivity}} @onClick={{this.addActivity}} />
+                            </div>
+                        </div>
+                        {{#if this.newActivityCodeTaken}}
+                            <div class="mt-1 text-xs text-red-600 dark:text-red-400">{{t "order-config-manager.lifecycle.problem-duplicate-code" code=this.newActivityCode}}</div>
+                        {{/if}}
+                    </div>
+                {{/if}}
+            </div>
+
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-2">
                 <InputGroup @name={{t "order-config-manager.lifecycle.initial"}} @required={{true}} @helpText={{t "order-config-manager.lifecycle.initial-help"}}>
                     <div class="fleetbase-model-select fleetbase-power-select ember-model-select">

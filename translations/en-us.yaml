@@ -1295,6 +1295,27 @@ order-config-manager:
         select-activities: Select activities
         problems-title: Fix before saving
         problem-initial-required: Choose the initial activity.
+        problem-no-activities: Add at least one activity.
+        problem-duplicate-code: 'An activity with the code "{code}" already exists.'
+        activities: Activities
+        activities-help: The statuses an order of this type can be in. Each activity lists the activities it can move to; the graph on the Activity Flow tab shows the same flow. Changes here are saved with the lifecycle.
+        activity-label: Label
+        activity-label-placeholder: e.g. Vehicle Assigned
+        activity-code: Code
+        activity-code-help: Stored status value. Derived from the label when left empty; cannot change once added.
+        activity-code-placeholder: e.g. vehicle_assigned
+        activity-details: Details
+        activity-details-placeholder: Shown with the activity in the timeline
+        activity-color: Colour
+        activity-next: Can move to
+        add-activity: Add activity
+        remove-activity: Remove activity
+        no-activities: No activities yet. Add the first one below; it becomes the initial activity.
+        blank-flow: Start from a blank flow
+        blank-flow-title: Remove all activities?
+        blank-flow-body: The default dispatch activities (created, dispatched, started, …) are removed so you can define your own. Nothing is saved until you click Save changes.
+        blank-flow-confirm: Remove activities
+        initial-short: initial
         problem-missing-activity: '"{code}" is not an activity in the flow.'
         summary: Summary
         summary-initial: Orders start at
