@@ -16,6 +16,18 @@
                 RegistryYieldEnd=(component "registry-yield" registry="fleet-ops:component:order:form:end" order=@resource)
             )
         }}
+    {{else if this.profile}}
+        {{#each this.profileSections key="key" as |section|}}
+            {{#if section.native}}
+                {{#let (component section.componentName resource=@resource hiddenFields=this.hiddenFields) as |NativeSection|}}
+                    <NativeSection />
+                {{/let}}
+            {{else}}
+                <LazyEngineComponent @component={{section.component}} as |ProfileSection|>
+                    <ProfileSection @resource={{@resource}} @order={{@resource}} @controller={{@controller}} @profile={{this.profile}} @hiddenFields={{this.hiddenFields}} />
+                </LazyEngineComponent>
+            {{/if}}
+        {{/each}}
     {{else}}
         <RegistryYield @registry="fleet-ops:component:order:form:start" as |RegistryComponent|>
             <RegistryComponent @order={{@resource}} @resource={{@resource}} />

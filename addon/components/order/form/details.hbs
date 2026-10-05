@@ -9,7 +9,7 @@
                     @onChange={{perform this.selectOrderConfig}}
                     @placeholder={{t "order.fields.order-type-placeholder"}}
                     @triggerClass="form-select form-input"
-                    @disabled={{cannot-write @resource}}
+                    @disabled={{or (cannot-write @resource) this.orderTypeLocked}}
                     as |orderConfig|
                 >
                     <SelectOption::OrderConfig @option={{orderConfig}} />
@@ -17,8 +17,19 @@
             </div>
         </InputGroup>
 
-        <InputGroup @name={{t "order.fields.internal-id"}} @value={{@resource.internal_id}} @helpText={{t "order.fields.internal-id-help-text"}} @disabled={{cannot-write @resource}} />
+        {{#if this.profileDetailFields}}
+            <div class="contents">
+                <LazyEngineComponent @component={{this.profileDetailFields}} as |ProfileDetailFields|>
+                    <ProfileDetailFields @resource={{@resource}} @order={{@resource}} @profile={{this.profile}} />
+                </LazyEngineComponent>
+            </div>
+        {{/if}}
 
+        {{#if this.show.internalId}}
+        <InputGroup @name={{t "order.fields.internal-id"}} @value={{@resource.internal_id}} @helpText={{t "order.fields.internal-id-help-text"}} @disabled={{cannot-write @resource}} />
+        {{/if}}
+
+        {{#if this.show.schedule}}
         <InputGroup>
             <InputLabel @labelText={{t "order.fields.schedule"}} @helpText={{t "order.fields.schedule-help-text"}} />
             <DateTimeInput
@@ -30,7 +41,9 @@
                 @disabled={{or @resource.dispatched (cannot-write @resource)}}
             />
         </InputGroup>
+        {{/if}}
 
+        {{#if this.show.customer}}
         <InputGroup @name={{t "order.fields.customer"}} @helpText={{t "order.fields.customer-help-text"}}>
             <ModelSelect
                 @modelName="customer"
@@ -48,7 +61,9 @@
                 <SelectOption::Customer @option={{model}} />
             </ModelSelect>
         </InputGroup>
+        {{/if}}
 
+        {{#if this.show.facilitator}}
         <InputGroup @name={{t "order.fields.facilitator"}} @helpText={{t "order.fields.facilitator-help-text"}}>
             <ModelSelect
                 @modelName="facilitator"
@@ -66,8 +81,9 @@
                 <SelectOption::Facilitator @option={{model}} />
             </ModelSelect>
         </InputGroup>
+        {{/if}}
 
-        {{#if (and @resource.facilitator.isIntegratedVendor @resource.facilitator.service_types.length)}}
+        {{#if (and this.show.serviceType @resource.facilitator.isIntegratedVendor @resource.facilitator.service_types.length)}}
             <InputGroup @name={{t "order.fields.service-type"}} @helpText={{concat (t "order.fields.service-type-help-text") @resource.facilitator.name "."}}>
                 <Select
                     class="w-full"
@@ -82,6 +98,7 @@
             </InputGroup>
         {{/if}}
 
+        {{#if this.show.driver}}
         <InputGroup @name={{t "order.fields.assign-driver"}} @helpText={{t "order.fields.assign-driver-help-text"}}>
             <ModelSelect
                 @modelName="driver"
@@ -101,7 +118,9 @@
                 <SelectOption::Driver @option={{model}} />
             </ModelSelect>
         </InputGroup>
+        {{/if}}
 
+        {{#if this.show.vehicle}}
         <InputGroup @name={{t "order.fields.assign-vehicle"}} @helpText={{t "order.fields.assign-vehicle-help-text"}}>
             <ModelSelect
                 @modelName="vehicle"
@@ -120,8 +139,9 @@
                 <SelectOption::Vehicle @option={{model}} />
             </ModelSelect>
         </InputGroup>
+        {{/if}}
 
-        {{#if (and @resource.pod_required (not @resource.facilitator.isIntegratedVendor))}}
+        {{#if (and this.show.pod @resource.pod_required (not @resource.facilitator.isIntegratedVendor))}}
             <InputGroup @name={{t "order.fields.proof-delivery"}} @helpText={{t "order.fields.proof-delivery-help-text"}} @required={{true}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
@@ -142,7 +162,7 @@
             </InputGroup>
         {{/if}}
 
-        {{#if @resource.adhoc}}
+        {{#if (and this.show.adhoc @resource.adhoc)}}
             <div>
                 <InputGroup
                     @name={{t "order.fields.adhoc-ping"}}
@@ -158,6 +178,7 @@
             </div>
         {{/if}}
 
+        {{#if this.show.adhoc}}
         <div class="lg:col-span-2">
             <InputGroup @wrapperClass="pt-2">
                 <Toggle
@@ -170,7 +191,9 @@
                 />
             </InputGroup>
         </div>
+        {{/if}}
 
+        {{#if this.show.dispatch}}
         <div class="lg:col-span-2">
             <InputGroup @wrapperClass="pt-1">
                 <Toggle
@@ -183,7 +206,9 @@
                 />
             </InputGroup>
         </div>
+        {{/if}}
 
+        {{#if this.show.pod}}
         <div class="lg:col-span-2">
             <InputGroup @wrapperClass="pt-1">
                 <Toggle
@@ -196,6 +221,7 @@
                 />
             </InputGroup>
         </div>
+        {{/if}}
 
         <RegistryYield @registry="fleet-ops:component:order:form:details" as |RegistryComponent|>
             <RegistryComponent @order={{@resource}} @resource={{@resource}} />

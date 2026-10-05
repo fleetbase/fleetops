@@ -7,6 +7,7 @@ import relationValue from '../../../utils/relation-value';
 
 export default class OperationsOrdersIndexController extends Controller {
     @service orderActions;
+    @service orderPresentation;
     @service driverActions;
     @service vehicleActions;
     @service store;
@@ -436,7 +437,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 wrapperClass: 'flex items-center justify-end mx-2',
                 sticky: 'right',
                 width: 60,
-                actions: [
+                actions: this.withPresentationProfile([
                     {
                         id: 'view',
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.order') }),
@@ -485,13 +486,32 @@ export default class OperationsOrdersIndexController extends Controller {
                         fn: this.orderActions.delete,
                         permission: 'fleet-ops delete order',
                     },
-                ],
+                ]),
                 sortable: false,
                 filterable: false,
                 resizable: false,
                 searchable: false,
             },
         ];
+    }
+
+    /**
+     * Hides the row actions an order's presentation profile lists in `hidden.actions`, by id,
+     * the same way the details panel does.
+     */
+    withPresentationProfile(actions) {
+        return actions.map((item) => {
+            if (!item.id) {
+                return item;
+            }
+
+            const isVisible = item.isVisible;
+            const builtInVisible = (order, ...rest) => (typeof isVisible === 'function' ? isVisible(order, ...rest) : isVisible !== false);
+            return {
+                ...item,
+                isVisible: (order, ...rest) => !this.orderPresentation.isHidden(order, 'actions', item.id) && builtInVisible(order, ...rest),
+            };
+        });
     }
 
     constructor() {

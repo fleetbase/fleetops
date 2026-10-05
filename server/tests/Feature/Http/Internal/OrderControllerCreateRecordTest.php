@@ -486,3 +486,29 @@ test('create record dispatches orders when the dispatch flag is not disabled', f
     expect($result)->toBeArray()->toHaveKey('order')
         ->and($connection->table('orders')->value('dispatched'))->not->toBeNull();
 });
+
+test('create record starts configured lifecycles at their initial activity and never dispatches them', function () {
+    $connection = fleetopsInternalOrderCreateBoot();
+    $connection->table('order_configs')->where('uuid', 'config-1')->update([
+        'flow' => json_encode([
+            'requested' => ['key' => 'requested', 'code' => 'requested', 'status' => 'Requested', 'details' => 'Loan requested', 'activities' => ['completed']],
+            'completed' => ['key' => 'completed', 'code' => 'completed', 'status' => 'Completed', 'details' => 'Loan completed', 'activities' => []],
+        ]),
+        'meta' => json_encode(['lifecycle' => ['initial' => 'requested', 'completed' => 'completed', 'dispatch' => false]]),
+    ]);
+
+    // Asks to be dispatched; the lifecycle overrides both the status and the dispatch flag
+    $result = (new OrderController())->createRecord(Request::create('/int/v1/orders', 'POST', [
+        'order' => [
+            'status'     => 'created',
+            'dispatched' => true,
+            'adhoc'      => true,
+            'payload'    => ['type' => 'transport'],
+        ],
+    ]));
+
+    expect($result)->toBeArray()->toHaveKey('order')
+        ->and($connection->table('orders')->value('status'))->toBe('requested')
+        ->and((bool) $connection->table('orders')->value('dispatched'))->toBeFalse()
+        ->and((bool) $connection->table('orders')->value('adhoc'))->toBeFalse();
+});

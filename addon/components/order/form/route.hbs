@@ -1,7 +1,9 @@
-<ContentPanel @title={{t "order.fields.route"}} @open={{true}} @wrapperClass="bordered-top">
+<ContentPanel @title={{or this.profileTitle (t "order.fields.route")}} @open={{true}} @wrapperClass="bordered-top">
     <div class="flex flex-row items-center justify-between mb-4">
         <div class="flex">
-            <Toggle @isToggled={{this.multipleWaypoints}} @onToggle={{this.toggleWaypoints}} @label={{t "order.fields.route-label"}} />
+            {{#if this.allowsMultipleWaypoints}}
+                <Toggle @isToggled={{this.multipleWaypoints}} @onToggle={{this.toggleWaypoints}} @label={{t "order.fields.route-label"}} />
+            {{/if}}
         </div>
         <div class="flex flex-1 justify-end space-x-2">
             {{#if this.multipleWaypoints}}

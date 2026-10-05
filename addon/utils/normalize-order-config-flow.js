@@ -1,6 +1,11 @@
 import { isArray } from '@ember/array';
 
-export function getOrderConfigFlowRootCode(flow = {}) {
+export function getOrderConfigFlowRootCode(flow = {}, initialCode = null) {
+    // A configured lifecycle (`meta.lifecycle.initial`) names its own root activity.
+    if (initialCode && flow[initialCode]) {
+        return initialCode;
+    }
+
     if (flow.created) {
         return 'created';
     }

@@ -44,6 +44,35 @@
                 )
             )
         }}
+    {{else if this.profile}}
+        {{#each this.profileSections key="key" as |section|}}
+            {{#if section.native}}
+                {{#let
+                    (component
+                        section.componentName
+                        resource=@resource
+                        onChange=section.onChange
+                        isLoading=@isLoading
+                        isLoadingActivity=@isLoadingActivity
+                        reloadToken=this.effectiveProofReloadToken
+                    )
+                    as |NativeSection|
+                }}
+                    <NativeSection />
+                {{/let}}
+            {{else}}
+                <LazyEngineComponent @component={{section.component}} as |ProfileSection|>
+                    <ProfileSection
+                        @resource={{@resource}}
+                        @controller={{@controller}}
+                        @permission={{get-write-permission @resource}}
+                        @isLoading={{@isLoading}}
+                        @profile={{this.profile}}
+                        @onChange={{@onDetailsChanged}}
+                    />
+                </LazyEngineComponent>
+            {{/if}}
+        {{/each}}
     {{else}}
         <RegistryYield @registry="fleet-ops:component:order:details:start" as |RegistryComponent|>
             <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} @isLoading={{@isLoading}} />
