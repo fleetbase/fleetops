@@ -1,6 +1,7 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 
 export default class OrderDetailsActivityComponent extends Component {
@@ -62,6 +63,14 @@ export default class OrderDetailsActivityComponent extends Component {
                 ],
             },
         ];
+    }
+
+    /**
+     * A status change recorded outside this panel (a configured lifecycle advancing on save, an
+     * extension action, a realtime update) means new tracking statuses exist server-side.
+     */
+    @action onStatusChanged() {
+        this.loadActivity.perform();
     }
 
     @task *loadActivity() {
