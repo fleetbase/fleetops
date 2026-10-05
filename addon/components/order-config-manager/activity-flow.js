@@ -455,6 +455,10 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * and creates links from the parent to each child. It then calls itself to add any children of the current child activities.
      * Finally, it repositions all child activities to maintain visual consistency.
      *
+     * A flow is a graph, not a tree: an activity may be reachable from several parents, and a
+     * configured lifecycle can loop back (e.g. active -> extended -> active). An activity that is
+     * already on the graph only gets a link from this parent; it is never placed or walked twice.
+     *
      * @param {Object} parentActivity - The parent activity to which child activities will be added.
      * @param {Array} [childActivities=[]] - An array of child activity objects to be added. Defaults to an empty array.
      */
@@ -463,6 +467,11 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             return;
         }
         childActivities.forEach((childActivityObject) => {
+            if (childActivityObject.get('node')) {
+                this.addLinkToGraph(parentActivity, childActivityObject);
+                return;
+            }
+
             const childPositionals = this.getActivityPositioning(childActivityObject, parentActivity);
             const childActivity = this.createActivityNode(childActivityObject, childPositionals);
             childActivity.set('parentId', parentActivity.get('id'));
