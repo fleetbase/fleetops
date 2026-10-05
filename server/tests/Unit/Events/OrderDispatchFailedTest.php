@@ -6,7 +6,8 @@ use Illuminate\Support\Str;
 
 class FleetOpsOrderDispatchFailedUnitProbe extends OrderDispatchFailed
 {
-    public function getEventData(): array
+    // core-api 1.6.68 adds an optional $channel parameter; the literal keeps this probe loadable on earlier versions too.
+    public function getEventData(string $channel = 'webhook'): array
     {
         return [];
     }
