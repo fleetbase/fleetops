@@ -47,6 +47,7 @@ export default class EquipmentActionsService extends ResourceActionService {
         },
         view: (equipment, options = {}) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 equipment,
                 title: equipment?.name,
                 header: 'equipment/panel-header',

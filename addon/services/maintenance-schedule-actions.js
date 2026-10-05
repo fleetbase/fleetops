@@ -11,7 +11,7 @@ export default class MaintenanceScheduleActionsService extends ResourceActionSer
 
     constructor() {
         super(...arguments);
-        this.initialize('maintenance-schedule');
+        this.initialize('maintenance-schedule', { registryResource: 'schedule' });
     }
 
     transition = {
@@ -43,6 +43,7 @@ export default class MaintenanceScheduleActionsService extends ResourceActionSer
         },
         view: (schedule, options = {}) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 schedule,
                 title: schedule?.name,
                 actionButtons: this.panelActionButtons(schedule, { onDeleted: () => this.resourceContextPanel.closeAll() }),

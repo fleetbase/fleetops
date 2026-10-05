@@ -1,5 +1,6 @@
 {{#if (eq this.layout "table")}}
     <Layout::Resource::Tabular
+        @registry="fleet-ops:trailer:table"
         @resource="trailer"
         @title={{t "resource.trailers"}}
         @searchQuery={{this.query}}
@@ -34,6 +35,7 @@
 {{else}}
     <Layout::Section::Header @title={{t "resource.trailers"}} @actionsWrapperClass="space-x-1">
         <Layout::Resource::TabularActions
+            @registry="fleet-ops:trailer:table"
             @searchQuery={{this.query}}
             @onSearch={{perform this.trailerActions.controllerSearchTask this}}
             @columns={{this.columns}}

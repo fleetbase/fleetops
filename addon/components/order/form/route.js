@@ -22,6 +22,7 @@ export default class OrderFormRouteComponent extends Component {
     @service notifications;
     @service placeActions;
     @service orderCreation;
+    @service orderPresentation;
     @tracked multipleWaypoints = false;
     @tracked routingControl;
     @tracked route;
@@ -33,6 +34,16 @@ export default class OrderFormRouteComponent extends Component {
                 panBy: ORDER_ROUTE_PREVIEW_SINGLE_POINT_PANBY,
             });
         }
+    }
+
+    /** A presentation profile may hide multi-drop routing and rename the route panel. */
+    get allowsMultipleWaypoints() {
+        const hidden = this.args.hiddenFields ?? this.orderPresentation.hiddenFieldsFor(this.args.resource);
+        return !hidden.includes('multiple-waypoints');
+    }
+
+    get profileTitle() {
+        return this.orderPresentation.profileFor(this.args.resource)?.form?.titles?.route ?? null;
     }
 
     get coordinates() {

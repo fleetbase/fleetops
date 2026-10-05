@@ -11,7 +11,7 @@ export default class ManagementIssuesIndexController extends Controller {
     @service intl;
 
     /** query params */
-    @tracked queryParams = [
+    @tracked queryParams = this.issueActions.queryParamsFor([
         'page',
         'limit',
         'sort',
@@ -28,7 +28,7 @@ export default class ManagementIssuesIndexController extends Controller {
         'priority',
         'cateogry',
         'type',
-    ];
+    ]);
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -47,11 +47,13 @@ export default class ManagementIssuesIndexController extends Controller {
     get actionButtons() {
         return [
             {
+                id: 'refresh',
                 icon: 'refresh',
                 onClick: this.issueActions.refresh,
                 helpText: this.intl.t('common.refresh'),
             },
             {
+                id: 'create',
                 text: this.intl.t('common.new'),
                 type: 'primary',
                 icon: 'plus',
@@ -59,6 +61,7 @@ export default class ManagementIssuesIndexController extends Controller {
                 permission: 'fleet-ops create issue',
             },
             {
+                id: 'import',
                 text: this.intl.t('common.import'),
                 type: 'magic',
                 icon: 'upload',
@@ -66,6 +69,7 @@ export default class ManagementIssuesIndexController extends Controller {
                 permission: 'fleet-ops import issue',
             },
             {
+                id: 'export',
                 text: this.intl.t('common.export'),
                 icon: 'long-arrow-up',
                 iconClass: 'rotate-icon-45',
@@ -82,6 +86,7 @@ export default class ManagementIssuesIndexController extends Controller {
 
         return [
             {
+                id: 'bulk-delete',
                 label: this.intl.t('common.delete-selected-count', { count: selected.length }),
                 class: 'text-red-500',
                 fn: this.issueActions.bulkDelete,
@@ -94,6 +99,7 @@ export default class ManagementIssuesIndexController extends Controller {
     get columns() {
         return [
             {
+                id: 'public-id',
                 sticky: true,
                 label: this.intl.t('column.id'),
                 valuePath: 'public_id',
@@ -104,6 +110,7 @@ export default class ManagementIssuesIndexController extends Controller {
                 sortable: true,
             },
             {
+                id: 'priority',
                 label: this.intl.t('column.priority'),
                 valuePath: 'priority',
                 cellComponent: 'table/cell/status',
@@ -114,6 +121,7 @@ export default class ManagementIssuesIndexController extends Controller {
                 filterOptions: ['low', 'medium', 'high', 'critical', 'scheduled-maintenance', 'operational-suggestion'],
             },
             {
+                id: 'type',
                 label: this.intl.t('column.type'),
                 valuePath: 'type',
                 humanize: true,
@@ -127,6 +135,7 @@ export default class ManagementIssuesIndexController extends Controller {
                 placeholder: 'Select issue type',
             },
             {
+                id: 'category',
                 label: this.intl.t('column.category'),
                 valuePath: 'category',
                 humanize: true,
@@ -140,6 +149,7 @@ export default class ManagementIssuesIndexController extends Controller {
                 placeholder: 'Select issue category',
             },
             {
+                id: 'reporter-name',
                 label: this.intl.t('column.reporter'),
                 valuePath: 'reporter_name',
                 cellComponent: 'table/cell/user-identity',
@@ -155,6 +165,7 @@ export default class ManagementIssuesIndexController extends Controller {
                 model: 'user',
             },
             {
+                id: 'assignee-name',
                 label: this.intl.t('column.assignee'),
                 valuePath: 'assignee_name',
                 cellComponent: 'table/cell/user-identity',
@@ -170,6 +181,7 @@ export default class ManagementIssuesIndexController extends Controller {
                 model: 'user',
             },
             {
+                id: 'driver-name',
                 label: this.intl.t('column.driver'),
                 valuePath: 'driver_name',
                 cellComponent: 'cell/driver-identity',
@@ -186,6 +198,7 @@ export default class ManagementIssuesIndexController extends Controller {
                 model: 'driver',
             },
             {
+                id: 'vehicle-name',
                 label: this.intl.t('column.vehicle'),
                 valuePath: 'vehicle_name',
                 cellComponent: 'cell/vehicle-identity',
@@ -203,6 +216,7 @@ export default class ManagementIssuesIndexController extends Controller {
                 modelNamePath: 'displayName',
             },
             {
+                id: 'status',
                 label: this.intl.t('column.status'),
                 valuePath: 'status',
                 cellComponent: 'table/cell/status',
@@ -213,6 +227,7 @@ export default class ManagementIssuesIndexController extends Controller {
                 filterOptions: ['pending', 'in-progress', 'backlogged', 'requires-update', 'in-review', 're-opened', 'duplicate', 'pending-review', 'escalated', 'completed', 'canceled'],
             },
             {
+                id: 'created-at',
                 label: this.intl.t('column.created-at'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
@@ -222,6 +237,7 @@ export default class ManagementIssuesIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'updated-at',
                 label: this.intl.t('column.updated-at'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
@@ -232,6 +248,7 @@ export default class ManagementIssuesIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -244,11 +261,13 @@ export default class ManagementIssuesIndexController extends Controller {
                 width: 60,
                 actions: [
                     {
+                        id: 'view',
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.issue') }),
                         fn: this.issueActions.transition.view,
                         permission: 'fleet-ops view issue',
                     },
                     {
+                        id: 'edit',
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.issue') }),
                         fn: this.issueActions.transition.edit,
                         permission: 'fleet-ops update issue',
@@ -257,6 +276,7 @@ export default class ManagementIssuesIndexController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'delete',
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.issue') }),
                         fn: this.issueActions.delete,
                         permission: 'fleet-ops delete issue',

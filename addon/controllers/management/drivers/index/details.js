@@ -39,6 +39,7 @@ export default class ManagementDriverIndexDetailsController extends Controller {
                 permission: 'fleet-ops update driver',
             },
             {
+                id: 'more',
                 icon: 'ellipsis-h',
                 iconPrefix: 'fas',
                 renderInPlace: true,

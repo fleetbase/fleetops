@@ -18,6 +18,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
     get columns() {
         return [
             {
+                id: 'name',
                 sticky: true,
                 label: this.intl.t('column.name'),
                 valuePath: 'name',
@@ -31,6 +32,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 filterComponent: 'filter/string',
             },
             {
+                id: 'public-id',
                 label: this.intl.t('column.id'),
                 valuePath: 'public_id',
                 cellComponent: 'click-to-copy',
@@ -41,6 +43,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 filterComponent: 'filter/string',
             },
             {
+                id: 'internal-id',
                 label: this.intl.t('column.internal-id'),
                 valuePath: 'internal_id',
                 cellComponent: 'click-to-copy',
@@ -51,6 +54,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 filterComponent: 'filter/string',
             },
             {
+                id: 'title',
                 label: this.intl.t('column.title'),
                 valuePath: 'title',
                 cellComponent: 'click-to-copy',
@@ -62,6 +66,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 filterComponent: 'filter/string',
             },
             {
+                id: 'email',
                 label: this.intl.t('column.email'),
                 valuePath: 'email',
                 cellComponent: 'click-to-copy',
@@ -72,6 +77,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 filterComponent: 'filter/string',
             },
             {
+                id: 'phone',
                 label: this.intl.t('column.phone'),
                 valuePath: 'phone',
                 cellComponent: 'click-to-copy',
@@ -82,6 +88,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 filterComponent: 'filter/string',
             },
             {
+                id: 'address',
                 label: this.intl.t('column.address'),
                 valuePath: 'address',
                 cellComponent: 'cell/place-identity',
@@ -94,6 +101,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 filterComponent: 'filter/string',
             },
             {
+                id: 'created-at',
                 label: this.intl.t('column.created'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
@@ -104,6 +112,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 filterComponent: 'filter/date',
             },
             {
+                id: 'updated-at',
                 label: this.intl.t('column.updated'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
@@ -115,6 +124,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 filterComponent: 'filter/date',
             },
             {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -127,12 +137,14 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 width: 60,
                 actions: [
                     {
+                        id: 'view',
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.customer') }),
                         icon: 'eye',
                         fn: this.customerActions.transition.view,
                         permission: 'fleet-ops view contact',
                     },
                     {
+                        id: 'edit',
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.customer') }),
                         icon: 'pencil',
                         fn: this.customerActions.transition.edit,
@@ -146,6 +158,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                         separator: true,
                     },
                     {
+                        id: 'delete',
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.customer') }),
                         icon: 'trash',
                         fn: this.customerActions.delete,

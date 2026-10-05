@@ -17,6 +17,7 @@ export default class DeviceEventActionsService extends ResourceActionService {
     panel = {
         view: (deviceEvent) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 deviceEvent,
                 tabs: [
                     {

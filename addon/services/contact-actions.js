@@ -48,6 +48,7 @@ export default class ContactActionsService extends ResourceActionService {
         },
         view: (contact, options = {}) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 contact,
                 title: contact?.name,
                 header: 'contact/panel-header',

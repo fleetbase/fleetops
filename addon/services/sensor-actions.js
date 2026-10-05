@@ -35,6 +35,7 @@ export default class SensorActionsService extends ResourceActionService {
         },
         view: (sensor) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 sensor,
                 header: 'sensor/panel-header',
                 tabs: [

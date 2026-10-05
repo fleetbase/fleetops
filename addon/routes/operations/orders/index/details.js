@@ -60,6 +60,7 @@ export default class OperationsOrdersIndexDetailsRoute extends Route {
             with: [
                 'payload',
                 'driverAssigned',
+                'vehicleAssigned',
                 'orderConfig',
                 'customer',
                 'facilitator',

@@ -50,6 +50,7 @@ export default class IssueActionsService extends ResourceActionService {
         },
         view: (issue, options = {}) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 issue,
                 header: 'issue/panel-header',
                 width: '800px',

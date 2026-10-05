@@ -24,8 +24,9 @@ export default class MaintenanceInspectionSubmissionsIndexDetailsController exte
      */
     get actionButtons() {
         return [
-            { icon: 'edit', fn: this.edit, permission: 'fleet-ops update inspection-submission' },
+            { id: 'edit', icon: 'edit', fn: this.edit, permission: 'fleet-ops update inspection-submission' },
             {
+                id: 'more',
                 icon: 'ellipsis-h',
                 iconPrefix: 'fas',
                 renderInPlace: true,

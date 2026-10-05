@@ -1256,6 +1256,7 @@ order-config-manager:
         details: Details
         custom-fields: Custom Fields
         activity-flow: Activity Flow
+        lifecycle: Lifecycle
         entities: Entities
     details:
         details: Details
@@ -1272,6 +1273,65 @@ order-config-manager:
             delete-title: Delete this order config?
             delete-body-message: Once this order config is deleted it will not be recoverable and you will lose all configurations.
             confirm-delete: Delete
+    lifecycle:
+        title: Lifecycle
+        description: A configured lifecycle lets this order type start, complete and cancel at its own activities instead of the default dispatch lifecycle (created, dispatched, started, completed, canceled).
+        default-lifecycle: This order type uses the default dispatch lifecycle. Orders start at "created", can be dispatched to drivers and complete or cancel through the standard activities.
+        enable: Use a configured lifecycle
+        enable-help: Orders of this type start at the initial activity you choose and follow the activity flow instead of the dispatch lifecycle.
+        initial: Initial activity
+        initial-help: New orders of this type start here. Must be an activity in the flow.
+        completed: Completed activity
+        completed-help: Reaching this activity completes the order.
+        canceled: Canceled activity
+        canceled-help: Canceling an order moves it to this activity.
+        terminal: Terminal activities
+        terminal-help: No further transition is allowed after these. The completed and canceled activities are always terminal.
+        dispatch: Allow dispatch
+        dispatch-help: When off, orders of this type are never dispatched to drivers and the dispatch actions are refused.
+        strict-transitions: Strict transitions
+        strict-transitions-help: When on, an activity can only move to one of its configured next activities in the flow.
+        select-activity: Select activity
+        select-activities: Select activities
+        problems-title: Fix before saving
+        problem-initial-required: Choose the initial activity.
+        problem-no-activities: Add at least one activity.
+        problem-duplicate-code: 'An activity with the code "{code}" already exists.'
+        activities: Activities
+        activities-help: The statuses an order of this type can be in. Each activity lists the activities it can move to; the graph on the Activity Flow tab shows the same flow. Changes here are saved with the lifecycle.
+        activity-label: Label
+        activity-label-placeholder: e.g. Vehicle Assigned
+        activity-code: Code
+        activity-code-help: Stored status value. Derived from the label when left empty; cannot change once added.
+        activity-code-placeholder: e.g. vehicle_assigned
+        activity-details: Details
+        activity-details-placeholder: Shown with the activity in the timeline
+        activity-color: Colour
+        activity-next: Can move to
+        add-activity: Add activity
+        remove-activity: Remove activity
+        no-activities: No activities yet. Add the first one below; it becomes the initial activity.
+        blank-flow: Start from a blank flow
+        blank-flow-title: Remove all activities?
+        blank-flow-body: The default dispatch activities (created, dispatched, started, …) are removed so you can define your own. Nothing is saved until you click Save changes.
+        blank-flow-confirm: Remove activities
+        initial-short: initial
+        problem-missing-activity: '"{code}" is not an activity in the flow.'
+        summary: Summary
+        summary-initial: Orders start at
+        summary-completed: Completed at
+        summary-canceled: Canceled at
+        summary-terminal: Terminal
+        summary-dispatch: Dispatch
+        summary-strict: Strict transitions
+        'yes': 'Yes'
+        'no': 'No'
+        none: None
+        remove: Remove configured lifecycle
+        remove-title: Remove the configured lifecycle?
+        remove-body: Orders of this type will use the default dispatch lifecycle again. Existing orders keep their current status.
+        remove-confirm: Remove
+        saved: Lifecycle saved for {orderConfigName}.
     activity-flow:
         save-activity-flow: Save Activity Flow
         edit-activity-unique-code-warning: Activity code must be unique!

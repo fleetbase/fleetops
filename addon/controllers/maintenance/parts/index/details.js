@@ -19,8 +19,8 @@ export default class MaintenancePartsIndexDetailsController extends Controller {
 
     get actionButtons() {
         return [
-            { icon: 'edit', fn: this.edit, permission: 'fleet-ops update part' },
-            { icon: 'trash', fn: this.delete, type: 'danger', permission: 'fleet-ops delete part' },
+            { id: 'edit', icon: 'edit', fn: this.edit, permission: 'fleet-ops update part' },
+            { id: 'delete', icon: 'trash', fn: this.delete, type: 'danger', permission: 'fleet-ops delete part' },
         ];
     }
 

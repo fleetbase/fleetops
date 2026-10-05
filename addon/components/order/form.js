@@ -11,11 +11,25 @@ export default class OrderFormComponent extends Component {
     @service customFieldsRegistry;
     @service mapManager;
     @service currentUser;
+    @service orderPresentation;
     @tracked customFields;
 
     constructor() {
         super(...arguments);
         this.orderConfigActions.loadAll.perform();
+    }
+
+    /** The extension presentation profile applying to this order's config, if any. */
+    get profile() {
+        return this.orderPresentation.profileFor(this.args.resource);
+    }
+
+    get profileSections() {
+        return this.orderPresentation.renderableSectionsFor(this.profile, 'form');
+    }
+
+    get hiddenFields() {
+        return this.orderPresentation.hiddenFieldsFor(this.args.resource);
     }
 
     @action selectFacilitator(model) {
@@ -32,7 +46,13 @@ export default class OrderFormComponent extends Component {
         });
         this.args.resource.payload.set('type', orderConfig.key);
 
-        this.customFields = yield this.customFieldsRegistry.loadSubjectCustomFields.perform(orderConfig);
+        // loadSubjectCustomFields rejects when the custom fields cannot be loaded (ember-core 0.3.25).
+        try {
+            this.customFields = yield this.customFieldsRegistry.loadSubjectCustomFields.perform(orderConfig);
+        } catch (err) {
+            this.customFields = undefined;
+            debug('Unable to load order custom fields: ' + err.message);
+        }
     }
 
     @task *selectDriver(driver) {

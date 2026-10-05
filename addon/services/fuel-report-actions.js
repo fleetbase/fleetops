@@ -43,6 +43,7 @@ export default class FuelReportActionsService extends ResourceActionService {
         },
         view: (fuelReport, options = {}) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 fuelReport,
                 title: fuelReport?.name ?? `Fuel reported on ${fuelReport?.createdAt ?? ''}`.trim(),
                 actionButtons: [{ icon: 'pencil', permission: 'fleet-ops update fuel-report', fn: () => closePanelsThen(this.resourceContextPanel, () => this.panel.edit(fuelReport)) }],

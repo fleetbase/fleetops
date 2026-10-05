@@ -41,6 +41,7 @@ export default class WorkOrderActionsService extends ResourceActionService {
         },
         view: (workOrder, options = {}) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 workOrder,
                 title: workOrder?.code ?? workOrder?.subject,
                 header: 'work-order/panel-header',

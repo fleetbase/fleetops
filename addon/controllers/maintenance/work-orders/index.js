@@ -9,7 +9,7 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
     @service workOrderActions;
     @service intl;
 
-    @tracked queryParams = ['category', 'status', 'priority', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
+    @tracked queryParams = this.workOrderActions.queryParamsFor(['category', 'status', 'priority', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at']);
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -20,10 +20,11 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
 
     get actionButtons() {
         return [
-            { icon: 'refresh', onClick: this.workOrderActions.refresh, helpText: this.intl.t('common.refresh') },
-            { text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.workOrderActions.transition.create, permission: 'fleet-ops create work-order' },
-            { text: this.intl.t('common.import'), type: 'magic', icon: 'upload', onClick: this.workOrderActions.import, permission: 'fleet-ops import work-order' },
+            { id: 'refresh', icon: 'refresh', onClick: this.workOrderActions.refresh, helpText: this.intl.t('common.refresh') },
+            { id: 'create', text: this.intl.t('common.new'), type: 'primary', icon: 'plus', onClick: this.workOrderActions.transition.create, permission: 'fleet-ops create work-order' },
+            { id: 'import', text: this.intl.t('common.import'), type: 'magic', icon: 'upload', onClick: this.workOrderActions.import, permission: 'fleet-ops import work-order' },
             {
+                id: 'export',
                 text: this.intl.t('common.export'),
                 icon: 'long-arrow-up',
                 iconClass: 'rotate-icon-45',
@@ -35,12 +36,13 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
     }
 
     get bulkActions() {
-        return [{ label: 'Delete selected...', class: 'text-red-500', fn: this.workOrderActions.bulkDelete, permission: 'fleet-ops delete work-order' }];
+        return [{ id: 'bulk-delete', label: 'Delete selected...', class: 'text-red-500', fn: this.workOrderActions.bulkDelete, permission: 'fleet-ops delete work-order' }];
     }
 
     get columns() {
         return [
             {
+                id: 'code',
                 label: this.intl.t('column.code'),
                 valuePath: 'code',
                 cellComponent: 'table/cell/anchor',
@@ -53,8 +55,18 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
                 filterParam: 'code',
                 filterComponent: 'filter/string',
             },
-            { label: this.intl.t('column.subject'), valuePath: 'subject', resizable: true, sortable: true, filterable: true, filterParam: 'subject', filterComponent: 'filter/string' },
             {
+                id: 'subject',
+                label: this.intl.t('column.subject'),
+                valuePath: 'subject',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterParam: 'subject',
+                filterComponent: 'filter/string',
+            },
+            {
+                id: 'category',
                 label: this.intl.t('column.category'),
                 valuePath: 'category',
                 cellComponent: 'table/cell/base',
@@ -70,6 +82,7 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
                 placeholder: 'Select work order category',
             },
             {
+                id: 'status',
                 label: this.intl.t('column.status'),
                 valuePath: 'status',
                 cellComponent: 'table/cell/status',
@@ -80,6 +93,7 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'priority',
                 label: this.intl.t('column.priority'),
                 valuePath: 'priority',
                 cellComponent: 'table/cell/base',
@@ -91,6 +105,7 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'target-name',
                 label: this.intl.t('column.target'),
                 valuePath: 'target_name',
                 cellComponent: 'cell/maintenance-subject-identity',
@@ -100,6 +115,7 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
                 hidden: true,
             },
             {
+                id: 'assignee-name',
                 label: this.intl.t('column.assignee'),
                 valuePath: 'assignee_name',
                 cellComponent: 'cell/facilitator-identity',
@@ -107,9 +123,19 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
                 resizable: true,
                 sortable: false,
             },
-            { label: this.intl.t('column.due-at'), valuePath: 'dueAt', sortParam: 'due_at', resizable: true, sortable: true, filterable: true, filterComponent: 'filter/date' },
-            { label: this.intl.t('column.created-at'), valuePath: 'createdAt', sortParam: 'created_at', resizable: true, sortable: true, filterable: true, filterComponent: 'filter/date' },
+            { id: 'due-at', label: this.intl.t('column.due-at'), valuePath: 'dueAt', sortParam: 'due_at', resizable: true, sortable: true, filterable: true, filterComponent: 'filter/date' },
             {
+                id: 'created-at',
+                label: this.intl.t('column.created-at'),
+                valuePath: 'createdAt',
+                sortParam: 'created_at',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/date',
+            },
+            {
+                id: 'updated-at',
                 label: this.intl.t('column.updated-at'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
@@ -120,6 +146,7 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -130,17 +157,20 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
                 wrapperClass: 'flex items-center justify-end mx-2',
                 actions: [
                     {
+                        id: 'view',
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.work-order') }),
                         fn: this.workOrderActions.transition.view,
                         permission: 'fleet-ops view work-order',
                     },
                     {
+                        id: 'edit',
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.work-order') }),
                         fn: this.workOrderActions.transition.edit,
                         permission: 'fleet-ops update work-order',
                     },
                     { separator: true },
                     {
+                        id: 'send-email',
                         label: 'Send Work Order to Vendor',
                         fn: this.workOrderActions.sendEmail,
                         icon: 'paper-plane',
@@ -148,6 +178,7 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
                     },
                     { separator: true },
                     {
+                        id: 'delete',
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.work-order') }),
                         fn: this.workOrderActions.delete,
                         permission: 'fleet-ops delete work-order',

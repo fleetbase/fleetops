@@ -34,7 +34,17 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * An array of activity codes that should not be modified.
      * @type {Array.<string>}
      */
-    @tracked immutableActivities = ['created', 'dispatched', 'started'];
+    /**
+     * Activities that cannot be edited or removed. Configs with their own lifecycle
+     * (`meta.lifecycle`) are not bound to the default dispatch activities.
+     */
+    get immutableActivities() {
+        return this.lifecycle ? [] : ['created', 'dispatched', 'started'];
+    }
+
+    get lifecycle() {
+        return this.config?.meta?.lifecycle ?? null;
+    }
 
     /**
      * The configuration data for the activity flow.
@@ -180,6 +190,12 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         this.clearGraph({
             onAfter: () => {
                 this.flow = {};
+                // A configured lifecycle resets to its saved flow, never to the default dispatch flow.
+                if (this.lifecycle && this.config?.flow && Object.keys(this.config.flow).length) {
+                    this.deserializeFlow(this.config.flow);
+                    return;
+                }
+
                 const defaultActivities = this.getDefaultActivities();
                 this.addActivityToGraph(defaultActivities);
             },
@@ -361,7 +377,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             }
         });
 
-        const rootCode = getOrderConfigFlowRootCode(deserializedFlow);
+        const rootCode = getOrderConfigFlowRootCode(deserializedFlow, this.lifecycle?.initial);
         if (rootCode && deserializedFlow[rootCode]) {
             this.addDeserializedActivityToGraph(deserializedFlow[rootCode]);
         }
@@ -439,6 +455,10 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * and creates links from the parent to each child. It then calls itself to add any children of the current child activities.
      * Finally, it repositions all child activities to maintain visual consistency.
      *
+     * A flow is a graph, not a tree: an activity may be reachable from several parents, and a
+     * configured lifecycle can loop back (e.g. active -> extended -> active). An activity that is
+     * already on the graph only gets a link from this parent; it is never placed or walked twice.
+     *
      * @param {Object} parentActivity - The parent activity to which child activities will be added.
      * @param {Array} [childActivities=[]] - An array of child activity objects to be added. Defaults to an empty array.
      */
@@ -447,6 +467,11 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             return;
         }
         childActivities.forEach((childActivityObject) => {
+            if (childActivityObject.get('node')) {
+                this.addLinkToGraph(parentActivity, childActivityObject);
+                return;
+            }
+
             const childPositionals = this.getActivityPositioning(childActivityObject, parentActivity);
             const childActivity = this.createActivityNode(childActivityObject, childPositionals);
             childActivity.set('parentId', parentActivity.get('id'));
@@ -823,16 +848,26 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         const addButton = this.createAddActivityButton(activity, { x: width });
         let tools = [];
 
-        if (activity.get('code') === 'created' || activity.get('code') === 'dispatched') {
-            tools = [];
-        }
+        const code = activity.get('code');
+        const canUpdate = this.abilities.can('fleet-ops update order-config');
 
-        if (activity.get('code') === 'started' && this.abilities.can('fleet-ops update order-config')) {
-            tools = [addButton];
-        }
+        if (this.lifecycle) {
+            // The configured initial activity is the root: it can gain children but not be removed.
+            if (canUpdate) {
+                tools = code === this.lifecycle.initial ? [addButton] : [removeButton, addButton];
+            }
+        } else {
+            if (code === 'created' || code === 'dispatched') {
+                tools = [];
+            }
 
-        if (!this.immutableActivities.includes(activity.get('code')) && this.abilities.can('fleet-ops update order-config')) {
-            tools = [removeButton, addButton];
+            if (code === 'started' && canUpdate) {
+                tools = [addButton];
+            }
+
+            if (!this.immutableActivities.includes(code) && canUpdate) {
+                tools = [removeButton, addButton];
+            }
         }
 
         const activityNodeView = activityNode.findView(this.paper);

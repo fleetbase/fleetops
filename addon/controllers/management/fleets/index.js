@@ -15,7 +15,22 @@ export default class ManagementFleetsIndexController extends Controller {
     @service intl;
 
     /** query params */
-    @tracked queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'zone', 'service_area', 'parent_fleet', 'vendor', 'created_by', 'updated_by', 'status', 'task', 'name'];
+    @tracked queryParams = this.fleetActions.queryParamsFor([
+        'page',
+        'limit',
+        'sort',
+        'query',
+        'public_id',
+        'zone',
+        'service_area',
+        'parent_fleet',
+        'vendor',
+        'created_by',
+        'updated_by',
+        'status',
+        'task',
+        'name',
+    ]);
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -33,11 +48,13 @@ export default class ManagementFleetsIndexController extends Controller {
     get actionButtons() {
         return [
             {
+                id: 'refresh',
                 icon: 'refresh',
                 onClick: this.fleetActions.refresh,
                 helpText: this.intl.t('common.refresh'),
             },
             {
+                id: 'create',
                 text: this.intl.t('common.new'),
                 type: 'primary',
                 icon: 'plus',
@@ -45,6 +62,7 @@ export default class ManagementFleetsIndexController extends Controller {
                 permission: 'fleet-ops create fleet',
             },
             {
+                id: 'import',
                 text: this.intl.t('common.import'),
                 type: 'magic',
                 icon: 'upload',
@@ -52,6 +70,7 @@ export default class ManagementFleetsIndexController extends Controller {
                 permission: 'fleet-ops import fleet',
             },
             {
+                id: 'export',
                 text: this.intl.t('common.export'),
                 icon: 'long-arrow-up',
                 iconClass: 'rotate-icon-45',
@@ -68,6 +87,7 @@ export default class ManagementFleetsIndexController extends Controller {
 
         return [
             {
+                id: 'bulk-delete',
                 label: this.intl.t('common.delete-selected-count', { count: selected.length }),
                 class: 'text-red-500',
                 fn: this.fleetActions.bulkDelete,
@@ -80,6 +100,7 @@ export default class ManagementFleetsIndexController extends Controller {
     get columns() {
         return [
             {
+                id: 'name',
                 sticky: true,
                 label: this.intl.t('column.name'),
                 valuePath: 'name',
@@ -93,6 +114,7 @@ export default class ManagementFleetsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'service-area-name',
                 label: this.intl.t('column.service-area'),
                 cellComponent: 'cell/service-area-identity',
                 permission: 'fleet-ops view service-area',
@@ -107,6 +129,7 @@ export default class ManagementFleetsIndexController extends Controller {
                 model: 'service-area',
             },
             {
+                id: 'parent-fleet-name',
                 label: this.intl.t('column.parent-fleet'),
                 cellComponent: 'cell/fleet-identity',
                 permission: 'fleet-ops view fleet',
@@ -120,6 +143,7 @@ export default class ManagementFleetsIndexController extends Controller {
                 model: 'fleet',
             },
             {
+                id: 'vendor-name',
                 label: this.intl.t('column.vendor'),
                 cellComponent: 'cell/vendor-identity',
                 permission: 'fleet-ops view vendor',
@@ -134,6 +158,7 @@ export default class ManagementFleetsIndexController extends Controller {
                 model: 'vendor',
             },
             {
+                id: 'zone-name',
                 label: this.intl.t('column.zone'),
                 cellComponent: 'cell/zone-identity',
                 permission: 'fleet-ops view zone',
@@ -147,6 +172,7 @@ export default class ManagementFleetsIndexController extends Controller {
                 model: 'zone',
             },
             {
+                id: 'public-id',
                 label: this.intl.t('column.id'),
                 valuePath: 'public_id',
                 cellComponent: 'click-to-copy',
@@ -158,6 +184,7 @@ export default class ManagementFleetsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'drivers-count',
                 label: this.intl.t('column.manpower'),
                 valuePath: 'drivers_count',
                 resizable: true,
@@ -165,6 +192,7 @@ export default class ManagementFleetsIndexController extends Controller {
                 filterable: false,
             },
             {
+                id: 'drivers-online-count',
                 label: this.intl.t('column.active-manpower'),
                 valuePath: 'drivers_online_count',
                 hidden: true,
@@ -173,6 +201,7 @@ export default class ManagementFleetsIndexController extends Controller {
                 filterable: false,
             },
             {
+                id: 'task',
                 label: this.intl.t('column.task'),
                 valuePath: 'task',
                 cellComponent: 'table/cell/base',
@@ -182,6 +211,7 @@ export default class ManagementFleetsIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'status',
                 label: this.intl.t('column.status'),
                 valuePath: 'status',
                 cellComponent: 'table/cell/status',
@@ -194,6 +224,7 @@ export default class ManagementFleetsIndexController extends Controller {
                 filterOptions: fleetOpsOptions('fleetStatuses'),
             },
             {
+                id: 'created-at',
                 label: this.intl.t('column.created-at'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
@@ -203,6 +234,7 @@ export default class ManagementFleetsIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'updated-at',
                 label: this.intl.t('column.updated-at'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
@@ -213,6 +245,7 @@ export default class ManagementFleetsIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -225,21 +258,25 @@ export default class ManagementFleetsIndexController extends Controller {
                 width: 60,
                 actions: [
                     {
+                        id: 'view',
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.fleet') }),
                         fn: this.fleetActions.transition.view,
                         permission: 'fleet-ops view fleet',
                     },
                     {
+                        id: 'edit',
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.fleet') }),
                         fn: this.fleetActions.transition.edit,
                         permission: 'fleet-ops update fleet',
                     },
                     {
+                        id: 'assign-driver',
                         label: this.intl.t('fleet.actions.assign-driver'),
                         permission: 'fleet-ops assign-driver-for fleet',
                         fn: this.fleetActions.assignDriver,
                     },
                     {
+                        id: 'assign-vehicle',
                         label: this.intl.t('fleet.actions.assign-vehicle'),
                         permission: 'fleet-ops assign-vehicle-for fleet',
                         fn: this.fleetActions.assignVehicle,
@@ -248,6 +285,7 @@ export default class ManagementFleetsIndexController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'delete',
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.fleet') }),
                         fn: this.fleetActions.delete,
                         permission: 'fleet-ops delete fleet',

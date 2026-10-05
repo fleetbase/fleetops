@@ -68,6 +68,7 @@ export default class ManagementVehiclesIndexDetailsController extends Controller
                 permission: 'fleet-ops update vehicle',
             },
             {
+                id: 'more',
                 // Actions dropdown — shared with the vehicle context panel
                 icon: 'ellipsis-h',
                 iconPrefix: 'fas',

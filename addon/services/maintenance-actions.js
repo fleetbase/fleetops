@@ -44,6 +44,7 @@ export default class MaintenanceActionsService extends ResourceActionService {
         },
         view: (maintenance, options = {}) => {
             return this.resourceContextPanel.open({
+                registry: this.detailsRegistry,
                 maintenance,
                 title: maintenance?.summary,
                 header: 'maintenance/panel-header',

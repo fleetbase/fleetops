@@ -16,7 +16,7 @@ export default class ManagementVehiclesIndexController extends Controller {
     @service appCache;
 
     /** query params */
-    @tracked queryParams = [
+    @tracked queryParams = this.vehicleActions.queryParamsFor([
         'page',
         'limit',
         'sort',
@@ -38,7 +38,7 @@ export default class ManagementVehiclesIndexController extends Controller {
         'has_trailer',
         'has_driver',
         'has_device',
-    ];
+    ]);
     @tracked query = null;
     @tracked page = 1;
     @tracked limit;
@@ -68,6 +68,7 @@ export default class ManagementVehiclesIndexController extends Controller {
     get actionButtons() {
         return [
             {
+                id: 'more',
                 component: 'dropdown-button',
                 icon: 'display',
                 size: 'xs',
@@ -93,11 +94,13 @@ export default class ManagementVehiclesIndexController extends Controller {
                 helpText: 'Change the layout',
             },
             {
+                id: 'refresh',
                 icon: 'refresh',
                 onClick: this.vehicleActions.refresh,
                 helpText: this.intl.t('common.refresh'),
             },
             {
+                id: 'create',
                 text: this.intl.t('common.new'),
                 type: 'primary',
                 icon: 'plus',
@@ -105,6 +108,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 permission: 'fleet-ops create vehicle',
             },
             {
+                id: 'import',
                 text: this.intl.t('common.import'),
                 type: 'magic',
                 icon: 'upload',
@@ -112,6 +116,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 permission: 'fleet-ops import vehicle',
             },
             {
+                id: 'export',
                 text: this.intl.t('common.export'),
                 icon: 'long-arrow-up',
                 iconClass: 'rotate-icon-45',
@@ -128,6 +133,7 @@ export default class ManagementVehiclesIndexController extends Controller {
 
         return [
             {
+                id: 'bulk-delete',
                 label: this.intl.t('common.delete-selected-count', { count: selected.length }),
                 class: 'text-red-500',
                 fn: this.vehicleActions.bulkDelete,
@@ -151,6 +157,7 @@ export default class ManagementVehiclesIndexController extends Controller {
     get columns() {
         return [
             {
+                id: 'display-name',
                 sticky: true,
                 label: this.intl.t('column.name'),
                 valuePath: 'displayName',
@@ -165,6 +172,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 filterParam: 'name',
             },
             {
+                id: 'plate-number',
                 label: this.intl.t('column.plate-number'),
                 valuePath: 'plate_number',
                 cellComponent: 'table/cell/base',
@@ -176,6 +184,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 filterParam: 'plate_number',
             },
             {
+                id: 'internal-id',
                 label: this.intl.t('column.internal-id'),
                 valuePath: 'internal_id',
                 cellComponent: 'table/cell/base',
@@ -188,6 +197,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 filterParam: 'internal_id',
             },
             {
+                id: 'driver-name',
                 label: this.intl.t('column.driver-assigned'),
                 cellComponent: 'cell/driver-identity',
                 permission: 'fleet-ops view driver',
@@ -203,6 +213,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 model: 'driver',
             },
             {
+                id: 'trailers',
                 label: this.intl.t('resource.trailers'),
                 valuePath: 'trailers',
                 cellComponent: 'cell/resource-list',
@@ -216,6 +227,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 modelNamePath: 'displayName',
             },
             {
+                id: 'devices',
                 label: this.intl.t('resource.devices'),
                 valuePath: 'devices',
                 cellComponent: 'cell/resource-list',
@@ -229,6 +241,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 modelNamePath: 'displayName',
             },
             {
+                id: 'public-id',
                 label: this.intl.t('column.id'),
                 valuePath: 'public_id',
                 cellComponent: 'click-to-copy',
@@ -238,6 +251,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'make',
                 label: this.intl.t('column.make'),
                 valuePath: 'make',
                 cellComponent: 'table/cell/base',
@@ -249,6 +263,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'model',
                 label: this.intl.t('column.model'),
                 valuePath: 'model',
                 cellComponent: 'table/cell/base',
@@ -260,6 +275,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'year',
                 label: this.intl.t('column.year'),
                 valuePath: 'year',
                 cellComponent: 'table/cell/base',
@@ -270,6 +286,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                id: 'vendor-name',
                 label: this.intl.t('column.vendor'),
                 cellComponent: 'cell/vendor-identity',
                 permission: 'fleet-ops view vendor',
@@ -287,6 +304,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 model: 'vendor',
             },
             {
+                id: 'status',
                 label: this.intl.t('column.status'),
                 valuePath: 'status',
                 cellComponent: 'table/cell/status',
@@ -297,6 +315,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 filterFetchOptions: 'vehicles/statuses',
             },
             {
+                id: 'created-at',
                 label: this.intl.t('column.created-at'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
@@ -308,6 +327,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 filterComponent: 'filter/date',
             },
             {
+                id: 'updated-at',
                 label: this.intl.t('column.updated-at'),
                 valuePath: 'updatedAt',
                 sortParam: 'updated_at',
@@ -351,6 +371,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 filterParam: 'has_device',
             },
             {
+                id: 'row-actions',
                 label: '',
                 cellComponent: 'table/cell/dropdown',
                 ddButtonText: false,
@@ -363,26 +384,31 @@ export default class ManagementVehiclesIndexController extends Controller {
                 width: 60,
                 actions: [
                     {
+                        id: 'view',
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.vehicle') }),
                         fn: this.vehicleActions.transition.view,
                         permission: 'fleet-ops view vehicle',
                     },
                     {
+                        id: 'edit',
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.vehicle') }),
                         fn: this.vehicleActions.transition.edit,
                         permission: 'fleet-ops update vehicle',
                     },
                     {
+                        id: 'locate',
                         label: this.intl.t('vehicle.actions.locate-vehicle'),
                         fn: this.vehicleActions.locate,
                         permission: 'fleet-ops view vehicle',
                     },
                     {
+                        id: 'attach-device',
                         label: this.intl.t('vehicle.actions.attach-device'),
                         fn: this.vehicleActions.attachDevice,
                         permission: 'fleet-ops update vehicle',
                     },
                     {
+                        id: 'unassign-orders',
                         label: this.intl.t('vehicle.actions.unassign-orders'),
                         fn: this.vehicleActions.unassignOrders,
                         permission: 'fleet-ops update vehicle',
@@ -392,21 +418,25 @@ export default class ManagementVehiclesIndexController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'schedule-maintenance',
                         label: this.intl.t('vehicle.actions.schedule-maintenance'),
                         fn: this.vehicleActions.scheduleMaintenance,
                         permission: 'fleet-ops create maintenance-schedule',
                     },
                     {
+                        id: 'create-work-order',
                         label: this.intl.t('vehicle.actions.create-work-order'),
                         fn: this.vehicleActions.createWorkOrder,
                         permission: 'fleet-ops create work-order',
                     },
                     {
+                        id: 'log-maintenance',
                         label: this.intl.t('vehicle.actions.log-maintenance'),
                         fn: this.vehicleActions.logMaintenance,
                         permission: 'fleet-ops create maintenance',
                     },
                     {
+                        id: 'create-issue',
                         label: this.intl.t('vehicle.actions.create-issue'),
                         fn: this.createIssue,
                         permission: 'fleet-ops create issue',
@@ -415,6 +445,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                         separator: true,
                     },
                     {
+                        id: 'delete',
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.vehicle') }),
                         fn: this.vehicleActions.delete,
                         permission: 'fleet-ops delete vehicle',

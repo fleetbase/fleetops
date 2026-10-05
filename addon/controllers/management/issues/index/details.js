@@ -20,6 +20,7 @@ export default class ManagementIssuesIndexDetailsController extends Controller {
                 fn: () => this.hostRouter.transitionTo('console.fleet-ops.management.issues.index.edit', this.model),
             },
             {
+                id: 'more',
                 icon: 'ellipsis',
                 type: 'default',
                 items: this.issueActions.workflowItems(this.model, () => this.refreshIssue()),

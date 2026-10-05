@@ -14,6 +14,7 @@ import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-co
 import OrderConfigManagerDetailsComponent from './order-config-manager/details';
 import OrderConfigManagerCustomFieldsComponent from './order-config-manager/custom-fields';
 import OrderConfigManagerActivityFlowComponent from './order-config-manager/activity-flow';
+import OrderConfigManagerLifecycleComponent from './order-config-manager/lifecycle';
 import OrderConfigManagerEntitiesComponent from './order-config-manager/entities';
 import findActiveTab from '../utils/find-active-tab';
 
@@ -45,6 +46,7 @@ export default class OrderConfigManagerComponent extends Component {
             this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.details'), null, { icon: 'circle-info', component: OrderConfigManagerDetailsComponent }),
             this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.custom-fields'), null, { icon: 'rectangle-list', component: OrderConfigManagerCustomFieldsComponent }),
             this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.activity-flow'), null, { icon: 'diagram-project', component: OrderConfigManagerActivityFlowComponent }),
+            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.lifecycle'), null, { icon: 'arrows-spin', component: OrderConfigManagerLifecycleComponent }),
             this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.entities'), null, { icon: 'boxes-packing', component: OrderConfigManagerEntitiesComponent }),
         ];
 
@@ -106,7 +108,9 @@ export default class OrderConfigManagerComponent extends Component {
      */
     @task *loadOrderConfigs(options = {}) {
         try {
-            const configs = yield this.store.findAll('order-config').then(Array.from);
+            // Always fetch: `findAll` otherwise resolves with whatever subset of configs the store
+            // already holds (e.g. from an order's embedded config) and only refreshes in the background.
+            const configs = yield this.store.findAll('order-config', { reload: true }).then(Array.from);
             let currentConfig;
             if (isArray(configs) && configs.length > 0) {
                 currentConfig = configs.find((c) => c.id === this.args.orderConfig);

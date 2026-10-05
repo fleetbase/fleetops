@@ -661,3 +661,75 @@ test('set destination and next activity guard missing orders and configs', funct
     $noConfig = $controller->nextActivity('order_internal', Request::create('/x', 'GET'));
     expect($noConfig->getData(true)['error'] ?? '')->toBe('No order config found for order.');
 });
+
+function fleetopsInternalActivityUseLifecycle(SQLiteConnection $connection, array $lifecycle = []): void
+{
+    $activity = fn (string $code, array $children = []) => ['key' => $code, 'code' => $code, 'status' => ucfirst($code), 'details' => ucfirst($code) . ' loan', 'activities' => $children, 'logic' => [], 'events' => [], 'complete' => $code === 'completed'];
+
+    $connection->table('order_configs')->where('uuid', 'config-1')->update([
+        'flow' => json_encode([
+            'requested' => $activity('requested', ['assigned', 'cancelled']),
+            'assigned'  => $activity('assigned', ['completed']),
+            'completed' => $activity('completed'),
+            'cancelled' => $activity('cancelled'),
+        ]),
+        'meta' => json_encode(['lifecycle' => array_replace([
+            'initial'            => 'requested',
+            'completed'          => 'completed',
+            'canceled'           => 'cancelled',
+            'dispatch'           => false,
+            'strict_transitions' => true,
+        ], $lifecycle)]),
+    ]);
+}
+
+test('strict transitions reject activities outside the configured flow and use the configured definition', function () {
+    $connection = fleetopsInternalActivityBoot();
+    $controller = new OrderController();
+
+    fleetopsInternalActivityUseLifecycle($connection);
+    fleetopsInternalActivitySeedOrder($connection, ['status' => 'requested']);
+
+    // Not a child of the current activity
+    $skipped = $controller->updateActivity('order_internal', Request::create('/x', 'POST', ['activity' => ['key' => 'completed', 'code' => 'completed', 'status' => 'Completed'], 'bypass_proof' => 1]));
+    expect($skipped->getStatusCode())->toBe(422)
+        ->and($skipped->getData(true)['error'])->toContain('not a permitted next step');
+
+    // Not in the flow at all
+    $unknown = $controller->updateActivity('order_internal', Request::create('/x', 'POST', ['activity' => ['key' => 'started', 'code' => 'started', 'status' => 'Started'], 'bypass_proof' => 1]));
+    expect($unknown->getStatusCode())->toBe(422);
+
+    // A configured child is accepted, with the server-side definition replacing the client's
+    $assigned = $controller->updateActivity('order_internal', Request::create('/x', 'POST', ['activity' => ['key' => 'assigned', 'code' => 'assigned', 'status' => 'Tampered'], 'bypass_proof' => 1]));
+    expect($assigned)->toBeInstanceOf(Fleetbase\FleetOps\Http\Resources\v1\Order::class)
+        ->and($connection->table('tracking_statuses')->where('code', 'ASSIGNED')->value('status'))->toBe('Assigned');
+});
+
+test('dispatch order refuses orders whose lifecycle disables dispatch', function () {
+    $connection = fleetopsInternalActivityBoot();
+    $controller = new OrderController();
+
+    fleetopsInternalActivityUseLifecycle($connection);
+    fleetopsInternalActivitySeedOrder($connection, ['status' => 'requested', 'driver_assigned_uuid' => 'driver-1']);
+
+    $response = $controller->dispatchOrder(Request::create('/x', 'POST', ['order' => 'order_internal']));
+    expect($response->getData(true)['error'] ?? '')->toContain('not dispatched')
+        ->and($connection->table('orders')->value('dispatched'))->toBe(0);
+});
+
+test('orders with a configured lifecycle start their tracking at the initial activity', function () {
+    $connection = fleetopsInternalActivityBoot();
+
+    // No config, or a config without a lifecycle, keeps the default created status
+    expect((new Fleetbase\FleetOps\Models\Order())->getInitialTrackingStatus())->toBeNull();
+    $order                    = new Fleetbase\FleetOps\Models\Order();
+    $order->order_config_uuid = 'config-1';
+    expect($order->getInitialTrackingStatus())->toBeNull();
+
+    fleetopsInternalActivityUseLifecycle($connection);
+    expect($order->getInitialTrackingStatus())->toBe(['code' => 'requested', 'status' => 'Requested', 'details' => 'Requested loan']);
+
+    // An initial activity missing from the flow falls back to the default
+    fleetopsInternalActivityUseLifecycle($connection, ['initial' => 'nowhere']);
+    expect($order->getInitialTrackingStatus())->toBeNull();
+});
