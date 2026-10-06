@@ -59,7 +59,10 @@ module('Unit | Controller | operations/scheduler/index', function (hooks) {
         await this.controller.subscribeToRealTimeUpdates();
 
         assert.deepEqual(this.socket.listened, ['driver.driver_a', 'driver.driver_b'], 'one listener per driver, opened once');
-        assert.notOk(this.socket.listened.some((name) => name.startsWith('company.')), 'the dead company orders channel is gone');
+        assert.notOk(
+            this.socket.listened.some((name) => name.startsWith('company.')),
+            'the dead company orders channel is gone'
+        );
     });
 
     test('teardown closes only the channels the board opened', async function (assert) {
