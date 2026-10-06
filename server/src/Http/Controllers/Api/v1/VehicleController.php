@@ -18,6 +18,7 @@ use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\Warranty;
 use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
+use Fleetbase\FleetOps\Support\TrackingPublisher;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
@@ -298,6 +299,7 @@ class VehicleController extends Controller
         $vehicle->createPosition($positionData);
 
         broadcast(new VehicleLocationChanged($vehicle));
+        app(TrackingPublisher::class)->vehicleMoved($vehicle);
 
         try {
             $newLocation     = new Point($latitude, $longitude);

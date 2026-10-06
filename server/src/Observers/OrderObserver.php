@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Observers;
 
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\LiveCacheService;
+use Fleetbase\FleetOps\Support\TrackingPublisher;
 use Illuminate\Support\Facades\Cache;
 
 class OrderObserver
@@ -46,6 +47,9 @@ class OrderObserver
         }
 
         $this->invalidateCache($order);
+
+        // Public tracking channels follow status, assignment and ETA changes.
+        app(TrackingPublisher::class)->orderChanged($order);
     }
 
     /**
