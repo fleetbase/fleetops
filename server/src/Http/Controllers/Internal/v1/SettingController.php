@@ -5,10 +5,13 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 use Fleetbase\FleetOps\Jobs\DispatchTelematicsRetentionJobs;
 use Fleetbase\FleetOps\Support\Telematics\Retention\RetentionPolicy;
 use Fleetbase\FleetOps\Support\Telematics\Telemetry\Queue;
+use Fleetbase\FleetOps\Support\TrackingPage\TrackingPageConfig;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Tracking\TrackingProviderRegistry;
 use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
+use Fleetbase\Services\SmsService;
 use Fleetbase\Support\Auth;
 use Fleetbase\Support\NotificationRegistry;
 use Illuminate\Database\MySqlConnection;
@@ -47,6 +50,11 @@ class SettingController extends Controller
             'saveTelematicsSettings'                  => 'update telematics-settings',
             'getTelematicsStorageUsage'               => 'admin',
             'runTelematicsRetention'                  => 'admin',
+            'getTrackingPageSettings'                 => 'view tracking-page-settings',
+            'saveTrackingPageSettings'                => 'update tracking-page-settings',
+            'validateTrackingPageSlug'                => 'update tracking-page-settings',
+            'getAdminTrackingPageSettings'            => 'admin',
+            'saveAdminTrackingPageSettings'           => 'admin',
         ]);
     }
 
@@ -1072,6 +1080,194 @@ class SettingController extends Controller
         }
 
         return $statistics;
+    }
+
+    /**
+     * The company's customer tracking page settings, with what the settings screen needs to
+     * explain them: whether the slug is usable, whether SMS can be sent, and whether the
+     * customer portal is there for sign-in.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTrackingPageSettings()
+    {
+        return response()->json($this->trackingPageView($this->trackingPageConfig()));
+    }
+
+    /**
+     * Save the company's tracking page settings.
+     *
+     * The slug is indexed so the public page can find the company in one read. A slug that
+     * is invalid, reserved or taken can't be saved while the organization page is on; while
+     * it is off, the slug is kept but not indexed.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveTrackingPageSettings(Request $request)
+    {
+        $previous   = $this->trackingPageConfig();
+        $config     = TrackingPageConfig::sanitize((array) $request->input('trackingPage', []), $this->trackingPageAdminConfig(), $this->trackingPageCompanyName());
+        $slug       = $config['org_page']['slug'];
+        $validation = $this->trackingPageSlugValidation($slug);
+
+        if ($config['org_page']['enabled'] && !$validation['valid']) {
+            return response()->error($validation['message'], 422);
+        }
+
+        if ($validation['valid']) {
+            $previousSlug = $previous['org_page']['slug'];
+            if ($previousSlug !== $slug && $this->trackingPageSlugOwner($previousSlug) === $this->trackingPageCompanyUuid()) {
+                $this->configureSetting(TrackingPageConfig::SLUG_INDEX_PREFIX . $previousSlug, null);
+            }
+
+            $this->configureSetting(TrackingPageConfig::SLUG_INDEX_PREFIX . $slug, $this->trackingPageCompanyUuid());
+        }
+
+        $this->configureCompanySetting(TrackingPageConfig::SETTING_KEY, $config);
+
+        return response()->json($this->trackingPageView($config));
+    }
+
+    /**
+     * Check a slug while it is typed.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function validateTrackingPageSlug(Request $request)
+    {
+        $slug = strtolower(trim((string) $request->input('slug', '')));
+
+        return response()->json(array_merge(['slug' => $slug], $this->trackingPageSlugValidation($slug)));
+    }
+
+    /**
+     * Instance-wide defaults for the generic tracking page.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAdminTrackingPageSettings()
+    {
+        return response()->json($this->trackingPageAdminConfig());
+    }
+
+    /**
+     * Save the instance-wide defaults for the generic tracking page.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveAdminTrackingPageSettings(Request $request)
+    {
+        $config = TrackingPageConfig::sanitizeAdmin((array) $request->input('trackingPage', []));
+        $this->configureSetting(TrackingPageConfig::ADMIN_SETTING_KEY, $config);
+
+        return response()->json($config);
+    }
+
+    protected function trackingPageConfig(): array
+    {
+        return TrackingPageConfig::sanitize(
+            (array) $this->lookupCompanySetting(TrackingPageConfig::SETTING_KEY, []),
+            $this->trackingPageAdminConfig(),
+            $this->trackingPageCompanyName()
+        );
+    }
+
+    protected function trackingPageAdminConfig(): array
+    {
+        return TrackingPageConfig::sanitizeAdmin((array) $this->lookupSetting(TrackingPageConfig::ADMIN_SETTING_KEY, []));
+    }
+
+    /**
+     * The saved config plus the read-only facts the settings screen shows beside it.
+     */
+    protected function trackingPageView(array $config): array
+    {
+        $accent = $config['branding']['accent'];
+
+        return array_merge($config, [
+            'slug_validation'           => $this->trackingPageSlugValidation($config['org_page']['slug']),
+            'accent_ink'                => TrackingPageConfig::inkFor($accent),
+            'accent_contrast'           => TrackingPageConfig::contrastRatio($accent, TrackingPageConfig::inkFor($accent)),
+            'sms_available'             => $this->smsProviderConfigured(),
+            'customer_portal_installed' => $this->customerPortalInstalled(),
+            'admin'                     => $this->trackingPageAdminConfig(),
+        ]);
+    }
+
+    /**
+     * @return array{valid: bool, code: string, message: string}
+     */
+    protected function trackingPageSlugValidation(string $slug): array
+    {
+        $error = TrackingPageConfig::slugError($slug);
+        if ($error === 'invalid') {
+            return ['valid' => false, 'code' => 'invalid', 'message' => 'Use 3 to 40 lowercase letters, numbers and single hyphens, starting and ending with a letter or number.'];
+        }
+
+        if ($error === 'reserved') {
+            return ['valid' => false, 'code' => 'reserved', 'message' => 'This address is reserved. Please choose another.'];
+        }
+
+        $owner = $this->trackingPageSlugOwner($slug);
+        if ($owner !== null && $owner !== $this->trackingPageCompanyUuid()) {
+            return ['valid' => false, 'code' => 'taken', 'message' => 'Another organization already uses this address.'];
+        }
+
+        return ['valid' => true, 'code' => 'available', 'message' => 'This address is available.'];
+    }
+
+    protected function trackingPageSlugOwner(string $slug): ?string
+    {
+        $owner = $this->lookupSetting(TrackingPageConfig::SLUG_INDEX_PREFIX . $slug);
+
+        return is_string($owner) && $owner !== '' ? $owner : null;
+    }
+
+    protected function trackingPageCompanyUuid(): ?string
+    {
+        return data_get($this->currentCompany(), 'uuid');
+    }
+
+    protected function trackingPageCompanyName(): ?string
+    {
+        return data_get($this->currentCompany(), 'name');
+    }
+
+    /**
+     * Whether the instance can send SMS. Twilio is listed as always available, so it counts
+     * only with credentials; other providers report their own configuration.
+     */
+    protected function smsProviderConfigured(): bool
+    {
+        if (filled(config('services.twilio.sid')) && filled(config('services.twilio.token'))) {
+            return true;
+        }
+
+        return collect($this->smsProviders())
+            ->except(SmsService::PROVIDER_TWILIO)
+            ->contains(fn ($provider) => (bool) data_get($provider, 'available'));
+    }
+
+    protected function smsProviders(): array
+    {
+        // @codeCoverageIgnoreStart
+        // Reads the live SMS provider configuration; tests replace this seam.
+        return (new SmsService())->getAvailableProviders();
+        // @codeCoverageIgnoreEnd
+    }
+
+    protected function customerPortalInstalled(): bool
+    {
+        return collect($this->installedFleetbaseExtensions())
+            ->contains(fn ($package) => data_get($package, 'name') === 'fleetbase/customer-portal-api');
+    }
+
+    protected function installedFleetbaseExtensions(): array
+    {
+        // @codeCoverageIgnoreStart
+        // Reads the installed composer packages; tests replace this seam.
+        return Utils::getInstalledFleetbaseExtensions();
+        // @codeCoverageIgnoreEnd
     }
 
     protected function dispatchTelematicsPrune(): void
