@@ -398,7 +398,10 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->group(
                     ['prefix' => 'v1/fleet-ops', 'namespace' => 'v1'],
                     function ($router) {
-                        $router->get('lookup', 'OrderController@lookup');
+                        // The public Track Order page: no session, the tracking number is
+                        // the credential. Rate limited per address so numbers cannot be
+                        // enumerated, on a limiter of its own.
+                        $router->get('lookup', 'OrderController@lookup')->middleware('throttle:30,1,tracking-lookup');
                     }
                 );
 

@@ -223,6 +223,12 @@ test('fleetops route file registers public internal analytics metrics and hub ro
     // Uploads through a link have a tighter limit of their own, on top of the group's.
     $upload = collect($recorder->routes)->firstWhere('uri', 'public/inspections/forms/{id}/files');
     expect($upload['middleware'] ?? [])->toBe(['throttle:20,1,inspection-upload']);
+
+    // The public tracking lookup has no session either, so it is rate limited
+    // per address, on a limiter of its own.
+    $lookup = collect($recorder->routes)->first(fn (array $route) => $route['action'] === 'OrderController@lookup');
+    expect($lookup)->not->toBeNull()
+        ->and($lookup['middleware'] ?? [])->toBe(['throttle:30,1,tracking-lookup']);
 });
 
 test('fleetops route file wires route groups with expected middleware and namespaces', function () {
