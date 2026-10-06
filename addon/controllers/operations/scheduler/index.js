@@ -4,12 +4,16 @@ import { inject as service } from '@ember/service';
 import { action, computed } from '@ember/object';
 import { isNone } from '@ember/utils';
 import { isValid as isValidDate } from 'date-fns';
+import { later } from '@ember/runloop';
 import { task } from 'ember-concurrency';
 import isObject from '@fleetbase/ember-core/utils/is-object';
 import isJson from '@fleetbase/ember-core/utils/is-json';
 import createFullCalendarEventFromOrder from '../../../utils/create-full-calendar-event-from-order';
 import createFullCalendarEventFromScheduleItem from '../../../utils/create-full-calendar-event-from-schedule-item';
 import toCalendarDate from '../../../utils/to-calendar-date';
+
+// The ember-core socket service subscribes ~300 ms after listen() is called.
+const SOCKET_SUBSCRIBE_SETTLE_MS = 500;
 
 /**
  * OperationsSchedulerIndexController
@@ -722,28 +726,55 @@ export default class OperationsSchedulerIndexController extends Controller {
     // Real-Time Socket Subscriptions
     // -------------------------------------------------------------------------
 
+    // Names of the socket channels this board opened, so teardown closes only those
+    // and leaves every other subscription (chat, notifications, ...) alone.
+    _socketChannelNames = new Set();
+
     @action async subscribeToRealTimeUpdates() {
-        const orgId = this.currentUser?.companyId ?? this.currentUser?.company?.id;
-        if (!orgId) return;
-        await this.socket.listen(`company.${orgId}.orders`, (payload) => this._handleOrderSocketEvent(payload));
-        this.drivers.forEach(async (driver) => {
-            await this.socket.listen(`driver.${driver.id}`, (payload) => this._handleDriverSocketEvent(payload));
-        });
+        const drivers = this.drivers ?? [];
+        await Promise.all(
+            drivers.map((driver) => {
+                if (!driver?.id) return;
+                const channelName = `driver.${driver.id}`;
+                if (this._socketChannelNames.has(channelName)) return;
+                this._socketChannelNames.add(channelName);
+                return this.socket.listen(channelName, (payload) => this._handleDriverSocketEvent(payload));
+            })
+        );
     }
 
     @action unsubscribeFromRealTimeUpdates() {
-        if (this.socket && typeof this.socket.closeChannels === 'function') {
-            this.socket.closeChannels();
+        const names = this._socketChannelNames;
+        this._socketChannelNames = new Set();
+        if (!this.socket || names.size === 0) return;
+
+        if (typeof this.socket.closeChannel === 'function') {
+            names.forEach((name) => this.socket.closeChannel(name));
+            return;
         }
+
+        const remaining = this._closeOpenedChannels(names);
+        if (remaining.size === 0) return;
+
+        // The socket service subscribes after a short delay, so a channel requested just before
+        // teardown may not exist yet: sweep once more after that delay.
+        later(this, () => this._closeOpenedChannels(remaining), SOCKET_SUBSCRIBE_SETTLE_MS);
     }
 
-    _handleOrderSocketEvent({ data } = {}) {
-        if (!data?.id) return;
-        try {
-            this.store.pushPayload('order', { order: data });
-        } catch {
-            /* ignore */
+    /**
+     * Close the socket's channels with the given names, except any the board has opened again
+     * since. Returns the names that had no channel yet.
+     */
+    _closeOpenedChannels(names) {
+        const remaining = new Set([...names].filter((name) => !this._socketChannelNames.has(name)));
+        const channels = Array.isArray(this.socket.channels) ? this.socket.channels : [];
+        for (const channel of channels) {
+            if (!names.has(channel?.name) || this._socketChannelNames.has(channel.name)) continue;
+            remaining.delete(channel.name);
+            channel.close();
         }
+
+        return remaining;
     }
 
     _handleDriverSocketEvent({ event, data } = {}) {
