@@ -114,6 +114,9 @@ test('matches accepts legacy and new codes for the scanned subject only', functi
         // A URL that names nothing matches nothing.
         ->and(TrackingCode::matches('https://console.example/track-order', $order))->toBeFalse()
         ->and(TrackingCode::matches('', $order))->toBeFalse()
+        // A request may carry a scanner's whole result object instead of its value.
+        ->and(TrackingCode::matches(['type' => 'qr', 'value' => 'order_a1b2c3d'], $order))->toBeFalse()
+        ->and(TrackingCode::matches(null, $order))->toBeFalse()
         ->and(TrackingCode::matches('order_a1b2c3d', null))->toBeFalse()
         ->and(TrackingCode::matches('order_a1b2c3d', (object) ['public_id' => 'order_a1b2c3d']))->toBeFalse();
 });

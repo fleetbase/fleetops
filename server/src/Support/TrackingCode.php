@@ -123,18 +123,19 @@ class TrackingCode
 
     /**
      * Whether a scanned value identifies the given subject (an order, waypoint, entity or
-     * place).
+     * place). The value comes straight from a request, so anything but a string, such as
+     * a scanner library's whole result object, matches nothing.
      */
-    public static function matches(?string $code, $subject): bool
+    public static function matches($code, $subject): bool
     {
         $subjectUuid = data_get($subject, 'uuid');
-        if (!$subject || empty($subjectUuid)) {
+        if (!is_string($code) || !$subject || empty($subjectUuid)) {
             return false;
         }
 
         // Labels printed before v1 encode the subject's bare uuid; compare it exactly, as
         // scans always have been.
-        if (trim((string) $code) === $subjectUuid) {
+        if (trim($code) === $subjectUuid) {
             return true;
         }
 
