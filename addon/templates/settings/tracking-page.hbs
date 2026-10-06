@@ -1,0 +1,311 @@
+<Layout::Section::Header @title={{t "tracking-page.settings.title"}}>
+    <Button
+        @type="primary"
+        @size="sm"
+        @icon="save"
+        @text={{t "common.save-changes"}}
+        @onClick={{perform this.saveSettings}}
+        @disabled={{or this.saveSettings.isRunning this.loadFailed}}
+        @isLoading={{this.saveSettings.isRunning}}
+    />
+</Layout::Section::Header>
+
+<Layout::Section::Body class="overflow-y-scroll-i h-full">
+    <div class="container mx-auto">
+        {{#if this.loadFailed}}
+            <div class="max-w-3xl my-10 mx-auto rounded-lg border border-gray-200 dark:border-gray-700 p-6 text-sm">
+                <p class="font-semibold mb-1">{{t "tracking-page.settings.load-failed"}}</p>
+                <p class="text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.load-failed-help"}}</p>
+            </div>
+        {{else if this.config}}
+            <div class="my-10 mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                <div class="lg:col-span-2 space-y-6">
+
+                    {{! ── Pages ─────────────────────────────────────────────── }}
+                    <ContentPanel @title={{t "tracking-page.settings.pages"}} @open={{true}} @wrapperClass="bordered-classic">
+                        <div class="space-y-5">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <div class="text-sm font-semibold">{{t "tracking-page.settings.org-page-enabled"}}</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.org-page-enabled-help"}}</div>
+                                </div>
+                                <Toggle @isToggled={{this.config.org_page.enabled}} @onToggle={{fn this.update "org_page.enabled"}} />
+                            </div>
+
+                            <div>
+                                <label for="tracking-page-slug" class="block text-sm font-semibold mb-1">{{t "tracking-page.settings.slug"}}</label>
+                                <div class="flex items-stretch rounded-md border border-gray-300 dark:border-gray-700 overflow-hidden">
+                                    <span class="flex items-center px-3 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border-r border-gray-300 dark:border-gray-700 whitespace-nowrap">{{this.orgPageBase}}</span>
+                                    <input
+                                        id="tracking-page-slug"
+                                        type="text"
+                                        class="form-input border-0 rounded-none flex-1 min-w-0"
+                                        value={{this.config.org_page.slug}}
+                                        autocomplete="off"
+                                        spellcheck="false"
+                                        aria-describedby="tracking-page-slug-status"
+                                        {{on "input" this.updateSlug}}
+                                    />
+                                </div>
+                                <div id="tracking-page-slug-status" class="mt-1 text-xs {{if this.slugIsValid 'text-green-700 dark:text-green-400' 'text-red-700 dark:text-red-400'}}" aria-live="polite">
+                                    {{#if this.validateSlug.isRunning}}
+                                        <span class="text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.slug-checking"}}</span>
+                                    {{else if this.slugValidation}}
+                                        {{this.slugValidation.message}}
+                                    {{/if}}
+                                </div>
+                                <div class="mt-2 flex flex-wrap items-center gap-2">
+                                    <ClickToCopy class="px-3 py-1.5 border rounded-md text-xs bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-800" @value={{this.orgPageUrl}}>{{this.orgPageUrl}}</ClickToCopy>
+                                    {{#if this.config.org_page.enabled}}
+                                        <a href={{this.orgPageUrl}} target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-blue-600 dark:text-blue-400">{{t "tracking-page.settings.open-page"}}</a>
+                                    {{/if}}
+                                </div>
+                            </div>
+
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <div class="text-sm font-semibold">{{t "tracking-page.settings.generic-page-allowed"}}</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.generic-page-allowed-help" url=this.genericPageUrl}}</div>
+                                </div>
+                                <Toggle @isToggled={{this.config.generic_page.allowed}} @onToggle={{fn this.update "generic_page.allowed"}} />
+                            </div>
+
+                            <InputGroup @name={{t "tracking-page.settings.links-target"}} @helpText={{t "tracking-page.settings.links-target-help"}}>
+                                <Select
+                                    class="w-full"
+                                    @value={{this.config.links.target}}
+                                    @options={{this.linkTargetOptions}}
+                                    @optionLabel="label"
+                                    @optionValue="value"
+                                    @onSelect={{fn this.selectOption "links.target"}}
+                                />
+                            </InputGroup>
+                        </div>
+                    </ContentPanel>
+
+                    {{! ── Branding ──────────────────────────────────────────── }}
+                    <ContentPanel @title={{t "tracking-page.settings.branding"}} @open={{true}} @wrapperClass="bordered-classic">
+                        <div class="space-y-5">
+                            <div>
+                                <label for="tracking-page-display-name" class="block text-sm font-semibold mb-1">{{t "tracking-page.settings.display-name"}}</label>
+                                <input
+                                    id="tracking-page-display-name"
+                                    type="text"
+                                    class="form-input w-full"
+                                    value={{this.config.branding.display_name}}
+                                    placeholder={{this.companyName}}
+                                    {{on "input" (fn this.updateFromEvent "branding.display_name")}}
+                                />
+                                <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.logo-help"}}</p>
+                            </div>
+
+                            <div>
+                                <label for="tracking-page-accent" class="block text-sm font-semibold mb-1">{{t "tracking-page.settings.accent"}}</label>
+                                <div class="flex items-center gap-3">
+                                    <input
+                                        id="tracking-page-accent"
+                                        type="color"
+                                        class="h-10 w-14 rounded-md border border-gray-300 dark:border-gray-700 bg-transparent cursor-pointer"
+                                        value={{this.accent}}
+                                        {{on "input" (fn this.updateFromEvent "branding.accent")}}
+                                    />
+                                    <input
+                                        type="text"
+                                        class="form-input w-32 font-mono uppercase"
+                                        aria-label={{t "tracking-page.settings.accent-hex"}}
+                                        value={{this.config.branding.accent}}
+                                        {{on "change" (fn this.updateFromEvent "branding.accent")}}
+                                    />
+                                    <span class="text-xs {{if this.accentReadable 'text-green-700 dark:text-green-400' 'text-red-700 dark:text-red-400'}}">
+                                        {{#if this.accentReadable}}
+                                            {{t "tracking-page.settings.contrast-ok" ratio=this.accentContrast}}
+                                        {{else}}
+                                            {{t "tracking-page.settings.contrast-low" ratio=this.accentContrast}}
+                                        {{/if}}
+                                    </span>
+                                </div>
+                                <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.accent-help"}}</p>
+                            </div>
+
+                            <div>
+                                <label for="tracking-page-accent-dark" class="block text-sm font-semibold mb-1">{{t "tracking-page.settings.accent-dark"}}</label>
+                                <input
+                                    id="tracking-page-accent-dark"
+                                    type="text"
+                                    class="form-input w-32 font-mono uppercase"
+                                    value={{this.config.branding.accent_dark}}
+                                    placeholder={{t "tracking-page.settings.accent-dark-auto"}}
+                                    {{on "change" (fn this.updateFromEvent "branding.accent_dark")}}
+                                />
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label for="tracking-page-phone" class="block text-sm font-semibold mb-1">{{t "tracking-page.settings.support-phone"}}</label>
+                                    <input id="tracking-page-phone" type="tel" class="form-input w-full" value={{this.config.branding.support_phone}} {{on "input" (fn this.updateFromEvent "branding.support_phone")}} />
+                                </div>
+                                <div>
+                                    <label for="tracking-page-email" class="block text-sm font-semibold mb-1">{{t "tracking-page.settings.support-email"}}</label>
+                                    <input id="tracking-page-email" type="email" class="form-input w-full" value={{this.config.branding.support_email}} {{on "input" (fn this.updateFromEvent "branding.support_email")}} />
+                                </div>
+                                <div>
+                                    <label for="tracking-page-website" class="block text-sm font-semibold mb-1">{{t "tracking-page.settings.website"}}</label>
+                                    <input id="tracking-page-website" type="url" class="form-input w-full" value={{this.config.branding.website}} {{on "input" (fn this.updateFromEvent "branding.website")}} />
+                                </div>
+                            </div>
+                            <p class="-mt-3 text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.support-help"}}</p>
+
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <div class="text-sm font-semibold">{{t "tracking-page.settings.powered-by"}}</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.powered-by-help"}}</div>
+                                </div>
+                                <Toggle @isToggled={{this.config.branding.powered_by}} @onToggle={{fn this.update "branding.powered_by"}} />
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <InputGroup @name={{t "tracking-page.settings.theme"}}>
+                                    <Select
+                                        class="w-full"
+                                        @value={{this.config.branding.theme}}
+                                        @options={{this.themeOptions}}
+                                        @optionLabel="label"
+                                        @optionValue="value"
+                                        @onSelect={{fn this.selectOption "branding.theme"}}
+                                    />
+                                </InputGroup>
+                                <InputGroup @name={{t "tracking-page.settings.default-language"}}>
+                                    <Select
+                                        class="w-full"
+                                        @value={{this.config.branding.default_locale}}
+                                        @options={{this.defaultLocaleOptions}}
+                                        @optionLabel="label"
+                                        @optionValue="value"
+                                        @onSelect={{this.setDefaultLocale}}
+                                    />
+                                </InputGroup>
+                            </div>
+
+                            <fieldset>
+                                <legend class="text-sm font-semibold mb-2">{{t "tracking-page.settings.languages"}}</legend>
+                                <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+                                    {{#each this.localeOptions as |locale|}}
+                                        <label class="flex items-center gap-2 text-sm">
+                                            <input type="checkbox" checked={{locale.enabled}} disabled={{locale.isDefault}} {{on "change" (fn this.toggleLocale locale.code)}} />
+                                            <span>{{locale.label}}</span>
+                                        </label>
+                                    {{/each}}
+                                </div>
+                            </fieldset>
+                        </div>
+                    </ContentPanel>
+
+                    {{! ── Access ────────────────────────────────────────────── }}
+                    <ContentPanel @title={{t "tracking-page.settings.access"}} @open={{true}} @wrapperClass="bordered-classic">
+                        <div class="space-y-5">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <div class="text-sm font-semibold">{{t "tracking-page.settings.public-status"}}</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.public-status-help"}}</div>
+                                </div>
+                                <Toggle @isToggled={{this.config.access.public_status}} @onToggle={{fn this.update "access.public_status"}} />
+                            </div>
+
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <div class="text-sm font-semibold">{{t "tracking-page.settings.channel-sms"}}</div>
+                                    {{#if this.smsAvailable}}
+                                        <div class="text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.channel-sms-help"}}</div>
+                                    {{else}}
+                                        <div class="text-xs text-red-700 dark:text-red-400">{{t "tracking-page.settings.channel-sms-unavailable"}}</div>
+                                    {{/if}}
+                                </div>
+                                <Toggle @isToggled={{and this.smsAvailable this.config.access.channels.sms}} @disabled={{not this.smsAvailable}} @onToggle={{fn this.update "access.channels.sms"}} />
+                            </div>
+
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <div class="text-sm font-semibold">{{t "tracking-page.settings.channel-email"}}</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.channel-email-help"}}</div>
+                                </div>
+                                <Toggle @isToggled={{this.config.access.channels.email}} @onToggle={{fn this.update "access.channels.email"}} />
+                            </div>
+
+                            <div>
+                                <label for="tracking-page-session-hours" class="block text-sm font-semibold mb-1">{{t "tracking-page.settings.session-hours"}}</label>
+                                <input
+                                    id="tracking-page-session-hours"
+                                    type="number"
+                                    min="1"
+                                    max="168"
+                                    class="form-input w-32"
+                                    value={{this.config.access.session_hours}}
+                                    {{on "change" (fn this.updateNumber "access.session_hours")}}
+                                />
+                                <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.session-hours-help"}}</p>
+                            </div>
+
+                            {{#if this.customerPortalInstalled}}
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <div class="text-sm font-semibold">{{t "tracking-page.settings.account-sign-in"}}</div>
+                                        <div class="text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.account-sign-in-help"}}</div>
+                                    </div>
+                                    <Toggle @isToggled={{this.config.access.account_sign_in}} @onToggle={{fn this.update "access.account_sign_in"}} />
+                                </div>
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <div class="text-sm font-semibold">{{t "tracking-page.settings.account-upsell"}}</div>
+                                        <div class="text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.account-upsell-help"}}</div>
+                                    </div>
+                                    <Toggle @isToggled={{this.config.access.account_upsell}} @onToggle={{fn this.update "access.account_upsell"}} />
+                                </div>
+                            {{else}}
+                                <p class="text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.customer-portal-missing"}}</p>
+                            {{/if}}
+
+                            <p class="text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.code-rules"}}</p>
+                        </div>
+                    </ContentPanel>
+
+                    {{! ── What verified customers see ───────────────────────── }}
+                    <ContentPanel @title={{t "tracking-page.settings.visibility"}} @open={{true}} @wrapperClass="bordered-classic">
+                        <div class="space-y-4">
+                            {{#each (array "map" "driver_name" "vehicle" "items" "item_prices" "pod_photo" "pod_signature" "instructions_edit" "report_problem") as |key|}}
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <div class="text-sm font-semibold">{{t (concat "tracking-page.settings.visibility-" key)}}</div>
+                                        <div class="text-xs text-gray-600 dark:text-gray-300">{{t (concat "tracking-page.settings.visibility-" key "-help")}}</div>
+                                    </div>
+                                    <Toggle @isToggled={{get this.config.visibility key}} @onToggle={{fn this.update (concat "visibility." key)}} />
+                                </div>
+                            {{/each}}
+
+                            <InputGroup @name={{t "tracking-page.settings.driver-contact"}} @helpText={{t "tracking-page.settings.driver-contact-help"}}>
+                                <Select
+                                    class="w-full"
+                                    @value={{this.config.visibility.driver_contact}}
+                                    @options={{this.driverContactOptions}}
+                                    @optionLabel="label"
+                                    @optionValue="value"
+                                    @onSelect={{fn this.selectOption "visibility.driver_contact"}}
+                                />
+                            </InputGroup>
+
+                            <p class="text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.privacy-rules"}}</p>
+                        </div>
+                    </ContentPanel>
+                </div>
+
+                {{! ── Live preview ───────────────────────────────────────────── }}
+                <div class="lg:sticky lg:top-6 space-y-3">
+                    <div class="text-sm font-semibold">{{t "tracking-page.settings.preview"}}</div>
+                    <TrackingPage::SettingsPreview @themeStyle={{this.previewLightStyle}} @displayName={{this.displayName}} @poweredBy={{this.config.branding.powered_by}} />
+                    <TrackingPage::SettingsPreview @themeStyle={{this.previewDarkStyle}} @displayName={{this.displayName}} @poweredBy={{this.config.branding.powered_by}} />
+                    <p class="text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.preview-help"}}</p>
+                </div>
+            </div>
+        {{/if}}
+    </div>
+    <Spacer @height="400px" />
+</Layout::Section::Body>

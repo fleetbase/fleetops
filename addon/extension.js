@@ -117,6 +117,11 @@ export default {
                     icon: 'satellite-dish',
                     component: new ExtensionComponent('@fleetbase/fleetops-engine', 'admin/telematics-settings'),
                 }),
+                new MenuItem({
+                    title: 'Tracking Page',
+                    icon: 'magnifying-glass-location',
+                    component: new ExtensionComponent('@fleetbase/fleetops-engine', 'admin/tracking-page-settings'),
+                }),
             ],
             {
                 slug: 'fleet-ops',

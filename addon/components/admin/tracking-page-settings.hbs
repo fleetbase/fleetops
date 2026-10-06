@@ -1,0 +1,56 @@
+<ContentPanel @title="Generic Tracking Page" @open={{true}} @wrapperClass="bordered-classic">
+    <div class="space-y-5">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <div class="text-sm font-semibold">Enable the generic tracking page</div>
+                <div class="text-xs text-gray-600 dark:text-gray-300">Serves /track for every organization that allows it. Organizations can also run their own page from their Fleet-Ops settings.</div>
+            </div>
+            <Toggle @isToggled={{this.genericEnabled}} @onToggle={{fn (mut this.genericEnabled)}} />
+        </div>
+        <div>
+            <label for="admin-tracking-page-name" class="block text-sm font-semibold mb-1">Display name</label>
+            <input id="admin-tracking-page-name" type="text" class="form-input w-full" value={{this.displayName}} {{on "input" (fn this.setValue "displayName")}} />
+            <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">Shown before a lookup. The logo comes from the instance branding.</p>
+        </div>
+        <div>
+            <label for="admin-tracking-page-accent" class="block text-sm font-semibold mb-1">Accent colour</label>
+            <div class="flex items-center gap-3">
+                <input id="admin-tracking-page-accent" type="color" class="h-10 w-14 rounded-md border border-gray-300 dark:border-gray-700 bg-transparent cursor-pointer" value={{this.accent}} {{on "input" (fn this.setValue "accent")}} />
+                <span class="font-mono text-sm">{{this.accent}}</span>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label for="admin-tracking-page-phone" class="block text-sm font-semibold mb-1">Support phone</label>
+                <input id="admin-tracking-page-phone" type="tel" class="form-input w-full" value={{this.supportPhone}} {{on "input" (fn this.setValue "supportPhone")}} />
+            </div>
+            <div>
+                <label for="admin-tracking-page-email" class="block text-sm font-semibold mb-1">Support email</label>
+                <input id="admin-tracking-page-email" type="email" class="form-input w-full" value={{this.supportEmail}} {{on "input" (fn this.setValue "supportEmail")}} />
+            </div>
+            <div>
+                <label for="admin-tracking-page-website" class="block text-sm font-semibold mb-1">Website</label>
+                <input id="admin-tracking-page-website" type="url" class="form-input w-full" value={{this.website}} {{on "input" (fn this.setValue "website")}} />
+            </div>
+        </div>
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <div class="text-sm font-semibold">Show "Powered by Fleetbase"</div>
+                <div class="text-xs text-gray-600 dark:text-gray-300">The default for organizations that haven't chosen.</div>
+            </div>
+            <Toggle @isToggled={{this.poweredBy}} @onToggle={{fn (mut this.poweredBy)}} />
+        </div>
+    </div>
+</ContentPanel>
+
+<EmberWormhole @to="next-view-section-subheader-actions">
+    <Button
+        @type="primary"
+        @size="sm"
+        @icon="save"
+        @text="Save Changes"
+        @onClick={{perform this.saveSettings}}
+        @isLoading={{or this.saveSettings.isRunning this.loadSettings.isRunning}}
+        @disabled={{this.saveSettings.isRunning}}
+    />
+</EmberWormhole>

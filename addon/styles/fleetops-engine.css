@@ -12429,3 +12429,100 @@ body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-
     font-size: 0.875rem;
     line-height: 1rem;
 }
+
+/* Customer tracking page settings preview: colours come from the --tp-* tokens on the root. */
+.tp-preview {
+    border: 1px solid var(--tp-border);
+    border-radius: 1.25rem;
+    overflow: hidden;
+    background: var(--tp-bg);
+    color: var(--tp-text);
+    font-size: 0.75rem;
+}
+
+.tp-preview-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    background: var(--tp-surface);
+    border-bottom: 1px solid var(--tp-border);
+}
+
+.tp-preview-monogram {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.5rem;
+    background: var(--tp-accent);
+    color: var(--tp-ink);
+    font-weight: 700;
+    font-size: 0.6875rem;
+}
+
+.tp-preview-name {
+    font-weight: 700;
+    font-size: 0.8125rem;
+}
+
+.tp-preview-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.875rem;
+}
+
+.tp-preview-chip {
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    background: var(--tp-accent-soft);
+    color: var(--tp-accent);
+    font-weight: 600;
+}
+
+.tp-preview-headline {
+    font-size: 1.125rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.tp-preview-sub {
+    color: var(--tp-muted);
+}
+
+.tp-preview-steps {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.25rem;
+    width: 100%;
+}
+
+.tp-preview-step {
+    height: 0.25rem;
+    border-radius: 999px;
+    background: var(--tp-border);
+}
+
+.tp-preview-step-done {
+    background: var(--tp-accent);
+}
+
+.tp-preview-button {
+    align-self: stretch;
+    padding: 0.5rem;
+    border-radius: 0.625rem;
+    background: var(--tp-accent);
+    color: var(--tp-ink);
+    font-weight: 600;
+    text-align: center;
+}
+
+.tp-preview-footer {
+    padding: 0.5rem 0.875rem 0.75rem;
+    color: var(--tp-muted);
+    text-align: center;
+    font-size: 0.6875rem;
+}
