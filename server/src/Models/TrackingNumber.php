@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\FleetOps\Casts\Point;
+use Fleetbase\FleetOps\Support\TrackingCode;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Model;
@@ -16,6 +17,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Milon\Barcode\Facades\DNS1DFacade as DNS1D;
 use Milon\Barcode\Facades\DNS2DFacade as DNS2D;
 
 class TrackingNumber extends Model
@@ -236,6 +238,74 @@ class TrackingNumber extends Model
         throw (new \Illuminate\Database\Eloquent\ModelNotFoundException())->setModel(static::class, $id);
     }
 
+    /**
+     * The record a scanned code points at, within one company: the order, waypoint,
+     * entity or place that owns the tracking number.
+     *
+     * Accepts every format TrackingCode::parse() reads, including the bare owner uuid
+     * printed on labels before codes carried a url, and a bare tracking number or public
+     * id from a barcode or typed by hand. Without a company nothing resolves.
+     */
+    public static function findOwnerByCode(?string $code, ?string $companyUuid): ?\Illuminate\Database\Eloquent\Model
+    {
+        if (empty($companyUuid)) {
+            return null;
+        }
+
+        $parsed = TrackingCode::parse($code);
+
+        if ($parsed['uuid']) {
+            return static::ownerOf(static::firstForCode('owner_uuid', $parsed['uuid'], $companyUuid));
+        }
+
+        $number = $parsed['tracking_number'] ?? $parsed['reference'];
+        if ($number) {
+            $owner = static::ownerOf(static::firstForCode('tracking_number', $number, $companyUuid));
+
+            // A url names its tracking number deliberately, so an unknown one is a miss,
+            // not a cue to fall back to the owner it also names, which must agree.
+            if ($owner || $parsed['tracking_number']) {
+                return $owner && (!$parsed['public_id'] || data_get($owner, 'public_id') === $parsed['public_id']) ? $owner : null;
+            }
+        }
+
+        $publicId = $parsed['public_id'] ?? $parsed['reference'];
+
+        return $publicId ? static::ownerOf(static::firstForOwnerPublicId($publicId, $companyUuid)) : null;
+    }
+
+    protected static function firstForCode(string $column, string $value, string $companyUuid): ?self
+    {
+        return static::where('company_uuid', $companyUuid)->where($column, $value)->first();
+    }
+
+    protected static function firstForOwnerPublicId(string $publicId, string $companyUuid): ?self
+    {
+        // The public id's prefix names the owner's model, so only that table is searched.
+        $prefix     = Str::contains($publicId, '_') ? Str::before($publicId, '_') : null;
+        $ownerClass = [
+            'order'    => Order::class,
+            'waypoint' => Waypoint::class,
+            'entity'   => Entity::class,
+            'place'    => Place::class,
+        ][$prefix] ?? null;
+
+        if (!$ownerClass) {
+            return null;
+        }
+
+        return static::where('company_uuid', $companyUuid)
+            // Rows inserted raw (waypoints, entities) store the class with a leading slash.
+            ->whereIn('owner_type', [$ownerClass, '\\' . $ownerClass])
+            ->whereIn('owner_uuid', $ownerClass::withoutGlobalScopes()->select('uuid')->where('public_id', $publicId))
+            ->first();
+    }
+
+    protected static function ownerOf(?self $trackingNumber): ?\Illuminate\Database\Eloquent\Model
+    {
+        return $trackingNumber?->owner;
+    }
+
     public function updateOwnerStatus(?TrackingStatus $trackingStatus = null)
     {
         $trackingStatus = $trackingStatus ?? $this->load(['status'])->getRelationValue('status');
@@ -254,6 +324,10 @@ class TrackingNumber extends Model
 
     public static function insertGetUuid($values = [], ?Model $owner = null)
     {
+        // Read before the fillable filter below drops it. Callers that insert the owner
+        // with a raw query, and so have no model to pass, hand its public_id over here.
+        $ownerPublicId = $owner ? data_get($owner, 'public_id') : ($values['owner_public_id'] ?? null);
+
         $instance   = new static();
         $fillable   = $instance->getFillable();
         $insertKeys = array_keys($values);
@@ -276,8 +350,7 @@ class TrackingNumber extends Model
         }
 
         $values['tracking_number'] = static::newTrackingNumber($values['region'] ?? 'SG');
-        $values['qr_code']         = static::newBarcode((string) ($values['owner_uuid'] ?? ''), 'QRCODE');
-        $values['barcode']         = static::newBarcode((string) ($values['owner_uuid'] ?? ''), 'PDF417');
+        $values                    = array_merge($values, static::codeImages($values['tracking_number'], $ownerPublicId));
 
         if (isset($values['meta']) && (is_object($values['meta']) || is_array($values['meta']))) {
             $values['meta'] = json_encode($values['meta']);
@@ -339,8 +412,29 @@ class TrackingNumber extends Model
         return static::generateNumber($region);
     }
 
+    /**
+     * The base64 PNGs printed on a label: a QR code carrying the tracking url (see
+     * TrackingCode) and a Code 128 barcode carrying the bare tracking number.
+     *
+     * @return array{qr_code: string, barcode: string}
+     */
+    public static function codeImages(string $trackingNumber, ?string $ownerPublicId = null): array
+    {
+        return [
+            // Medium error correction: labels get scuffed, and the url fits comfortably.
+            'qr_code' => static::newBarcode(TrackingCode::qrContent($trackingNumber, $ownerPublicId), 'QRCODE,M'),
+            'barcode' => static::newBarcode(TrackingCode::barcodeContent($trackingNumber), 'C128'),
+        ];
+    }
+
     protected static function newBarcode(string $value, string $type): string
     {
+        if ($type === 'C128') {
+            // 2px modules, 60px tall: a typical tracking number renders ~330px wide, inside
+            // the label's 360px cap, so it prints at its own resolution.
+            return DNS1D::getBarcodePNG($value, $type, 2, 60);
+        }
+
         return DNS2D::getBarcodePNG($value, $type);
     }
 

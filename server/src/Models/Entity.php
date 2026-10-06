@@ -471,10 +471,11 @@ class Entity extends Model
         if ($result && $payload) {
             // create tracking number for entity
             $trackingNumberId = TrackingNumber::insertGetUuid([
-                'owner_uuid' => $uuid,
-                'owner_type' => Utils::getModelClassName('entity'),
-                'region'     => $payload->getPickupRegion(),
-                'location'   => Utils::parsePointToWkt($payload->getPickupLocation()),
+                'owner_uuid'      => $uuid,
+                'owner_type'      => Utils::getModelClassName('entity'),
+                'owner_public_id' => $values['public_id'],
+                'region'          => $payload->getPickupRegion(),
+                'location'        => Utils::parsePointToWkt($payload->getPickupLocation()),
             ]);
 
             // set tracking number
