@@ -185,6 +185,11 @@ class TrackingPageConfig
             return $value;
         }
 
+        // filter_var() reads null as false, so a missing value must fall back explicitly.
+        if ($value === null || $value === '') {
+            return $default;
+        }
+
         return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $default;
     }
 
