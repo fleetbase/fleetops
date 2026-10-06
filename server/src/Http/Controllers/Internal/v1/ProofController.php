@@ -83,8 +83,8 @@ class ProofController extends FleetOpsController
         // set the signature storage path
         $path = $this->signatureStoragePath($proof);
 
-        // upload signature
-        $this->storeSignature($path, base64_decode($signature), 'public');
+        // upload signature (private object; File::url serves it through a signed URL)
+        $this->storeSignature($path, base64_decode($signature));
 
         // create file record for upload
         $file = $this->createSignatureFile($path, $signature, $proof);
@@ -121,9 +121,13 @@ class ProofController extends FleetOpsController
         return Proof::create($attributes);
     }
 
-    protected function storeSignature(string $path, string|false $contents, string $visibility): void
+    /**
+     * Writes without an ACL: the media bucket enforces bucket-owner object ownership, so a
+     * 'public' visibility (public-read ACL) makes S3 reject the PUT and put() return false.
+     */
+    protected function storeSignature(string $path, string|false $contents): void
     {
-        Storage::disk('s3')->put($path, $contents, $visibility);
+        Storage::disk('s3')->put($path, $contents);
     }
 
     /**

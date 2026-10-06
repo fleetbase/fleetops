@@ -1603,4 +1603,15 @@ class Utils extends FleetbaseUtils
 
         return $phone;
     }
+
+    /**
+     * Re-sign a URL stored as a string (e.g. a legacy `avatar_url` value) when it points into the
+     * private S3 media bucket, so it keeps working once the bucket stops allowing public reads.
+     * Other values pass through unchanged. Falls back to the raw value on core-api releases that
+     * predate File::signStoredUrl().
+     */
+    public static function signStoredFileUrl(?string $url): ?string
+    {
+        return method_exists(\Fleetbase\Models\File::class, 'signStoredUrl') ? \Fleetbase\Models\File::signStoredUrl($url) : $url;
+    }
 }
