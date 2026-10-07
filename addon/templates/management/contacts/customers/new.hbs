@@ -2,7 +2,7 @@
     @resource={{this.customer}}
     @controller={{this}}
     @actionButtons={{this.actionButtons}}
-    @headerTitle="Create a new customer"
+    @headerTitle={{t "common.create-a-new-resource" resource=(lowercase (t "resource.customer"))}}
     @modelName="Customer"
     @saveTask={{this.save}}
     @onPressCancel={{transition-to "management.contacts.customers"}}

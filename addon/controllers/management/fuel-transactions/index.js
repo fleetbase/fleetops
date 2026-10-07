@@ -11,6 +11,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
     @service modalsManager;
     @service notifications;
     @service hostRouter;
+    @service intl;
 
     @tracked queryParams = ['page', 'limit', 'sort', 'query', 'provider', 'sync_status', 'vehicle', 'connection', 'transaction_at'];
     @tracked page = 1;
@@ -38,26 +39,26 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
 
     get emptyStateTitle() {
         if (this.sync_status === 'unmatched') {
-            return 'No unmatched fuel transactions';
+            return this.intl.t('management.empty-states.fuel-transactions.no-unmatched-title');
         }
 
         if (this.connection) {
-            return 'No transactions imported for this integration';
+            return this.intl.t('management.empty-states.fuel-transactions.no-integration-title');
         }
 
-        return 'No fuel transactions imported yet';
+        return this.intl.t('management.empty-states.fuel-transactions.no-imported-title');
     }
 
     get emptyStateMessage() {
         if (this.sync_status === 'unmatched') {
-            return 'Fleet-Ops did not find imported provider bills that still need vehicle or trip matching.';
+            return this.intl.t('management.empty-states.fuel-transactions.no-unmatched-description');
         }
 
         if (this.connection) {
-            return 'Run a sync from the fuel integration detail page to import provider bills into this ledger.';
+            return this.intl.t('management.empty-states.fuel-transactions.no-integration-description');
         }
 
-        return 'Connect PetroApp or another fuel integration, then run a transaction sync. Imported provider bills appear here before linked Fuel Reports are created.';
+        return this.intl.t('management.empty-states.fuel-transactions.no-imported-description');
     }
 
     get actionButtons() {
@@ -66,12 +67,12 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
                 id: 'refresh',
                 icon: 'refresh',
                 onClick: this.refresh,
-                helpText: 'Refresh',
+                helpText: this.intl.t('management.empty-states.fuel-transactions.refresh'),
             },
             {
                 id: 'fuel-integrations',
                 icon: 'gas-pump',
-                text: 'Fuel Integrations',
+                text: this.intl.t('management.empty-states.fuel-transactions.open-integrations'),
                 onClick: () => this.hostRouter.transitionTo('console.fleet-ops.connectivity.fuel-providers.index'),
                 permission: 'fleet-ops list fuel-provider-connection',
             },
@@ -100,7 +101,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
             {
                 id: 'provider-transaction-id',
                 sticky: true,
-                label: 'Transaction',
+                label: this.intl.t('management.empty-states.fuel-transactions.columns.transaction'),
                 valuePath: 'provider_transaction_id',
                 cellComponent: 'cell/fuel-provider-transaction-identity',
                 action: this.openDetails,
@@ -207,7 +208,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
                 ddButtonText: false,
                 ddButtonIcon: 'ellipsis-h',
                 ddButtonIconPrefix: 'fas',
-                ddMenuLabel: 'Fuel Transaction Actions',
+                ddMenuLabel: this.intl.t('management.empty-states.fuel-transactions.actions-menu'),
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
                 sticky: 'right',
@@ -257,7 +258,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
 
     @action openFuelReport(transaction) {
         if (!transaction?.fuel_report_id) {
-            this.notifications.info('This transaction does not have a linked Fuel Report yet.');
+            this.notifications.info(this.intl.t('management.empty-states.fuel-transactions.unlinked-info'));
             return;
         }
 
