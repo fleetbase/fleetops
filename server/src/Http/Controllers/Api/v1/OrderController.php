@@ -25,6 +25,7 @@ use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
+use Fleetbase\FleetOps\Support\TrackingCode;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Http\Resources\Comment as CommentResource;
@@ -1444,8 +1445,8 @@ class OrderController extends Controller
             return $this->apiError('Unable to capture QR code data.');
         }
 
-        // validate
-        if ($subject && $code === $subject->uuid) {
+        // validate: the scan must name this subject, in any code format still in circulation
+        if (TrackingCode::matches($code, $subject)) {
             // create verification proof
             $proof = $this->createProof([
                 'company_uuid' => session('company'),

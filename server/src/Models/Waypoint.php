@@ -221,10 +221,11 @@ class Waypoint extends Model
         if ($result && $payload) {
             // create tracking number for entity
             $trackingNumberId = static::createTrackingNumber([
-                'owner_uuid' => $uuid,
-                'owner_type' => Utils::getModelClassName('waypoint'),
-                'region'     => $payload->getPickupRegion(),
-                'location'   => static::pickupLocationWkt($payload),
+                'owner_uuid'      => $uuid,
+                'owner_type'      => Utils::getModelClassName('waypoint'),
+                'owner_public_id' => $values['public_id'],
+                'region'          => $payload->getPickupRegion(),
+                'location'        => static::pickupLocationWkt($payload),
             ]);
 
             // set tracking number

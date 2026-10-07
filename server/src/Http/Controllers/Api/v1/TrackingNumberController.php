@@ -127,8 +127,10 @@ class TrackingNumberController extends Controller
         // validate request inputs
         $code = $request->input('code');
 
-        // get the model of from the code
-        $model = $this->findQrModel(['entities', 'orders'], ['uuid' => $code]);
+        // the order, waypoint, entity or place the code points at, in any format still in
+        // circulation: a tracking url, a bare tracking number or public id, or the bare
+        // owner uuid printed on older labels
+        $model = $this->findQrModel($code);
 
         // if no model response with error
         if (!$model) {
@@ -179,37 +181,9 @@ class TrackingNumberController extends Controller
         return new DeletedResource($trackingNumber);
     }
 
-    protected function findQrModel(array $tables, array $where)
+    protected function findQrModel(string $code)
     {
-        // Hydrate through the eloquent models so the resolved record can be
-        // wrapped in its typed resource — raw rows have no model class.
-        $modelMap = [
-            'entities' => \Fleetbase\FleetOps\Models\Entity::class,
-            'orders'   => \Fleetbase\FleetOps\Models\Order::class,
-        ];
-
-        foreach ($tables as $table) {
-            $modelClass = $modelMap[$table] ?? null;
-            if (!$modelClass) {
-                continue;
-            }
-
-            $model = $modelClass::where($where)->first();
-            if ($model) {
-                return $model;
-            }
-        }
-
-        // No raw-row fallback. Utils::findModel() was called with the ARRAY of table names
-        // and, when nothing matched, passed that array to DB::table() — which stringified
-        // it to the literal table name "Array" and threw SQLSTATE[42S02]. Every
-        // unresolvable code became a 500 instead of the 400 this method's caller already
-        // handles.
-        //
-        // The fallback could not have helped anyway: qrModelResource() serializes through
-        // a typed resource keyed on the model class, and a raw stdClass row has none. The
-        // mapped models above are the endpoint's whole contract.
-        return null;
+        return TrackingNumber::findOwnerByCode($code, session('company'));
     }
 
     protected function qrModelResource($model)

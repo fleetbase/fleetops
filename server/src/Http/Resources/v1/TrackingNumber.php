@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\TrackingCode;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
@@ -30,45 +31,18 @@ class TrackingNumber extends FleetbaseResource
             'status'          => $this->last_status,
             'status_code'     => $this->last_status_code,
             'qr_code'         => $this->qr_code,
-            // The raw text encoded inside qr_code, exposed ONLY in debug mode.
-            //
-            // qr_code is a base64 PNG generated from owner_uuid (TrackingNumber::newBarcode),
-            // and the endpoints that consume a scanned code match on that uuid. A client
-            // scans the image to obtain it; an automated contract run cannot, so debug
-            // builds publish the value beside the image rather than the API growing a
-            // decode endpoint or handing out uuids generally.
-            //
-            // `when()` omits the key entirely when false — it is absent, not null — so a
-            // production response is byte-identical to before.
-            'qr_code_content' => $this->when(static::exposesQrCodeContent(), fn () => $this->owner_uuid),
+            // A value that scans as this tracking number: the QR content current labels
+            // print (see TrackingCode). It names the tracking number and the subject's
+            // public id, both already in this resource, so it is safe to publish, and lets
+            // clients that print their own labels, or cannot decode a PNG, use the code.
+            // Labels printed before it encode the owner uuid; resolvers accept both.
+            'qr_code_content' => $this->when($this->tracking_number, fn () => TrackingCode::qrContent($this->tracking_number, Utils::get($this->owner, 'public_id'))),
             'barcode'         => $this->barcode,
-            'url'             => Utils::consoleUrl('track-order', ['order' => $this->tracking_number]),
+            'url'             => Utils::consoleUrl(TrackingCode::PATH, [TrackingCode::TRACKING_PARAM => $this->tracking_number]),
             'type'            => Utils::getTypeFromClassName($this->owner_type),
             'updated_at'      => $this->updated_at,
             'created_at'      => $this->created_at,
         ];
-    }
-
-    /**
-     * Whether the QR code's decoded content may be published.
-     *
-     * Debug mode only, and fails closed: any failure to determine the debug state — no
-     * container, an application without the accessor — answers false rather than
-     * defaulting to exposure.
-     */
-    protected static function exposesQrCodeContent(): bool
-    {
-        try {
-            $app = app();
-
-            if (!is_object($app) || !method_exists($app, 'hasDebugModeEnabled')) {
-                return false;
-            }
-
-            return (bool) $app->hasDebugModeEnabled();
-        } catch (\Throwable $e) {
-            return false;
-        }
     }
 
     /**

@@ -218,9 +218,10 @@ test('waypoint insert filters values and creates payload tracking number', funct
     ])->and($inserted)->not->toHaveKey('not_allowed')
         ->and(FleetOpsWaypointInsertFake::$createdTracking)->toHaveCount(1)
         ->and(FleetOpsWaypointInsertFake::$createdTracking[0])->toMatchArray([
-            'owner_uuid' => 'waypoint-uuid',
-            'owner_type' => Utils::getModelClassName('waypoint'),
-            'region'     => 'AE',
+            'owner_uuid'      => 'waypoint-uuid',
+            'owner_type'      => Utils::getModelClassName('waypoint'),
+            'owner_public_id' => FleetOpsWaypointInsertFake::$insertedValues[0]['public_id'],
+            'region'          => 'AE',
         ])
         ->and(FleetOpsWaypointInsertFake::$createdTracking[0]['location'])->toBe('POINT(55.2708 25.2048)')
         ->and(FleetOpsWaypointInsertFake::$trackingNumberWrites)->toBe([
