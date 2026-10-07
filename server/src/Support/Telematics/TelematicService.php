@@ -13,6 +13,7 @@ use Fleetbase\FleetOps\Models\Sensor;
 use Fleetbase\FleetOps\Models\Telematic;
 use Fleetbase\FleetOps\Models\Trailer;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\TrackingPublisher;
 use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
@@ -811,6 +812,7 @@ class TelematicService
             'position_at'       => $event->occurred_at?->toISOString(),
         ]);
         $this->broadcastTelemetry($broadcast, $eventData['_ordered_telemetry'] ?? false);
+        app(TrackingPublisher::class)->vehicleMoved($vehicle);
     }
 
     protected function broadcastTelemetry(object $event, bool $afterCommit): void
