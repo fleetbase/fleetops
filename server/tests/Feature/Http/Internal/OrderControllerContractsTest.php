@@ -4,6 +4,7 @@ use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrderController;
 use Fleetbase\FleetOps\Http\Requests\BulkDispatchRequest;
 use Fleetbase\FleetOps\Http\Requests\CancelOrderRequest;
+use Fleetbase\FleetOps\Http\Resources\v1\PublicOrderTracking;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Order;
@@ -68,6 +69,7 @@ class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
     public Collection $proofResults;
     public array $exportDownloads                                    = [];
     public ?FleetOpsInternalOrderLifecycleOrderFake $trackingOrder   = null;
+    public array $trackingLookups                                   = [];
     public ?FleetOpsInternalOrderLifecycleOrderFake $scheduleOrder   = null;
     public ?FleetOpsInternalOrderLifecycleDriverFake $scheduleDriver = null;
 
@@ -218,6 +220,7 @@ class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
 
     protected function findOrderByTrackingNumber(string $trackingNumber): ?Order
     {
+        $this->trackingLookups[] = $trackingNumber;
         $this->trackingOrder?->setAttribute('tracking_lookup', $trackingNumber);
 
         return $this->trackingOrder;
@@ -1549,24 +1552,29 @@ test('internal order controller export lookup and schedule endpoints use resolve
         ->and($export['selections'])->toBe(['order-one', 'order-two'])
         ->and($controller->exportDownloads[0][0])->toBe(['order-one', 'order-two']);
 
-    expect($controller->lookup(new Request())->getData(true))->toBe([
-        'error' => 'No tracking number provided for lookup.',
-    ])
-        ->and($controller->lookup(new Request(['tracking' => 'TN-404']))->getData(true))->toBe([
-            'error' => 'No order found using tracking number provided.',
-        ]);
+    // Missing, malformed and unknown tracking numbers all get the one answer,
+    // and malformed input never reaches the query.
+    $notFound = ['error' => OrderController::TRACKING_LOOKUP_ERROR];
+    foreach ([[], ['tracking' => ''], ['tracking' => '   '], ['tracking' => ['TN-1']], ['tracking' => '../etc/passwd'], ['tracking' => "TN-1' OR 1=1"], ['tracking' => str_repeat('A', 101)], ['tracking' => '-TN']] as $input) {
+        expect($controller->lookup(new Request($input))->getData(true))->toBe($notFound);
+    }
+    expect($controller->trackingLookups)->toBe([]);
+
+    expect($controller->lookup(new Request(['tracking' => 'TN-404']))->getData(true))->toBe($notFound)
+        ->and($controller->trackingLookups)->toBe(['TN-404']);
 
     $trackedOrder                 = fleetopsInternalOrderLifecycleOrder('tracked-order');
     $trackedOrder->trackerForTest = new FleetOpsInternalOrderLifecycleTrackerFake($trackedOrder);
     $controller->trackingOrder    = $trackedOrder;
 
-    $lookup = $controller->lookup(new Request(['tracking' => 'TN-100']));
+    $lookup = $controller->lookup(new Request(['tracking' => '  TN-100.a_b  ']));
 
-    expect($lookup->resource)->toBe($trackedOrder)
-        ->and($trackedOrder->tracking_lookup)->toBe('TN-100')
-        ->and($trackedOrder->loadedMissing)->toBe([['trackingNumber', 'payload', 'trackingStatuses']])
+    expect($lookup)->toBeInstanceOf(PublicOrderTracking::class)
+        ->and($lookup->resource)->toBe($trackedOrder)
+        ->and($trackedOrder->tracking_lookup)->toBe('TN-100.a_b')
+        ->and($trackedOrder->loadedMissing)->toBe([['trackingNumber', 'trackingStatuses', 'payload.pickup', 'payload.dropoff', 'payload.waypoints', 'payload.entities']])
         ->and($trackedOrder->tracker_data)->toBe(['tracker' => 'info', 'options' => []])
-        ->and($trackedOrder->eta)->toBe(['eta' => [['stop' => 'dropoff']], 'options' => []]);
+        ->and($trackedOrder->trackerForTest->etaOptions)->toBe([]);
 
     expect($controller->scheduleOrder(new Request(['order' => 'missing-order']))->getData(true))->toBe([
         'error' => 'No order found to schedule.',
