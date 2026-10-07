@@ -187,7 +187,8 @@ class Place extends Model
             return static::getAvatar($value);
         }
 
-        return $value;
+        // legacy rows hold an absolute URL; re-sign it if it points into the private media bucket
+        return Utils::signStoredFileUrl($value);
     }
 
     /**
