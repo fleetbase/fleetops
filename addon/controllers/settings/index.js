@@ -29,6 +29,12 @@ export default class SettingsIndexController extends Controller {
             links: [
                 { label: 'Payments', route: 'settings.payments', icon: 'cash-register', description: 'Payment setup for operational commerce workflows.' },
                 {
+                    label: 'Tracking Page',
+                    route: 'settings.tracking-page',
+                    icon: 'magnifying-glass-location',
+                    description: 'The page your customers use to follow deliveries: address, branding and how they verify.',
+                },
+                {
                     label: 'Telematics',
                     route: 'settings.telematics',
                     icon: 'satellite-dish',
