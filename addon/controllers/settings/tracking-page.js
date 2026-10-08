@@ -97,15 +97,15 @@ export default class SettingsTrackingPageController extends Controller {
     }
 
     get orgPageBase() {
-        return `${window.location.origin}/t/`;
+        return `${window.location.origin}/~/track?org=`;
     }
 
     get orgPageUrl() {
-        return `${window.location.origin}/t/${this.config?.org_page?.slug ?? ''}`;
+        return `${window.location.origin}/~/track?org=${encodeURIComponent(this.config?.org_page?.slug ?? '')}`;
     }
 
     get genericPageUrl() {
-        return `${window.location.origin}/track`;
+        return `${window.location.origin}/~/track`;
     }
 
     get slugIsValid() {

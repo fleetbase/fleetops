@@ -42,6 +42,27 @@ class TrackingCode
     public const TRACKING_PARAM = 'order';
 
     /**
+     * The tracking page link for emails, notifications and the API: the company's own page
+     * when its settings send links there, otherwise the shared page.
+     */
+    public static function pageUrl(string $trackingNumber, ?string $companyUuid = null): string
+    {
+        $query = [static::TRACKING_PARAM => $trackingNumber];
+
+        try {
+            $slug = $companyUuid ? app(TrackingPage\TrackingResolver::class)->linkSlugFor($companyUuid) : null;
+        } catch (\Throwable) {
+            $slug = null;
+        }
+
+        if ($slug) {
+            $query['org'] = $slug;
+        }
+
+        return Utils::consoleUrl(static::PATH, $query);
+    }
+
+    /**
      * The QR content for a tracking number.
      */
     public static function qrContent(string $trackingNumber, ?string $ownerPublicId = null): string

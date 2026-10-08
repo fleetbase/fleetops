@@ -1,0 +1,147 @@
+<div class="tp-root {{if this.dark 'tp-dark'}}" style={{this.themeStyle}} dir={{this.dir}} lang={{this.locale}}>
+    <header class="tp-header">
+        <div class="tp-brand">
+            {{#if this.company.logo_url}}
+                <img class="tp-brand-logo" src={{this.company.logo_url}} alt="" />
+            {{else}}
+                <span class="tp-brand-monogram" aria-hidden="true">{{this.monogram}}</span>
+            {{/if}}
+            <span class="tp-brand-name">{{this.company.name}}</span>
+        </div>
+        {{#if (or (eq this.screen "public") (eq this.screen "track"))}}
+            <button type="button" class="tp-link-button" {{on "click" this.lookupAnother}}>{{t "tracking-page.page.track-another"}}</button>
+        {{/if}}
+    </header>
+
+    <main class="tp-main">
+        {{#if (or this.boot.isRunning (eq this.screen "loading"))}}
+            <div class="tp-narrow" aria-busy="true">
+                <div class="tp-skeleton tp-skeleton-title"></div>
+                <div class="tp-skeleton tp-skeleton-line"></div>
+                <div class="tp-skeleton tp-skeleton-card"></div>
+            </div>
+        {{else if (eq this.screen "unavailable")}}
+            <section class="tp-narrow tp-stack">
+                <h1 class="tp-h1">{{t "tracking-page.page.unavailable-title"}}</h1>
+                <p class="tp-muted">{{t "tracking-page.page.unavailable-help"}}</p>
+            </section>
+        {{else if (eq this.screen "lookup")}}
+            <section class="tp-narrow tp-stack">
+                <div class="tp-stack-sm">
+                    <h1 class="tp-h1">{{t "tracking-page.page.lookup-title"}}</h1>
+                    <p class="tp-muted">{{t "tracking-page.page.lookup-sub"}}</p>
+                </div>
+                <form class="tp-stack-sm" novalidate {{on "submit" this.submitLookup}}>
+                    <label for="tp-tracking-number" class="tp-label">{{t "tracking-page.page.tracking-number"}}</label>
+                    <input
+                        id="tp-tracking-number"
+                        class="tp-input tp-mono"
+                        value={{this.trackingInput}}
+                        autocomplete="off"
+                        autocapitalize="characters"
+                        spellcheck="false"
+                        placeholder={{t "tracking-page.page.tracking-number-placeholder"}}
+                        aria-describedby="tp-tracking-help tp-tracking-error"
+                        {{on "input" this.updateTracking}}
+                    />
+                    <p id="tp-tracking-help" class="tp-small tp-muted">{{t "tracking-page.page.tracking-number-help"}}</p>
+                    <div id="tp-tracking-error" role="alert">
+                        {{#if (eq this.lookupError "rate")}}
+                            <p class="tp-notice">{{t "tracking-page.page.lookup-rate"}}</p>
+                        {{else if (eq this.lookupError "neutral")}}
+                            <p class="tp-notice">{{t "tracking-page.page.lookup-neutral"}}</p>
+                        {{/if}}
+                    </div>
+                    <button type="submit" class="tp-button tp-button-primary" disabled={{or this.rateLimited this.lookup.isRunning}}>
+                        {{#if this.lookup.isRunning}}{{t "tracking-page.page.looking-up"}}{{else}}{{t "tracking-page.page.track"}}{{/if}}
+                    </button>
+                </form>
+                {{#if this.page.sign_in}}
+                    <div class="tp-divider"><span>{{t "tracking-page.page.or"}}</span></div>
+                    {{#if this.signedIn}}
+                        <button type="button" class="tp-button tp-button-secondary" {{on "click" (perform this.loadOrders)}}>{{t "tracking-page.page.your-orders"}}</button>
+                    {{else}}
+                        <a class="tp-button tp-button-secondary" href={{this.signInUrl}}>{{t "tracking-page.page.sign-in"}}</a>
+                    {{/if}}
+                {{/if}}
+            </section>
+        {{else if (eq this.screen "public")}}
+            <TrackingPage::PublicView @data={{this.data}} @signInUrl={{this.signInUrl}} @onVerify={{this.startVerify}} />
+        {{else if (eq this.screen "verify")}}
+            <section class="tp-narrow tp-stack">
+                <button type="button" class="tp-back" {{on "click" this.cancelVerify}}><FaIcon @icon="chevron-left" class="tp-flip" /> {{t "tracking-page.page.back"}}</button>
+                <TrackingPage::VerifyPanel
+                    @step={{this.verifyStep}}
+                    @channels={{this.channels}}
+                    @selectedChannel={{this.selectedChannel}}
+                    @otherChannel={{this.otherChannel}}
+                    @masked={{this.masked}}
+                    @code={{this.code}}
+                    @boxes={{this.codeBoxes}}
+                    @attemptsLeft={{this.attemptsLeft}}
+                    @cooldown={{this.cooldown}}
+                    @cooldownText={{this.cooldownText}}
+                    @lockText={{this.lockText}}
+                    @message={{this.verifyMessage}}
+                    @company={{this.company}}
+                    @sessionHours={{this.page.session_hours}}
+                    @onPick={{this.pickChannel}}
+                    @onSend={{perform this.sendCode}}
+                    @onCode={{this.updateCode}}
+                    @onResend={{this.resend}}
+                    @onSwitch={{this.switchChannel}}
+                />
+            </section>
+        {{else if (eq this.screen "list")}}
+            <TrackingPage::OrderList @orders={{this.orders}} @isLoading={{this.loadOrders.isRunning}} @onOpen={{this.openOrder}} />
+        {{else if (eq this.screen "track")}}
+            <TrackingPage::FullView
+                @data={{this.data}}
+                @company={{this.company}}
+                @liveState={{this.liveState}}
+                @fromList={{this.orders}}
+                @onBack={{this.backToOrders}}
+                @onShare={{this.share}}
+                @onSignOut={{perform this.signOut}}
+                @saveInstructions={{perform this.saveInstructions}}
+                @reportProblem={{perform this.reportProblem}}
+                @loadProof={{perform this.loadProof}}
+            />
+        {{/if}}
+    </main>
+
+    <footer class="tp-footer">
+        {{#if (or this.company.support_phone this.company.support_email)}}
+            <div>
+                {{t "tracking-page.page.help"}}
+                {{#if this.company.support_phone}}<a href="tel:{{this.company.support_phone}}">{{this.company.support_phone}}</a>{{/if}}
+                {{#if (and this.company.support_phone this.company.support_email)}} · {{/if}}
+                {{#if this.company.support_email}}<a href="mailto:{{this.company.support_email}}">{{this.company.support_email}}</a>{{/if}}
+            </div>
+        {{/if}}
+        <label class="tp-footer-language">
+            <span>{{t "tracking-page.page.language"}}</span>
+            <select class="tp-select" {{on "change" this.changeLocale}}>
+                {{#each this.localeOptions as |option|}}
+                    <option value={{option.code}} selected={{option.selected}}>{{option.label}}</option>
+                {{/each}}
+            </select>
+        </label>
+        {{#if this.company.powered_by}}
+            <div>{{t "tracking-page.page.powered-by"}}</div>
+        {{/if}}
+    </footer>
+
+    <div class="tp-toast-region" role="status" aria-live="polite">
+        {{#if this.toast}}
+            <div class="tp-toast">
+                <FaIcon @icon="check" />
+                <div>
+                    <div class="tp-toast-title">{{this.toast.title}}</div>
+                    {{#if this.toast.text}}<div class="tp-toast-text">{{this.toast.text}}</div>{{/if}}
+                </div>
+                <button type="button" class="tp-toast-close" aria-label={{t "tracking-page.page.dismiss"}} {{on "click" this.dismissToast}}><FaIcon @icon="xmark" /></button>
+            </div>
+        {{/if}}
+    </div>
+</div>

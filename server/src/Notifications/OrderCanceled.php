@@ -139,7 +139,7 @@ class OrderCanceled extends Notification implements ShouldQueue
             ->line($this->message)
             ->line($this->reason)
             ->line('No further action is necessary.')
-            ->action('Track Order', Utils::consoleUrl(TrackingCode::PATH, [TrackingCode::TRACKING_PARAM => $this->getTrackingNumber()]));
+            ->action('Track Order', TrackingCode::pageUrl($this->getTrackingNumber(), data_get($this, 'order.company_uuid')));
     }
 
     /**

@@ -171,7 +171,7 @@ class OrderDispatched extends Notification implements ShouldQueue
         return (new MailMessage())
             ->subject($this->title)
             ->line($this->message)
-            ->action('Track Order', Utils::consoleUrl(TrackingCode::PATH, [TrackingCode::TRACKING_PARAM => $this->getTrackingNumber()]));
+            ->action('Track Order', TrackingCode::pageUrl($this->getTrackingNumber(), data_get($this, 'order.company_uuid')));
     }
 
     /**

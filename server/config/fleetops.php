@@ -88,6 +88,10 @@ return [
         'route_cache_ttl_seconds'          => env('TRACKING_ROUTE_CACHE_TTL_SECONDS', 600),
         'stale_location_threshold_seconds' => env('TRACKING_STALE_LOCATION_THRESHOLD_SECONDS', 300),
         'default_vehicle_speed_kph'        => env('TRACKING_DEFAULT_VEHICLE_SPEED_KPH', 35),
+        // The public tracking page's device-session cookie. `lax` suits a console and API on
+        // the same site (console.example.com and api.example.com); use `none` (sent only over
+        // HTTPS) when they are on different domains.
+        'cookie_same_site'                 => env('TRACKING_COOKIE_SAME_SITE', 'lax'),
     ],
 
     /*

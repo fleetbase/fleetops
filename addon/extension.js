@@ -132,16 +132,18 @@ export default {
         // inside the console. Signed-out visitors are sent on to the public route after login;
         // registering the page in the console too shows it to signed-in staff instead of an
         // empty console page.
-        menuService.registerMenuItem(
-            'console',
-            new MenuItem({
-                title: 'Track Order',
-                slug: 'track-order',
-                section: null,
-                view: null,
-                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'order-tracking-lookup'),
-            })
-        );
+        for (const slug of ['track', 'track-order']) {
+            menuService.registerMenuItem(
+                'console',
+                new MenuItem({
+                    title: 'Track Order',
+                    slug,
+                    section: null,
+                    view: null,
+                    component: new ExtensionComponent('@fleetbase/fleetops-engine', 'tracking-page'),
+                })
+            );
+        }
 
         // Register track order button
         menuService.registerMenuItem(
@@ -155,7 +157,23 @@ export default {
                 // btn-auth (ember-ui): the sign-in page's neutral button, matching the
                 // console's "Continue with ..." provider buttons, hover included.
                 wrapperClass: 'btn-block btn-auth',
-                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'order-tracking-lookup'),
+                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'tracking-page'),
+                onClick: (menuItem) => {
+                    universe.transitionMenuItem('virtual', menuItem);
+                },
+            })
+        );
+
+        // The customer tracking page at /~/track (the shared page, or ?org= for a company's own).
+        menuService.registerMenuItem(
+            'auth:login',
+            new MenuItem({
+                title: 'Track',
+                route: 'virtual',
+                slug: 'track',
+                type: 'link',
+                wrapperClass: 'hidden',
+                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'tracking-page'),
                 onClick: (menuItem) => {
                     universe.transitionMenuItem('virtual', menuItem);
                 },

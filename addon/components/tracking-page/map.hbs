@@ -1,0 +1,32 @@
+<div class="tp-map" role="img" aria-label={{@label}}>
+    <LeafletMap class="tp-map-canvas" @lat={{get this.center 0}} @lng={{get this.center 1}} @zoom={{13}} @zoomControl={{false}} @onLoad={{this.setup}} as |layers|>
+        <layers.tile @url={{(leaflet-tile-url)}} />
+        {{#if this.hasRoute}}
+            <layers.polyline @locations={{this.route}} @color="var(--tp-accent)" @weight={{5}} @opacity={{0.9}} />
+        {{/if}}
+        {{#if this.hub}}
+            <layers.marker @location={{this.hub}} @icon={{this.hubIcon}} @keyboard={{false}} />
+        {{/if}}
+        {{#each this.stops as |stop|}}
+            <layers.marker @location={{stop.location}} @icon={{this.stopIcon}} @title={{stop.place.name}} />
+        {{/each}}
+        {{#if this.vehicle}}
+            <layers.marker @location={{this.vehicle}} @icon={{this.vehicleIcon}} @zIndexOffset={{1000}} />
+        {{/if}}
+    </LeafletMap>
+    <div class="tp-map-chip {{if @stale 'tp-map-chip-stale'}}">
+        {{#if @stale}}
+            {{@staleText}}
+        {{else if @live}}
+            <span class="tp-live-dot" aria-hidden="true"></span>{{t "tracking-page.page.live"}}
+        {{else}}
+            {{t "tracking-page.page.map"}}
+        {{/if}}
+    </div>
+    <div class="tp-map-controls">
+        {{#if this.vehicle}}
+            <button type="button" class="tp-map-button" aria-label={{t "tracking-page.page.recenter"}} {{on "click" this.recenter}}><FaIcon @icon="crosshairs" /></button>
+        {{/if}}
+        <button type="button" class="tp-map-button" aria-label={{t "tracking-page.page.fit-route"}} {{on "click" this.fitRoute}}><FaIcon @icon="expand" /></button>
+    </div>
+</div>

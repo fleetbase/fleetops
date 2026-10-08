@@ -132,7 +132,7 @@ class OrderCompleted extends Notification implements ShouldQueue
             ->subject($this->title)
             ->line($this->message)
             ->line('No further action is necessary.')
-            ->action('Track Order', Utils::consoleUrl(TrackingCode::PATH, [TrackingCode::TRACKING_PARAM => $this->getTrackingNumber()]));
+            ->action('Track Order', TrackingCode::pageUrl($this->getTrackingNumber(), data_get($this, 'order.company_uuid')));
     }
 
     /**

@@ -144,3 +144,25 @@ test('the tracking page path itself is never read as a tracking number', functio
             'version'         => 1,
         ]);
 });
+
+test('tracking page links name the company page when its settings send links there', function () {
+    app()->instance(Fleetbase\FleetOps\Support\TrackingPage\TrackingResolver::class, new class extends Fleetbase\FleetOps\Support\TrackingPage\TrackingResolver {
+        public function linkSlugFor(string $companyUuid): ?string
+        {
+            if ($companyUuid === 'broken') {
+                throw new RuntimeException('settings unavailable');
+            }
+
+            return $companyUuid === 'co-1' ? 'northwind' : null;
+        }
+    });
+
+    try {
+        expect(TrackingCode::pageUrl('NOR1', 'co-1'))->toEndWith('/~/track-order?order=NOR1&org=northwind')
+            ->and(TrackingCode::pageUrl('NOR1', 'co-2'))->toEndWith('/~/track-order?order=NOR1')
+            ->and(TrackingCode::pageUrl('NOR1', 'broken'))->toEndWith('/~/track-order?order=NOR1')
+            ->and(TrackingCode::pageUrl('NOR1'))->toEndWith('/~/track-order?order=NOR1');
+    } finally {
+        app()->forgetInstance(Fleetbase\FleetOps\Support\TrackingPage\TrackingResolver::class);
+    }
+});

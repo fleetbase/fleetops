@@ -133,7 +133,7 @@ class WaypointCompleted extends Notification implements ShouldQueue
             ->subject($this->title)
             ->line($this->message)
             ->line('No further action is necessary.')
-            ->action('Track Order', Utils::consoleUrl(TrackingCode::PATH, [TrackingCode::TRACKING_PARAM => $this->waypoint->trackingNumber->tracking_number]));
+            ->action('Track Order', TrackingCode::pageUrl($this->waypoint->trackingNumber->tracking_number, data_get($this, 'waypoint.company_uuid')));
     }
 
     /**

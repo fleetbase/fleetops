@@ -38,7 +38,7 @@ class TrackingNumber extends FleetbaseResource
             // Labels printed before it encode the owner uuid; resolvers accept both.
             'qr_code_content' => $this->when($this->tracking_number, fn () => TrackingCode::qrContent($this->tracking_number, Utils::get($this->owner, 'public_id'))),
             'barcode'         => $this->barcode,
-            'url'             => Utils::consoleUrl(TrackingCode::PATH, [TrackingCode::TRACKING_PARAM => $this->tracking_number]),
+            'url'             => TrackingCode::pageUrl($this->tracking_number, $this->company_uuid),
             'type'            => Utils::getTypeFromClassName($this->owner_type),
             'updated_at'      => $this->updated_at,
             'created_at'      => $this->created_at,

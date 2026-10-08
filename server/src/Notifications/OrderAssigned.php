@@ -129,7 +129,7 @@ class OrderAssigned extends Notification implements ShouldQueue
             $message->line('Dispatch is scheduled for ' . $this->order->scheduled_at);
         }
 
-        $message->action('Track Order', Utils::consoleUrl(TrackingCode::PATH, [TrackingCode::TRACKING_PARAM => $this->order->trackingNumber->tracking_number]));
+        $message->action('Track Order', TrackingCode::pageUrl($this->order->trackingNumber->tracking_number, data_get($this, 'order.company_uuid')));
 
         return $message;
     }
