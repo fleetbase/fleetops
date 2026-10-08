@@ -36,10 +36,10 @@ const LOCALE_LABELS = {
 /**
  * The customer tracking page.
  *
- * Registered in the `auth:login` registry as `track` and `track-order`, so the console's
- * public `virtual` route serves it at `/~/track` and `/~/track-order`: outside the console,
- * signed in or not. `?order=` (or `?number=`) opens a tracking number and `?org=` a
- * company's own page.
+ * Registered in the `auth:login` registry as `t`, `track` and `track-order`, so the
+ * console's public `virtual` routes serve it outside the console, signed in or not:
+ * `/~/track/{number}` on the shared page and `/~/t/{slug}/{number}` on a company's own.
+ * The older `?order=` (or `?number=`) and `?org=` query links still open.
  *
  * A tracking number alone shows a coarse status. A one-time code to the customer's own
  * contact details unlocks their stops on this device; a signed-in customer, or staff of
@@ -77,8 +77,9 @@ export default class TrackingPageComponent extends Component {
 
     constructor() {
         super(...arguments);
-        this.org = this.urlSearchParams.get('org') || null;
-        this.trackingInput = this.urlSearchParams.get('order') || this.urlSearchParams.get('number') || '';
+        const fromPath = parseTrackingPath(window.location.pathname);
+        this.org = fromPath.org || this.urlSearchParams.get('org') || null;
+        this.trackingInput = fromPath.number || this.urlSearchParams.get('order') || this.urlSearchParams.get('number') || '';
         this.watchColorScheme();
         this.ticker = setInterval(() => this.tick(), 1000);
         this.boot.perform();
@@ -216,7 +217,7 @@ export default class TrackingPageComponent extends Component {
             const data = yield this.fetch.get(`track/${encodeURIComponent(value)}`, this.query(), REQUEST_OPTIONS);
             this.misses = 0;
             this.show(data);
-            this.urlSearchParams.addParamToCurrentUrl('order', data.tracking_number);
+            this.replaceUrl(data.tracking_number);
         } catch (error) {
             this.misses += 1;
             this.lookupError = this.rateLimited ? 'rate' : 'neutral';
@@ -296,7 +297,7 @@ export default class TrackingPageComponent extends Component {
         this.data = null;
         this.trackingInput = '';
         this.lookupError = null;
-        this.urlSearchParams.removeParamFromCurrentUrl('order');
+        this.replaceUrl(null);
         this.screen = 'lookup';
     }
 
@@ -308,7 +309,7 @@ export default class TrackingPageComponent extends Component {
     @action backToOrders() {
         this.live?.stop();
         this.data = null;
-        this.urlSearchParams.removeParamFromCurrentUrl('order');
+        this.replaceUrl(null);
         this.screen = 'list';
     }
 
@@ -452,7 +453,7 @@ export default class TrackingPageComponent extends Component {
     }
 
     @action share() {
-        const url = `${window.location.origin}/~/track?order=${encodeURIComponent(this.number)}${this.org ? `&org=${encodeURIComponent(this.org)}` : ''}`;
+        const url = `${window.location.origin}${trackingPath(this.org, this.number)}`;
         try {
             if (navigator.share) {
                 navigator.share({ url }).catch(() => {});
@@ -523,6 +524,18 @@ export default class TrackingPageComponent extends Component {
         this.colorScheme.addEventListener?.('change', this.onColorScheme);
     }
 
+    /**
+     * Keep the address bar on the page's own link, so a reload or a copied link opens the
+     * same order. The console router never sees it: the page stays on the same route.
+     */
+    replaceUrl(number) {
+        try {
+            window.history.replaceState(window.history.state, '', trackingPath(this.org, number));
+        } catch {
+            // The address bar is a convenience; the page already shows the order.
+        }
+    }
+
     query() {
         return this.org ? { org: this.org } : {};
     }
@@ -530,6 +543,44 @@ export default class TrackingPageComponent extends Component {
     queryString() {
         return this.org ? `?org=${encodeURIComponent(this.org)}` : '';
     }
+}
+
+/**
+ * The page's link: `/~/t/{slug}/{number}` on a company's own page, `/~/track/{number}`
+ * on the shared one; without a number, the page's lookup screen.
+ */
+export function trackingPath(org, number) {
+    const base = org ? `/~/t/${encodeURIComponent(org)}` : '/~/track';
+
+    return number ? `${base}/${encodeURIComponent(number)}` : base;
+}
+
+/**
+ * The company slug and tracking number in a page link's path, when it carries them.
+ */
+export function parseTrackingPath(pathname) {
+    const segments = String(pathname ?? '')
+        .split('/')
+        .filter(Boolean)
+        .map((segment) => {
+            try {
+                return decodeURIComponent(segment);
+            } catch {
+                return segment;
+            }
+        });
+    const start = segments.indexOf('~');
+    const [page, ...rest] = start === -1 ? [] : segments.slice(start + 1);
+
+    if (page === 't') {
+        return { org: rest[0] || null, number: rest[1] || null };
+    }
+
+    if (page === 'track' || page === 'track-order') {
+        return { org: null, number: rest[0] || null };
+    }
+
+    return { org: null, number: null };
 }
 
 export function formatCountdown(seconds) {

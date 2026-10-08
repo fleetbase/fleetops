@@ -43,23 +43,20 @@ class TrackingCode
 
     /**
      * The tracking page link for emails, notifications and the API: the company's own page
-     * when its settings send links there, otherwise the shared page.
+     * (`~/t/{slug}/{number}`) when its settings send links there, otherwise the shared page
+     * (`~/track/{number}`). QR codes keep {@see PATH}, which labels already printed carry.
      */
     public static function pageUrl(string $trackingNumber, ?string $companyUuid = null): string
     {
-        $query = [static::TRACKING_PARAM => $trackingNumber];
-
         try {
             $slug = $companyUuid ? app(TrackingPage\TrackingResolver::class)->linkSlugFor($companyUuid) : null;
         } catch (\Throwable) {
             $slug = null;
         }
 
-        if ($slug) {
-            $query['org'] = $slug;
-        }
+        $base = $slug ? '~/t/' . rawurlencode($slug) : '~/track';
 
-        return Utils::consoleUrl(static::PATH, $query);
+        return Utils::consoleUrl($base . '/' . rawurlencode($trackingNumber), []);
     }
 
     /**

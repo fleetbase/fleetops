@@ -158,10 +158,11 @@ test('tracking page links name the company page when its settings send links the
     });
 
     try {
-        expect(TrackingCode::pageUrl('NOR1', 'co-1'))->toEndWith('/~/track-order?order=NOR1&org=northwind')
-            ->and(TrackingCode::pageUrl('NOR1', 'co-2'))->toEndWith('/~/track-order?order=NOR1')
-            ->and(TrackingCode::pageUrl('NOR1', 'broken'))->toEndWith('/~/track-order?order=NOR1')
-            ->and(TrackingCode::pageUrl('NOR1'))->toEndWith('/~/track-order?order=NOR1');
+        expect(TrackingCode::pageUrl('NOR1', 'co-1'))->toEndWith('/~/t/northwind/NOR1')
+            ->and(TrackingCode::pageUrl('NOR1', 'co-2'))->toEndWith('/~/track/NOR1')
+            ->and(TrackingCode::pageUrl('NOR1', 'broken'))->toEndWith('/~/track/NOR1')
+            ->and(TrackingCode::pageUrl('NOR1'))->toEndWith('/~/track/NOR1')
+            ->and(TrackingCode::pageUrl('A B/1'))->toEndWith('/~/track/A%20B%2F1');
     } finally {
         app()->forgetInstance(Fleetbase\FleetOps\Support\TrackingPage\TrackingResolver::class);
     }

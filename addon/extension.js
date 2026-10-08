@@ -164,13 +164,29 @@ export default {
             })
         );
 
-        // The customer tracking page at /~/track (the shared page, or ?org= for a company's own).
+        // The customer tracking page: /~/track/{number} is the shared page.
         menuService.registerMenuItem(
             'auth:login',
             new MenuItem({
                 title: 'Track',
                 route: 'virtual',
                 slug: 'track',
+                type: 'link',
+                wrapperClass: 'hidden',
+                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'tracking-page'),
+                onClick: (menuItem) => {
+                    universe.transitionMenuItem('virtual', menuItem);
+                },
+            })
+        );
+
+        // A company's own tracking page: /~/t/{slug}/{number}.
+        menuService.registerMenuItem(
+            'auth:login',
+            new MenuItem({
+                title: 'Company tracking',
+                route: 'virtual',
+                slug: 't',
                 type: 'link',
                 wrapperClass: 'hidden',
                 component: new ExtensionComponent('@fleetbase/fleetops-engine', 'tracking-page'),
