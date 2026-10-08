@@ -128,6 +128,21 @@ export default {
             }
         );
 
+        // Links printed or emailed without the public `~/` prefix (/track-order?order=...) land
+        // inside the console. Signed-out visitors are sent on to the public route after login;
+        // registering the page in the console too shows it to signed-in staff instead of an
+        // empty console page.
+        menuService.registerMenuItem(
+            'console',
+            new MenuItem({
+                title: 'Track Order',
+                slug: 'track-order',
+                section: null,
+                view: null,
+                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'order-tracking-lookup'),
+            })
+        );
+
         // Register track order button
         menuService.registerMenuItem(
             'auth:login',

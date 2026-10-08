@@ -2833,9 +2833,9 @@ test('tracking number resource publishes a scannable qr code content beside the 
         Illuminate\Container\Container::setInstance($previousContainer);
     }
 
-    expect($payload['qr_code_content'])->toBe('https://console.fleetbase.test/track-order?order=TN-SCAN&r=order_public&v=1')
+    expect($payload['qr_code_content'])->toBe('https://console.fleetbase.test/~/track-order?order=TN-SCAN&r=order_public&v=1')
         ->and($payload['qr_code_content'])->not->toContain('owner-uuid')
-        ->and($payload['url'])->toBe('https://console.fleetbase.test/track-order?order=TN-SCAN')
+        ->and($payload['url'])->toBe('https://console.fleetbase.test/~/track-order?order=TN-SCAN')
         ->and($payload['qr_code'])->toBe('qr-data')
         // Nothing to scan without a tracking number: the key is absent, not null.
         ->and(array_key_exists('qr_code_content', $withoutNumber))->toBeFalse();

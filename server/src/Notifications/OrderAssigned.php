@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Notifications;
 
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Support\TrackingCode;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Support\PushNotification;
 use Illuminate\Broadcasting\Channel;
@@ -128,7 +129,7 @@ class OrderAssigned extends Notification implements ShouldQueue
             $message->line('Dispatch is scheduled for ' . $this->order->scheduled_at);
         }
 
-        $message->action('Track Order', Utils::consoleUrl('track-order', ['order' => $this->order->trackingNumber->tracking_number]));
+        $message->action('Track Order', Utils::consoleUrl(TrackingCode::PATH, [TrackingCode::TRACKING_PARAM => $this->order->trackingNumber->tracking_number]));
 
         return $message;
     }

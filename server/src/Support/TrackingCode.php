@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
  * QR (v1) is a URL, so a phone camera opens the customer tracking page while scanners
  * and the navigator app read the parameters:
  *
- *     https://<console host>/track-order?order=<tracking number>&r=<owner public_id>&v=1
+ *     https://<console host>/~/track-order?order=<tracking number>&r=<owner public_id>&v=1
  *
  * Only the tracking number (printed on the label in plain text) and the owner's public
  * id go in: no uuids, no addresses, no names, no company. The owner's type is its
@@ -33,8 +33,12 @@ class TrackingCode
      * Where a phone camera lands. The public tracking page is being rebuilt; when its
      * route changes, change these two and nothing else. parse() never depends on the
      * host or the path, since printed labels outlive both.
+     *
+     * `~/` is the console's public route prefix: it renders the page whether or not the
+     * visitor is signed in. A bare `/track-order` falls into the console's own routes, so
+     * a signed-in user landed on an empty console page instead of the tracking page.
      */
-    public const PATH           = 'track-order';
+    public const PATH           = '~/track-order';
     public const TRACKING_PARAM = 'order';
 
     /**
@@ -174,11 +178,11 @@ class TrackingCode
         $trackingNumber = static::stringParam($query, static::TRACKING_PARAM) ?? static::stringParam($query, 'tn');
 
         // A future route may carry the tracking number in the path (/track/<number>). Only
-        // a path of two or more segments can, so /track-order itself is never mistaken
-        // for one.
+        // a path of two or more segments can, and the tracking page's own path
+        // (/track-order, /~/track-order) is never mistaken for one.
         if ($trackingNumber === null && is_array($parts) && isset($parts['path'])) {
             $segments = array_values(array_filter(explode('/', $parts['path']), fn ($segment) => $segment !== ''));
-            if (count($segments) >= 2) {
+            if (count($segments) >= 2 && end($segments) !== basename(static::PATH)) {
                 $trackingNumber = rawurldecode(end($segments));
             }
         }

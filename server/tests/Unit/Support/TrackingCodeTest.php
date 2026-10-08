@@ -13,21 +13,21 @@ afterEach(function () {
 
 test('qr content is a versioned tracking url naming the owner by public id', function () {
     expect(TrackingCode::qrContent('ACM1234567890SG', 'order_a1b2c3d'))
-        ->toBe('https://console.fleetbase.test/track-order?order=ACM1234567890SG&r=order_a1b2c3d&v=1')
+        ->toBe('https://console.fleetbase.test/~/track-order?order=ACM1234567890SG&r=order_a1b2c3d&v=1')
         // No owner: the tracking number alone still resolves.
         ->and(TrackingCode::qrContent('ACM1234567890SG'))
-        ->toBe('https://console.fleetbase.test/track-order?order=ACM1234567890SG&v=1')
+        ->toBe('https://console.fleetbase.test/~/track-order?order=ACM1234567890SG&v=1')
         // Tracking numbers start with the company name, which may hold spaces.
         ->and(TrackingCode::qrContent('A B1234567890SG', ''))
-        ->toBe('https://console.fleetbase.test/track-order?order=A+B1234567890SG&v=1');
+        ->toBe('https://console.fleetbase.test/~/track-order?order=A+B1234567890SG&v=1');
 });
 
 test('qr content follows the configured console origin but never the app environment', function () {
     config(['fleetbase.console' => ['host' => 'fleetbase.test', 'subdomain' => 'console', 'secure' => false]]);
-    expect(TrackingCode::qrContent('TN1', 'order_x'))->toBe('http://console.fleetbase.test/track-order?order=TN1&r=order_x&v=1');
+    expect(TrackingCode::qrContent('TN1', 'order_x'))->toBe('http://console.fleetbase.test/~/track-order?order=TN1&r=order_x&v=1');
 
     config(['fleetbase.console' => ['host' => 'https://tracking.example.test/', 'subdomain' => 'ignored']]);
-    expect(TrackingCode::qrContent('TN1'))->toBe('https://tracking.example.test/track-order?order=TN1&v=1');
+    expect(TrackingCode::qrContent('TN1'))->toBe('https://tracking.example.test/~/track-order?order=TN1&v=1');
 
     // Unset `secure` defaults to https, whatever environment generated the label.
     config(['fleetbase.console' => ['host' => 'console.fleetbase.test']]);
@@ -132,4 +132,15 @@ test('matches decides a subject without its own tracking number by public id', f
         // A tracking number may also sit directly on the subject.
         ->and(TrackingCode::matches('TN-FLAT', (object) ['uuid' => 'u', 'public_id' => '', 'tracking_number' => 'TN-FLAT']))->toBeTrue()
         ->and(TrackingCode::matches('TN-FLAT', (object) ['uuid' => 'u', 'public_id' => null]))->toBeFalse();
+});
+
+test('the tracking page path itself is never read as a tracking number', function () {
+    expect(TrackingCode::parse('https://console.example/~/track-order?r=order_o1'))->toMatchArray([
+        'tracking_number' => null,
+        'public_id'       => 'order_o1',
+    ])
+        ->and(TrackingCode::parse('https://console.example/~/track-order?order=TN1&v=1'))->toMatchArray([
+            'tracking_number' => 'TN1',
+            'version'         => 1,
+        ]);
 });

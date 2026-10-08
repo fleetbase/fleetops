@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Notifications;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Support\TrackingCode;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Support\PushNotification;
 use Illuminate\Broadcasting\Channel;
@@ -132,7 +133,7 @@ class WaypointCompleted extends Notification implements ShouldQueue
             ->subject($this->title)
             ->line($this->message)
             ->line('No further action is necessary.')
-            ->action('Track Order', Utils::consoleUrl('track-order', ['order' => $this->waypoint->trackingNumber->tracking_number]));
+            ->action('Track Order', Utils::consoleUrl(TrackingCode::PATH, [TrackingCode::TRACKING_PARAM => $this->waypoint->trackingNumber->tracking_number]));
     }
 
     /**

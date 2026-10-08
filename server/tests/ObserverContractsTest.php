@@ -1355,7 +1355,7 @@ test('tracking number observer reads the owner public id and renders codes throu
 
     try {
         expect($images->invoke($observer, 'TN-sg', 'order_public'))->toBe([
-            'qr_code' => 'DNS2D:QRCODE,M:https://console.fleetbase.test/track-order?order=TN-sg&r=order_public&v=1',
+            'qr_code' => 'DNS2D:QRCODE,M:https://console.fleetbase.test/~/track-order?order=TN-sg&r=order_public&v=1',
             'barcode' => 'DNS1D:C128:TN-sg',
         ]);
     } finally {
