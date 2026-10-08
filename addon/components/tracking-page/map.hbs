@@ -1,4 +1,5 @@
-<div class="tp-map" role="img" aria-label={{@label}}>
+<div class="tp-map">
+    <span class="tp-sr-only">{{@label}}</span>
     <LeafletMap class="tp-map-canvas" @lat={{get this.center 0}} @lng={{get this.center 1}} @zoom={{13}} @zoomControl={{false}} @onLoad={{this.setup}} as |layers|>
         <layers.tile @url={{(leaflet-tile-url)}} />
         {{#if this.hasRoute}}

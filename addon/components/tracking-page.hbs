@@ -122,8 +122,8 @@
         <label class="tp-footer-language">
             <span>{{t "tracking-page.page.language"}}</span>
             <select class="tp-select" {{on "change" this.changeLocale}}>
-                {{#each this.localeOptions as |option|}}
-                    <option value={{option.code}} selected={{option.selected}}>{{option.label}}</option>
+                {{#each this.localeOptions as |locale|}}
+                    <option value={{locale.code}} selected={{locale.selected}}>{{locale.label}}</option>
                 {{/each}}
             </select>
         </label>

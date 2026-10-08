@@ -364,7 +364,9 @@ export default class TrackingPageComponent extends Component {
             return;
         }
 
-        this.code = String(event.target.value ?? '').replace(/\D/g, '').slice(0, CODE_LENGTH);
+        this.code = String(event.target.value ?? '')
+            .replace(/\D/g, '')
+            .slice(0, CODE_LENGTH);
         if (this.verifyStep === 'wrong') {
             this.verifyStep = 'sent';
         }
