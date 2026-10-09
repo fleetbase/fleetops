@@ -380,3 +380,28 @@ test('feature geometries strict lookups matrices and centroids cover edge seams'
     expect(Utils::getCentroidFromGeosPolygon($brickPolygon)->x())->toBe(103.81)
         ->and(Utils::getCentroidFromGeosMultiPolygon(Brick\Geo\MultiPolygon::of($brickPolygon))->y())->toBe(1.31);
 });
+
+test('coordsToCircle keeps every vertex on the requested radius', function () {
+    $haversine = function (float $lat1, float $lng1, float $lat2, float $lng2): float {
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+        $a    = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+
+        return 6378137 * 2 * atan2(sqrt($a), sqrt(1 - $a));
+    };
+
+    // 15 km around Seattle, the case from fleetbase/fleetops#360
+    foreach (Utils::coordsToCircle(47.6062, -122.3321, 15000) as [$lat, $lng]) {
+        expect($haversine(47.6062, -122.3321, $lat, $lng))->toEqualWithDelta(15000, 1);
+    }
+});
+
+test('coordsToCircle wraps longitudes across the antimeridian', function () {
+    $longitudes = array_column(Utils::coordsToCircle(0, -179.99, 5000), 1);
+
+    expect(min($longitudes))->toBeGreaterThanOrEqual(-180)
+        ->and(max($longitudes))->toBeLessThanOrEqual(180)
+        // the eastern half of the ring crosses to the far side of the antimeridian
+        ->and(max($longitudes))->toBeGreaterThan(179.9)
+        ->and(min($longitudes))->toBeLessThan(-179.99);
+});
