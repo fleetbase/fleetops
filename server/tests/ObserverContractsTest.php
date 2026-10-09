@@ -1082,6 +1082,8 @@ test('order observer ignores non dispatched start transitions', function () {
 test('order observer invalidates cache on delete and forwards to integrated vendors', function () {
     Cache::swap(new Repository(new ArrayStore()));
     session(['company' => 'company-uuid']);
+    // Deleting cascades to the order's children, so the queries need a database.
+    Fleetbase\Tests\Support\TrackingPageDatabase::boot();
 
     $order       = new FleetOpsOrderObserverOrderFake();
     $order->uuid = 'order-deleted-uuid';
@@ -1100,6 +1102,8 @@ test('order observer invalidates cache on delete and forwards to integrated vend
     $integrated->integratedVendor = true;
 
     expect(fn () => (new OrderObserver())->deleted($integrated))->toThrow(Error::class);
+
+    Illuminate\Database\Eloquent\Model::unsetConnectionResolver();
 });
 
 test('contact observer creates syncs normalizes and deletes associated users', function () {
