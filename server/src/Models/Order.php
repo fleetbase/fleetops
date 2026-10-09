@@ -264,6 +264,31 @@ class Order extends Model
     }
 
     /**
+     * Bulk removal deletes the matched orders one at a time instead of with a single
+     * query, so the "deleted" event fires for each and OrderObserver cascades the soft
+     * delete to the order's payload, entities and tracking data. Matching, the tenant
+     * constraint (GHSA-3wj9-hh56-7fw7) and the returned count follow core-api's version.
+     */
+    public function bulkRemove($ids = [])
+    {
+        $orders = static::where(function ($query) use ($ids) {
+            $query->whereIn($this->getQualifiedKeyName(), $ids)->orWhereIn($this->getQualifiedPublicId(), $ids);
+        });
+
+        // Tenant constraint: never delete another company's orders.
+        $companyUuid = session('company');
+        if ($companyUuid) {
+            $orders->where($this->qualifyColumn('company_uuid'), $companyUuid);
+        }
+
+        $orders = $orders->get();
+        $orders->each->delete();
+        $this->invalidateApiCacheOnChange();
+
+        return $orders->count();
+    }
+
+    /**
      * Get the activity log options for the model.
      */
     public function getActivitylogOptions(): LogOptions
