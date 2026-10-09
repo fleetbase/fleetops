@@ -632,24 +632,6 @@ class OrderController extends Controller
                 });
             }
 
-            if ($request->has('facilitator')) {
-                $query->whereHas('facilitator', function ($q) use ($request) {
-                    $q->where(function ($q) use ($request) {
-                        $q->where('public_id', $request->input('facilitator'));
-                        $q->orWhere('internal_id', $request->input('facilitator'));
-                    });
-                });
-            }
-
-            if ($request->has('customer')) {
-                $query->whereHas('customer', function ($q) use ($request) {
-                    $q->where(function ($q) use ($request) {
-                        $q->where('public_id', $request->input('customer'));
-                        $q->orWhere('internal_id', $request->input('customer'));
-                    });
-                });
-            }
-
             if ($request->has('entity')) {
                 $query->whereHas('payload.entities', function ($q) use ($request) {
                     $q->where(function ($q) use ($request) {

@@ -124,6 +124,173 @@ function fleetopsOrderFilter(FleetOpsRecordingOrderFilterBuilder $builder, array
     return $filter;
 }
 
+/**
+ * A filter whose request resolves to an internal console route.
+ *
+ * `Http::isInternalRequest()` reads the resolved route's uri, so the console's
+ * uuid pass-through is only reachable through a route resolver.
+ */
+function fleetopsInternalOrderFilter(FleetOpsRecordingOrderFilterBuilder $builder): OrderFilter
+{
+    $uri     = 'int/v1/fleet-ops/orders';
+    $request = Request::create('/' . $uri, 'GET');
+    $session = app('session.store');
+    $session->put('company', 'company_test');
+    $request->setLaravelSession($session);
+    $request->setRouteResolver(fn () => new class($uri) {
+        public array $action = [];
+
+        public function __construct(private string $uri)
+        {
+        }
+
+        public function uri(): string
+        {
+            return $this->uri;
+        }
+    });
+
+    $filter     = new OrderFilter($request);
+    $reflection = new ReflectionClass($filter);
+    $property   = $reflection->getParentClass()->getProperty('builder');
+    $property->setAccessible(true);
+    $property->setValue($filter, $builder);
+
+    return $filter;
+}
+
+/**
+ * Customer and facilitator filters resolve public ids to uuids, which is a real query.
+ *
+ * @return array<string, array<string, string>>
+ */
+function fleetopsOrderFilterRelationDatabase(): array
+{
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    app()->instance('db', new class($connection) {
+        public function __construct(public Illuminate\Database\SQLiteConnection $c)
+        {
+        }
+
+        public function connection($name = null)
+        {
+            return $this->c;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this->c->{$method}(...$arguments);
+        }
+    });
+    Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+
+    $schema = $connection->getSchemaBuilder();
+    foreach (['vendors', 'integrated_vendors', 'contacts'] as $table) {
+        $schema->create($table, function ($blueprint) {
+            $blueprint->increments('id');
+            foreach (['uuid', 'public_id', 'internal_id', 'company_uuid', 'name', '_key'] as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+
+    $rows = [
+        'vendors'            => ['uuid' => '77777777-7777-4777-8777-777777777701', 'public_id' => 'vendor_ofilterone', 'internal_id' => 'VND-1'],
+        'integrated_vendors' => ['uuid' => '77777777-7777-4777-8777-777777777702', 'public_id' => 'integrated_vendor_ofilter'],
+        'contacts'           => ['uuid' => '77777777-7777-4777-8777-777777777703', 'public_id' => 'contact_ofilterone'],
+    ];
+
+    foreach ($rows as $table => $row) {
+        $connection->table($table)->insert($row + ['company_uuid' => 'company_test']);
+    }
+
+    // Another tenant's vendor is never reachable by its public id.
+    $connection->table('vendors')->insert(['uuid' => '77777777-7777-4777-8777-777777777709', 'public_id' => 'vendor_otherco', 'company_uuid' => 'another-company']);
+
+    return $rows;
+}
+
+/**
+ * @return array<int, array<int, string>>
+ */
+function fleetopsOrderFilterWhereInValues(FleetOpsRecordingOrderFilterBuilder $builder, string $column): array
+{
+    return collect($builder->methodCalls('whereIn'))
+        ->filter(fn ($call) => $call[1] === $column)
+        ->map(fn ($call) => $call[2])
+        ->values()
+        ->all();
+}
+
+test('order filter resolves facilitator public ids across vendors integrated vendors and contacts', function () {
+    $rows    = fleetopsOrderFilterRelationDatabase();
+    $builder = new FleetOpsRecordingOrderFilterBuilder();
+    $filter  = fleetopsOrderFilter($builder);
+
+    $filter->facilitator($rows['vendors']['public_id']);
+    $filter->facilitator($rows['vendors']['internal_id']);
+    $filter->facilitator($rows['integrated_vendors']['public_id']);
+    $filter->facilitator($rows['contacts']['public_id']);
+    // The public API never accepts a raw uuid, an unknown id, or another tenant's id.
+    $filter->facilitator($rows['vendors']['uuid']);
+    $filter->facilitator('vendor_missing');
+    $filter->facilitator('vendor_otherco');
+
+    // The filter used to compare the public id against `facilitator_uuid`
+    // directly, which could never match. An id that resolves to nothing now
+    // yields an empty list, so it matches no order rather than every order.
+    expect(fleetopsOrderFilterWhereInValues($builder, 'facilitator_uuid'))->toBe([
+        [$rows['vendors']['uuid']],
+        [$rows['vendors']['uuid']],
+        [$rows['integrated_vendors']['uuid']],
+        [$rows['contacts']['uuid']],
+        [],
+        [],
+        [],
+    ]);
+});
+
+test('order filter resolves customer public ids and keeps the customer portal user match', function () {
+    $rows    = fleetopsOrderFilterRelationDatabase();
+    $builder = new FleetOpsRecordingOrderFilterBuilder();
+    $filter  = fleetopsOrderFilter($builder);
+
+    $filter->customer($rows['contacts']['public_id']);
+    $filter->customer($rows['vendors']['public_id']);
+    $filter->customer('portal-user-uuid');
+
+    $userMatches = collect($builder->methodCalls('orWhereHas'))
+        ->filter(fn ($call) => $call[1] === 'authenticatableCustomer')
+        ->map(fn ($call) => $call[2]->calls)
+        ->values()
+        ->all();
+
+    expect(fleetopsOrderFilterWhereInValues($builder, 'customer_uuid'))->toBe([
+        [$rows['contacts']['uuid']],
+        [$rows['vendors']['uuid']],
+        [],
+    ])
+        // A customer portal user still reaches their orders by user uuid.
+        ->and($userMatches[2])->toBe([['where', 'user_uuid', ['portal-user-uuid']]]);
+});
+
+test('order filter keeps console uuids working for customer and facilitator', function () {
+    $rows    = fleetopsOrderFilterRelationDatabase();
+    $builder = new FleetOpsRecordingOrderFilterBuilder();
+    $filter  = fleetopsInternalOrderFilter($builder);
+
+    $filter->customer($rows['contacts']['uuid']);
+    $filter->facilitator($rows['integrated_vendors']['uuid']);
+
+    expect(fleetopsOrderFilterWhereInValues($builder, 'customer_uuid'))->toBe([[$rows['contacts']['uuid']]])
+        ->and(fleetopsOrderFilterWhereInValues($builder, 'facilitator_uuid'))->toBe([[$rows['integrated_vendors']['uuid']]]);
+});
+
 test('order filter applies internal and public base scopes with eager loading', function () {
     $builder = new FleetOpsRecordingOrderFilterBuilder();
     $filter  = fleetopsOrderFilter($builder);
@@ -161,9 +328,7 @@ test('order filter identity and relation filters support uuid and public identif
 
     $filter->status('active');
     $filter->status(['created', 'started']);
-    $filter->customer('customer_uuid');
     $filter->authenticatedCustomer('user_uuid');
-    $filter->facilitator('facilitator_uuid');
     $filter->type('transport');
     $filter->orderConfig('transport');
     $filter->payload($uuid);

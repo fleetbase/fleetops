@@ -2,6 +2,10 @@
 
 namespace Fleetbase\FleetOps\Http\Filter;
 
+use Fleetbase\FleetOps\Http\Filter\Concerns\ResolvesPublicRelationUuids;
+use Fleetbase\FleetOps\Models\Contact;
+use Fleetbase\FleetOps\Models\IntegratedVendor;
+use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Filter\Filter;
 use Fleetbase\Support\Http;
@@ -10,6 +14,8 @@ use Illuminate\Support\Str;
 
 class OrderFilter extends Filter
 {
+    use ResolvesPublicRelationUuids;
+
     public function queryForInternal()
     {
         $companyUuid = $this->request->session()->get('company');
@@ -141,10 +147,17 @@ class OrderFilter extends Filter
         }
     }
 
+    /**
+     * A customer is a contact or a vendor. The public API names it by public id,
+     * so the id is resolved to the uuid `customer_uuid` stores. The customer
+     * portal names its own user, which the authenticatable branch still matches.
+     */
     public function customer(string $customer)
     {
-        $this->builder->where(function ($query) use ($customer) {
-            $query->where('customer_uuid', $customer);
+        $customerUuids = $this->resolvePublicRelationUuidsAcross([Contact::class, Vendor::class], $customer);
+
+        $this->builder->where(function ($query) use ($customer, $customerUuids) {
+            $query->whereIn('customer_uuid', $customerUuids);
             $query->orWhereHas('authenticatableCustomer', function ($query) use ($customer) {
                 $query->where('user_uuid', $customer);
             });
@@ -158,9 +171,29 @@ class OrderFilter extends Filter
         });
     }
 
+    /**
+     * A facilitator is a vendor, an integrated vendor or a contact. An id that
+     * resolves to none of them leaves an empty list, which matches no order.
+     */
     public function facilitator(string $facilitator)
     {
-        $this->builder->where('facilitator_uuid', $facilitator);
+        $this->builder->whereIn('facilitator_uuid', $this->resolvePublicRelationUuidsAcross([Vendor::class, IntegratedVendor::class, Contact::class], $facilitator));
+    }
+
+    /**
+     * Resolve an identifier against every model a polymorphic relation can point at.
+     *
+     * @param array<int, class-string> $modelClasses
+     *
+     * @return array<int, string>
+     */
+    protected function resolvePublicRelationUuidsAcross(array $modelClasses, string $identifier): array
+    {
+        return collect($modelClasses)
+            ->flatMap(fn (string $modelClass) => $this->resolvePublicRelationUuids($modelClass, $identifier))
+            ->unique()
+            ->values()
+            ->all();
     }
 
     public function type(string $type)
