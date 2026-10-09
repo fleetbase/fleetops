@@ -645,6 +645,8 @@ class Contact extends Model
             return null;
         }
 
+        ProfileAccountManager::copyAccountToSandbox($user, $contact->company->uuid);
+
         $role        = $contact->isCustomer() ? 'Fleet-Ops Customer' : 'Fleet-Ops Contact';
         $companyUser = $contact->company->addUser($user, $role);
 
