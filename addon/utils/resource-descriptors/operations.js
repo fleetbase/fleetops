@@ -1,5 +1,6 @@
 import { get } from '@ember/object';
 import { first, present, relation, icon, colourTile, fact, relatedFact, money, join, panelOpener, routeOpener, polymorphicType, dateLabel } from './helpers';
+import { sharedDescriptors } from './shared';
 
 /**
  * Places, orders, order configs, service rates, service areas, zones,
@@ -7,67 +8,7 @@ import { first, present, relation, icon, colourTile, fact, relatedFact, money, j
  */
 export default function buildOperationsDescriptors(owner) {
     return [
-        {
-            key: 'place',
-            labelKey: 'resource.place',
-            icon: 'location-dot',
-            modelNames: ['place'],
-            polymorphicTypes: ['fleet-ops:place', 'Fleetbase\\FleetOps\\Models\\Place'],
-            permission: 'fleet-ops view place',
-            title: (place) => first(place, 'displayName', 'name', 'address', 'street1', 'public_id'),
-            identifier: (place) => join([first(place, 'city'), first(place, 'country')], ', ') ?? first(place, 'public_id'),
-            image: () => icon('location-dot'),
-            selectDetails: (place) => [first(place, 'address', 'street1'), join([first(place, 'city'), first(place, 'country')], ', ')],
-            facts: (place) => [
-                fact('address', first(place, 'address', 'street1')),
-                fact('phone', first(place, 'phone')),
-                fact('type', first(place, 'type'), { format: 'humanize' }),
-                relatedFact('vendor', relation(owner, place, 'vendor'), 'vendor', first(place, 'vendor_name')),
-                fact('coordinates', first(place, 'positionString') ?? (present(get(place, 'latitude')) ? `${get(place, 'latitude')}, ${get(place, 'longitude')}` : null)),
-            ],
-            open: panelOpener(owner, 'place-actions'),
-        },
-        {
-            key: 'order',
-            labelKey: 'resource.order',
-            icon: 'box',
-            modelNames: ['order'],
-            polymorphicTypes: ['fleet-ops:order', 'Fleetbase\\FleetOps\\Models\\Order'],
-            permission: 'fleet-ops view order',
-            statusTones: {
-                created: 'text-gray-400',
-                preparing: 'text-yellow-500',
-                dispatched: 'text-yellow-500',
-                started: 'text-yellow-500',
-                in_progress: 'text-yellow-500',
-                enroute: 'text-yellow-500',
-                completed: 'text-green-500',
-                delivered: 'text-green-500',
-                canceled: 'text-red-500',
-                cancelled: 'text-red-500',
-                failed: 'text-red-500',
-            },
-            title: (order) => first(order, 'tracking', 'tracking_number.tracking_number', 'public_id'),
-            identifier: (order) => first(order, 'public_id', 'internal_id'),
-            image: () => icon('box'),
-            status: (order) => first(order, 'status'),
-            selectDetails: (order) => [first(order, 'public_id'), first(order, 'status')],
-            facts: (order) => [
-                fact('status', first(order, 'status'), { format: 'humanize' }),
-                relatedFact('customer', relation(owner, order, 'customer'), polymorphicType(order, 'customer', 'customer_type'), first(order, 'customer_name')),
-                relatedFact('driver', relation(owner, order, 'driver_assigned'), 'driver', first(order, 'driver_name')),
-                fact('route', join([first(order, 'pickupName', 'pickup_name'), first(order, 'dropoffName', 'dropoff_name')], ' → ')),
-                fact('scheduled', get(order, 'scheduled_at'), { format: 'date' }),
-                fact('order-config', first(order, 'order_config.name', 'type')),
-            ],
-            open: (order) => {
-                if (!order || order.isIdentityStub || !first(order, 'id', 'uuid')) {
-                    return false;
-                }
-
-                return panelOpener(owner, 'order-actions')(order);
-            },
-        },
+        ...sharedDescriptors(owner, ['place', 'order']),
         {
             key: 'order-config',
             labelKey: 'resource.order-config',
