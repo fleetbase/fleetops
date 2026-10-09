@@ -135,19 +135,20 @@ function fleetopsOrderNearbyBoot(): SQLiteConnection
 
     $schema = $connection->getSchemaBuilder();
     $tables = [
-        'orders'            => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'driver_assigned_uuid', 'customer_uuid', 'customer_type', 'facilitator_uuid', 'facilitator_type', 'tracking_number_uuid', 'status', 'pod_required', 'dispatched', 'scheduled_at', 'type'],
-        'payloads'          => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'return_uuid', 'current_waypoint_uuid', 'type'],
-        'places'            => ['uuid', 'public_id', 'company_uuid', 'name', 'street1', 'city', 'country', 'location', 'meta'],
-        'waypoints'         => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid'],
-        'entities'          => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'name'],
-        'drivers'           => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'location'],
-        'users'             => ['uuid', 'public_id', 'company_uuid', 'type'],
-        'contacts'          => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'name'],
-        'vendors'           => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'name'],
-        'companies'         => ['uuid', 'public_id', 'name', 'options'],
-        'tracking_numbers'  => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'owner_uuid', 'owner_type', 'status_uuid', '_key'],
-        'tracking_statuses' => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'code', 'status', 'details'],
-        'directives'        => ['uuid', 'company_uuid', 'permission_uuid', 'subject_type', 'subject_uuid', 'key', 'rules'],
+        'orders'             => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'driver_assigned_uuid', 'customer_uuid', 'customer_type', 'facilitator_uuid', 'facilitator_type', 'tracking_number_uuid', 'status', 'pod_required', 'dispatched', 'scheduled_at', 'type'],
+        'payloads'           => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'return_uuid', 'current_waypoint_uuid', 'type'],
+        'places'             => ['uuid', 'public_id', 'company_uuid', 'name', 'street1', 'city', 'country', 'location', 'meta'],
+        'waypoints'          => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid'],
+        'entities'           => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'name'],
+        'drivers'            => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'location'],
+        'users'              => ['uuid', 'public_id', 'company_uuid', 'type'],
+        'contacts'           => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'name'],
+        'vendors'            => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'name'],
+        'integrated_vendors' => ['uuid', 'public_id', 'company_uuid', 'provider'],
+        'companies'          => ['uuid', 'public_id', 'name', 'options'],
+        'tracking_numbers'   => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'owner_uuid', 'owner_type', 'status_uuid', '_key'],
+        'tracking_statuses'  => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'code', 'status', 'details'],
+        'directives'         => ['uuid', 'company_uuid', 'permission_uuid', 'subject_type', 'subject_uuid', 'key', 'rules'],
     ];
     foreach ($tables as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
@@ -276,7 +277,6 @@ test('facilitator and customer filters constrain by public and internal ids', fu
         'facilitator' => 'vendor_nearby1',
         'customer'    => 'contact_nearby1',
     ]));
-    // MorphTo whereHas subqueries build and constrain without matching in
-    // the harness morph map
-    expect($result->count())->toBeGreaterThanOrEqual(0);
+    // Both ids resolve to the uuids the order stores, so exactly that order matches.
+    expect($result->pluck('uuid')->all())->toBe(['order-1']);
 });
