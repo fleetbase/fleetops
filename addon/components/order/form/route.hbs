@@ -151,7 +151,7 @@
                 <div class="flex items-center justify-end">
                     <div class="flex-row space-x-1 pr-0.5">
                         {{#if @resource.payload.pickup}}
-                            <a href="javascript:;" {{on "click" (fn this.editPlace @resource.payload.pickup)}}>
+                            <a href="javascript:;" data-test-edit-place="pickup" {{on "click" (fn this.editPlace @resource.payload.pickup)}}>
                                 <FaIcon @icon="edit" />
                             </a>
                             <a href="javascript:;" {{on "click" (fn this.setPayloadPlace "pickup" null)}}>
