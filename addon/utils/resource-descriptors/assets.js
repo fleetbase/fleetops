@@ -1,68 +1,13 @@
 import { get } from '@ember/object';
 import { first, present, relation, photo, icon, badge, badges, fact, relatedFact, money, join, panelOpener } from './helpers';
+import { sharedDescriptors } from './shared';
 
 /**
  * Vehicles, trailers, equipment, parts, generic assets and warranties.
  */
 export default function buildAssetDescriptors(owner) {
     return [
-        {
-            key: 'vehicle',
-            labelKey: 'resource.vehicle',
-            icon: 'truck',
-            modelNames: ['vehicle'],
-            aliases: ['attachable-vehicle', 'maintenance-subject-vehicle'],
-            polymorphicTypes: ['fleet-ops:vehicle', 'Fleetbase\\FleetOps\\Models\\Vehicle'],
-            permission: 'fleet-ops view vehicle',
-            statusTones: {
-                available: 'text-green-500',
-                active: 'text-green-500',
-                in_service: 'text-green-500',
-                maintenance: 'text-yellow-500',
-                unavailable: 'text-gray-400',
-                inactive: 'text-gray-400',
-                out_of_service: 'text-red-500',
-            },
-            title: (vehicle) =>
-                first(vehicle, 'displayName', 'display_name', 'name', 'yearMakeModel', 'public_id') ?? join([get(vehicle, 'year'), get(vehicle, 'make'), get(vehicle, 'model')]),
-            identifier: (vehicle) => first(vehicle, 'plate_number', 'call_sign', 'vin', 'serial_number'),
-            image: (vehicle) => photo(vehicle, 'vehicle'),
-            online: (vehicle) => {
-                const online = get(vehicle, 'online');
-
-                return typeof online === 'boolean' ? online : undefined;
-            },
-            status: (vehicle) => first(vehicle, 'status'),
-            badges: (vehicle) => {
-                const driver = relation(owner, vehicle, 'driver');
-
-                return badges(
-                    badge('plate', 'id-card', first(vehicle, 'plate_number', 'call_sign', 'vehicle_number')),
-                    badge('driver', 'user', first(driver, 'name', 'displayName') ?? first(vehicle, 'driver_name'), {
-                        relatedType: 'driver',
-                        relatedId: driver?.id ?? get(vehicle, 'driver_uuid'),
-                    })
-                );
-            },
-            selectDetails: (vehicle) => [first(vehicle, 'plate_number', 'vin', 'serial_number', 'call_sign'), first(vehicle, 'driver_name')],
-            facts: (vehicle) => {
-                const driver = relation(owner, vehicle, 'driver');
-                const trailers = relation(owner, vehicle, 'trailers');
-                const trailer = trailers && typeof trailers.objectAt === 'function' ? trailers.objectAt(0) : Array.isArray(trailers) ? trailers[0] : null;
-                const extra = trailers?.length > 1 ? ` (+${trailers.length - 1})` : '';
-
-                return [
-                    fact('make-model', join([get(vehicle, 'year'), get(vehicle, 'make'), get(vehicle, 'model'), get(vehicle, 'trim')])),
-                    fact('plate', join([first(vehicle, 'plate_number'), first(vehicle, 'vin')], ' · ')),
-                    relatedFact('driver', driver, 'driver', first(vehicle, 'driver_name')),
-                    trailer ? { ...relatedFact('trailer', trailer, 'trailer', first(trailer, 'displayName', 'display_name', 'name')), suffix: extra } : fact('trailer', null),
-                    fact('odometer', present(get(vehicle, 'odometer')) ? join([get(vehicle, 'odometer'), get(vehicle, 'odometer_unit')]) : null),
-                    fact('status', first(vehicle, 'status'), { format: 'humanize' }),
-                ];
-            },
-            open: panelOpener(owner, 'vehicle-actions'),
-            components: { identity: 'cell/vehicle-identity' },
-        },
+        ...sharedDescriptors(owner, ['vehicle']),
         {
             key: 'trailer',
             labelKey: 'resource.trailer',
