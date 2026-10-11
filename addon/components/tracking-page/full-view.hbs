@@ -1,0 +1,258 @@
+<div class="tp-full {{if @data.location 'tp-full-with-map'}}" {{did-insert this.loadProofs}} {{did-update this.loadProofs @data.proofs}}>
+    <div class="tp-row-wrap tp-full-chips">
+        {{#if @fromList}}
+            <button type="button" class="tp-back" {{on "click" @onBack}}><FaIcon @icon="chevron-left" class="tp-flip" /> {{t "tracking-page.page.your-orders"}}</button>
+        {{/if}}
+        <span class="tp-chip tp-chip-accent"><FaIcon @icon={{this.viewerChip.icon}} /> {{this.viewerChip.label}}</span>
+        {{#if this.canSignOut}}
+            <button type="button" class="tp-link-button tp-muted" {{on "click" @onSignOut}}>{{t "tracking-page.page.sign-out"}}</button>
+        {{/if}}
+    </div>
+
+    <div class="tp-full-head">
+        {{#if this.hasSeveralStops}}
+            <div class="tp-segmented" role="group" aria-label={{t "tracking-page.page.your-stops"}}>
+                {{#each this.stopOptions as |option|}}
+                    <button type="button" class="tp-segment {{if option.selected 'tp-segment-selected'}}" aria-pressed={{if option.selected "true" "false"}} {{on "click" (fn this.selectStop option.id)}}>
+                        {{option.label}}{{#if option.complete}} <FaIcon @icon="check" />{{/if}}
+                    </button>
+                {{/each}}
+            </div>
+        {{/if}}
+
+        <section class="tp-stack-sm" aria-labelledby="tp-headline">
+            <div aria-live="polite" aria-atomic="true" class="tp-stack-xs">
+                <h1 id="tp-headline" class="tp-headline {{if (eq this.tone 'warn') 'tp-warn-text'}} {{if (eq this.tone 'muted') 'tp-muted'}}">{{this.headline}}</h1>
+                {{#if this.subline}}
+                    <p class="tp-subline">{{this.subline}}</p>
+                {{/if}}
+            </div>
+            <div class="tp-row-wrap tp-small tp-muted">
+                {{#if this.live}}
+                    <span class="tp-live"><span class="tp-live-dot" aria-hidden="true"></span>{{t "tracking-page.page.live"}}</span>
+                {{/if}}
+                {{#if (eq @liveState "reconnecting")}}
+                    <span class="tp-warn-text">{{t "tracking-page.page.reconnecting"}}</span>
+                {{/if}}
+                {{#if this.timezoneNote}}<span>{{this.timezoneNote}}</span>{{/if}}
+            </div>
+        </section>
+
+        <ol class="tp-steps" aria-label={{t "tracking-page.page.progress"}}>
+            {{#each this.steps as |step|}}
+                <li class="tp-step tp-step-{{step.state}}" aria-current={{if step.isCurrent "step"}}>
+                    <div class="tp-step-track">
+                        <span class="tp-step-dot">
+                            {{#if step.isDone}}<FaIcon @icon="check" />{{/if}}
+                            {{#if step.isFailed}}<FaIcon @icon="xmark" />{{/if}}
+                            {{#if step.isStop}}<FaIcon @icon="minus" />{{/if}}
+                        </span>
+                        {{#unless step.last}}<span class="tp-step-line"></span>{{/unless}}
+                    </div>
+                    <span class="tp-step-label">{{step.label}}</span>
+                </li>
+            {{/each}}
+        </ol>
+
+        {{#if this.delayed}}
+            <div class="tp-notice tp-notice-warn" role="note">
+                <FaIcon @icon="triangle-exclamation" />
+                <span><strong>{{t "tracking-page.page.delayed-title"}}</strong> {{t "tracking-page.page.delayed-help"}}</span>
+            </div>
+        {{/if}}
+
+        {{#if this.isMultiStop}}
+            <section class="tp-card tp-stack-sm">
+                <h2 class="tp-h3">{{t "tracking-page.page.stop-of" position=this.stopPosition total=this.route.total_stops}}</h2>
+                <p class="tp-small tp-muted">{{t "tracking-page.page.stops-private" count=this.route.stops_before}}</p>
+            </section>
+        {{/if}}
+
+        <div class="tp-row-between tp-card tp-card-tight">
+            <div class="tp-stack-xs">
+                <span class="tp-small tp-muted">{{t "tracking-page.page.tracking-number"}}</span>
+                <span class="tp-mono tp-strong">{{@data.tracking_number}}</span>
+            </div>
+            <ClickToCopy class="tp-button tp-button-small" @value={{@data.tracking_number}}>{{t "tracking-page.page.copy"}}</ClickToCopy>
+        </div>
+    </div>
+
+    {{#if @data.map}}
+        {{#if (or @data.location (gt this.stops.length 0))}}
+            <div class="tp-full-map">
+                <TrackingPage::Map
+                    @data={{@data}}
+                    @live={{this.live}}
+                    @stale={{this.stale}}
+                    @staleText={{if this.stale this.staleText}}
+                    @label={{t "tracking-page.page.map-label"}}
+                />
+            </div>
+        {{/if}}
+    {{else if (eq this.stage "delivered")}}
+        <p class="tp-notice">{{t "tracking-page.page.map-hidden"}}</p>
+    {{/if}}
+
+    <div class="tp-full-body">
+        {{#if (or this.etaCard this.driver)}}
+            <div class="tp-card-grid">
+                {{#if this.etaCard}}
+                    <section class="tp-card tp-stack-sm" aria-labelledby="tp-eta-title">
+                        <h2 id="tp-eta-title" class="tp-eyebrow">{{t "tracking-page.page.eta"}}</h2>
+                        <div class="tp-row-wrap tp-baseline">
+                            <span class="tp-eta-time">{{this.etaCard.time}}</span>
+                            {{#if this.etaCard.relative}}<span class="tp-muted">{{this.etaCard.relative}}</span>{{/if}}
+                        </div>
+                        <dl class="tp-dl">
+                            {{#if this.etaCard.window}}
+                                <div><dt>{{t "tracking-page.page.window"}}</dt><dd>{{this.etaCard.window}}</dd></div>
+                            {{/if}}
+                            <div><dt>{{t "tracking-page.page.before-yours"}}</dt><dd>{{t "tracking-page.page.stops-count" count=this.etaCard.stopsBefore}}</dd></div>
+                        </dl>
+                        {{#if this.etaCard.low}}
+                            <span class="tp-chip tp-chip-warn">{{t "tracking-page.page.estimate-may-change"}}</span>
+                        {{/if}}
+                    </section>
+                {{/if}}
+                {{#if this.driver}}
+                    <section class="tp-card tp-stack-sm" aria-labelledby="tp-driver-title">
+                        <h2 id="tp-driver-title" class="tp-eyebrow">{{t "tracking-page.page.driver"}}</h2>
+                        <div class="tp-row">
+                            <span class="tp-avatar" aria-hidden="true">{{this.driverInitial}}</span>
+                            <div class="tp-stack-xs">
+                                {{#if this.driver.name}}<span class="tp-strong">{{this.driver.name}}</span>{{/if}}
+                                {{#if this.driver.vehicle}}<span class="tp-small tp-muted">{{this.driver.vehicle}}</span>{{/if}}
+                                <span class="tp-small {{if this.driver.online 'tp-accent-text' 'tp-muted'}}">
+                                    {{#if this.driver.online}}{{t "tracking-page.page.online"}}{{else}}{{t "tracking-page.page.location-paused"}}{{/if}}
+                                </span>
+                            </div>
+                        </div>
+                        {{#if this.contactPhone}}
+                            <div class="tp-row-wrap">
+                                <a class="tp-button tp-button-primary tp-grow" href="tel:{{this.contactPhone}}"><FaIcon @icon="phone" /> {{t "tracking-page.page.call-short"}}</a>
+                                <a class="tp-button tp-button-secondary tp-grow" href="sms:{{this.contactPhone}}"><FaIcon @icon="message" /> {{t "tracking-page.page.message"}}</a>
+                            </div>
+                            <p class="tp-small tp-muted">{{t "tracking-page.page.contact-note" name=@company.name}}</p>
+                        {{/if}}
+                    </section>
+                {{/if}}
+            </div>
+        {{/if}}
+
+        {{#if (gt this.proofs.length 0)}}
+            <section class="tp-card tp-stack-sm" aria-labelledby="tp-proof-title">
+                <h2 id="tp-proof-title" class="tp-h3">{{t "tracking-page.page.proof"}}</h2>
+                <div class="tp-proof-grid">
+                    {{#each this.proofs as |proof|}}
+                        {{#if proof.url}}
+                            <button type="button" class="tp-proof" aria-label={{t (concat "tracking-page.page.open-" proof.type)}} {{on "click" (fn this.openProof proof)}}>
+                                <img src={{proof.url}} alt="" />
+                            </button>
+                        {{else}}
+                            <div class="tp-proof tp-proof-empty">
+                                <FaIcon @icon={{if (eq proof.type "scan") "qrcode" "image"}} />
+                                <span class="tp-small">{{t (concat "tracking-page.page.proof-" proof.type)}}</span>
+                            </div>
+                        {{/if}}
+                    {{/each}}
+                </div>
+            </section>
+        {{/if}}
+
+        {{#if (or this.instructions.text this.instructions.editable)}}
+            <section class="tp-card tp-stack-sm" aria-labelledby="tp-instructions-title">
+                <div class="tp-row-between">
+                    <h2 id="tp-instructions-title" class="tp-h3">{{t "tracking-page.page.instructions"}}</h2>
+                    {{#if (and this.instructions.editable (not this.editing))}}
+                        <button type="button" class="tp-button tp-button-small" {{on "click" this.editInstructions}}>{{t "tracking-page.page.edit"}}</button>
+                    {{/if}}
+                </div>
+                {{#if this.editing}}
+                    <label for="tp-instructions" class="tp-small tp-muted">{{t "tracking-page.page.instructions-help"}}</label>
+                    <textarea id="tp-instructions" class="tp-input tp-textarea" rows="3" maxlength="500" {{on "input" this.updateDraft}}>{{this.draft}}</textarea>
+                    <div class="tp-row-end">
+                        <button type="button" class="tp-link-button" {{on "click" this.cancelInstructions}}>{{t "tracking-page.page.cancel"}}</button>
+                        <button type="button" class="tp-button tp-button-primary tp-button-small" {{on "click" this.saveInstructions}}>{{t "tracking-page.page.save"}}</button>
+                    </div>
+                {{else}}
+                    <p>{{or this.instructions.text (t "tracking-page.page.no-instructions")}}</p>
+                {{/if}}
+            </section>
+        {{/if}}
+
+        <section class="tp-card tp-stack-xs" aria-labelledby="tp-timeline-title">
+            <h2 id="tp-timeline-title" class="tp-h3">{{t "tracking-page.page.updates"}}</h2>
+            {{#each this.timelineGroups as |group|}}
+                <div class="tp-eyebrow tp-timeline-day">{{group.day}}</div>
+                <ol class="tp-timeline">
+                    {{#each group.entries as |entry|}}
+                        <li class="tp-timeline-entry {{if entry.latest 'tp-timeline-latest'}}">
+                            <span class="tp-timeline-dot" aria-hidden="true"></span>
+                            <div class="tp-row-between tp-grow">
+                                <span class="tp-strong">{{entry.status}}</span>
+                                <span class="tp-small tp-muted">{{entry.time}}</span>
+                            </div>
+                        </li>
+                    {{/each}}
+                </ol>
+            {{else}}
+                <p class="tp-muted">{{t "tracking-page.page.no-updates"}}</p>
+            {{/each}}
+            {{#if this.hasOlder}}
+                <button type="button" class="tp-button tp-button-small tp-self-start" aria-expanded={{if this.showOlder "true" "false"}} {{on "click" this.toggleOlder}}>
+                    {{#if this.showOlder}}{{t "tracking-page.page.show-fewer"}}{{else}}{{t "tracking-page.page.show-earlier" count=this.olderCount}}{{/if}}
+                </button>
+            {{/if}}
+        </section>
+
+        {{#if (gt this.items.length 0)}}
+            <section class="tp-card tp-stack-xs" aria-labelledby="tp-items-title">
+                <h2 id="tp-items-title" class="tp-h3">{{t "tracking-page.page.items"}}</h2>
+                {{#each this.items as |item|}}
+                    <div class="tp-item">
+                        <span class="tp-item-photo" aria-hidden="true">
+                            {{#if item.photo_url}}<img src={{item.photo_url}} alt="" />{{else}}<FaIcon @icon="box" />{{/if}}
+                        </span>
+                        <div class="tp-stack-xs tp-grow">
+                            <span class="tp-strong">{{or item.name (t "tracking-page.page.item")}}</span>
+                            {{#if item.description}}<span class="tp-small tp-muted">{{item.description}}</span>{{/if}}
+                            {{#if item.quantity}}<span class="tp-small tp-muted">{{t "tracking-page.page.quantity" count=item.quantity}}</span>{{/if}}
+                            {{#if item.tracking}}<span class="tp-mono tp-small tp-muted">{{item.tracking}}</span>{{/if}}
+                        </div>
+                        {{#if item.price}}<span class="tp-strong">{{format-currency item.price item.currency}}</span>{{/if}}
+                    </div>
+                {{/each}}
+            </section>
+        {{/if}}
+
+        <div class="tp-actions">
+            <button type="button" class="tp-button tp-button-secondary" {{on "click" @onShare}}><FaIcon @icon="share-from-square" /> {{t "tracking-page.page.share"}}</button>
+            {{#if this.canReport}}
+                <button type="button" class="tp-button tp-button-secondary" aria-expanded={{if this.reporting "true" "false"}} {{on "click" this.toggleReport}}><FaIcon @icon="flag" /> {{t "tracking-page.page.report"}}</button>
+            {{/if}}
+            {{#if this.contactEmail}}
+                <a class="tp-button tp-button-secondary" href="mailto:{{this.contactEmail}}"><FaIcon @icon="envelope" /> {{t "tracking-page.page.contact" name=@company.name}}</a>
+            {{/if}}
+        </div>
+        {{#if this.reporting}}
+            <section class="tp-card tp-stack-sm">
+                <label for="tp-report" class="tp-label">{{t "tracking-page.page.report-label"}}</label>
+                <textarea id="tp-report" class="tp-input tp-textarea" rows="4" maxlength="1000" {{on "input" this.updateReport}}>{{this.reportText}}</textarea>
+                <div class="tp-row-end">
+                    <button type="button" class="tp-link-button" {{on "click" this.toggleReport}}>{{t "tracking-page.page.cancel"}}</button>
+                    <button type="button" class="tp-button tp-button-primary tp-button-small" disabled={{not this.reportText}} {{on "click" this.sendReport}}>{{t "tracking-page.page.send"}}</button>
+                </div>
+            </section>
+        {{/if}}
+    </div>
+
+    {{#if this.lightbox}}
+        <div class="tp-lightbox" role="dialog" aria-modal="true" aria-label={{t "tracking-page.page.proof"}} {{on "keydown" this.closeOnEscape}}>
+            <button type="button" class="tp-lightbox-close" aria-label={{t "tracking-page.page.close"}} {{on "click" this.closeProof}} {{did-insert this.focusElement}}><FaIcon @icon="xmark" /></button>
+            <figure class="tp-lightbox-figure">
+                <img src={{this.lightbox.url}} alt={{t (concat "tracking-page.page.proof-" this.lightbox.type)}} />
+                <figcaption>{{t (concat "tracking-page.page.proof-" this.lightbox.type)}}</figcaption>
+            </figure>
+        </div>
+    {{/if}}
+</div>

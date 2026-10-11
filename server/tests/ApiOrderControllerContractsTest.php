@@ -1028,3 +1028,54 @@ test('api order controller captures QR proof payloads and validates error branch
         'status'   => 400,
     ]);
 });
+
+test('api order controller captures QR proof from tracking url codes and barcodes', function () {
+    session(['company' => 'company-uuid']);
+
+    $subject = (object) [
+        'uuid'           => 'subject-uuid',
+        'public_id'      => 'waypoint_subject',
+        'trackingNumber' => (object) ['tracking_number' => 'ACM1234567890SG'],
+    ];
+
+    // The url printed by current labels, from any host, and the Code 128 barcode.
+    foreach ([
+        'https://console.fleetbase.test/track-order?order=ACM1234567890SG&r=waypoint_subject&v=1',
+        'https://old-host.example/track-order?order=ACM1234567890SG&r=waypoint_subject&v=1',
+        'ACM1234567890SG',
+    ] as $code) {
+        $controller                  = new FleetOpsApiOrderCrudControllerProbe();
+        $controller->order           = new FleetOpsApiOrderCrudFake();
+        $controller->resolvedSubject = $subject;
+
+        expect($controller->captureQrScan(new Request(['code' => $code]), 'order-public', 'waypoint_subject')['resource'])->toBe('proof')
+            ->and($controller->createdProofs[0]['subject_uuid'])->toBe('subject-uuid');
+    }
+
+    // A scanner's whole result object, rather than its value, is refused as before
+    // instead of failing the request.
+    $controller                  = new FleetOpsApiOrderCrudControllerProbe();
+    $controller->order           = new FleetOpsApiOrderCrudFake();
+    $controller->resolvedSubject = $subject;
+
+    expect($controller->captureQrScan(new Request(['code' => ['type' => 'qr', 'value' => 'ACM1234567890SG']]), 'order-public', 'waypoint_subject'))->toBe([
+        'apiError' => 'Unable to validate QR code data.',
+        'status'   => 400,
+    ]);
+
+    // Another parcel's label is refused, whether it names another owner or, naming none,
+    // another tracking number.
+    foreach ([
+        'https://console.fleetbase.test/track-order?order=ACM1234567890SG&r=waypoint_other&v=1',
+        'https://console.fleetbase.test/track-order?order=ACM0000000000SG&v=1',
+    ] as $code) {
+        $controller                  = new FleetOpsApiOrderCrudControllerProbe();
+        $controller->order           = new FleetOpsApiOrderCrudFake();
+        $controller->resolvedSubject = $subject;
+
+        expect($controller->captureQrScan(new Request(['code' => $code]), 'order-public', 'waypoint_subject'))->toBe([
+            'apiError' => 'Unable to validate QR code data.',
+            'status'   => 400,
+        ])->and($controller->createdProofs)->toBe([]);
+    }
+});

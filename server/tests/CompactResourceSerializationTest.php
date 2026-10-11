@@ -2739,8 +2739,8 @@ test('tracking number and waypoint webhook resources serialize tracking contract
         'scheduled_at'       => '2026-07-30 09:00:00',
     ]);
 
-    // The decoded QR content is a debug-only field and must never ride along on a webhook,
-    // which is a separate literal payload rather than a filtered toArray().
+    // The webhook is a separate literal payload rather than a filtered toArray(), and its
+    // shape is unchanged: the QR content is not added to it.
     expect(array_key_exists('qr_code_content', (new TrackingNumberResource($trackingNumber))->toWebhookPayload()))->toBeFalse();
 
     expect((new TrackingNumberResource($trackingNumber))->toWebhookPayload())->toMatchArray([
@@ -2790,14 +2790,15 @@ test('tracking number and waypoint webhook resources serialize tracking contract
         ]);
 });
 
-test('tracking number resource publishes the qr code content only in debug mode', function () {
-    // qr_code is a base64 PNG generated from owner_uuid, and the endpoints that consume a
-    // scanned code match on that uuid. Debug builds publish the value beside the image so
-    // an automated client can follow the flow without decoding a PNG; production must not.
+test('tracking number resource publishes a scannable qr code content beside the image', function () {
+    // qr_code is a base64 PNG; qr_code_content is the text current labels encode in it,
+    // a tracking url naming the tracking number and the subject's public id. Both are in
+    // the resource already, so it is published in every environment.
     $trackingNumber = fleetopsCompactResourceFixture([
-        'tracking_number'  => 'TN-DEBUG',
-        'owner_uuid'       => 'owner-uuid-under-the-qr',
+        'tracking_number'  => 'TN-SCAN',
+        'owner_uuid'       => 'owner-uuid-never-published',
         'owner_type'       => 'Fleetbase\\FleetOps\\Models\\Order',
+        'owner'            => (object) ['public_id' => 'order_public'],
         'region'           => 'sg',
         'qr_code'          => 'qr-data',
         'barcode'          => 'barcode-data',
@@ -2811,17 +2812,9 @@ test('tracking number resource publishes the qr code content only in debug mode'
     // cover the index resource and the webhook payload.
     $previousContainer = Illuminate\Container\Container::getInstance();
     $container         = new class extends Illuminate\Container\Container {
-        public bool $debugMode = false;
-
         public function environment(...$environments)
         {
             return in_array('testing', $environments, true) || $environments === [] ? 'testing' : false;
-        }
-
-        // Stands in for the framework's Application::hasDebugModeEnabled().
-        public function hasDebugModeEnabled()
-        {
-            return $this->debugMode;
         }
     };
     $container->instance('config', new Illuminate\Config\Repository([
@@ -2829,52 +2822,21 @@ test('tracking number resource publishes the qr code content only in debug mode'
     ]));
     Illuminate\Container\Container::setInstance($container);
 
-    // Drive the REAL accessor through the container rather than overriding it, so the
-    // debug check itself is exercised and not just the resource's use of it.
-    $container->debugMode = true;
-    $withDebug            = new TrackingNumberResource($trackingNumber);
-
     try {
-        $debugPayload = $withDebug->resolve($request);
-
-        $container->debugMode = false;
-        $productionPayload    = (new TrackingNumberResource($trackingNumber))->resolve($request);
+        $payload       = (new TrackingNumberResource($trackingNumber))->resolve($request);
+        $withoutNumber = (new TrackingNumberResource(fleetopsCompactResourceFixture([
+            'tracking_number' => null,
+            'owner_type'      => 'Fleetbase\\FleetOps\\Models\\Order',
+            'owner'           => null,
+        ])))->resolve($request);
     } finally {
         Illuminate\Container\Container::setInstance($previousContainer);
     }
 
-    // Present and exactly the value the QR was generated from — not a public id.
-    expect($debugPayload['qr_code_content'])->toBe('owner-uuid-under-the-qr')
-        ->and($debugPayload['qr_code'])->toBe('qr-data')
-        // Absent, not null: `when()` drops the key entirely, so a production response is
-        // byte-identical to one from before the field existed.
-        ->and(array_key_exists('qr_code_content', $productionPayload))->toBeFalse()
-        ->and($productionPayload['qr_code'])->toBe('qr-data');
-});
-
-test('tracking number resource fails closed when the debug state cannot be determined', function () {
-    // Any failure to resolve the debug state must answer false rather than defaulting to
-    // exposure. The real accessor is exercised here with no usable application bound.
-    $expose = new ReflectionMethod(TrackingNumberResource::class, 'exposesQrCodeContent');
-    $expose->setAccessible(true);
-
-    $previous = Illuminate\Container\Container::getInstance();
-
-    try {
-        // A container that is not an Application has no hasDebugModeEnabled().
-        Illuminate\Container\Container::setInstance(new Illuminate\Container\Container());
-        expect($expose->invoke(null))->toBeFalse();
-
-        // And an accessor that throws must also answer false rather than propagating —
-        // a resource must not be able to fail serialization over a debug check.
-        Illuminate\Container\Container::setInstance(new class extends Illuminate\Container\Container {
-            public function hasDebugModeEnabled()
-            {
-                throw new RuntimeException('debug state unavailable');
-            }
-        });
-        expect($expose->invoke(null))->toBeFalse();
-    } finally {
-        Illuminate\Container\Container::setInstance($previous);
-    }
+    expect($payload['qr_code_content'])->toBe('https://console.fleetbase.test/~/track-order?order=TN-SCAN&r=order_public&v=1')
+        ->and($payload['qr_code_content'])->not->toContain('owner-uuid')
+        ->and($payload['url'])->toBe('https://console.fleetbase.test/~/track/TN-SCAN')
+        ->and($payload['qr_code'])->toBe('qr-data')
+        // Nothing to scan without a tracking number: the key is absent, not null.
+        ->and(array_key_exists('qr_code_content', $withoutNumber))->toBeFalse();
 });

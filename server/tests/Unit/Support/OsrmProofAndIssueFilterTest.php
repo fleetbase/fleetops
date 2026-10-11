@@ -119,7 +119,7 @@ function fleetopsOsrmProofBoot(): SQLiteConnection
 
         public function put($path, $contents, $options = [])
         {
-            $this->writes[] = [$path];
+            $this->writes[] = [$path, $options];
 
             return true;
         }
@@ -200,8 +200,9 @@ test('proof subject lookups resolve by uuid and public id per type', function ()
     expect($proof)->toBeInstanceOf(Proof::class)
         ->and($connection->table('proofs')->count())->toBe(1);
 
-    $probe->callHelper('storeSignature', 'signatures/proof.png', 'binary', 'public');
-    expect($GLOBALS['fleetopsProofStorageFake']->writes)->toHaveCount(1);
+    $probe->callHelper('storeSignature', 'signatures/proof.png', 'binary');
+    // Signatures are written without a visibility/ACL option; the media bucket rejects ACLs.
+    expect($GLOBALS['fleetopsProofStorageFake']->writes)->toBe([['signatures/proof.png', []]]);
 
     expect($probe->callHelper('jsonResponse', ['status' => 'ok'])->getData(true))->toBe(['status' => 'ok'])
         ->and($probe->callHelper('errorResponse', 'nope')->getData(true)['error'])->toBe('nope')

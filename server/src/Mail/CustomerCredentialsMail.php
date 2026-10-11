@@ -73,8 +73,10 @@ class CustomerCredentialsMail extends Mailable
     private function getCustomerPortalAccessUrl(): string
     {
         $customerPortalConfig = Setting::lookupForCompany($this->customer->company_uuid, 'customer-portal-config');
-        $accessUrlSlug        = data_get($customerPortalConfig, 'accessUrlSlug', 'customer-portal');
+        $accessUrlSlug        = data_get($customerPortalConfig, 'accessUrlSlug');
 
-        return Utils::consoleUrl($accessUrlSlug ?: 'customer-portal');
+        // The portal resolves a company's access slug under /customer-access/{slug};
+        // without one, send the customer to the portal's own sign-in route.
+        return Utils::consoleUrl($accessUrlSlug ? 'customer-access/' . $accessUrlSlug : 'customer-portal');
     }
 }

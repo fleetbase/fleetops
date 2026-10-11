@@ -1,0 +1,35 @@
+<section class="tp-wide tp-stack" aria-labelledby="tp-orders-title">
+    <div class="tp-stack-xs">
+        <span class="tp-chip"><FaIcon @icon="user" /> {{t "tracking-page.page.chip-account"}}</span>
+        <h1 id="tp-orders-title" class="tp-h1">{{t "tracking-page.page.your-orders"}}</h1>
+    </div>
+    {{#if @isLoading}}
+        <div class="tp-stack-sm" aria-busy="true">
+            <div class="tp-skeleton tp-skeleton-row"></div>
+            <div class="tp-skeleton tp-skeleton-row"></div>
+            <div class="tp-skeleton tp-skeleton-row"></div>
+        </div>
+    {{else if @orders.length}}
+        <ul class="tp-list">
+            {{#each @orders as |order|}}
+                <li>
+                    <button type="button" class="tp-list-row" {{on "click" (fn @onOpen order)}}>
+                        <span class="tp-icon-badge tp-icon-badge-soft" aria-hidden="true"><FaIcon @icon="box" /></span>
+                        <span class="tp-stack-xs tp-grow">
+                            <span class="tp-strong">{{or order.title order.tracking_number}}</span>
+                            <span class="tp-small tp-accent-text">{{t (concat "tracking-page.page.stage-" order.stage)}}</span>
+                            <span class="tp-mono tp-small tp-muted">{{order.tracking_number}}</span>
+                        </span>
+                        <FaIcon @icon="chevron-right" class="tp-muted tp-flip" />
+                    </button>
+                </li>
+            {{/each}}
+        </ul>
+    {{else}}
+        <div class="tp-empty">
+            <FaIcon @icon="box" />
+            <div class="tp-strong">{{t "tracking-page.page.no-orders"}}</div>
+            <div class="tp-small tp-muted">{{t "tracking-page.page.no-orders-help"}}</div>
+        </div>
+    {{/if}}
+</section>

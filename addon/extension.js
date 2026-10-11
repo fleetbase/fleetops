@@ -117,11 +117,33 @@ export default {
                     icon: 'satellite-dish',
                     component: new ExtensionComponent('@fleetbase/fleetops-engine', 'admin/telematics-settings'),
                 }),
+                new MenuItem({
+                    title: 'Tracking Page',
+                    icon: 'magnifying-glass-location',
+                    component: new ExtensionComponent('@fleetbase/fleetops-engine', 'admin/tracking-page-settings'),
+                }),
             ],
             {
                 slug: 'fleet-ops',
             }
         );
+
+        // Links printed or emailed without the public `~/` prefix (/track-order?order=...) land
+        // inside the console. Signed-out visitors are sent on to the public route after login;
+        // registering the page in the console too shows it to signed-in staff instead of an
+        // empty console page.
+        for (const slug of ['track', 'track-order']) {
+            menuService.registerMenuItem(
+                'console',
+                new MenuItem({
+                    title: 'Track Order',
+                    slug,
+                    section: null,
+                    view: null,
+                    component: new ExtensionComponent('@fleetbase/fleetops-engine', 'tracking-page'),
+                })
+            );
+        }
 
         // Register track order button
         menuService.registerMenuItem(
@@ -135,7 +157,39 @@ export default {
                 // btn-auth (ember-ui): the sign-in page's neutral button, matching the
                 // console's "Continue with ..." provider buttons, hover included.
                 wrapperClass: 'btn-block btn-auth',
-                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'order-tracking-lookup'),
+                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'tracking-page'),
+                onClick: (menuItem) => {
+                    universe.transitionMenuItem('virtual', menuItem);
+                },
+            })
+        );
+
+        // The customer tracking page: /~/track/{number} is the shared page.
+        menuService.registerMenuItem(
+            'auth:login',
+            new MenuItem({
+                title: 'Track',
+                route: 'virtual',
+                slug: 'track',
+                type: 'link',
+                wrapperClass: 'hidden',
+                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'tracking-page'),
+                onClick: (menuItem) => {
+                    universe.transitionMenuItem('virtual', menuItem);
+                },
+            })
+        );
+
+        // A company's own tracking page: /~/t/{slug}/{number}.
+        menuService.registerMenuItem(
+            'auth:login',
+            new MenuItem({
+                title: 'Company tracking',
+                route: 'virtual',
+                slug: 't',
+                type: 'link',
+                wrapperClass: 'hidden',
+                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'tracking-page'),
                 onClick: (menuItem) => {
                     universe.transitionMenuItem('virtual', menuItem);
                 },

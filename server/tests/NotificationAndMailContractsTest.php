@@ -704,5 +704,5 @@ test('customer credentials mail reads the portal slug from the customer company 
 
     $content = fleetOpsNotificationWithEnvironment(fn () => (new CustomerCredentialsMail('plain-secret', $customer))->content());
 
-    expect($content->with['customerPortalUrl'])->toBe('https://console.fleetbase.test/acme-portal');
+    expect($content->with['customerPortalUrl'])->toBe('https://console.fleetbase.test/customer-access/acme-portal');
 })->with([null, 'other-company']);

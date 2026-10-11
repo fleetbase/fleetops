@@ -397,11 +397,16 @@ class FleetOpsTrackingNumberObserverProbe extends TrackingNumberObserver
         return 'TN-' . $trackingNumber->region;
     }
 
-    protected function generateBarcode(string $ownerUuid, string $type): string
+    protected function generateCodeImages(string $trackingNumber, ?string $ownerPublicId): array
     {
-        $this->barcodes[] = [$ownerUuid, $type];
+        $this->barcodes[] = [$trackingNumber, $ownerPublicId];
 
-        return $type . '-png';
+        return ['qr_code' => 'qr-png', 'barcode' => 'barcode-png'];
+    }
+
+    protected function ownerPublicId(TrackingNumber $trackingNumber): ?string
+    {
+        return $trackingNumber->owner_uuid ? 'order_public' : null;
     }
 
     protected function createTrackingStatus(array $attributes): TrackingStatus
@@ -1077,6 +1082,8 @@ test('order observer ignores non dispatched start transitions', function () {
 test('order observer invalidates cache on delete and forwards to integrated vendors', function () {
     Cache::swap(new Repository(new ArrayStore()));
     session(['company' => 'company-uuid']);
+    // Deleting cascades to the order's children, so the queries need a database.
+    Fleetbase\Tests\Support\TrackingPageDatabase::boot();
 
     $order       = new FleetOpsOrderObserverOrderFake();
     $order->uuid = 'order-deleted-uuid';
@@ -1095,6 +1102,8 @@ test('order observer invalidates cache on delete and forwards to integrated vend
     $integrated->integratedVendor = true;
 
     expect(fn () => (new OrderObserver())->deleted($integrated))->toThrow(Error::class);
+
+    Illuminate\Database\Eloquent\Model::unsetConnectionResolver();
 });
 
 test('contact observer creates syncs normalizes and deletes associated users', function () {
@@ -1292,11 +1301,12 @@ test('tracking number observer generates codes and creates initial tracking stat
     $observer->created($trackingNumber);
 
     expect($trackingNumber->tracking_number)->toBe('TN-sg')
-        ->and($trackingNumber->qr_code)->toBe('QRCODE-png')
-        ->and($trackingNumber->barcode)->toBe('PDF417-png')
+        ->and($trackingNumber->qr_code)->toBe('qr-png')
+        ->and($trackingNumber->barcode)->toBe('barcode-png')
+        // Codes are generated from the new tracking number and the owner's public id,
+        // never from the owner's uuid.
         ->and($observer->barcodes)->toBe([
-            ['owner-uuid', 'QRCODE'],
-            ['owner-uuid', 'PDF417'],
+            ['TN-sg', 'order_public'],
         ])
         ->and($observer->statuses[0])->toMatchArray([
             'company_uuid'         => 'company-uuid',
@@ -1307,6 +1317,58 @@ test('tracking number observer generates codes and creates initial tracking stat
         ])
         ->and($observer->statuses[0]['location'])->toBeInstanceOf(Fleetbase\LaravelMysqlSpatial\Types\Point::class)
         ->and($trackingNumber->ownerStatuses)->toHaveCount(1);
+});
+
+test('tracking number observer reads the owner public id and renders codes through the model', function () {
+    $observer = new TrackingNumberObserver();
+    $owner    = new ReflectionMethod($observer, 'ownerPublicId');
+    $images   = new ReflectionMethod($observer, 'generateCodeImages');
+    $owner->setAccessible(true);
+    $images->setAccessible(true);
+
+    // No owner: nothing to look up.
+    expect($owner->invoke($observer, new TrackingNumber()))->toBeNull();
+
+    $order = new Order();
+    $order->setRawAttributes(['uuid' => 'owner-uuid', 'public_id' => 'order_public'], true);
+    $trackingNumber = new TrackingNumber();
+    $trackingNumber->setRawAttributes(['owner_uuid' => 'owner-uuid', 'owner_type' => Order::class], true);
+    $trackingNumber->setRelation('owner', $order);
+
+    expect($owner->invoke($observer, $trackingNumber))->toBe('order_public');
+
+    // An owner without a public id yields none rather than an empty `r` parameter.
+    $order->setRawAttributes(['uuid' => 'owner-uuid', 'public_id' => ''], true);
+    expect($owner->invoke($observer, $trackingNumber))->toBeNull();
+
+    $previousConsole = config('fleetbase.console');
+    config(['fleetbase.console' => ['host' => 'console.fleetbase.test', 'secure' => true]]);
+    foreach (['DNS2D', 'DNS1D'] as $facade) {
+        app()->instance($facade, new class($facade) {
+            public function __construct(private string $facade)
+            {
+            }
+
+            public function getBarcodePNG($code, $type, ...$size)
+            {
+                return $this->facade . ':' . $type . ':' . $code;
+            }
+        });
+        Illuminate\Support\Facades\Facade::clearResolvedInstance($facade);
+    }
+
+    try {
+        expect($images->invoke($observer, 'TN-sg', 'order_public'))->toBe([
+            'qr_code' => 'DNS2D:QRCODE,M:https://console.fleetbase.test/~/track-order?order=TN-sg&r=order_public&v=1',
+            'barcode' => 'DNS1D:C128:TN-sg',
+        ]);
+    } finally {
+        config(['fleetbase.console' => $previousConsole]);
+        foreach (['DNS2D', 'DNS1D'] as $facade) {
+            app()->forgetInstance($facade);
+            Illuminate\Support\Facades\Facade::clearResolvedInstance($facade);
+        }
+    }
 });
 
 test('zone observer invalidates service area cache for lifecycle events and original service area', function () {

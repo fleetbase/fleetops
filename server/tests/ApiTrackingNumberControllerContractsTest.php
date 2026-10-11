@@ -68,9 +68,9 @@ class FleetOpsApiTrackingNumberControllerProbe extends TrackingNumberController
         return ['resource' => 'deleted-tracking-number', 'trackingNumber' => $trackingNumber];
     }
 
-    protected function findQrModel(array $tables, array $where)
+    protected function findQrModel(string $code)
     {
-        $this->qrLookups[] = [$tables, $where];
+        $this->qrLookups[] = $code;
 
         return $this->qrModel;
     }
@@ -206,15 +206,12 @@ test('api tracking number controller decodes qr models and reports missing value
     $controller          = new FleetOpsApiTrackingNumberControllerProbe();
     $controller->qrModel = $model;
 
-    $response = $controller->fromQR(fleetopsDecodeTrackingNumberQrRequest(['code' => 'order-uuid']));
+    $code     = 'https://console.fleetbase.test/track-order?order=ACM1234567890SG&r=order_public&v=1';
+    $response = $controller->fromQR(fleetopsDecodeTrackingNumberQrRequest(['code' => $code]));
 
+    // The raw scanned value goes to the resolver, which understands every format.
     expect($response)->toBe(['resource' => 'qr-model', 'model' => $model])
-        ->and($controller->qrLookups)->toBe([
-            [
-                ['entities', 'orders'],
-                ['uuid' => 'order-uuid'],
-            ],
-        ]);
+        ->and($controller->qrLookups)->toBe([$code]);
 
     $controller = new FleetOpsApiTrackingNumberControllerProbe();
 

@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Console\Commands;
 
+use Carbon\Carbon;
 use Fleetbase\FleetOps\Support\Telematics\Retention\RetentionPolicy;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
@@ -21,6 +22,9 @@ class PruneTelematicsData extends Command
 
     public const LOCK = 'fleetops:prune-telematics-data';
 
+    /** Cache key prefix for the per-scope compaction watermark (see pruneDeviceEvents). */
+    public const WATERMARK_PREFIX = 'fleetops:prune-telematics-data:compacted:';
+
     protected $signature = 'fleetops:prune-telematics-data
         {--company= : Only prune data for this company (uuid or public id)}
         {--orphans-only : Only prune data without an existing company or connection}
@@ -35,6 +39,9 @@ class PruneTelematicsData extends Command
     protected int $batchSize  = 1000;
     protected int $maxBatches = 50;
     protected bool $dryRun    = false;
+
+    /** table => company uuids present in that table whose company no longer exists; resolved once per run. */
+    protected array $orphanCompaniesByTable = [];
 
     public function handle(): int
     {
@@ -142,7 +149,7 @@ class PruneTelematicsData extends Command
         }
         $inbox = $telematics ? fn ($query) => $query->whereIn('telematic_uuid', $telematics) : null;
 
-        return $this->prune($rows, $inbox, $policy, $tables);
+        return $this->prune($rows, $inbox, $policy, $tables, $companyUuid);
     }
 
     /**
@@ -150,9 +157,7 @@ class PruneTelematicsData extends Command
      */
     protected function pruneOrphans(RetentionPolicy $policy, array $tables): array
     {
-        $rows = fn ($query) => $query->where(function ($where) {
-            $where->whereNull('company_uuid')->orWhereNotIn('company_uuid', DB::table('companies')->select('uuid'));
-        });
+        $rows  = fn ($query) => $this->scopeOrphanRows($query);
         $inbox = fn ($query) => $query->whereNotExists(function ($connections) use ($query) {
             $connections->selectRaw('1')
                 ->from('telematics')
@@ -160,14 +165,46 @@ class PruneTelematicsData extends Command
                 ->whereColumn('telematics.uuid', $query->from . '.telematic_uuid');
         });
 
-        return $this->prune($rows, $inbox, $policy, $tables);
+        return $this->prune($rows, $inbox, $policy, $tables, 'orphans');
     }
 
-    protected function prune(\Closure $rows, ?\Closure $inbox, RetentionPolicy $policy, array $tables): array
+    /**
+     * Rows without a company, plus rows whose company uuid no longer exists. The gone
+     * companies are resolved once per table from the distinct company uuids it holds, so
+     * every batch ranges over the (company_uuid, created_at) index instead of evaluating
+     * a NOT IN subquery against every row.
+     */
+    protected function scopeOrphanRows($query)
+    {
+        $table = $query->from;
+        $gone  = $this->orphanCompaniesByTable[$table] ??= $this->orphanCompanies($table);
+
+        return $query->where(function ($where) use ($gone) {
+            $where->whereNull('company_uuid');
+            if ($gone !== []) {
+                $where->orWhereIn('company_uuid', $gone);
+            }
+        });
+    }
+
+    /**
+     * @return string[]
+     */
+    protected function orphanCompanies(string $table): array
+    {
+        return DB::table($table)
+            ->whereNotNull('company_uuid')
+            ->whereNotIn('company_uuid', DB::table('companies')->select('uuid'))
+            ->groupBy('company_uuid')
+            ->pluck('company_uuid')
+            ->all();
+    }
+
+    protected function prune(\Closure $rows, ?\Closure $inbox, RetentionPolicy $policy, array $tables, string $scope): array
     {
         $stats = $this->emptyStats();
         if (in_array('device_events', $tables, true)) {
-            $stats['tables']['device_events'] = $this->pruneDeviceEvents($rows, $policy);
+            $stats['tables']['device_events'] = $this->pruneDeviceEvents($rows, $policy, $scope);
         }
         if (in_array('positions', $tables, true)) {
             $stats['tables']['positions'] = $this->prunePositions($rows, $policy);
@@ -188,40 +225,69 @@ class PruneTelematicsData extends Command
         return $stats;
     }
 
-    protected function pruneDeviceEvents(\Closure $rows, RetentionPolicy $policy): array
+    protected function pruneDeviceEvents(\Closure $rows, RetentionPolicy $policy, string $scope): array
     {
         $stats  = $this->emptyTableStats();
         $cutoff = $policy->cutoff('event_retention_days');
         // Soft-deleted events only grow the table; purge them regardless of age.
-        $this->deleteInBatches('device_events', 'id', fn ($query) => $rows($query)->whereNotNull('deleted_at'), $stats);
+        $this->deleteInBatches('device_events', 'id', fn ($query) => $rows($query)->whereNotNull('deleted_at'), $stats, 'deleted_at');
         if ($cutoff) {
-            $this->deleteInBatches('device_events', 'id', fn ($query) => $rows($query)->where('created_at', '<', $cutoff->toDateTimeString()), $stats);
+            $this->deleteInBatches('device_events', 'id', fn ($query) => $rows($query)->where('created_at', '<', $cutoff->toDateTimeString()), $stats, 'created_at');
         }
         if ($policy->compactsEvents() && ($compactAt = $policy->cutoff('event_compact_after_days'))) {
             // Keep the event (type, severity, location, normalized data) but drop the raw provider blobs.
             // Rows past the delete cutoff are left to the delete sweep rather than rewritten first.
-            $this->updateInBatches(
+            // Everything older than the watermark was compacted by an earlier complete sweep, so
+            // only the rows that aged into the window since then are visited; without it every
+            // run re-scanned the whole history looking for blobs that were already gone.
+            $watermark = $this->compactionWatermark($scope);
+            $since     = $cutoff && (!$watermark || $cutoff->greaterThan($watermark)) ? $cutoff : $watermark;
+            $completed = $this->updateInBatches(
                 'device_events',
                 'id',
-                function ($query) use ($rows, $cutoff, $compactAt) {
+                function ($query) use ($rows, $since, $compactAt) {
                     $query = $rows($query)->where('created_at', '<', $compactAt->toDateTimeString())->where(fn ($where) => $where->whereNotNull('payload')->orWhereNotNull('meta'));
 
-                    return $cutoff ? $query->where('created_at', '>=', $cutoff->toDateTimeString()) : $query;
+                    return $since ? $query->where('created_at', '>=', $since->toDateTimeString()) : $query;
                 },
                 ['payload' => null, 'meta' => null],
-                $stats
+                $stats,
+                'created_at'
             );
+            if ($completed && !$this->dryRun) {
+                $this->rememberCompactionWatermark($scope, $compactAt);
+            }
         }
 
         return $stats;
     }
 
+    protected function compactionWatermark(string $scope): ?Carbon
+    {
+        try {
+            $value = Cache::get(self::WATERMARK_PREFIX . $scope);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $value ? Carbon::parse($value) : null;
+    }
+
+    protected function rememberCompactionWatermark(string $scope, Carbon $compactedBefore): void
+    {
+        try {
+            Cache::forever(self::WATERMARK_PREFIX . $scope, $compactedBefore->toDateTimeString());
+        } catch (\Throwable) {
+            // A cache outage only costs the next run a wider scan.
+        }
+    }
+
     protected function prunePositions(\Closure $rows, RetentionPolicy $policy): array
     {
         $stats = $this->emptyTableStats();
-        $this->deleteInBatches('positions', 'id', fn ($query) => $rows($query)->whereNotNull('deleted_at'), $stats);
+        $this->deleteInBatches('positions', 'id', fn ($query) => $rows($query)->whereNotNull('deleted_at'), $stats, 'deleted_at');
         if ($cutoff = $policy->cutoff('position_retention_days')) {
-            $this->deleteInBatches('positions', 'id', fn ($query) => $rows($query)->where('created_at', '<', $cutoff->toDateTimeString()), $stats);
+            $this->deleteInBatches('positions', 'id', fn ($query) => $rows($query)->where('created_at', '<', $cutoff->toDateTimeString()), $stats, 'created_at');
         }
 
         return $stats;
@@ -232,7 +298,7 @@ class PruneTelematicsData extends Command
         $stats = $this->emptyTableStats();
         foreach (['processed' => 'processed_retention_hours', 'quarantined' => 'quarantine_retention_days'] as $status => $key) {
             if ($cutoff = $policy->cutoff($key)) {
-                $this->deleteInBatches('telematic_deliveries', 'uuid', fn ($query) => $inbox($query)->where('status', $status)->where('updated_at', '<', $cutoff->toDateTimeString()), $stats);
+                $this->deleteInBatches('telematic_deliveries', 'uuid', fn ($query) => $inbox($query)->where('status', $status)->where('updated_at', '<', $cutoff->toDateTimeString()), $stats, 'updated_at');
             }
         }
 
@@ -244,46 +310,55 @@ class PruneTelematicsData extends Command
         $stats = $this->emptyTableStats();
         if ($cutoff = $policy->cutoff('sync_run_retention_days')) {
             // In-flight runs are recovered by the drain command, never expired here.
-            $this->deleteInBatches('telematic_sync_runs', 'uuid', fn ($query) => $inbox($query)->whereNotIn('status', ['fetching', 'ingesting'])->where('updated_at', '<', $cutoff->toDateTimeString()), $stats);
+            $this->deleteInBatches('telematic_sync_runs', 'uuid', fn ($query) => $inbox($query)->whereNotIn('status', ['fetching', 'ingesting'])->where('updated_at', '<', $cutoff->toDateTimeString()), $stats, 'updated_at');
         }
 
         return $stats;
     }
 
-    protected function deleteInBatches(string $table, string $key, \Closure $scope, array &$stats): void
+    /**
+     * Batches are ordered by the column the scope ranges over (the retention indexes lead
+     * with company_uuid and that column), so each pick is an index range rather than a
+     * primary-key walk across the whole table. Returns true when the scope was drained.
+     */
+    protected function deleteInBatches(string $table, string $key, \Closure $scope, array &$stats, ?string $orderBy = null): bool
     {
         if ($this->dryRun) {
             $stats['deleted'] += $scope(DB::table($table))->count();
 
-            return;
+            return true;
         }
         for ($batch = 0; $batch < $this->maxBatches; $batch++) {
-            $ids = $scope(DB::table($table))->orderBy($key)->limit($this->batchSize)->pluck($key);
+            $ids = $scope(DB::table($table))->orderBy($orderBy ?? $key)->limit($this->batchSize)->pluck($key);
             if ($ids->isEmpty()) {
-                return;
+                return true;
             }
             $stats['batches']++;
             $stats['deleted'] += DB::table($table)->whereIn($key, $ids->all())->delete();
         }
         $stats['capped'] = true;
+
+        return false;
     }
 
-    protected function updateInBatches(string $table, string $key, \Closure $scope, array $values, array &$stats): void
+    protected function updateInBatches(string $table, string $key, \Closure $scope, array $values, array &$stats, ?string $orderBy = null): bool
     {
         if ($this->dryRun) {
             $stats['compacted'] += $scope(DB::table($table))->count();
 
-            return;
+            return true;
         }
         for ($batch = 0; $batch < $this->maxBatches; $batch++) {
-            $ids = $scope(DB::table($table))->orderBy($key)->limit($this->batchSize)->pluck($key);
+            $ids = $scope(DB::table($table))->orderBy($orderBy ?? $key)->limit($this->batchSize)->pluck($key);
             if ($ids->isEmpty()) {
-                return;
+                return true;
             }
             $stats['batches']++;
             $stats['compacted'] += DB::table($table)->whereIn($key, $ids->all())->update($values);
         }
         $stats['capped'] = true;
+
+        return false;
     }
 
     protected function report(string $label, array $stats): void

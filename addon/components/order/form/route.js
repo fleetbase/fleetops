@@ -206,7 +206,19 @@ export default class OrderFormRouteComponent extends Component {
     }
 
     @action editPlace(place) {
-        this.placeActions.modal.edit(place);
+        // The place is edited in place, so the form already shows the change; there is no list
+        // to refresh, only the route preview and quote that depend on its location.
+        this.placeActions.modal.edit(
+            place,
+            {},
+            {
+                refresh: false,
+                callback: () => {
+                    this.previewRoute();
+                    this.requestServiceQuoteRefresh('route.place.updated');
+                },
+            }
+        );
     }
 
     @action async previewRoute() {

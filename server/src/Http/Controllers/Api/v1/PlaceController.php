@@ -146,7 +146,7 @@ class PlaceController extends Controller
         try {
             $place = $this->findPlaceOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return $this->apiError('Place resource not found.');
+            return $this->apiError('Place resource not found.', 404);
         }
 
         // get request input
@@ -253,7 +253,7 @@ class PlaceController extends Controller
         try {
             $place = $this->findPlaceOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return $this->apiError('Place resource not found.');
+            return $this->apiError('Place resource not found.', 404);
         }
 
         return $this->placeResource($place);
@@ -269,7 +269,7 @@ class PlaceController extends Controller
         try {
             $place = $this->findPlaceOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return $this->apiError('Place resource not found.');
+            return $this->apiError('Place resource not found.', 404);
         }
 
         $place->delete();

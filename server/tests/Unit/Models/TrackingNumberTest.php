@@ -84,13 +84,21 @@ class FleetOpsTrackingNumberInsertFake extends TrackingNumber
 
 beforeEach(function () {
     FleetOpsTrackingNumberInsertFake::resetInsertFake();
+
+    $this->previousConsoleConfig = config('fleetbase.console');
+    config(['fleetbase.console' => ['host' => 'console.fleetbase.test', 'subdomain' => null, 'secure' => true]]);
+});
+
+afterEach(function () {
+    config(['fleetbase.console' => $this->previousConsoleConfig]);
 });
 
 test('tracking number insert filters values and creates initial owner status', function () {
     $owner = new Order();
     $owner->setRawAttributes([
-        'uuid'   => 'order-uuid',
-        'status' => 'pending',
+        'uuid'      => 'order-uuid',
+        'public_id' => 'order_public',
+        'status'    => 'pending',
     ], true);
 
     $uuid = FleetOpsTrackingNumberInsertFake::insertGetUuid([
@@ -114,8 +122,10 @@ test('tracking number insert filters values and creates initial owner status', f
         'owner_uuid'      => 'order-uuid',
         'owner_type'      => Utils::getMutationType($owner),
         'tracking_number' => 'TRACK-AE',
-        'qr_code'         => 'QRCODE:order-uuid',
-        'barcode'         => 'PDF417:order-uuid',
+        // The QR carries the tracking url naming the owner by public id, never its uuid;
+        // the barcode carries the bare tracking number printed beneath it.
+        'qr_code'         => 'QRCODE,M:https://console.fleetbase.test/~/track-order?order=TRACK-AE&r=order_public&v=1',
+        'barcode'         => 'C128:TRACK-AE',
         'meta'            => '{"source":"api"}',
     ])->and($inserted)->not->toHaveKey('not_allowed');
 
@@ -147,8 +157,8 @@ test('tracking number insert defaults region location and skips side effects whe
         ->and(FleetOpsTrackingNumberInsertFake::$insertedValues[0])->toMatchArray([
             'uuid'            => 'tracking-uuid',
             'tracking_number' => 'TRACK-SG',
-            'qr_code'         => 'QRCODE:',
-            'barcode'         => 'PDF417:',
+            'qr_code'         => 'QRCODE,M:https://console.fleetbase.test/~/track-order?order=TRACK-SG&v=1',
+            'barcode'         => 'C128:TRACK-SG',
         ])
         ->and(FleetOpsTrackingNumberInsertFake::$createdStatuses)->toBe([])
         ->and(FleetOpsTrackingNumberInsertFake::$statusUpdates)->toBe([])
@@ -196,4 +206,55 @@ test('tracking numbers generate unique values and resolve or fail lookups', func
     expect(TrackingNumber::findTrackingOrFail($number)->uuid)->toBe('tn-find-1')
         ->and(TrackingNumber::findTrackingOrFail('track_findone1')->uuid)->toBe('tn-find-1')
         ->and(fn () => TrackingNumber::findTrackingOrFail('missing-number'))->toThrow(Illuminate\Database\Eloquent\ModelNotFoundException::class);
+});
+
+test('tracking number insert takes the owner public id from callers without an owner model', function () {
+    // Waypoints and entities insert their owner with a raw query and pass only ids.
+    FleetOpsTrackingNumberInsertFake::insertGetUuid([
+        'owner_uuid'      => 'waypoint-uuid',
+        'owner_type'      => 'Fleetbase\\FleetOps\\Models\\Waypoint',
+        'owner_public_id' => 'waypoint_public',
+        'region'          => 'SG',
+    ]);
+
+    $inserted = FleetOpsTrackingNumberInsertFake::$insertedValues[0];
+
+    expect($inserted['qr_code'])->toBe('QRCODE,M:https://console.fleetbase.test/~/track-order?order=TRACK-SG&r=waypoint_public&v=1')
+        // A helper key, not a column: the fillable filter keeps it out of the insert.
+        ->and($inserted)->not->toHaveKey('owner_public_id')
+        ->and($inserted['owner_uuid'])->toBe('waypoint-uuid');
+});
+
+test('tracking number code images render a medium-correction QR and a Code 128 barcode', function () {
+    $calls = new ArrayObject();
+    foreach (['DNS2D', 'DNS1D'] as $facade) {
+        app()->instance($facade, new class($facade, $calls) {
+            public function __construct(private string $facade, private ArrayObject $calls)
+            {
+            }
+
+            public function getBarcodePNG(...$arguments)
+            {
+                $this->calls[] = array_merge([$this->facade], $arguments);
+
+                return $this->facade . '-png';
+            }
+        });
+        Illuminate\Support\Facades\Facade::clearResolvedInstance($facade);
+    }
+
+    try {
+        expect(TrackingNumber::codeImages('ACM1234567890SG', 'entity_public'))->toBe([
+            'qr_code' => 'DNS2D-png',
+            'barcode' => 'DNS1D-png',
+        ])->and($calls->getArrayCopy())->toBe([
+            ['DNS2D', 'https://console.fleetbase.test/~/track-order?order=ACM1234567890SG&r=entity_public&v=1', 'QRCODE,M'],
+            ['DNS1D', 'ACM1234567890SG', 'C128', 2, 60],
+        ]);
+    } finally {
+        foreach (['DNS2D', 'DNS1D'] as $facade) {
+            app()->forgetInstance($facade);
+            Illuminate\Support\Facades\Facade::clearResolvedInstance($facade);
+        }
+    }
 });
