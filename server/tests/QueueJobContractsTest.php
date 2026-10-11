@@ -609,7 +609,8 @@ test('finalize api order creation job prepares optional dispatch and emits ready
     expect($missingOrderJob->events)->toBe([]);
 
     $order = new FleetOpsFinalizeOrderFake();
-    $order->setRawAttributes(['uuid' => 'order-uuid'], true);
+    $order->setRawAttributes(['uuid' => 'order-uuid', 'status' => 'created'], true);
+    $order->setRelation('trackingStatuses', collect());
 
     $serviceQuote = new ServiceQuote();
     $serviceQuote->setRawAttributes(['uuid' => 'service-quote-uuid'], true);
