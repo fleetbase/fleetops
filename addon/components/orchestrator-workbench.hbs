@@ -59,7 +59,13 @@
     {{! ── Phase builder panel (collapsible, below toolbar) ── }}
     {{#if this.showPhaseBuilder}}
         <div class="workbench-phase-panel border-b dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0 h-80">
-            <Orchestrator::PhaseBuilder @phases={{this.phases}} @availableEngines={{this.availableEngines}} @onPhasesChange={{this.onPhasesChange}} @onRunPhases={{this.onRunPhases}} />
+            <Orchestrator::PhaseBuilder
+                @phases={{this.phases}}
+                @availableEngines={{this.availableEngines}}
+                @defaultEngine={{this.defaultEngine}}
+                @onPhasesChange={{this.onPhasesChange}}
+                @onRunPhases={{this.onRunPhases}}
+            />
         </div>
     {{/if}}
 

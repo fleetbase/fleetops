@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Jobs\DispatchTelematicsRetentionJobs;
+use Fleetbase\FleetOps\Orchestration\Support\OrchestratorSettings;
 use Fleetbase\FleetOps\Support\Telematics\Retention\RetentionPolicy;
 use Fleetbase\FleetOps\Support\Telematics\Telemetry\Queue;
 use Fleetbase\FleetOps\Support\TrackingPage\TrackingPageConfig;
@@ -555,14 +556,7 @@ class SettingController extends Controller
      */
     public function getOrchestratorSettings()
     {
-        $defaults = [
-            'allocation_engine'           => 'vroom',
-            'auto_allocate_on_create'     => false,
-            'auto_reallocate_on_complete' => false,
-            'max_travel_time_seconds'     => 3600,
-            'balance_workload'            => false,
-        ];
-        $settings = $this->lookupFromCompanySetting('fleet-ops.allocation-settings', $defaults);
+        $settings = $this->lookupFromCompanySetting(OrchestratorSettings::KEY, OrchestratorSettings::defaults());
 
         return response()->json($settings);
     }
@@ -575,13 +569,13 @@ class SettingController extends Controller
     public function saveOrchestratorSettings(Request $request)
     {
         $settings = [
-            'allocation_engine'           => $request->input('allocation_engine', 'vroom'),
+            'allocation_engine'           => $request->input('allocation_engine', OrchestratorSettings::DEFAULT_ENGINE),
             'auto_allocate_on_create'     => (bool) $request->input('auto_allocate_on_create', false),
             'auto_reallocate_on_complete' => (bool) $request->input('auto_reallocate_on_complete', false),
             'max_travel_time_seconds'     => (int) $request->input('max_travel_time_seconds', 3600),
             'balance_workload'            => (bool) $request->input('balance_workload', false),
         ];
-        $this->configureCompanySetting('fleet-ops.allocation-settings', $settings);
+        $this->configureCompanySetting(OrchestratorSettings::KEY, $settings);
 
         return response()->json($settings);
     }

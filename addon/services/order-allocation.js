@@ -35,7 +35,7 @@ export default class OrderAllocationService extends Service {
     @task *loadSettings() {
         try {
             const settings = yield this.fetch.get('fleet-ops/settings/orchestrator-settings');
-            this.activeEngineId = settings.orchestrator_engine ?? 'greedy';
+            this.activeEngineId = settings.allocation_engine ?? 'greedy';
             return settings;
         } catch (error) {
             this.notifications.serverError(error);

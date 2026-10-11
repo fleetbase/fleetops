@@ -112,7 +112,40 @@ test('vroom maps shipment delivery steps back to fleetops assignments', function
         'duration'   => 900,
         'distance'   => 4200,
     ]);
-    expect($result['summary'])->toBe(['routes' => 1]);
+    expect($result['summary'])->toBe(['engine' => 'vroom', 'routes' => 1]);
+});
+
+test('vroom carries route totals onto assignments and anchors relative arrivals to the run start', function () {
+    $engine = new VroomOrchestrationEngine();
+    $method = new ReflectionMethod($engine, 'mapVroomResponse');
+
+    $method->setAccessible(true);
+
+    $before = now()->timestamp;
+    $result = $method->invoke($engine, [
+        'routes' => [
+            [
+                'description' => json_encode(['vehicle_id' => 'vehicle_one', 'driver_id' => 'driver_one']),
+                'distance'    => 9100,
+                'duration'    => 1500,
+                'steps'       => [
+                    ['type' => 'start', 'arrival' => 0],
+                    ['type' => 'job', 'id' => 1001, 'arrival' => 600, 'duration' => 600, 'distance' => 5000],
+                    ['type' => 'job', 'id' => 1002],
+                ],
+            ],
+        ],
+        'summary' => ['distance' => 9100, 'duration' => 1500],
+    ], [
+        1001 => 'order_one',
+        1002 => 'order_two',
+    ]);
+
+    expect($result['assignments'][0]['arrival'])->toBeGreaterThanOrEqual($before + 600)
+        ->and($result['assignments'][0]['arrival'])->toBeLessThanOrEqual(now()->timestamp + 600)
+        ->and($result['assignments'][0])->toMatchArray(['route_distance' => 9100, 'route_duration' => 1500])
+        ->and($result['assignments'][1]['arrival'])->toBeNull()
+        ->and($result['summary'])->toBe(['engine' => 'vroom', 'distance' => 9100, 'duration' => 1500]);
 });
 
 test('vroom capacity-only payload uses matrix indexes instead of coordinates', function () {

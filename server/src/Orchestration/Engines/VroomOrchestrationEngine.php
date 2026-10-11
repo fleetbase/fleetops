@@ -38,6 +38,11 @@ use Illuminate\Support\Facades\Log;
 class VroomOrchestrationEngine implements OrchestrationEngineInterface
 {
     /**
+     * Arrivals below this (2001-09-09) are offsets from the route start, not unix timestamps.
+     */
+    protected const ABSOLUTE_TIMESTAMP_THRESHOLD = 1000000000;
+
+    /**
      * The company whose VROOM settings apply to the current allocation run.
      * Resolved from the orders so queued runs work without a company session.
      */
@@ -202,6 +207,14 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
 
         $result = $this->mapVroomResponse($this->callVroom($vroomPayload), $jobIdReverse);
 
+        // Capacity-only solves run on a uniform placeholder matrix, so VROOM's
+        // timings are meaningless here; clear them so real estimates replace them.
+        $result['assignments'] = array_map(
+            fn (array $assignment) => array_merge($assignment, array_fill_keys(['arrival', 'duration', 'distance', 'route_distance', 'route_duration'], null)),
+            $result['assignments']
+        );
+        unset($result['summary']['distance'], $result['summary']['duration']);
+
         $result['summary'] = array_merge($result['summary'] ?? [], [
             'engine'              => 'vroom',
             'allocation_strategy' => 'capacity_only',
@@ -339,6 +352,7 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
     protected function mapVroomResponse(array $vroomResult, array $jobIdReverse): array
     {
         $assignments = [];
+        $startTime   = now()->timestamp;
 
         foreach ($vroomResult['routes'] ?? [] as $route) {
             $vehicleDesc = json_decode($route['description'] ?? '{}', true);
@@ -355,13 +369,15 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
                     continue;
                 }
                 $assignments[] = [
-                    'order_id'   => $orderId,
-                    'vehicle_id' => $vehicleId,
-                    'driver_id'  => $driverId,
-                    'sequence'   => ++$sequence,
-                    'arrival'    => $step['arrival'] ?? null,
-                    'duration'   => $step['duration'] ?? null,
-                    'distance'   => $step['distance'] ?? null,
+                    'order_id'       => $orderId,
+                    'vehicle_id'     => $vehicleId,
+                    'driver_id'      => $driverId,
+                    'sequence'       => ++$sequence,
+                    'arrival'        => $this->absoluteArrival($step['arrival'] ?? null, $startTime),
+                    'duration'       => $step['duration'] ?? null,
+                    'distance'       => $step['distance'] ?? null,
+                    'route_distance' => $route['distance'] ?? null,
+                    'route_duration' => $route['duration'] ?? null,
                 ];
             }
         }
@@ -374,8 +390,22 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
         return [
             'assignments' => $assignments,
             'unassigned'  => array_values(array_unique($unassigned)),
-            'summary'     => $vroomResult['summary'] ?? [],
+            'summary'     => array_merge(['engine' => 'vroom'], $vroomResult['summary'] ?? []),
         ];
+    }
+
+    /**
+     * VROOM reports arrivals on the timeline of the time windows it was given.
+     * Without absolute windows that timeline starts at 0, so small values are
+     * offsets from the start of the run rather than unix timestamps.
+     */
+    protected function absoluteArrival($arrival, int $startTime): ?int
+    {
+        if ($arrival === null) {
+            return null;
+        }
+
+        return $arrival < self::ABSOLUTE_TIMESTAMP_THRESHOLD ? $startTime + (int) $arrival : (int) $arrival;
     }
 
     protected function mapTaskToVroomJob(array $task, array &$jobIdReverse): ?array
