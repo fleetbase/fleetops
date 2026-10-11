@@ -240,6 +240,66 @@ test('distance and time setters use origin and destination positions', function 
     expect($origin?->getLat())->toBe(1.20);
 });
 
+test('a driver without a reported location does not turn the order origin into null island', function () {
+    $connection = fleetopsOrderPayloadBoot();
+    // Sunshine -> Melton, Victoria: a ~25 km straight-line run
+    $connection->table('places')->insert([
+        ['uuid' => '11111111-1111-4111-8111-111111111111', 'public_id' => 'place_vicpickup', 'company_uuid' => 'company-1', 'location' => fleetopsOrderPayloadWkb(-37.78, 144.83)],
+        ['uuid' => '22222222-2222-4222-8222-222222222222', 'public_id' => 'place_vicdropoff', 'company_uuid' => 'company-1', 'location' => fleetopsOrderPayloadWkb(-37.68, 144.58)],
+    ]);
+    $connection->table('payloads')->insert(['uuid' => 'payload-1', 'company_uuid' => 'company-1', 'pickup_uuid' => '11111111-1111-4111-8111-111111111111', 'dropoff_uuid' => '22222222-2222-4222-8222-222222222222']);
+    $connection->table('users')->insert(['uuid' => 'user-1', 'company_uuid' => 'company-1', 'type' => 'user']);
+    // Drivers are created with a POINT(0 0) placeholder until their first location report
+    $connection->table('drivers')->insert(['uuid' => '44444444-4444-4444-8444-444444444444', 'public_id' => 'driver_vicnoloc', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1', 'location' => fleetopsOrderPayloadWkb(0, 0)]);
+    $connection->table('orders')->insert(['uuid' => 'order-1', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-1', 'driver_assigned_uuid' => '44444444-4444-4444-8444-444444444444']);
+
+    $order  = Order::query()->where('uuid', 'order-1')->first();
+    $origin = $order->getCurrentOriginPosition();
+    expect($origin?->getLat())->toBe(-37.78)
+        ->and($origin?->getLng())->toBe(144.83);
+
+    $order->setPreliminaryDistanceAndTime();
+    $distance = (float) $connection->table('orders')->value('distance');
+    $time     = (float) $connection->table('orders')->value('time');
+    expect($distance)->toBeGreaterThan(20000)->toBeLessThan(30000)
+        ->and($time)->toBe(round($distance / 100) * 7.2);
+
+    $connection->table('orders')->where('uuid', 'order-1')->update(['distance' => null, 'time' => null]);
+    $order = Order::query()->where('uuid', 'order-1')->first();
+    $order->setDistanceAndTime(['provider' => 'calculate']);
+    expect((float) $connection->table('orders')->value('distance'))->toBe($distance)
+        ->and((float) $connection->table('orders')->value('time'))->toBe($time);
+
+    // Once the driver reports a real position it becomes the origin again
+    $connection->table('drivers')->update(['location' => fleetopsOrderPayloadWkb(-37.70, 144.70)]);
+    $order = Order::query()->where('uuid', 'order-1')->first();
+    expect($order->getCurrentOriginPosition()?->getLat())->toBe(-37.70);
+});
+
+test('distance setters leave the order untouched when an endpoint is an ungeocoded placeholder', function () {
+    $connection = fleetopsOrderPayloadBoot();
+    $connection->table('places')->insert([
+        ['uuid' => '11111111-1111-4111-8111-111111111111', 'public_id' => 'place_vicpickup', 'company_uuid' => 'company-1', 'location' => fleetopsOrderPayloadWkb(-37.78, 144.83)],
+        ['uuid' => '22222222-2222-4222-8222-222222222222', 'public_id' => 'place_ungeocoded', 'company_uuid' => 'company-1', 'location' => fleetopsOrderPayloadWkb(0, 0)],
+    ]);
+    $connection->table('payloads')->insert([
+        ['uuid' => 'payload-1', 'company_uuid' => 'company-1', 'pickup_uuid' => '11111111-1111-4111-8111-111111111111', 'dropoff_uuid' => '22222222-2222-4222-8222-222222222222'],
+        ['uuid' => 'payload-2', 'company_uuid' => 'company-1', 'pickup_uuid' => '22222222-2222-4222-8222-222222222222', 'dropoff_uuid' => '11111111-1111-4111-8111-111111111111'],
+    ]);
+    $connection->table('orders')->insert([
+        ['uuid' => 'order-1', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-1'],
+        ['uuid' => 'order-2', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-2'],
+    ]);
+
+    foreach (['order-1', 'order-2'] as $uuid) {
+        $order = Order::query()->where('uuid', $uuid)->first();
+        expect($order->setPreliminaryDistanceAndTime())->toBe($order)
+            ->and($order->setDistanceAndTime(['provider' => 'calculate']))->toBe($order)
+            ->and($connection->table('orders')->where('uuid', $uuid)->value('distance'))->toBeNull()
+            ->and($connection->table('orders')->where('uuid', $uuid)->value('time'))->toBeNull();
+    }
+});
+
 test('config resolution prefers uuid then company default', function () {
     $connection = fleetopsOrderPayloadBoot();
     $flow       = json_encode([
