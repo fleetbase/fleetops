@@ -1334,6 +1334,29 @@ class Order extends Model
     }
 
     /**
+     * Determine whether the order is still waiting to be dispatched.
+     *
+     * A deferred dispatch, such as the queued finalize job for orders created with
+     * `dispatch: true`, can run after the order was already dispatched or started
+     * through another path. Dispatching it then would move the status back to
+     * "dispatched", so only an order that still sits at its initial status with no
+     * dispatch or start recorded qualifies.
+     */
+    public function isAwaitingDispatch(): bool
+    {
+        if ($this->dispatched || $this->dispatched_at || $this->started || $this->started_at) {
+            return false;
+        }
+
+        $status = $this->status ?? 'created';
+        if ($status !== 'created' && $status !== $this->config()?->getInitialStatusCode()) {
+            return false;
+        }
+
+        return !$this->hasDispatchedStatus();
+    }
+
+    /**
      * Dispatches the order only if it hasn't been dispatched yet.
      * A check is performed before dispatching the order.
      *
