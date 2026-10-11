@@ -3,12 +3,14 @@
 namespace Fleetbase\FleetOps\Http\Filter;
 
 use Fleetbase\FleetOps\Http\Filter\Concerns\ResolvesPublicRelationUuids;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Customer as CustomerIndexResource;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\IntegratedVendor;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Filter\Filter;
 use Fleetbase\Support\Http;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
@@ -63,7 +65,7 @@ class OrderFilter extends Filter
             'vehicleAssigned' => function ($query) {
                 $query->without(['fleets', 'vendor']);
             },
-            'customer',
+            'customer' => static fn (MorphTo $relation) => CustomerIndexResource::withPhoto($relation),
             'facilitator',
         ]);
     }
