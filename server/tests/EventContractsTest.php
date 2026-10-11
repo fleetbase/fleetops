@@ -33,6 +33,8 @@ use Fleetbase\FleetOps\Models\FuelProviderTransaction;
 use Fleetbase\FleetOps\Models\FuelReport;
 use Fleetbase\FleetOps\Models\GeofenceEventLog;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Payload;
+use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Waypoint;
@@ -832,8 +834,19 @@ test('geofence entered listener handles arrival branch outcomes', function () {
         'name'      => 'Event Zone',
     ], 'zone', new Point(1.3521, 103.8198));
 
-    $place        = (object) ['location' => new Point(1.3521, 103.8198)];
-    $destination  = (object) ['place' => $place];
+    $payloadTo = function (?Point $location): Payload {
+        $pickup = new Place();
+        $pickup->setRawAttributes(['uuid' => 'pickup-place-uuid', 'location' => $location], true);
+
+        $payload = new Payload();
+        $payload->setRawAttributes(['uuid' => 'arrival-payload-uuid'], true);
+        $payload->setRelation('pickup', $pickup);
+        $payload->setRelation('dropoff', null);
+        $payload->setRelation('waypoints', collect());
+        $payload->setRelation('waypointMarkers', collect());
+
+        return $payload;
+    };
     $nearGeofence = new class {
         public string $uuid      = 'near-zone-uuid';
         public string $public_id = 'near_zone_public';
@@ -896,66 +909,14 @@ test('geofence entered listener handles arrival branch outcomes', function () {
         return $order;
     };
 
-    $missingPlaceOrder = $makeOrder((object) [
-        'getPickupOrCurrentWaypoint' => null,
-    ]);
-    $missingPlaceOrder->setRelation('payload', new class($destination) {
-        public function __construct(private object $destination)
-        {
-        }
-
-        public function getPickupOrCurrentWaypoint(): object
-        {
-            return (object) ['place' => (object) ['location' => null]];
-        }
-    });
-
-    $farOrder = $makeOrder(new class($destination) {
-        public function __construct(private object $destination)
-        {
-        }
-
-        public function getPickupOrCurrentWaypoint(): object
-        {
-            return $this->destination;
-        }
-    });
-
-    $badCentroidOrder = $makeOrder(new class($destination) {
-        public function __construct(private object $destination)
-        {
-        }
-
-        public function getPickupOrCurrentWaypoint(): object
-        {
-            return $this->destination;
-        }
-    });
-
-    $customer     = new FleetOpsGeofenceArrivalCustomerFake();
-    $successOrder = $makeOrder(new class($destination) {
-        public function __construct(private object $destination)
-        {
-        }
-
-        public function getPickupOrCurrentWaypoint(): object
-        {
-            return $this->destination;
-        }
-    }, $customer);
-
+    $missingPlaceOrder             = $makeOrder($payloadTo(null));
+    $farOrder                      = $makeOrder($payloadTo(new Point(1.3521, 103.8198)));
+    $badCentroidOrder              = $makeOrder($payloadTo(new Point(1.3521, 103.8198)));
+    $customer                      = new FleetOpsGeofenceArrivalCustomerFake();
+    $successOrder                  = $makeOrder($payloadTo(new Point(1.3521, 103.8198)), $customer);
     $throwingCustomer              = new FleetOpsGeofenceArrivalCustomerFake();
     $throwingCustomer->shouldThrow = true;
-    $notificationFailureOrder      = $makeOrder(new class($destination) {
-        public function __construct(private object $destination)
-        {
-        }
-
-        public function getPickupOrCurrentWaypoint(): object
-        {
-            return $this->destination;
-        }
-    }, $throwingCustomer);
+    $notificationFailureOrder      = $makeOrder($payloadTo(new Point(1.3521, 103.8198)), $throwingCustomer);
 
     $arrival->invoke($listener, $driver, $nearGeofence, $missingPlaceOrder, $event);
     $arrival->invoke($listener, $driver, $farGeofence, $farOrder, $event);
