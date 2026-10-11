@@ -1697,7 +1697,10 @@ class Order extends Model
                 $driverAssigned = Driver::where('uuid', $this->driver_assigned_uuid)->first();
             }
 
-            if ($driverAssigned instanceof Driver) {
+            // A driver that has never reported a position still carries the
+            // POINT(0 0) placeholder it was created with. Measuring from there
+            // puts the origin at null island, so fall back to the pickup.
+            if ($driverAssigned instanceof Driver && static::isKnownPosition($driverAssigned->location)) {
                 return $driverAssigned->location;
             }
         }
@@ -1729,6 +1732,16 @@ class Order extends Model
     }
 
     /**
+     * Determines whether a position is a real, resolved location rather than
+     * missing or the POINT(0 0) placeholder stored for drivers that have not
+     * reported a position yet and for places that failed to geocode.
+     */
+    public static function isKnownPosition($position): bool
+    {
+        return $position instanceof Point && ($position->getLat() != 0.0 || $position->getLng() != 0.0);
+    }
+
+    /**
      * Sets the preliminary distance and time for the order.
      * Uses a utility method to calculate the distance and time between the current origin and destination positions.
      *
@@ -1739,7 +1752,7 @@ class Order extends Model
         $origin      = $this->getCurrentOriginPosition();
         $destination = $this->getDestinationPosition();
 
-        if ($origin === null || $destination === null) {
+        if (!static::isKnownPosition($origin) || !static::isKnownPosition($destination)) {
             return $this;
         }
 
@@ -1761,7 +1774,7 @@ class Order extends Model
         $origin      = $this->getCurrentOriginPosition();
         $destination = $this->getDestinationPosition();
 
-        if (!$origin || !$destination) {
+        if (!static::isKnownPosition($origin) || !static::isKnownPosition($destination)) {
             return $this;
         }
 
