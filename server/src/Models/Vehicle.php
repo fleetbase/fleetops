@@ -795,7 +795,7 @@ class Vehicle extends Model
             return null;
         }
 
-        return static::where(function ($query) use ($vehicleName) {
+        return static::where('company_uuid', session('company'))->where(function ($query) use ($vehicleName) {
             $query->where('public_id', $vehicleName)
                     ->orWhere('internal_id', $vehicleName)
                     ->orWhere('plate_number', $vehicleName)
