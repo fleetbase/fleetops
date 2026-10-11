@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Orchestration\Engines;
 
+use Fleetbase\FleetOps\Orchestration\Support\RouteMetrics;
 use Illuminate\Support\Collection;
 
 /**
@@ -18,6 +19,8 @@ use Illuminate\Support\Collection;
  *      using a nearest-neighbour TSP heuristic.
  *   3. Returns one assignment entry per order, preserving the existing
  *      vehicle_id / driver_id and updating only the sequence number.
+ *   4. Estimates arrival times and route distance/duration along the
+ *      sequenced stops (see RouteMetrics).
  *
  * This ensures that running "Assign Vehicles" followed by "Optimize Routes"
  * produces one properly-sequenced route per vehicle rather than re-running
@@ -37,6 +40,9 @@ class RouteSequencingEngine
     {
         $assignments = [];
         $unassigned  = [];
+        $startTime   = now()->timestamp;
+        $distance    = 0;
+        $duration    = 0;
 
         // Group orders by their currently assigned vehicle UUID
         $byVehicle = [];
@@ -73,6 +79,13 @@ class RouteSequencingEngine
             // (or waypoints for multi-drop orders). We keep pickup before its own
             // dropoff as a hard constraint.
             $sequenced = $this->_sequenceOrdersForVehicle($vehicleOrders, $startLat, $startLng);
+            $metrics   = RouteMetrics::measure(
+                $startLat !== null && $startLng !== null ? [$startLat, $startLng] : null,
+                array_map(fn ($stop) => ['order_id' => $stop['order_public_id'], 'lat' => $stop['lat'], 'lng' => $stop['lng']], $sequenced),
+                $startTime
+            );
+            $distance += $metrics['distance'];
+            $duration += $metrics['duration'];
 
             // Build assignment entries — one per order, with the sequence number
             // being the position of the order's FIRST stop in the sequenced list.
@@ -92,9 +105,11 @@ class RouteSequencingEngine
                     'driver_id'         => $driverPublicId,
                     'sequence'          => $orderSequences[$order->public_id] ?? 1,
                     'waypoint_sequence' => null,
-                    'arrival'           => null,
-                    'duration'          => null,
-                    'distance'          => null,
+                    'arrival'           => $metrics['orders'][$order->public_id]['arrival'] ?? null,
+                    'duration'          => $metrics['orders'][$order->public_id]['duration'] ?? null,
+                    'distance'          => $metrics['orders'][$order->public_id]['distance'] ?? null,
+                    'route_distance'    => $metrics['distance'],
+                    'route_duration'    => $metrics['duration'],
                 ];
             }
         }
@@ -106,6 +121,9 @@ class RouteSequencingEngine
                 'engine'     => 'route_sequencing',
                 'assigned'   => count($assignments),
                 'unassigned' => count($unassigned),
+                'distance'   => $distance,
+                'duration'   => $duration,
+                'metrics'    => 'estimated',
             ],
         ];
     }

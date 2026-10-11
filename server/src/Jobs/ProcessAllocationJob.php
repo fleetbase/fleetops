@@ -6,7 +6,7 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry;
-use Fleetbase\Models\Setting;
+use Fleetbase\FleetOps\Orchestration\Support\OrchestratorSettings;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -69,9 +69,17 @@ class ProcessAllocationJob implements ShouldQueue
             return;
         }
 
-        $engine = $registry->resolve($this->engineId());
+        $result = $registry->allocateWithFallback($this->engineId(), $orders, $vehicles, $this->allocationOptions());
 
-        $result = $engine->allocate($orders, $vehicles, $this->allocationOptions());
+        if (!empty($result['summary']['fallback_reason'])) {
+            $this->logInfo(sprintf(
+                '[ProcessAllocationJob] Used the %s engine instead of %s for company %s: %s',
+                $result['summary']['engine'],
+                $result['summary']['requested_engine'],
+                $this->companyUuid,
+                $result['summary']['fallback_reason']
+            ));
+        }
 
         foreach ($result['assignments'] as $assignment) {
             $order  = $this->findOrderByPublicId($assignment['order_id']);
@@ -125,14 +133,16 @@ class ProcessAllocationJob implements ShouldQueue
 
     protected function engineId(): string
     {
-        return Setting::lookup('fleetops.orchestrator_engine', 'greedy');
+        return OrchestratorSettings::engineForCompany($this->companyUuid);
     }
 
     protected function allocationOptions(): array
     {
+        $settings = OrchestratorSettings::forCompany($this->companyUuid);
+
         return [
-            'max_travel_time'  => Setting::lookup('fleetops.allocation_max_travel_time', 3600),
-            'balance_workload' => Setting::lookup('fleetops.allocation_balance_workload', false),
+            'max_travel_time'  => (int) $settings['max_travel_time_seconds'],
+            'balance_workload' => (bool) $settings['balance_workload'],
         ];
     }
 

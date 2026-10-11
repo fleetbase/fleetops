@@ -128,6 +128,20 @@ test('route sequencing preserves vehicle assignment and orders stops by nearest 
         'sequence'   => 1,
     ]);
     expect($assignments['order_far']['sequence'])->toBeGreaterThan($assignments['order_near']['sequence']);
+
+    // arrival, distance and duration are estimated along the sequenced stops
+    $near = $assignments['order_near'];
+    $far  = $assignments['order_far'];
+    expect($near['arrival'])->toBeGreaterThan(0)
+        ->and($far['arrival'])->toBeGreaterThan($near['arrival'])
+        ->and($far['distance'])->toBe($far['route_distance'])
+        ->and($near['distance'])->toBeLessThan($far['distance'])
+        ->and($near['route_duration'])->toBe($far['duration'])
+        ->and($result['summary'])->toMatchArray([
+            'distance' => $far['route_distance'],
+            'duration' => $far['route_duration'],
+            'metrics'  => 'estimated',
+        ]);
 });
 
 test('route sequencing handles multi drop waypoints and missing vehicle relations', function () {
@@ -150,7 +164,10 @@ test('route sequencing handles multi drop waypoints and missing vehicle relation
             'vehicle_id' => 'vehicle-missing-relation',
             'driver_id'  => null,
             'sequence'   => 1,
+            // with no vehicle position the route is measured from its first stop
+            'route_distance' => $result['assignments'][0]['distance'],
         ])
+        ->and($result['assignments'][0]['distance'])->toBeGreaterThan(0)
         ->and($result['summary']['assigned'])->toBe(1);
 });
 

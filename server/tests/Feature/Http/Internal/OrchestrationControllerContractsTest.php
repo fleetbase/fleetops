@@ -327,6 +327,9 @@ function fleetopsOrchestrationOrder(string $publicId, ?string $dropoffUuid = 'dr
     $payload = new Payload();
     $payload->setRawAttributes(['uuid' => 'payload-' . $publicId], true);
     $payload->setRelation('dropoff', $dropoff);
+    // the run resolves route stops, so every stop relation is set up front
+    $payload->setRelation('pickup', null);
+    $payload->setRelation('waypoints', collect());
 
     $order = new FleetOpsOrchestrationCommitOrderFake();
     $order->setRawAttributes([
@@ -518,8 +521,17 @@ test('orchestration optimize routes hydrates missing vehicle relations before se
         'mode' => 'optimize_routes',
     ]));
 
+    $payload = $response->getData(true);
+
+    // greedy (the probe's configured engine) cannot sequence stops, so the
+    // built-in sequencer runs and the summary says so without raising a warning
     expect($response->getStatusCode())->toBe(200)
-        ->and($response->getData(true)['summary'])->toBe(['engine' => 'route_sequence_fake'])
+        ->and($payload['summary'])->toMatchArray([
+            'engine'           => 'route_sequence_fake',
+            'requested_engine' => 'greedy',
+        ])
+        ->and($payload['summary']['fallback_reason'])->toContain('does not sequence stops')
+        ->and($payload)->not->toHaveKey('warning')
         ->and($order->relationLoaded('vehicle'))->toBeTrue()
         ->and($order->vehicle->driver->public_id)->toBe('driver_one')
         ->and($controller->routeEngine->calls)->toHaveCount(1);
@@ -926,3 +938,161 @@ test('assign drivers skips orders without a prior assignment entry', function ()
     expect($matched->vehicle_assigned_uuid)->toBe('vehicle_one-uuid')
         ->and($unmatched->vehicle_assigned_uuid)->toBeNull();
 });
+
+class FleetOpsSolverEngineFake implements OrchestrationEngineInterface
+{
+    public array $calls = [];
+
+    public function allocate(Collection $orders, Collection $vehicles, array $options = []): array
+    {
+        $this->calls[] = compact('orders', 'vehicles', 'options');
+        $vehicle       = $vehicles->first();
+
+        return [
+            'assignments' => $orders->values()->map(fn ($order, $index) => [
+                'order_id'       => $order->public_id,
+                'vehicle_id'     => $vehicle->public_id,
+                'driver_id'      => null,
+                'sequence'       => $index + 1,
+                'arrival'        => 1778918400 + $index,
+                'duration'       => 600,
+                'distance'       => 4200,
+                'route_distance' => 4200,
+                'route_duration' => 600,
+            ])->all(),
+            'unassigned'  => [],
+            'summary'     => ['cost' => 600],
+        ];
+    }
+
+    public function getName(): string
+    {
+        return 'VROOM';
+    }
+
+    public function getIdentifier(): string
+    {
+        return 'vroom';
+    }
+}
+
+function fleetopsOrchestrationAssignedOrder(string $publicId, ?string $vehicleUuid, ?Vehicle $vehicle = null): FleetOpsOrchestrationCommitOrderFake
+{
+    $order                        = fleetopsOrchestrationOrder($publicId);
+    $order->vehicle_assigned_uuid = $vehicleUuid;
+    if ($vehicle) {
+        $order->setRelation('vehicle', $vehicle);
+    }
+
+    return $order;
+}
+
+test('orchestration run falls back to greedy and reports why when the selected engine is unavailable', function () {
+    $registry = new OrchestrationEngineRegistry();
+    $registry->register(new GreedyOrchestrationEngine());
+    $registry->register(new FleetOpsThrowingOrchestrationEngineFake());
+
+    $vehicle = fleetopsOrchestrationVehicle('vehicle_one');
+    $vehicle->setRelation('driver', fleetopsOrchestrationDriver('driver_one'));
+
+    $controller                = new FleetOpsOrchestrationCommitControllerProbe($registry);
+    $controller->engineSetting = 'throwing';
+    $controller->orderQuery    = new FleetOpsOrchestrationQueryFake(collect([fleetopsOrchestrationOrder('order_one'), fleetopsOrchestrationOrder('order_two')]));
+    $controller->vehicleQuery  = new FleetOpsOrchestrationQueryFake(collect([$vehicle]));
+
+    // an empty engine option defers to the organization's selected engine
+    $response = $controller->run(Request::create('/orchestrator/run', 'POST', [
+        'mode'    => 'assign_vehicles',
+        'options' => ['engine' => ''],
+    ]));
+
+    $payload = $response->getData(true);
+
+    expect($response->getStatusCode())->toBe(200)
+        ->and($payload['summary'])->toMatchArray([
+            'engine'           => 'greedy',
+            'requested_engine' => 'throwing',
+            'fallback_reason'  => 'orchestration unavailable',
+            'metrics'          => 'estimated',
+            'distance'         => 0,
+            'duration'         => 0,
+        ])
+        ->and($payload['warning'])->toBe('The "greedy" engine was used instead of "throwing": orchestration unavailable')
+        // the fallback still routes every order onto the one vehicle
+        ->and(array_column($payload['assignments'], 'order_id'))->toBe(['order_one', 'order_two'])
+        ->and($payload['assignments'][0])->toHaveKeys(['arrival', 'route_distance', 'route_duration']);
+});
+
+test('orchestration optimize routes runs the selected solver once per vehicle', function () {
+    $solver   = new FleetOpsSolverEngineFake();
+    $registry = new OrchestrationEngineRegistry();
+    $registry->register(new GreedyOrchestrationEngine());
+    $registry->register($solver);
+
+    $vehicle       = fleetopsOrchestrationVehicle('vehicle_one');
+    $vehicle->uuid = 'vehicle-one-uuid';
+
+    $controller                = new FleetOpsOrchestrationCommitControllerProbe($registry);
+    $controller->engineSetting = 'vroom';
+    $controller->orderQuery    = new FleetOpsOrchestrationQueryFake(collect([
+        fleetopsOrchestrationAssignedOrder('order_one', 'vehicle-one-uuid', $vehicle),
+        fleetopsOrchestrationAssignedOrder('order_two', 'vehicle-one-uuid', $vehicle),
+        // a vehicle that can no longer be found, and an order with no vehicle
+        fleetopsOrchestrationAssignedOrder('order_ghost', 'ghost-uuid'),
+        fleetopsOrchestrationAssignedOrder('order_loose', null),
+    ]));
+    $controller->vehicleQuery = new FleetOpsOrchestrationQueryFake(collect([$vehicle]));
+
+    $response = $controller->run(Request::create('/orchestrator/run', 'POST', [
+        'mode'    => 'optimize_routes',
+        'options' => ['allocation_strategy' => 'capacity_only'],
+    ]));
+
+    $payload = $response->getData(true);
+
+    expect($response->getStatusCode())->toBe(200)
+        ->and($solver->calls)->toHaveCount(1)
+        ->and($solver->calls[0]['vehicles']->all())->toBe([$vehicle])
+        ->and($solver->calls[0]['orders']->pluck('public_id')->all())->toBe(['order_one', 'order_two'])
+        // sequencing always needs a routed solve, whatever the phase asked for
+        ->and($solver->calls[0]['options']['allocation_strategy'])->toBe('route_aware')
+        ->and(array_column($payload['assignments'], 'arrival'))->toBe([1778918400, 1778918401])
+        ->and($payload['unassigned'])->toBe(['order_ghost', 'order_loose'])
+        ->and($payload['summary'])->toBe([
+            'engine'     => 'vroom',
+            'assigned'   => 2,
+            'unassigned' => 2,
+            'distance'   => 4200,
+            'duration'   => 600,
+            'metrics'    => 'engine',
+        ])
+        ->and($payload)->not->toHaveKey('warning');
+});
+
+test('orchestration optimize routes falls back to the route sequencer with a warning', function (string $engineSetting, string $reason) {
+    $registry = new OrchestrationEngineRegistry();
+    $registry->register(new GreedyOrchestrationEngine());
+    $registry->register(new FleetOpsThrowingOrchestrationEngineFake());
+
+    $vehicle       = fleetopsOrchestrationVehicle('vehicle_one');
+    $vehicle->uuid = 'vehicle-one-uuid';
+    $vehicle->setRelation('driver', fleetopsOrchestrationDriver('driver_one'));
+
+    $controller                = new FleetOpsOrchestrationCommitControllerProbe($registry);
+    $controller->engineSetting = $engineSetting;
+    $controller->orderQuery    = new FleetOpsOrchestrationQueryFake(collect([fleetopsOrchestrationAssignedOrder('order_one', 'vehicle-one-uuid', $vehicle)]));
+    $controller->vehicleQuery  = new FleetOpsOrchestrationQueryFake(collect([$vehicle]));
+
+    $payload = $controller->run(Request::create('/orchestrator/run', 'POST', ['mode' => 'optimize_routes']))->getData(true);
+
+    expect($controller->routeEngine->calls)->toHaveCount(1)
+        ->and($payload['summary'])->toMatchArray([
+            'engine'           => 'route_sequence_fake',
+            'requested_engine' => $engineSetting,
+            'fallback_reason'  => $reason,
+        ])
+        ->and($payload['warning'])->toContain($reason);
+})->with([
+    'unavailable solver' => ['throwing', 'orchestration unavailable'],
+    'unregistered'       => ['missing', 'No orchestration engine is registered as "missing".'],
+]);
