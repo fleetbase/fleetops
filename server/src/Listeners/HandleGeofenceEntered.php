@@ -6,7 +6,10 @@ use Fleetbase\FleetOps\Events\GeofenceEntered;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Models\GeofenceEventLog;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Payload;
+use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Notifications\DriverArrivedAtGeofence;
+use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
@@ -24,6 +27,7 @@ use Illuminate\Support\Str;
 class HandleGeofenceEntered implements ShouldQueue
 {
     use InteractsWithQueue;
+    use ResolvesOrderServiceStops;
 
     /**
      * The number of times the job may be attempted.
@@ -89,10 +93,11 @@ class HandleGeofenceEntered implements ShouldQueue
             return;
         }
 
-        // Get the current destination waypoint
-        $destination = null;
+        // Resolve the stop the driver is currently heading to: the pickup
+        // until it is completed, then the next waypoint or the dropoff.
+        $place = null;
         try {
-            $destination = $order->payload?->getPickupOrCurrentWaypoint();
+            $place = $this->currentDestination($order);
         } catch (\Throwable $e) {
             Log::warning('GeofenceEntered: Could not resolve order destination', [
                 'order_uuid'  => $order->uuid,
@@ -100,18 +105,6 @@ class HandleGeofenceEntered implements ShouldQueue
                 'error'       => $e->getMessage(),
             ]);
 
-            return;
-        }
-
-        if (!$destination) {
-            return;
-        }
-
-        // Resolve the destination place
-        $place = null;
-        try {
-            $place = $destination->place ?? $destination->getPlace();
-        } catch (\Throwable $e) {
             return;
         }
 
@@ -169,6 +162,29 @@ class HandleGeofenceEntered implements ShouldQueue
                 ]);
             }
         }
+    }
+
+    /**
+     * Resolve the place of the order's current destination stop.
+     *
+     * Uses the payload's current service stop (pickup, waypoints, dropoff in
+     * sequence, tracked by `current_waypoint_uuid`). When that stop has
+     * already been completed but the pointer was not advanced, the next
+     * incomplete stop is the destination instead.
+     */
+    protected function currentDestination(Order $order): ?Place
+    {
+        $payload = $order->payload;
+        if (!$payload instanceof Payload) {
+            return null;
+        }
+
+        $stop = $this->payloadCurrentServiceStop($payload);
+        if ($stop && $this->serviceStopIsComplete($order, $payload, $stop)) {
+            $stop = $this->nextIncompleteServiceStop($order, $payload);
+        }
+
+        return $stop['place'] ?? null;
     }
 
     /**
