@@ -13,12 +13,14 @@ use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
+use Fleetbase\FleetOps\Orchestration\Contracts\OrchestrationEngineInterface;
 use Fleetbase\FleetOps\Orchestration\Engines\DriverAssignmentEngine;
 use Fleetbase\FleetOps\Orchestration\Engines\RouteSequencingEngine;
 use Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry;
+use Fleetbase\FleetOps\Orchestration\Support\OrchestratorSettings;
+use Fleetbase\FleetOps\Orchestration\Support\RouteMetrics;
 use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
-use Fleetbase\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -41,6 +43,11 @@ use Illuminate\Support\Str;
 class OrchestrationController extends Controller
 {
     use AuthorizesMethods;
+
+    /**
+     * Engines that assign orders to vehicles without producing a stop sequence.
+     */
+    protected const ASSIGNMENT_ONLY_ENGINES = ['greedy', 'capacity'];
 
     public function __construct(protected OrchestrationEngineRegistry $registry)
     {
@@ -281,7 +288,7 @@ class OrchestrationController extends Controller
         // ── Run engine ────────────────────────────────────────────────────────
         $engineId = $mode === 'assign_drivers'
             ? 'driver_assignment'
-            : ($request->input('options.engine') ?? $this->orchestratorEngineSetting());
+            : ($request->input('options.engine') ?: $this->orchestratorEngineSetting());
 
         try {
             if ($mode === 'assign_drivers') {
@@ -308,14 +315,13 @@ class OrchestrationController extends Controller
                         }
                     }
                 }
-                $engine = $this->routeSequencingEngine();
-                $result = $engine->sequence($orders, $options);
+                $result = $this->optimizeRoutes($engineId, $orders, $options);
             } else {
-                $engine = $this->registry->resolve($engineId);
-                $result = $engine->allocate($orders, $vehicles, $options);
+                $result = $this->registry->allocateWithFallback($engineId, $orders, $vehicles, $options);
             }
         } catch (\RuntimeException $e) {
-            // Engine is unavailable (e.g. VROOM not reachable).
+            // Engine is unavailable (e.g. VROOM not reachable) and there is no
+            // built-in engine to fall back to.
             // Return a structured JSON 503 so the frontend can display a
             // user-friendly message instead of an unhandled exception page.
             return response()->json([
@@ -323,6 +329,10 @@ class OrchestrationController extends Controller
                 'hint'   => 'If you are using the VROOM engine, ensure the VROOM service is running and VROOM_HOST is configured correctly. Alternatively, switch to the built-in "greedy" engine in Orchestrator Settings.',
                 'engine' => $engineId,
             ], 503);
+        }
+
+        if ($mode !== 'assign_drivers') {
+            $result = RouteMetrics::annotate($result, $orders, $vehicles);
         }
 
         return response()->json($result);
@@ -384,7 +394,71 @@ class OrchestrationController extends Controller
 
     protected function orchestratorEngineSetting(): string
     {
-        return Setting::lookup('fleetops.orchestrator_engine', 'greedy');
+        return OrchestratorSettings::engineForCompany($this->companyUuid());
+    }
+
+    /**
+     * Re-sequence each vehicle's already-assigned orders.
+     *
+     * A solver engine (e.g. VROOM) is run once per vehicle, restricted to
+     * that vehicle and its orders, so the stop order, arrival times and
+     * distances come from the selected engine. Engines that only assign
+     * orders (greedy, capacity) cannot sequence stops, and a solver that is
+     * missing or unavailable is replaced; in both cases the built-in route
+     * sequencer runs and the result says which engine ran and why.
+     */
+    protected function optimizeRoutes(string $engineId, $orders, array $options): array
+    {
+        $warn = true;
+        if (in_array($engineId, self::ASSIGNMENT_ONLY_ENGINES, true)) {
+            $warn   = false;
+            $reason = sprintf('The "%s" engine assigns orders but does not sequence stops; stops were sequenced by the built-in route sequencer.', $engineId);
+        } elseif (!$this->registry->has($engineId)) {
+            $reason = sprintf('No orchestration engine is registered as "%s".', $engineId);
+        } else {
+            try {
+                return $this->sequenceWithEngine($this->registry->resolve($engineId), $orders, $options);
+            } catch (\RuntimeException $e) {
+                $reason = $e->getMessage();
+            }
+        }
+
+        $result = $this->routeSequencingEngine()->sequence($orders, $options);
+
+        return OrchestrationEngineRegistry::markFallback($result, $result['summary']['engine'] ?? 'route_sequencing', $engineId, $reason, $warn);
+    }
+
+    /**
+     * Run a solver engine once per vehicle group, keeping every order on its vehicle.
+     */
+    protected function sequenceWithEngine(OrchestrationEngineInterface $engine, $orders, array $options): array
+    {
+        $options     = array_merge($options, ['allocation_strategy' => 'route_aware']);
+        $assignments = [];
+        $unassigned  = [];
+
+        foreach ($orders->groupBy(fn ($order) => $order->vehicle_assigned_uuid ?? '') as $vehicleUuid => $vehicleOrders) {
+            $vehicle = $vehicleUuid !== '' && $vehicleOrders->first()->relationLoaded('vehicle') ? $vehicleOrders->first()->vehicle : null;
+            if (!$vehicle) {
+                // Without an assigned vehicle there is no route to sequence.
+                array_push($unassigned, ...$vehicleOrders->pluck('public_id')->all());
+                continue;
+            }
+
+            $result = $engine->allocate($vehicleOrders->values(), collect([$vehicle]), $options);
+            array_push($assignments, ...($result['assignments'] ?? []));
+            array_push($unassigned, ...($result['unassigned'] ?? []));
+        }
+
+        return [
+            'assignments' => $assignments,
+            'unassigned'  => array_values(array_unique($unassigned)),
+            'summary'     => [
+                'engine'     => $engine->getIdentifier(),
+                'assigned'   => count($assignments),
+                'unassigned' => count(array_unique($unassigned)),
+            ],
+        ];
     }
 
     protected function driverAssignmentEngine(): DriverAssignmentEngine

@@ -49,6 +49,8 @@ export default class OrchestratorWorkbenchComponent extends Component {
     @tracked availableVehicles = [];
     @tracked availableDrivers = [];
     @tracked availableEngines = [];
+    /** The engine selected in Orchestrator settings; new phases start with it. */
+    @tracked defaultEngine = null;
 
     // ── Plan state ────────────────────────────────────────────────────────────
 
@@ -204,6 +206,12 @@ export default class OrchestratorWorkbenchComponent extends Component {
         } catch {
             this.availableEngines = [{ id: 'greedy', name: 'Greedy (built-in)' }];
         }
+        try {
+            const settings = yield this.fetch.get('fleet-ops/settings/orchestrator-settings');
+            this.defaultEngine = settings?.allocation_engine ?? null;
+        } catch {
+            this.defaultEngine = null;
+        }
     }
 
     @task *loadCardFields() {
@@ -270,7 +278,8 @@ export default class OrchestratorWorkbenchComponent extends Component {
                 mode: phase.mode,
                 order_statuses: phase.orderStatuses ?? ['created'],
                 options: {
-                    engine: phase.engine ?? 'greedy',
+                    // Without an explicit engine the server runs the one selected in Orchestrator settings.
+                    engine: phase.engine ?? null,
                     allocation_strategy: phase.allocationStrategy ?? 'route_aware',
                     vehicle_packing: phase.vehiclePacking ?? 'minimize_vehicles',
                     balance_workload: phase.balanceWorkload ?? false,
@@ -310,6 +319,11 @@ export default class OrchestratorWorkbenchComponent extends Component {
             this.ranPhaseTypes = ranTypes;
             if (result.message) {
                 this.orchestratorRunMessage = result.message;
+            }
+            // The server substituted another engine (e.g. VROOM unavailable) — say so.
+            if (result.warning) {
+                this.orchestratorRunMessage = result.warning;
+                this.notifications.warning(result.warning, { autoClear: true, clearDuration: 10000 });
             }
             // If the run returned zero assignments, surface the error/message to
             // the user immediately — otherwise the right panel stays blank with
@@ -401,7 +415,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
             id: 'legacy',
             mode: 'allocate',
             label: 'Allocate',
-            engine: 'greedy',
+            engine: null,
             allocationStrategy: 'route_aware',
             orderStatuses: ['created'],
             balanceWorkload: false,

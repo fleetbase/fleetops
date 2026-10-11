@@ -15,6 +15,7 @@ import { inject as service } from '@ember/service';
  *
  * @arg phases              - Array of phase objects (managed externally)
  * @arg availableEngines    - Array of { id, name } engine options
+ * @arg defaultEngine       - Engine id selected in Orchestrator settings; new phases start with it
  * @arg onPhasesChange      - Action(phases) — called when phases array changes
  * @arg onRunPhases         - Action(phases) — called when "Run" is clicked
  */
@@ -49,7 +50,7 @@ export default class OrchestratorPhaseBuilderComponent extends Component {
             id: crypto.randomUUID(),
             mode,
             label: this.intl.t(`orchestrator.mode-${mode.replace(/_/g, '-')}`),
-            engine: 'greedy',
+            engine: this.args.defaultEngine ?? 'greedy',
             allocationStrategy: 'route_aware',
             vehiclePacking: 'minimize_vehicles',
             orderStatuses: ['created'],

@@ -247,7 +247,7 @@ test('vroom route allocation builds shipment payloads and maps delivery assignme
             'distance'   => 4200,
         ])
         ->and($result['unassigned'])->toBe([])
-        ->and($result['summary'])->toBe(['routes' => 1]);
+        ->and($result['summary'])->toBe(['engine' => 'vroom', 'routes' => 1]);
 
     $payload = $engine->payloads[0];
 
@@ -367,7 +367,14 @@ test('vroom capacity-only allocation maps solver responses and summary metadata'
         'vehicle_id' => 'vehicle_capacity',
         'driver_id'  => 'driver_capacity',
         'sequence'   => 1,
+        // the placeholder matrix timings are cleared so estimates replace them
+        'arrival'        => null,
+        'duration'       => null,
+        'distance'       => null,
+        'route_distance' => null,
+        'route_duration' => null,
     ])
+        ->and($result['summary'])->not->toHaveKeys(['distance', 'duration'])
         ->and($result['summary'])->toMatchArray([
             'engine'              => 'vroom',
             'allocation_strategy' => 'capacity_only',
