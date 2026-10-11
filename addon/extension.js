@@ -468,6 +468,16 @@ export default {
                 default: true,
             }),
             new Widget({
+                id: 'fleet-ops-proof-of-delivery-widget',
+                name: 'Proof of Delivery',
+                description: 'The latest proof of delivery photos, each linking to its order.',
+                icon: 'camera',
+                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/proof-of-delivery'),
+                grid_options: { w: 4, h: 9, minW: 3, minH: 6 },
+                category: 'Operations',
+                default: false,
+            }),
+            new Widget({
                 id: 'fleet-ops-geofence-violations-widget',
                 name: 'Geofence Violations',
                 description: 'Dwell-time outliers and geofence event hotspots.',

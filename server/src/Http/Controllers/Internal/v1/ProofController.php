@@ -22,6 +22,53 @@ class ProofController extends FleetOpsController
     public $resource = 'proof';
 
     /**
+     * The most a dashboard can ask for in one request.
+     */
+    public const RECENT_LIMIT_MAX = 24;
+
+    /**
+     * The latest photo proofs captured for the company's orders, newest first,
+     * for the dashboard's proof-of-delivery tile.
+     */
+    public function recent(Request $request)
+    {
+        $limit  = max(1, min(static::RECENT_LIMIT_MAX, (int) $request->input('limit', 12)));
+        $proofs = Proof::where('company_uuid', session('company'))
+            ->whereNotNull('order_uuid')
+            ->whereHas('file', fn ($query) => $query->where('type', 'photo'))
+            ->with(['file', 'order.customer'])
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get();
+
+        return $this->jsonResponse([
+            'proofs' => $proofs->map(fn (Proof $proof) => $this->recentProofPayload($proof))->values()->all(),
+        ]);
+    }
+
+    protected function recentProofPayload(Proof $proof): array
+    {
+        $order = $proof->order;
+
+        return [
+            'id'            => $proof->public_id,
+            'order_id'      => $order?->public_id,
+            'customer_name' => data_get($order, 'customer.name'),
+            'remarks'       => $proof->remarks,
+            'url'           => $this->photoUrl($proof->file),
+            'captured_at'   => $proof->created_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * File::url signs the object on s3/gcs, so a private bucket still serves the photo.
+     */
+    protected function photoUrl(File $file): ?string
+    {
+        return $file->url;
+    }
+
+    /**
      * Verify a QR code.
      *
      * @return void

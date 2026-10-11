@@ -582,7 +582,12 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->post('import', $controller('import'));
                             }
                         );
-                        $router->fleetbaseRoutes('proofs');
+                        $router->fleetbaseRoutes(
+                            'proofs',
+                            function ($router, $controller) {
+                                $router->get('recent', $controller('recent'));
+                            }
+                        );
                         $router->fleetbaseRoutes('purchase-rates');
                         $router->fleetbaseRoutes('routes');
                         $router->fleetbaseRoutes('positions', function ($router, $controller) {
