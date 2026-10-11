@@ -17,19 +17,23 @@ class Zone extends FleetbaseResource
     public function toArray($request)
     {
         return $this->withCustomFields([
-            'id'                => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
-            'public_id'         => $this->when(Http::isInternalRequest(), $this->public_id),
-            'uuid'              => $this->when(Http::isInternalRequest(), $this->uuid),
-            'service_area_uuid' => $this->when(Http::isInternalRequest(), $this->service_area_uuid),
-            'name'              => $this->name,
-            'description'       => $this->description,
-            'center'            => $this->location,
-            'border'            => $this->border,
-            'color'             => $this->color,
-            'stroke_color'      => $this->stroke_color,
-            'status'            => $this->status,
-            'updated_at'        => $this->updated_at,
-            'created_at'        => $this->created_at,
+            'id'                      => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
+            'public_id'               => $this->when(Http::isInternalRequest(), $this->public_id),
+            'uuid'                    => $this->when(Http::isInternalRequest(), $this->uuid),
+            'service_area_uuid'       => $this->when(Http::isInternalRequest(), $this->service_area_uuid),
+            'name'                    => $this->name,
+            'description'             => $this->description,
+            'center'                  => $this->location,
+            'border'                  => $this->border,
+            'color'                   => $this->color,
+            'stroke_color'            => $this->stroke_color,
+            'trigger_on_entry'        => $this->trigger_on_entry,
+            'trigger_on_exit'         => $this->trigger_on_exit,
+            'dwell_threshold_minutes' => $this->dwell_threshold_minutes,
+            'speed_limit_kmh'         => $this->speed_limit_kmh,
+            'status'                  => $this->status,
+            'updated_at'              => $this->updated_at,
+            'created_at'              => $this->created_at,
         ]);
     }
 
@@ -41,16 +45,20 @@ class Zone extends FleetbaseResource
     public function toWebhookPayload()
     {
         return [
-            'id'           => $this->public_id,
-            'name'         => $this->name,
-            'description'  => $this->description,
-            'center'       => $this->location,
-            'border'       => $this->border,
-            'color'        => $this->color,
-            'stroke_color' => $this->stroke_color,
-            'status'       => $this->status,
-            'updated_at'   => $this->updated_at,
-            'created_at'   => $this->created_at,
+            'id'                      => $this->public_id,
+            'name'                    => $this->name,
+            'description'             => $this->description,
+            'center'                  => $this->location,
+            'border'                  => $this->border,
+            'color'                   => $this->color,
+            'stroke_color'            => $this->stroke_color,
+            'trigger_on_entry'        => $this->trigger_on_entry,
+            'trigger_on_exit'         => $this->trigger_on_exit,
+            'dwell_threshold_minutes' => $this->dwell_threshold_minutes,
+            'speed_limit_kmh'         => $this->speed_limit_kmh,
+            'status'                  => $this->status,
+            'updated_at'              => $this->updated_at,
+            'created_at'              => $this->created_at,
         ];
     }
 }
