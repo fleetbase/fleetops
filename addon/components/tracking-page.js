@@ -107,10 +107,6 @@ export default class TrackingPageComponent extends Component {
         return this.intl.primaryLocale ?? 'en-us';
     }
 
-    get dir() {
-        return this.locale.startsWith('ar') ? 'rtl' : 'ltr';
-    }
-
     get number() {
         return (this.data?.tracking_number ?? this.trackingInput ?? '').trim();
     }

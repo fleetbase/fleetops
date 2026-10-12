@@ -13781,10 +13781,6 @@ body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-
     background: var(--tp-surface);
 }
 
-.tp-root[dir='rtl'] .tp-flip {
-    transform: scaleX(-1);
-}
-
 @media (width >= 960px) {
     .tp-main {
         padding: 2rem;

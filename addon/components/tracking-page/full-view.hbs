@@ -1,7 +1,7 @@
 <div class="tp-full {{if @data.location 'tp-full-with-map'}}" {{did-insert this.loadProofs}} {{did-update this.loadProofs @data.proofs}}>
     <div class="tp-row-wrap tp-full-chips">
         {{#if @fromList}}
-            <button type="button" class="tp-back" {{on "click" @onBack}}><FaIcon @icon="chevron-left" class="tp-flip" /> {{t "tracking-page.page.your-orders"}}</button>
+            <button type="button" class="tp-back" {{on "click" @onBack}}><FaIcon @icon="chevron-left" /> {{t "tracking-page.page.your-orders"}}</button>
         {{/if}}
         <span class="tp-chip tp-chip-accent"><FaIcon @icon={{this.viewerChip.icon}} /> {{this.viewerChip.label}}</span>
         {{#if this.canSignOut}}

@@ -1,4 +1,4 @@
-<div class="tp-root {{if this.dark 'tp-dark'}}" style={{this.themeStyle}} dir={{this.dir}} lang={{this.locale}}>
+<div class="tp-root {{if this.dark 'tp-dark'}}" style={{this.themeStyle}} lang={{this.locale}}>
     <header class="tp-header">
         <div class="tp-brand">
             {{#if this.company.logo_url}}
@@ -72,7 +72,7 @@
             <TrackingPage::PublicView @data={{this.data}} @signInUrl={{this.signInUrl}} @onVerify={{this.startVerify}} />
         {{else if (eq this.screen "verify")}}
             <section class="tp-narrow tp-stack">
-                <button type="button" class="tp-back" {{on "click" this.cancelVerify}}><FaIcon @icon="chevron-left" class="tp-flip" /> {{t "tracking-page.page.back"}}</button>
+                <button type="button" class="tp-back" {{on "click" this.cancelVerify}}><FaIcon @icon="chevron-left" /> {{t "tracking-page.page.back"}}</button>
                 <TrackingPage::VerifyPanel
                     @step={{this.verifyStep}}
                     @channels={{this.channels}}
