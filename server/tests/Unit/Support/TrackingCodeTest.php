@@ -176,7 +176,10 @@ test('tracking page links name the company page when its settings send links the
             ->and(TrackingCode::pageUrl('NOR1', 'co-2'))->toEndWith('/~/track/NOR1')
             ->and(TrackingCode::pageUrl('NOR1', 'broken'))->toEndWith('/~/track/NOR1')
             ->and(TrackingCode::pageUrl('NOR1'))->toEndWith('/~/track/NOR1')
-            ->and(TrackingCode::pageUrl('A B/1'))->toBe('https://console.fleetbase.test/~/track/A%20B%2F1');
+            ->and(TrackingCode::pageUrl('A B/1'))->toBe('https://console.fleetbase.test/~/track/A%20B%2F1')
+            // Notifications pass a nullable number; without one the link opens the page itself.
+            ->and(TrackingCode::pageUrl(null))->toBe('https://console.fleetbase.test/~/track')
+            ->and(TrackingCode::pageUrl('', 'co-1'))->toEndWith('/~/t/northwind');
     } finally {
         Illuminate\Container\Container::setInstance($previousContainer);
     }
