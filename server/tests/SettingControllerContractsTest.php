@@ -162,6 +162,116 @@ function fleetopsJsonPayload(mixed $response): array
     return $response->getData(true);
 }
 
+class FleetOpsMapCenterRedisFake
+{
+    public array $sets = [];
+
+    public function __construct(private array $cached = [], private bool $throws = false)
+    {
+    }
+
+    public function exists(string $key): bool
+    {
+        if ($this->throws) {
+            throw new RuntimeException('redis unavailable');
+        }
+
+        return array_key_exists($key, $this->cached);
+    }
+
+    public function get(string $key): mixed
+    {
+        return json_encode($this->cached[$key]);
+    }
+
+    public function set(string $key, string $value): bool
+    {
+        $this->sets[] = $key;
+
+        return true;
+    }
+}
+
+function fleetopsMapCenterFor(mixed $company, FleetOpsMapCenterRedisFake $redis): mixed
+{
+    Illuminate\Support\Facades\Redis::swap($redis);
+
+    $controller          = new FleetOpsSettingControllerProbe();
+    $controller->company = $company;
+
+    return fleetopsJsonPayload($controller->getMapSettings())['companyMapCenter'];
+}
+
+test('map settings persist a company default view and never persist the derived country centre', function () {
+    $controller = new FleetOpsSettingControllerProbe();
+
+    $saved = fleetopsJsonPayload($controller->saveMapSettings(new Request([
+        'settings' => [
+            'defaultMapLatitude'  => '-33.8688',
+            'defaultMapLongitude' => 151.2093,
+            'defaultMapZoom'      => '25',
+            'fitMapToVehicles'    => '1',
+            'companyMapCenter'    => ['latitude' => 1, 'longitude' => 2],
+        ],
+    ])));
+
+    expect($controller->configuredCompany['fleet-ops.map-settings'])->toMatchArray([
+        'defaultMapLatitude'  => -33.8688,
+        'defaultMapLongitude' => 151.2093,
+        'defaultMapZoom'      => 20,
+        'fitMapToVehicles'    => true,
+    ])
+        ->and(array_key_exists('companyMapCenter', $controller->configuredCompany['fleet-ops.map-settings']))->toBeFalse()
+        ->and($saved['defaultMapLatitude'])->toBe(-33.8688)
+        ->and($saved['companyMapCenter'])->toBeNull();
+
+    // A fresh company reads the defaults: no centre, no zoom, no fitting.
+    $fresh = fleetopsJsonPayload((new FleetOpsSettingControllerProbe())->getMapSettings());
+    expect($fresh)->toMatchArray([
+        'defaultMapLatitude'  => null,
+        'defaultMapLongitude' => null,
+        'defaultMapZoom'      => null,
+        'fitMapToVehicles'    => false,
+        'companyMapCenter'    => null,
+    ]);
+});
+
+test('map default view drops half or out of range centres and clamps the zoom', function (array $input, array $expected) {
+    $controller = new FleetOpsSettingControllerProbe();
+    $controller->saveMapSettings(new Request(['settings' => $input]));
+
+    expect($controller->configuredCompany['fleet-ops.map-settings'])->toMatchArray($expected);
+})->with([
+    'latitude only'          => [['defaultMapLatitude' => '10'], ['defaultMapLatitude' => null, 'defaultMapLongitude' => null]],
+    'latitude out of range'  => [['defaultMapLatitude' => 91, 'defaultMapLongitude' => 10], ['defaultMapLatitude' => null, 'defaultMapLongitude' => null]],
+    'longitude out of range' => [['defaultMapLatitude' => 10, 'defaultMapLongitude' => -180.5], ['defaultMapLatitude' => null, 'defaultMapLongitude' => null]],
+    'non numeric'            => [['defaultMapLatitude' => 'north', 'defaultMapLongitude' => ''], ['defaultMapLatitude' => null, 'defaultMapLongitude' => null]],
+    'zero is a real place'   => [['defaultMapLatitude' => 0, 'defaultMapLongitude' => '0'], ['defaultMapLatitude' => 0.0, 'defaultMapLongitude' => 0.0]],
+    'zoom below range'       => [['defaultMapZoom' => 0], ['defaultMapZoom' => 1]],
+    'zoom not an integer'    => [['defaultMapZoom' => '4.5'], ['defaultMapZoom' => null]],
+]);
+
+test('map settings centre a company on its country, falling back to the country of its timezone', function () {
+    $australia = ['countryData:AU' => ['coordinates' => ['latitude' => -25.58, 'longitude' => 134.5]]];
+
+    expect(fleetopsMapCenterFor(['country' => 'au'], new FleetOpsMapCenterRedisFake($australia)))
+        ->toBe(['country' => 'AU', 'latitude' => -25.58, 'longitude' => 134.5])
+        ->and(fleetopsMapCenterFor(['country' => 'Australia', 'timezone' => 'Australia/Sydney'], new FleetOpsMapCenterRedisFake($australia)))
+        ->toBe(['country' => 'AU', 'latitude' => -25.58, 'longitude' => 134.5]);
+});
+
+test('map settings omit the country centre when the company location cannot be resolved', function (mixed $company, array $cached, bool $throws) {
+    expect(fleetopsMapCenterFor($company, new FleetOpsMapCenterRedisFake($cached, $throws)))->toBeNull();
+})->with([
+    'no company'             => [null, [], false],
+    'no country or timezone' => [['country' => null, 'timezone' => ''], [], false],
+    'utc timezone'           => [['timezone' => 'UTC'], [], false],
+    'unknown timezone'       => [['timezone' => 'Not/AZone'], [], false],
+    'unknown country'        => [['country' => 'ZZ'], ['countryData:ZZ' => []], false],
+    'null island centroid'   => [['country' => 'XX'], ['countryData:XX' => ['coordinates' => ['latitude' => 0, 'longitude' => 0]]], false],
+    'country lookup fails'   => [['country' => 'AU'], [], true],
+]);
+
 test('setting controller persists and returns basic company settings through configured keys', function () {
     session(['company' => 'company-1']);
     $controller                  = new FleetOpsSettingControllerProbe();

@@ -2868,6 +2868,15 @@ settings:
         show-transit-layer-help-text: Overlay public transit routes on the Google Maps view.
         settings-saved: Map settings saved successfully.
         settings-save-failed: Failed to save map settings. Please try again.
+        default-view: Default Map View
+        default-view-help-text: Where the live map and the Live Fleet Map widget open. A default center is used instead of the browser's location. Without one, the map opens near your active orders or your browser's location, then in your company's country.
+        default-center: Default Center
+        default-center-help-text: Enter coordinates or select a point from the map. Leave blank to locate users automatically.
+        clear-default-center: Clear default center
+        default-zoom: Default Zoom
+        default-zoom-help-text: Zoom level from 1 (whole world) to 20 (street level) used with the default center. Defaults to 12.
+        fit-to-vehicles: Fit to my vehicles
+        fit-to-vehicles-help-text: When the map opens, frame every vehicle that has a position. If no vehicle has a position yet, the default center is used.
     navigator-app:
         navigator-app-settings: Navigator App Settings
     payments:

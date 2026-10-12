@@ -52,11 +52,38 @@ module('Unit | Service | map-settings', function (hooks) {
     });
 
     test('it applies google view layer defaults when values are omitted', function (assert) {
+        this.owner.register('service:fetch', class extends Service {});
         const service = this.owner.lookup('service:map-settings');
         const settings = service.applySettings({ mapProvider: 'google' });
 
         assert.strictEqual(settings.googleMapsMapType, 'roadmap');
         assert.false(service.showGoogleMapsTrafficLayer);
         assert.false(service.showGoogleMapsTransitLayer);
+    });
+
+    test('it exposes no default map view until the company sets one', function (assert) {
+        this.owner.register('service:fetch', class extends Service {});
+        const service = this.owner.lookup('service:map-settings');
+        service.applySettings({});
+
+        assert.strictEqual(service.defaultMapCenter, null);
+        assert.strictEqual(service.companyCountryCenter, null);
+        assert.false(service.fitMapToVehicles);
+    });
+
+    test('it exposes the company default map view and country centre', function (assert) {
+        this.owner.register('service:fetch', class extends Service {});
+        const service = this.owner.lookup('service:map-settings');
+        service.applySettings({
+            defaultMapLatitude: -33.86,
+            defaultMapLongitude: 151.2,
+            defaultMapZoom: 10,
+            fitMapToVehicles: true,
+            companyMapCenter: { country: 'AU', latitude: -25.58, longitude: 134.5 },
+        });
+
+        assert.deepEqual(service.defaultMapCenter, { latitude: -33.86, longitude: 151.2, zoom: 10 });
+        assert.deepEqual(service.companyCountryCenter, { latitude: -25.58, longitude: 134.5, zoom: 4 });
+        assert.true(service.fitMapToVehicles);
     });
 });
