@@ -1091,6 +1091,7 @@ class Order extends Model
         $route->save();
 
         $this->updateQuietly(['route_uuid' => $route->uuid]);
+        $this->invalidateApiCache();
 
         return $this;
     }
@@ -1226,6 +1227,7 @@ class Order extends Model
         ]);
 
         if ($attached) {
+            $this->invalidateApiCache();
             $this->setRelation('purchaseRate', $purchaseRate);
 
             if ($purchaseRate->transaction_uuid) {
@@ -1288,6 +1290,7 @@ class Order extends Model
             ]);
 
             $this->updateQuietly(['transaction_uuid' => $transaction->uuid]);
+            $this->invalidateApiCache();
         } catch (\Throwable $e) {
         }
 
@@ -1327,6 +1330,7 @@ class Order extends Model
         if ($save) {
             $this->saveQuietly();
             $this->flushAttributesCache();
+            $this->invalidateApiCache();
         }
 
         dispatch(fn () => event(new OrderDispatched($this)))->afterCommit();
@@ -1814,6 +1818,7 @@ class Order extends Model
         $matrix = Utils::getPreliminaryDistanceMatrix($origin, $destination);
 
         $this->updateQuietly(['distance' => $matrix->distance, 'time' => $matrix->time]);
+        $this->invalidateApiCache();
 
         return $this;
     }
@@ -1851,6 +1856,7 @@ class Order extends Model
                 'distance' => $matrix->distance,
                 'time'     => $matrix->time,
             ]);
+            $this->invalidateApiCache();
         }
 
         return $this;

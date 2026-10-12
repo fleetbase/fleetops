@@ -595,6 +595,7 @@ class DriverController extends FleetOpsController
             'driver_assigned_uuid' => null,
             'updated_at'           => now(),
         ]);
+        Order::invalidateApiCacheManually(session('company'));
     }
 
     protected function freshOrders($orders, array $with)
