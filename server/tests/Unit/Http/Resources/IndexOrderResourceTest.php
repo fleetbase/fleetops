@@ -6,6 +6,7 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\TrackingNumber;
+use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
 use Illuminate\Http\Request;
@@ -81,6 +82,35 @@ test('index order resource resolves loaded relations into lightweight payloads',
         ->and($resolved['latest_status'])->toBe('created')
         ->and($resolved['latest_status_code'])->toBeNull()
         ->and($resolved['meta'])->toBe(['_index_resource' => true]);
+});
+
+test('index order resource reports the newest tracking status whatever order they load in', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    app()->instance('request', Request::create('/v1/orders', 'GET'));
+    session(['company' => 'company-1']);
+
+    $status = function (int $id, string $code, string $createdAt) {
+        $status = new TrackingStatus();
+        $status->setRawAttributes(['id' => $id, 'uuid' => "ts-{$code}", 'status' => ucfirst($code), 'code' => $code, 'created_at' => $createdAt], true);
+
+        return $status;
+    };
+
+    // The relation has no order, so statuses arrive oldest first; two share a second
+    $order = fleetopsIndexOrderResourceOrder();
+    $order->setRelation('trackingStatuses', collect([
+        $status(1, 'created', '2026-10-13 09:00:00'),
+        $status(2, 'dispatched', '2026-10-13 09:05:00'),
+        $status(3, 'started', '2026-10-13 09:05:00'),
+    ]));
+
+    $resolved = (new IndexOrderResource($order))->resolve(Request::create('/v1/orders', 'GET'));
+
+    expect($resolved['latest_status'])->toBe('Started')
+        ->and($resolved['latest_status_code'])->toBe('started');
 });
 
 /**
