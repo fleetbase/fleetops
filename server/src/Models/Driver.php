@@ -681,8 +681,11 @@ class Driver extends Model
      */
     public function assignVehicle(Vehicle $vehicle): self
     {
-        // Unassign vehicle from other drivers
-        static::where('vehicle_uuid', $vehicle->uuid)->update(['vehicle_uuid' => null]);
+        // Unassign vehicle from other drivers. This driver is skipped: when it already holds the
+        // vehicle the save below isn't dirty, so it would not write the vehicle back
+        static::where('vehicle_uuid', $vehicle->uuid)
+            ->when($this->uuid, fn ($query) => $query->where('uuid', '!=', $this->uuid))
+            ->update(['vehicle_uuid' => null]);
         static::invalidateApiCacheManually($vehicle->company_uuid ?? $this->company_uuid);
 
         // Set this vehicle to the driver instance
