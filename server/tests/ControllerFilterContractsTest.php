@@ -1152,7 +1152,7 @@ test('contact filter records identity address and date filters', function () {
         ->and(collect($query->calls)->where(0, 'whereBetween')->values())->toHaveCount(1)
         ->and(collect($query->calls)->where(0, 'whereDate')->values())->toHaveCount(1);
 
-    $address = collect($query->calls)->first(fn ($call) => $call[0] === 'whereHas' && $call[1] === 'addresses');
+    $address = collect($query->calls)->first(fn ($call) => $call[0] === 'whereHas' && $call[1] === 'place');
 
     expect($address[2])->toBe([
         ['search', '1 Test Street'],
