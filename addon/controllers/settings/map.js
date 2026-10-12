@@ -92,14 +92,16 @@ export default class SettingsMapController extends Controller {
     }
 
     /**
-     * The default center as a GeoJSON point for the coordinates input, or null.
+     * The default center as a GeoJSON point for the coordinates input, or undefined.
+     * Not null: `CoordinatesInput#isPoint` reads `.type` on any object, and `typeof null`
+     * is "object", so a null value throws while the input is created.
      *
      * @memberof SettingsMapController
-     * @return {Object|null}
+     * @return {Object|undefined}
      */
     get defaultMapCenterPoint() {
         if (!this.hasDefaultMapCenter) {
-            return null;
+            return undefined;
         }
 
         return { type: 'Point', coordinates: [this.defaultMapLongitude, this.defaultMapLatitude] };
