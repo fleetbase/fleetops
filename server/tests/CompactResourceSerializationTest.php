@@ -2838,5 +2838,7 @@ test('tracking number resource publishes a scannable qr code content beside the 
         ->and($payload['url'])->toBe('https://console.fleetbase.test/~/track/TN-SCAN')
         ->and($payload['qr_code'])->toBe('qr-data')
         // Nothing to scan without a tracking number: the key is absent, not null.
-        ->and(array_key_exists('qr_code_content', $withoutNumber))->toBeFalse();
+        ->and(array_key_exists('qr_code_content', $withoutNumber))->toBeFalse()
+        // Nor is there a tracking page to link to.
+        ->and(array_key_exists('url', $withoutNumber))->toBeFalse();
 });
