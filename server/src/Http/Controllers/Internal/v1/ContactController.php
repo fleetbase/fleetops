@@ -19,6 +19,7 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\Models\User;
+use Fleetbase\Support\ApiModelCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -266,6 +267,7 @@ class ContactController extends FleetOpsController
     protected function bulkUpdateCustomerContext(string $modelClass, array $filter, array $replacement): void
     {
         $modelClass::where($filter)->update($replacement);
+        ApiModelCache::invalidateModelCache(new $modelClass(), session('company'));
     }
 
     protected function customerPortalIssuesForContact(Contact $contact)
@@ -350,6 +352,7 @@ class ContactController extends FleetOpsController
     protected function saveContactMetaQuietly(Contact $contact, array $meta): void
     {
         $contact->forceFill(['meta' => $meta])->saveQuietly();
+        $contact->invalidateApiCache();
     }
 
     protected function isCustomerPortalInstalled(): bool

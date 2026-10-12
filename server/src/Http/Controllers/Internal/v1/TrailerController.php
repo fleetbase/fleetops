@@ -166,6 +166,7 @@ class TrailerController extends FleetOpsController
             'updated_by_uuid'           => session('user'),
             'updated_at'                => now(),
         ]));
+        AssetConnection::invalidateApiCacheManually(session('company'));
 
         return response()->json([
             'status'  => 'ok',

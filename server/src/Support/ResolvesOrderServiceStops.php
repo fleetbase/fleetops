@@ -15,6 +15,7 @@ use Fleetbase\FleetOps\Models\TrackingNumber;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\Support\ApiModelCache;
 use Fleetbase\Support\TemplateString;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -185,6 +186,7 @@ trait ResolvesOrderServiceStops
 
         $payload->current_waypoint_uuid = $place->uuid;
         $payload->saveQuietly();
+        ApiModelCache::invalidateModelCache($payload, $payload->company_uuid);
         $payload->setRelation('currentWaypoint', $place);
 
         if (($stop['waypoint'] ?? null) instanceof Waypoint) {
@@ -254,6 +256,7 @@ trait ResolvesOrderServiceStops
             $activityId = $waypoint->insertActivity($activity, $location, $proof);
             if ($activityId && $waypoint->tracking_number_uuid) {
                 DB::table((new TrackingNumber())->getTable())->where('uuid', $waypoint->tracking_number_uuid)->update(['status_uuid' => $activityId]);
+                ApiModelCache::invalidateModelCache(new TrackingNumber(), $payload->company_uuid ?? $order->company_uuid);
                 if ($waypoint->relationLoaded('trackingNumber')) {
                     $waypoint->trackingNumber->status_uuid = $activityId;
                     $waypoint->trackingNumber->unsetRelation('status');
@@ -391,6 +394,7 @@ trait ResolvesOrderServiceStops
         // @codeCoverageIgnoreEnd
 
         DB::table($payload->getTable())->where('uuid', $payload->uuid)->update([$column => $trackingNumberUuid]);
+        ApiModelCache::invalidateModelCache($payload, $payload->company_uuid ?? $order->company_uuid);
         $payload->{$column} = $trackingNumberUuid;
 
         return TrackingNumber::where('uuid', $trackingNumberUuid)->first();
@@ -417,6 +421,7 @@ trait ResolvesOrderServiceStops
 
         if ($activityId) {
             DB::table($trackingNumber->getTable())->where('uuid', $trackingNumber->uuid)->update(['status_uuid' => $activityId]);
+            ApiModelCache::invalidateModelCache($trackingNumber, $payload->company_uuid ?? $order->company_uuid);
             $trackingNumber->status_uuid = $activityId;
         }
 

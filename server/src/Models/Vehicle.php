@@ -642,6 +642,7 @@ class Vehicle extends Model
     public function unassignDriver(): self
     {
         Driver::where('vehicle_uuid', $this->uuid)->update(['vehicle_uuid' => null]);
+        Driver::invalidateApiCacheManually($this->company_uuid);
         $this->unsetRelation('driver');
 
         return $this;

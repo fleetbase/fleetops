@@ -873,6 +873,11 @@ class Place extends Model
 
         $result = static::insert($values);
 
+        // Inserted without model events
+        if ($result) {
+            static::invalidateApiCacheManually($values['company_uuid']);
+        }
+
         return $result ? $uuid : false;
     }
 

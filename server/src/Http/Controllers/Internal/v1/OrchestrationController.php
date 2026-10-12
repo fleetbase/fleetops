@@ -13,6 +13,7 @@ use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
+use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Orchestration\Contracts\OrchestrationEngineInterface;
 use Fleetbase\FleetOps\Orchestration\Engines\DriverAssignmentEngine;
 use Fleetbase\FleetOps\Orchestration\Engines\RouteSequencingEngine;
@@ -489,9 +490,10 @@ class OrchestrationController extends Controller
             return response()->json(['error' => 'No assignments provided.'], 422);
         }
 
-        $committed = [];
-        $failed    = [];
-        $manifests = [];
+        $committed   = [];
+        $failed      = [];
+        $manifests   = [];
+        $resequenced = false;
 
         $this->beginOrchestrationTransaction();
         try {
@@ -576,6 +578,7 @@ class OrchestrationController extends Controller
                     if (!empty($assignment['waypoint_sequence']) && $order->payload) {
                         foreach ($assignment['waypoint_sequence'] as $seq => $waypointId) {
                             $this->updateWaypointSequence($order->payload_uuid, $waypointId, $seq);
+                            $resequenced = true;
                         }
                     }
 
@@ -595,6 +598,11 @@ class OrchestrationController extends Controller
             }
 
             return response()->json(['error' => 'Commit failed: ' . $e->getMessage()], 500);
+        }
+
+        // Waypoint sequences are written without model events
+        if ($resequenced) {
+            Waypoint::invalidateApiCacheManually($companyUuid);
         }
 
         return response()->json([

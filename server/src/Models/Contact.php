@@ -417,6 +417,7 @@ class Contact extends Model
                 ]);
                 $user->forceFill(['type' => 'customer'])->saveQuietly();
                 $this->forceFill(['user_uuid' => $user->uuid])->saveQuietly();
+                $this->invalidateApiCache();
             } else {
                 $user = $this->createUser();
             }

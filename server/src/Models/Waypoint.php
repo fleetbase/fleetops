@@ -235,6 +235,11 @@ class Waypoint extends Model
             static::updateTrackingNumberUuid($uuid, $trackingNumberId);
         }
 
+        // Inserted and updated without model events
+        if ($result) {
+            static::invalidateApiCacheManually($values['company_uuid']);
+        }
+
         return $result ? $uuid : false;
     }
 

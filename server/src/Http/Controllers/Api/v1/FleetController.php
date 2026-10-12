@@ -434,10 +434,13 @@ class FleetController extends Controller
 
     protected function removeVehicleFromFleet(Fleet $fleet, Vehicle $vehicle): void
     {
-        FleetVehicle::where([
+        // Deleted without model events; fleet_vehicles rows carry no company
+        if (FleetVehicle::where([
             'fleet_uuid'   => $fleet->uuid,
             'vehicle_uuid' => $vehicle->uuid,
-        ])->delete();
+        ])->delete()) {
+            FleetVehicle::invalidateApiCacheManually();
+        }
     }
 
     protected function assignDriverToFleet(Fleet $fleet, Driver $driver): void
@@ -450,10 +453,13 @@ class FleetController extends Controller
 
     protected function removeDriverFromFleet(Fleet $fleet, Driver $driver): void
     {
-        FleetDriver::where([
+        // Deleted without model events; fleet_drivers rows carry no company
+        if (FleetDriver::where([
             'fleet_uuid'  => $fleet->uuid,
             'driver_uuid' => $driver->uuid,
-        ])->delete();
+        ])->delete()) {
+            FleetDriver::invalidateApiCacheManually();
+        }
     }
 
     protected function vehicleMembershipPayload(Fleet $fleet, Vehicle $vehicle, bool $assigned): array

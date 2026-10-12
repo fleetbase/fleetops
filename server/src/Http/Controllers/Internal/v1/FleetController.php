@@ -250,10 +250,17 @@ class FleetController extends FleetOpsController
 
     protected static function deleteFleetDriverAssignment(string $fleetUuid, string $driverUuid): mixed
     {
-        return FleetDriver::where([
+        $deleted = FleetDriver::where([
             'fleet_uuid'  => $fleetUuid,
             'driver_uuid' => $driverUuid,
         ])->delete();
+
+        // Deleted without model events; fleet_drivers rows carry no company
+        if ($deleted) {
+            FleetDriver::invalidateApiCacheManually();
+        }
+
+        return $deleted;
     }
 
     protected static function fleetVehicleAssignmentExists(string $fleetUuid, string $vehicleUuid): bool
@@ -274,10 +281,17 @@ class FleetController extends FleetOpsController
 
     protected static function deleteFleetVehicleAssignment(string $fleetUuid, string $vehicleUuid): mixed
     {
-        return FleetVehicle::where([
+        $deleted = FleetVehicle::where([
             'fleet_uuid'   => $fleetUuid,
             'vehicle_uuid' => $vehicleUuid,
         ])->delete();
+
+        // Deleted without model events; fleet_vehicles rows carry no company
+        if ($deleted) {
+            FleetVehicle::invalidateApiCacheManually();
+        }
+
+        return $deleted;
     }
 
     protected static function invalidateOperationsMonitor(): void

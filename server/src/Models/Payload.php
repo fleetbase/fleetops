@@ -12,6 +12,7 @@ use Fleetbase\FleetOps\Http\Resources\v1\Payload as PayloadResource;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Model;
+use Fleetbase\Support\ApiModelCache;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
@@ -365,6 +366,7 @@ class Payload extends Model
         $this->current_waypoint_uuid = $destination->uuid;
         if ($save) {
             DB::table($this->getTable())->where('uuid', $this->uuid)->update(['current_waypoint_uuid' => $destination->uuid]);
+            ApiModelCache::invalidateModelCache($this, $this->company_uuid);
         }
 
         return $this;
@@ -868,6 +870,7 @@ class Payload extends Model
     public function removeWaypoints()
     {
         Waypoint::where('payload_uuid', $this->uuid)->delete();
+        Waypoint::invalidateApiCacheManually($this->company_uuid);
         $this->setRelation('waypoints', collect());
 
         return $this;
@@ -895,6 +898,7 @@ class Payload extends Model
 
         if ($save) {
             $this->updateQuietly([$attr => null]);
+            ApiModelCache::invalidateModelCache($this, $this->company_uuid);
         }
 
         if (is_callable($callback)) {
@@ -928,6 +932,7 @@ class Payload extends Model
         // If optioned to save
         if ($save) {
             $this->updateQuietly([$attr => $id]);
+            ApiModelCache::invalidateModelCache($this, $this->company_uuid);
         }
 
         if (is_callable($callback)) {
@@ -1000,6 +1005,7 @@ class Payload extends Model
 
         $this->current_waypoint_uuid = $destination->uuid;
         $this->saveQuietly();
+        ApiModelCache::invalidateModelCache($this, $this->company_uuid);
         $this->updateWaypointActivity($activity, $location);
 
         return $this->load('currentWaypoint');
