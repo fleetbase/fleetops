@@ -142,12 +142,12 @@ test('vehicle observer seams resolve drivers and release assignments', function 
     expect(fleetopsObserverSeamInvoke(Fleetbase\FleetOps\Observers\VehicleObserver::class, 'findDriver', ['driver-veh-1'])?->uuid)->toBe('driver-veh-1')
         ->and(fleetopsObserverSeamInvoke(Fleetbase\FleetOps\Observers\VehicleObserver::class, 'findDriver', ['driver-missing']))->toBeNull();
 
-    // Deleting a vehicle releases only the drivers assigned to it
+    // Deleting a vehicle unassigns only the drivers assigned to it, and keeps them
     $vehicle = new Vehicle();
     $vehicle->setRawAttributes(['uuid' => 'vehicle-seam-1'], true);
-    fleetopsObserverSeamInvoke(Fleetbase\FleetOps\Observers\VehicleObserver::class, 'deleteDriversAssignedTo', [$vehicle]);
+    fleetopsObserverSeamInvoke(Fleetbase\FleetOps\Observers\VehicleObserver::class, 'unassignDriversFrom', [$vehicle]);
 
-    expect($connection->table('drivers')->whereNull('deleted_at')->pluck('uuid')->all())->toBe(['driver-veh-2']);
+    expect($connection->table('drivers')->whereNull('deleted_at')->pluck('vehicle_uuid', 'uuid')->all())->toBe(['driver-veh-1' => null, 'driver-veh-2' => 'vehicle-other']);
 });
 
 test('fleet observer clears the parent reference from child fleets', function () {

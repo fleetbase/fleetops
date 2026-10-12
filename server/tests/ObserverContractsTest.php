@@ -286,7 +286,7 @@ class FleetOpsVehicleObserverProbe extends VehicleObserver
         return $this->driver && $identifier === $this->identifier ? $this->driver : null;
     }
 
-    protected function deleteDriversAssignedTo(Vehicle $vehicle): mixed
+    protected function unassignDriversFrom(Vehicle $vehicle): int
     {
         $this->deleted[] = $vehicle->uuid;
 
