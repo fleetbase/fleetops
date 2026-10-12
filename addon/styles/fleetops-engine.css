@@ -12826,7 +12826,6 @@ body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-
     resize: vertical;
 }
 
-
 .tp-button {
     display: inline-flex;
     align-items: center;
@@ -13700,7 +13699,6 @@ body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-
     font-size: 0.8125rem;
     text-align: center;
 }
-
 
 .tp-toast-region {
     position: fixed;
