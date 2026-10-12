@@ -172,6 +172,8 @@ final class TrackingPageDatabase
             $table->timestamp('revoked_at')->nullable();
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();
+            // Fleetbase models soft delete (2026_10_12_000001_add_deleted_at_to_tracking_sessions_tables).
+            $table->timestamp('deleted_at')->nullable();
         });
         $schema->create('tracking_session_grants', function ($table) {
             $table->increments('id');
@@ -185,6 +187,7 @@ final class TrackingPageDatabase
             $table->timestamp('expires_at')->nullable();
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();
+            $table->timestamp('deleted_at')->nullable();
         });
 
         return $connection;

@@ -6,6 +6,7 @@ use Fleetbase\FleetOps\Models\TrackingSessionGrant;
 use Fleetbase\FleetOps\Support\TrackingPage\TrackingAccess;
 use Fleetbase\FleetOps\Support\TrackingScope;
 use Fleetbase\Models\VerificationCode;
+use Fleetbase\Scopes\ExpiryScope;
 use Fleetbase\Tests\Support\TrackingPageDatabase;
 use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\RateLimiter;
@@ -21,7 +22,24 @@ beforeEach(function () {
 afterEach(function () {
     Carbon::setTestNow();
     EloquentModel::unsetConnectionResolver();
+    EloquentModel::unsetEventDispatcher();
 });
+
+/**
+ * The tracking page tables, with model events on so sessions, grants and codes get their
+ * uuids (a grant is found through its session's uuid) as they do in the app.
+ */
+function trackingAccessDatabase(): void
+{
+    TrackingPageDatabase::boot();
+    EloquentModel::setEventDispatcher(new Illuminate\Events\Dispatcher());
+    app()->instance('responsecache', new class {
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+}
 
 function trackingAccess(): TrackingAccess
 {
@@ -87,14 +105,17 @@ test('sending codes is limited by cooldown, per scope and per address', function
 });
 
 test('codes are issued hashed, checked, and pause the scope after three wrong ones', function () {
-    TrackingPageDatabase::boot();
+    trackingAccessDatabase();
     $access = trackingAccess();
     $scope  = trackingScope();
 
     $first  = $access->issueCode($scope, null, 'sms');
     $second = $access->issueCode($scope, null, 'email');
 
-    expect(VerificationCode::withoutGlobalScopes()->count())->toBe(1)
+    // Codes soft delete, like every Fleetbase model: a voided or used code is trashed, and
+    // the code lookups (which only lift the expiry scope) never see it again.
+    expect(VerificationCode::withoutGlobalScope(ExpiryScope::class)->count())->toBe(1)
+        ->and(VerificationCode::onlyTrashed()->withoutGlobalScope(ExpiryScope::class)->value('meta')['channel'] ?? null)->toBe('sms')
         ->and($second->plainCode)->toMatch('/^\d{6}$/')
         ->and($second->code)->not->toBe($second->plainCode)
         ->and($second->getMeta('scope'))->toBe($scope->key())
@@ -106,7 +127,7 @@ test('codes are issued hashed, checked, and pause the scope after three wrong on
         ->and($access->pausedFor($scope))->toBe(0);
 
     expect($access->checkCode($scope, $second->plainCode))->toBe(['status' => VerificationCode::CHECK_VALID, 'channel' => 'email'])
-        ->and(VerificationCode::withoutGlobalScopes()->count())->toBe(0)
+        ->and(VerificationCode::withoutGlobalScope(ExpiryScope::class)->count())->toBe(0)
         ->and($access->checkCode($scope, $second->plainCode))->toBe(['status' => VerificationCode::CHECK_EXPIRED]);
 
     $third = $access->issueCode($scope, null, 'sms');
@@ -119,7 +140,7 @@ test('codes are issued hashed, checked, and pause the scope after three wrong on
 });
 
 test('a correct code gives the device a session and a grant for that customer only', function () {
-    TrackingPageDatabase::boot();
+    trackingAccessDatabase();
     Carbon::setTestNow(Carbon::parse('2026-10-08 09:00:00'));
     $access = trackingAccess();
     $scope  = trackingScope();
