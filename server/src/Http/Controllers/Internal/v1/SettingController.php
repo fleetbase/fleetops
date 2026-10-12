@@ -396,6 +396,10 @@ class SettingController extends Controller
             'googleMapsMapType'           => 'roadmap',
             'showGoogleMapsTrafficLayer'  => false,
             'showGoogleMapsTransitLayer'  => false,
+            'defaultMapLatitude'          => null,
+            'defaultMapLongitude'         => null,
+            'defaultMapZoom'              => null,
+            'fitMapToVehicles'            => false,
         ];
 
         $systemMapSettings          = $this->lookupSetting('fleet-ops.map-settings', []);
@@ -408,6 +412,12 @@ class SettingController extends Controller
         // single source of truth and avoids duplicating key management.
         $mapSettings['googleMapsApiKey'] = $this->googleMapsApiKey();
         $mapSettings['googleMapsMapId']  = data_get($systemMapSettings, 'googleMapsMapId', '');
+
+        // Last-resort starting point for the live map when the company has no
+        // configured default view and the browser cannot locate the user: the
+        // centre of the company's country, so a fresh account opens in the
+        // right part of the world instead of a hardcoded city.
+        $mapSettings['companyMapCenter'] = $this->companyMapCenter();
 
         return response()->json($mapSettings);
     }
@@ -429,6 +439,9 @@ class SettingController extends Controller
         // The API key is managed at the system level via core-api — strip it
         // from the payload in case a client accidentally sends it.
         unset($settings['googleMapsApiKey']);
+
+        // Derived server-side on every read, never persisted.
+        unset($settings['companyMapCenter']);
 
         // Validate provider value
         $settings = $this->normalizeCompanyMapSettings($settings);
@@ -488,7 +501,97 @@ class SettingController extends Controller
             'googleMapsMapType'          => $googleMapsMapType,
             'showGoogleMapsTrafficLayer' => filter_var(data_get($settings, 'showGoogleMapsTrafficLayer', false), FILTER_VALIDATE_BOOLEAN),
             'showGoogleMapsTransitLayer' => filter_var(data_get($settings, 'showGoogleMapsTransitLayer', false), FILTER_VALIDATE_BOOLEAN),
+            ...$this->normalizeDefaultMapView($settings),
         ];
+    }
+
+    /**
+     * Normalize the company's default live map view. A centre is only kept as
+     * a valid latitude/longitude pair — half a coordinate would send the map
+     * to the equator or the meridian — and the zoom is clamped to the range
+     * both map providers support.
+     */
+    protected function normalizeDefaultMapView(array $settings): array
+    {
+        $latitude  = $this->normalizeCoordinate(data_get($settings, 'defaultMapLatitude'), 90);
+        $longitude = $this->normalizeCoordinate(data_get($settings, 'defaultMapLongitude'), 180);
+        $hasCenter = $latitude !== null && $longitude !== null;
+        $zoom      = filter_var(data_get($settings, 'defaultMapZoom'), FILTER_VALIDATE_INT);
+
+        return [
+            'defaultMapLatitude'  => $hasCenter ? $latitude : null,
+            'defaultMapLongitude' => $hasCenter ? $longitude : null,
+            'defaultMapZoom'      => $zoom === false ? null : max(1, min(20, $zoom)),
+            'fitMapToVehicles'    => filter_var(data_get($settings, 'fitMapToVehicles', false), FILTER_VALIDATE_BOOLEAN),
+        ];
+    }
+
+    protected function normalizeCoordinate($value, float $limit): ?float
+    {
+        if ($value === null || $value === '' || !is_numeric($value)) {
+            return null;
+        }
+
+        $value = (float) $value;
+
+        return abs($value) <= $limit ? $value : null;
+    }
+
+    /**
+     * Resolve the centre of the current company's country, from its country
+     * code or, when none was recorded, the country of its timezone.
+     */
+    protected function companyMapCenter(): ?array
+    {
+        $company = $this->currentCompany();
+        $country = $this->normalizeCountryCode(data_get($company, 'country')) ?? $this->countryFromTimezone(data_get($company, 'timezone'));
+        if ($country === null) {
+            return null;
+        }
+
+        $coordinates = data_get($this->countryData($country), 'coordinates', []);
+        $latitude    = $this->normalizeCoordinate(data_get($coordinates, 'latitude'), 90);
+        $longitude   = $this->normalizeCoordinate(data_get($coordinates, 'longitude'), 180);
+        if ($latitude === null || $longitude === null || ($latitude == 0 && $longitude == 0)) {
+            return null;
+        }
+
+        return [
+            'country'   => $country,
+            'latitude'  => $latitude,
+            'longitude' => $longitude,
+        ];
+    }
+
+    protected function normalizeCountryCode($country): ?string
+    {
+        return is_string($country) && preg_match('/^[A-Za-z]{2}$/', $country) ? strtoupper($country) : null;
+    }
+
+    protected function countryFromTimezone($timezone): ?string
+    {
+        if (!is_string($timezone) || $timezone === '') {
+            return null;
+        }
+
+        try {
+            $location = (new \DateTimeZone($timezone))->getLocation();
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        // UTC and other non-geographic zones report the country code "??".
+        return $this->normalizeCountryCode(data_get($location, 'country_code'));
+    }
+
+    protected function countryData(string $country): ?array
+    {
+        try {
+            return Utils::getCountryData($country);
+        } catch (\Throwable $e) {
+            // The countries package throws for codes it does not know.
+            return null;
+        }
     }
 
     /**

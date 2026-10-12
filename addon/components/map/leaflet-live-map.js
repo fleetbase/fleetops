@@ -12,6 +12,7 @@ import { task, timeout } from 'ember-concurrency';
 import { next } from '@ember/runloop';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
 import ensureLeafletPluginsReady, { hasLeafletPluginsReady } from '../../utils/leaflet-plugin-loader';
+import { FIT_VEHICLES_MAX_ZOOM, isZoom, positionedBounds } from '../../utils/map-default-view';
 
 export default class MapLeafletLiveMapComponent extends Component {
     liveViewportReloadDebounceMs = 300;
@@ -243,9 +244,45 @@ export default class MapLeafletLiveMapComponent extends Component {
         this.rebuildMapContextMenu();
     }
 
+    /**
+     * When the company chose "Fit to my vehicles", frame every positioned
+     * vehicle before the first viewport-filtered load. With no positioned
+     * vehicles the map stays on the default view resolved by the location
+     * service.
+     *
+     * @return {Boolean} whether the view was fitted
+     */
+    @task *fitToPositionedVehicles() {
+        if (!this.mapSettings.fitMapToVehicles || this.abilities.cannot('fleet-ops list vehicle')) {
+            return false;
+        }
+
+        try {
+            const vehicles = yield this.fetch.get('fleet-ops/live/vehicles', { limit: this.liveViewportResourceLimit });
+            const bounds = positionedBounds(vehicles);
+            if (!bounds) {
+                return false;
+            }
+
+            const options = { maxZoom: FIT_VEHICLES_MAX_ZOOM, padding: [40, 40], animate: false };
+            if (typeof this.mapManager.fitBounds === 'function' && this.mapManager.adapter) {
+                this.mapManager.fitBounds(bounds, options);
+            } else {
+                this.map?.fitBounds?.(bounds, options);
+            }
+
+            return true;
+        } catch (err) {
+            debug('Failed to fit live map to vehicles: ' + err.message);
+            return false;
+        }
+    }
+
     /** load resources and wait for stuff here and trigger map ready **/
     @task *load() {
         try {
+            yield this.fitToPositionedVehicles.perform();
+
             // Get initial map bounds for spatial filtering (provider-agnostic)
             const mapBounds = this.mapManager.getBounds?.() ?? (this.map ? this.map.getBounds() : null);
             const bounds = this.#serializeBoundsForRequest(mapBounds);
@@ -360,6 +397,11 @@ export default class MapLeafletLiveMapComponent extends Component {
         if (typeof zoom === 'number' && !isNaN(zoom) && zoom >= 1 && zoom <= 20) {
             return zoom;
         }
+        // The company's default view (or a country centre) suggests its own zoom
+        const locationZoom = this.location.getZoom?.();
+        if (isZoom(locationZoom)) {
+            return locationZoom;
+        }
         // Return default zoom of 14 if invalid
         return 14;
     }
@@ -428,6 +470,9 @@ export default class MapLeafletLiveMapComponent extends Component {
         if (coordinates && typeof coordinates.latitude === 'number' && typeof coordinates.longitude === 'number') {
             this.latitude = coordinates.latitude;
             this.longitude = coordinates.longitude;
+            if (isZoom(coordinates.zoom) && !isZoom(this.args.zoom)) {
+                this.zoom = coordinates.zoom;
+            }
 
             // Update map position if map is loaded
             if (this.map && this.map.setView) {
@@ -859,37 +904,5 @@ export default class MapLeafletLiveMapComponent extends Component {
         this.universe.trigger('fleet-ops:contextmenu:vehicle:created', contextmenuRegistry, this.leafletContextmenuManager);
 
         return contextmenuRegistry;
-    }
-
-    /**
-     * Safely gets a valid latitude value with fallback to default
-     * @returns {number} Valid latitude value
-     */
-    #getValidLatitude() {
-        const lat = this.location.getLatitude();
-
-        // Validate latitude is a number and within valid range (-90 to 90)
-        if (typeof lat === 'number' && !isNaN(lat) && lat >= -90 && lat <= 90) {
-            return lat;
-        }
-
-        // Fallback to default Singapore latitude
-        return 1.369;
-    }
-
-    /**
-     * Safely gets a valid longitude value with fallback to default
-     * @returns {number} Valid longitude value
-     */
-    #getValidLongitude() {
-        const lng = this.location.getLongitude();
-
-        // Validate longitude is a number and within valid range (-180 to 180)
-        if (typeof lng === 'number' && !isNaN(lng) && lng >= -180 && lng <= 180) {
-            return lng;
-        }
-
-        // Fallback to default Singapore longitude
-        return 103.8864;
     }
 }

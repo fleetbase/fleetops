@@ -9,6 +9,7 @@ import { renderCompleted, waitForInsertedAndSized } from '@fleetbase/ember-ui/ut
 import LeafletTrackingMarkerComponent from '../leaflet-tracking-marker';
 import ensureLeafletDrawEditNamespace from '../../utils/leaflet-draw-namespace-guard';
 import { DEFAULT_LEAFLET_TILE_ATTRIBUTION } from '../../utils/leaflet-tile-url';
+import { FIT_VEHICLES_MAX_ZOOM, positionedBounds } from '../../utils/map-default-view';
 
 const DEFAULT_CENTER = [1.31, 103.85];
 const DEFAULT_ZOOM = 11;
@@ -56,6 +57,8 @@ export default class WidgetLiveFleetComponent extends Component {
     #map = null;
     #mapSetPromise = null;
     #resolveMapSet = null;
+    /** Fit to the vehicles only on the first load, never on the periodic reconcile. */
+    #fittedToVehicles = false;
 
     constructor() {
         super(...arguments);
@@ -152,15 +155,57 @@ export default class WidgetLiveFleetComponent extends Component {
         return this.drivers.length + this.vehicles.length;
     }
 
-    /** Center on the first available marker (driver, then vehicle), else default. */
-    get center() {
+    /**
+     * Bounds around the positioned vehicles when the company chose "Fit to my
+     * vehicles" (Settings > Map), else null.
+     */
+    get vehicleBounds() {
+        if (!this.mapSettings.fitMapToVehicles) return null;
+        return positionedBounds(this.vehicles.map((vehicle) => ({ location: [vehicle.lat, vehicle.lng] })));
+    }
+
+    /**
+     * Where the map opens, in order: the positioned vehicles (when fitting is
+     * on), the company's default centre, the first positioned marker, the
+     * centre of the company's country, the hardcoded default.
+     */
+    get initialView() {
+        const bounds = this.vehicleBounds;
+        if (bounds) {
+            const [[south, west], [north, east]] = bounds;
+            return { center: [(south + north) / 2, (west + east) / 2], zoom: DEFAULT_ZOOM, bounds };
+        }
+
+        const defaultCenter = this.mapSettings.defaultMapCenter;
+        if (defaultCenter) return { center: [defaultCenter.latitude, defaultCenter.longitude], zoom: defaultCenter.zoom };
+
         const first = this.drivers[0] ?? this.vehicles[0];
-        if (first?.lat && first?.lng) return [first.lat, first.lng];
-        return DEFAULT_CENTER;
+        if (first?.lat && first?.lng) return { center: [first.lat, first.lng], zoom: DEFAULT_ZOOM };
+
+        const countryCenter = this.mapSettings.companyCountryCenter;
+        if (countryCenter) return { center: [countryCenter.latitude, countryCenter.longitude], zoom: countryCenter.zoom };
+
+        return { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM };
+    }
+
+    get center() {
+        return this.initialView.center;
     }
 
     get zoom() {
-        return DEFAULT_ZOOM;
+        return this.initialView.zoom;
+    }
+
+    /** Frame the positioned vehicles once, after the first data load. */
+    fitToVehicles(map) {
+        if (this.#fittedToVehicles) return false;
+
+        const bounds = this.vehicleBounds;
+        if (!bounds || typeof map?.fitBounds !== 'function') return false;
+
+        map.fitBounds(bounds, { padding: [30, 30], maxZoom: FIT_VEHICLES_MAX_ZOOM });
+        this.#fittedToVehicles = true;
+        return true;
     }
 
     statusColor(status) {
@@ -182,9 +227,12 @@ export default class WidgetLiveFleetComponent extends Component {
             // container before we add markers. Without this, markers added to a
             // not-yet-sized map silently no-op (the data arrives, count chip ticks
             // up, but nothing paints).
-            yield this.ensureInteractive();
+            const map = yield this.ensureInteractive();
             this.data = yield this.fetch.get('fleet-ops/analytics/live-fleet');
             this.error = null;
+            // The fit choice lives in the company's map settings, loaded in the constructor.
+            yield this.mapSettings.load();
+            this.fitToVehicles(map);
         } catch (e) {
             this.error = e?.message ?? 'Failed to load live fleet';
         }
