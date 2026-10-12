@@ -75,6 +75,20 @@
             </div>
             <ClickToCopy class="tp-button tp-button-small" @value={{@data.tracking_number}}>{{t "tracking-page.page.copy"}}</ClickToCopy>
         </div>
+
+        {{#if this.currentStop}}
+            <section class="tp-card tp-card-tight tp-row-between" aria-labelledby="tp-stop-title">
+                <div class="tp-stack-xs tp-grow">
+                    <h2 id="tp-stop-title" class="tp-small tp-muted">{{this.stopCardTitle}}</h2>
+                    {{#if this.currentStop.place.name}}<span class="tp-strong">{{this.currentStop.place.name}}</span>{{/if}}
+                    {{#if this.currentStop.place.address}}<span class="tp-small tp-muted">{{this.currentStop.place.address}}</span>{{/if}}
+                    {{#if this.windowText}}<span class="tp-small"><span class="tp-muted">{{t "tracking-page.page.window"}}</span> {{this.windowText}}</span>{{/if}}
+                </div>
+                <span class="tp-chip {{if this.currentStop.complete 'tp-chip-accent'}}">
+                    {{#if this.currentStop.complete}}<FaIcon @icon="check" /> {{t "tracking-page.page.stop-complete"}}{{else}}{{t "tracking-page.page.stop-upcoming"}}{{/if}}
+                </span>
+            </section>
+        {{/if}}
     </div>
 
     {{#if @data.map}}
@@ -82,6 +96,7 @@
             <div class="tp-full-map">
                 <TrackingPage::Map
                     @data={{@data}}
+                    @selectedStopId={{this.currentStop.id}}
                     @live={{this.live}}
                     @stale={{this.stale}}
                     @staleText={{if this.stale this.staleText}}
@@ -189,7 +204,10 @@
                         <li class="tp-timeline-entry {{if entry.latest 'tp-timeline-latest'}}">
                             <span class="tp-timeline-dot" aria-hidden="true"></span>
                             <div class="tp-row-between tp-grow">
-                                <span class="tp-strong">{{entry.status}}</span>
+                                <div class="tp-stack-xs">
+                                    <span class="tp-strong">{{entry.status}}</span>
+                                    {{#if entry.place}}<span class="tp-small tp-muted">{{entry.place}}</span>{{/if}}
+                                </div>
                                 <span class="tp-small tp-muted">{{entry.time}}</span>
                             </div>
                         </li>

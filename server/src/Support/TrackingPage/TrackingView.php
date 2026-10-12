@@ -24,8 +24,9 @@ use Illuminate\Support\Collection;
  * the customer sees.
  *
  * Never sent at any level: internal uuids, notes, order meta, custom fields, files other
- * than proof of delivery, rates or transactions, the sender's address, another
- * customer's stops, items or people, and the driver's surname or phone.
+ * than proof of delivery, rates or transactions, another customer's stops, items or
+ * people, and the driver's surname or phone. Pickups are where the order comes from
+ * (a store, a warehouse) and show by name.
  */
 class TrackingView
 {
@@ -38,11 +39,13 @@ class TrackingView
      */
     public const ISSUE_CODES = ['failed', 'attempt_failed', 'delivery_failed', 'returned', 'return_to_sender'];
 
-    /**
-     * Pickup coordinates are rounded to about a kilometre: enough to draw where the route starts, not an address.
-     */
-    public const HUB_PRECISION  = 2;
     public const STOP_PRECISION = 5;
+
+    /**
+     * Status codes a stop's own tracking number is given when it is set up: bookkeeping,
+     * not news for the customer.
+     */
+    public const SETUP_CODES = ['created'];
 
     /**
      * Branding as the page shows it, from the company's config with its own details as fallbacks.
@@ -126,11 +129,11 @@ class TrackingView
             'stops'           => $stopsView,
             'focus_stop'      => $target->waypoint?->public_id,
             'eta'             => $this->eta($stopsView, $tracker, $update),
-            'timeline'        => $this->timeline($data),
+            'timeline'        => $this->timeline($data, $stopsView, $own),
             'driver'          => $this->driver($data['driver'], $config),
             'location'        => $location,
-            'map'             => $showMap ? $this->map($stops, $own, $tracker, $location) : null,
-            'items'           => data_get($config, 'visibility.items', true) ? $this->items($entities, $viewer === self::VIEWER_ACCOUNT && data_get($config, 'visibility.item_prices', false) && $scope->isOrderCustomer($order)) : [],
+            'map'             => $showMap ? $this->map($stops, $own, $tracker) : null,
+            'items'           => data_get($config, 'visibility.items', true) ? $this->items($entities, $own, $viewer === self::VIEWER_ACCOUNT && data_get($config, 'visibility.item_prices', false) && $scope->isOrderCustomer($order)) : [],
             'proofs'          => $this->proofs($order, $own, $entities, $scope, $config),
             'instructions'    => [
                 'text'     => $this->instructionsFor($order, $scope),
@@ -187,7 +190,7 @@ class TrackingView
             $entry = $byId->get($stop->sequence, []);
 
             return [
-                'id'       => $stop->waypoint?->public_id ?? $stop->place?->public_id,
+                'id'       => static::stopId($stop),
                 'type'     => $stop->type,
                 'sequence' => $stop->sequence,
                 'status'   => $stop->status,
@@ -229,17 +232,28 @@ class TrackingView
     }
 
     /**
-     * The order's and the customer's stops' status entries, newest first.
+     * The order's and the customer's stops' status entries, newest first. A stop's
+     * entries name the stop (`stop`, `place`), so the page can show the selected stop's
+     * alongside the order's; the setup entry each stop's tracking number starts with is
+     * left out.
      */
-    protected function timeline(array $data): array
+    protected function timeline(array $data, array $stopsView, Collection $own): array
     {
         $entries = collect($data['order']['timeline']);
+        $ids     = collect($stopsView)->keyBy('sequence');
+        $places  = $own->keyBy(fn (TrackingStop $stop) => $stop->sequence);
+
         foreach ($data['stops'] as $stop) {
-            $entries = $entries->merge($stop['timeline'] ?? []);
+            $id    = $ids->get($stop['sequence'])['id'] ?? null;
+            $place = $places->get($stop['sequence'])?->place?->name;
+
+            $entries = $entries->merge(collect($stop['timeline'] ?? [])
+                ->reject(fn ($entry) => in_array($entry['code'] ?? null, self::SETUP_CODES, true))
+                ->map(fn ($entry) => [...$entry, 'stop' => $id, 'place' => $place]));
         }
 
         return $entries
-            ->unique(fn ($entry) => ($entry['code'] ?? '') . '|' . ($entry['created_at'] ?? '') . '|' . ($entry['status'] ?? ''))
+            ->unique(fn ($entry) => ($entry['code'] ?? '') . '|' . ($entry['created_at'] ?? '') . '|' . ($entry['status'] ?? '') . '|' . ($entry['stop'] ?? ''))
             ->sortByDesc(fn ($entry) => $entry['created_at'] ?? '')
             ->values()
             ->all();
@@ -259,19 +273,27 @@ class TrackingView
     }
 
     /**
-     * Where the route starts (to about a kilometre) and, when every stop is this
+     * Where the order is collected and, when every stop it delivers to is this
      * customer's, the route line. On an order with other customers the line would trace
-     * their stops, so it is left out.
+     * their stops, so it is left out. The line is the tracker's: from the vehicle once
+     * it reports, from the first pickup before that.
      */
-    protected function map(Collection $stops, Collection $own, array $tracker, ?array $location): array
+    protected function map(Collection $stops, Collection $own, array $tracker): array
     {
-        $pickup = $stops->first(fn (TrackingStop $stop) => $stop->type === 'pickup');
-        $point  = $pickup?->point();
-        $mine   = $stops->every(fn (TrackingStop $stop) => $stop->type === 'pickup' || $own->contains(fn (TrackingStop $owned) => $owned === $stop));
+        $mine = $stops->every(fn (TrackingStop $stop) => $stop->type === 'pickup' || $own->contains(fn (TrackingStop $owned) => $owned === $stop));
 
         return [
-            'hub'      => $point ? ['latitude' => round($point->getLat(), self::HUB_PRECISION), 'longitude' => round($point->getLng(), self::HUB_PRECISION)] : null,
-            'polyline' => $mine && $location ? data_get($tracker, 'route.polyline') : null,
+            'pickups'  => $stops->filter(fn (TrackingStop $stop) => $stop->type === 'pickup')->map(function (TrackingStop $stop) {
+                $point = $stop->point();
+
+                return $point ? [
+                    'name'      => $stop->place?->name,
+                    'latitude'  => round($point->getLat(), self::STOP_PRECISION),
+                    'longitude' => round($point->getLng(), self::STOP_PRECISION),
+                    'complete'  => $stop->completed,
+                ] : null;
+            })->filter()->values()->all(),
+            'polyline' => $mine ? data_get($tracker, 'route.polyline') : null,
         ];
     }
 
@@ -279,10 +301,13 @@ class TrackingView
      * The customer's items: those going to their stops, and on an order with no stop
      * customers, the order customer's.
      */
-    protected function items(Collection $entities, bool $prices): array
+    protected function items(Collection $entities, Collection $own, bool $prices): array
     {
+        $stops = static::stopIdsByPlace($own);
+
         return $entities->map(fn (Entity $entity) => array_filter([
             'id'          => $entity->public_id,
+            'stop'        => $entity->destination_uuid ? ($stops[$entity->destination_uuid] ?? null) : null,
             'name'        => $entity->name,
             'description' => $entity->description,
             'quantity'    => data_get($entity, 'meta.quantity'),
@@ -304,8 +329,20 @@ class TrackingView
             $subjects[] = $order->uuid;
         }
 
+        $stops = [];
+        foreach ($own as $stop) {
+            if ($stop->type !== 'pickup' && $stop->waypoint?->uuid) {
+                $stops[$stop->waypoint->uuid] = static::stopId($stop);
+            }
+        }
+
+        $byPlace = static::stopIdsByPlace($own);
+        foreach ($entities as $entity) {
+            $stops[$entity->uuid] = $entity->destination_uuid ? ($byPlace[$entity->destination_uuid] ?? null) : null;
+        }
+
         return $this->proofsFor($subjects)
-            ->map(fn (Proof $proof) => ['id' => $proof->public_id, 'type' => static::proofType($proof), 'created_at' => $this->iso($proof->created_at)])
+            ->map(fn (Proof $proof) => ['id' => $proof->public_id, 'type' => static::proofType($proof), 'stop' => $stops[$proof->subject_uuid] ?? null, 'created_at' => $this->iso($proof->created_at)])
             ->filter(fn ($proof) => ($proof['type'] !== 'photo' || data_get($config, 'visibility.pod_photo', true)) && ($proof['type'] !== 'signature' || data_get($config, 'visibility.pod_signature', true)))
             ->values()
             ->all();
@@ -343,7 +380,65 @@ class TrackingView
         return $value ? Carbon::parse($value)->toISOString() : null;
     }
 
+    /**
+     * The id the page knows a stop by: its waypoint's public id, or its place's for an
+     * order with a single dropoff.
+     */
+    public static function stopId(TrackingStop $stop): ?string
+    {
+        return $stop->waypoint?->public_id ?? $stop->place?->public_id;
+    }
+
+    /**
+     * @return array<string, ?string> the customer's stop ids, by place uuid
+     */
+    protected static function stopIdsByPlace(Collection $own): array
+    {
+        $ids = [];
+        foreach ($own as $stop) {
+            if ($stop->type !== 'pickup' && $stop->place?->uuid) {
+                $ids[$stop->place->uuid] = static::stopId($stop);
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Whether a stop is where the order is collected rather than delivered: the payload's
+     * pickup, a waypoint marked as one, or a waypoint on a storefront order, where the
+     * waypoints are the other stores the order is collected from (storefront creates them
+     * without a type, so they default to dropoffs).
+     */
+    public static function isPickup(TrackingStop $stop, ?string $payloadType): bool
+    {
+        if ($stop->type === 'pickup') {
+            return true;
+        }
+
+        if (!$stop->waypoint) {
+            return false;
+        }
+
+        return strtolower((string) $stop->waypoint->type) === 'pickup' || ($stop->type === 'waypoint' && strtolower((string) $payloadType) === 'storefront');
+    }
+
+    /**
+     * The order's stops, with every pickup typed as one, so the customer's stops, the
+     * stage and the route counts leave them out.
+     */
     protected function stopsFor(Order $order): Collection
+    {
+        $payloadType = $order->payload?->type ?? $order->type;
+
+        return $this->contextStopsFor($order)->each(function (TrackingStop $stop) use ($payloadType) {
+            if (static::isPickup($stop, $payloadType)) {
+                $stop->type = 'pickup';
+            }
+        });
+    }
+
+    protected function contextStopsFor(Order $order): Collection
     {
         return app(TrackingContextBuilder::class)->build($order, TrackingOptions::fromArray([], $order->company_uuid))->stops;
     }

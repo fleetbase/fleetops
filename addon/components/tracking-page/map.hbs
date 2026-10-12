@@ -1,4 +1,4 @@
-<div class="tp-map">
+<div class="tp-map {{if this.expanded 'tp-map-expanded'}}" {{did-insert this.register}} {{did-update this.focusStop @selectedStopId}}>
     <span class="tp-sr-only">{{@label}}</span>
     <LeafletMap class="tp-map-canvas" @lat={{get this.center 0}} @lng={{get this.center 1}} @zoom={{13}} @zoomControl={{false}} @onLoad={{this.setup}} as |layers|>
         <layers.tile @url={{(leaflet-tile-url)}} />
@@ -7,11 +7,11 @@
         {{else if this.hasPlannedRoute}}
             <layers.polyline @locations={{this.plannedRoute}} @className="tp-map-route tp-map-route-planned" @weight={{3}} @dashArray="6 8" @interactive={{false}} />
         {{/if}}
-        {{#if this.hub}}
-            <layers.marker @location={{this.hub}} @icon={{this.hubIcon}} @keyboard={{false}} as |marker|>
-                <marker.tooltip @permanent={{true}} @direction="top" @className="tp-map-label">{{t "tracking-page.page.map-pickup"}}</marker.tooltip>
+        {{#each this.pickups as |pickup|}}
+            <layers.marker @location={{pickup.location}} @icon={{pickup.icon}} @title={{pickup.label}} @keyboard={{false}} as |marker|>
+                <marker.tooltip @permanent={{true}} @direction="top" @className="tp-map-label tp-map-label-pickup">{{pickup.label}}</marker.tooltip>
             </layers.marker>
-        {{/if}}
+        {{/each}}
         {{#each this.stops as |stop|}}
             <layers.marker @location={{stop.location}} @icon={{stop.icon}} @title={{stop.label}} @riseOnHover={{true}} as |marker|>
                 <marker.tooltip @permanent={{true}} @direction="top" @className="tp-map-label tp-map-label-stop">{{stop.label}}</marker.tooltip>
@@ -36,6 +36,9 @@
         {{#if this.vehicle}}
             <button type="button" class="tp-map-button" aria-label={{t "tracking-page.page.recenter"}} {{on "click" this.recenter}}><FaIcon @icon="crosshairs" /></button>
         {{/if}}
-        <button type="button" class="tp-map-button" aria-label={{t "tracking-page.page.fit-route"}} {{on "click" this.fitRoute}}><FaIcon @icon="expand" /></button>
+        <button type="button" class="tp-map-button" aria-label={{t "tracking-page.page.fit-route"}} {{on "click" this.fitRoute}}><FaIcon @icon="route" /></button>
+        <button type="button" class="tp-map-button" aria-label={{this.fullscreenLabel}} aria-pressed={{if this.expanded "true" "false"}} {{on "click" this.toggleFullscreen}}>
+            <FaIcon @icon={{if this.expanded "compress" "expand"}} />
+        </button>
     </div>
 </div>

@@ -49,7 +49,7 @@ class TrackingViewProbe extends TrackingView
     public ?Collection $proofRows = null;
     public array $proofQueries  = [];
 
-    protected function stopsFor(Order $order): Collection
+    protected function contextStopsFor(Order $order): Collection
     {
         return $this->stops;
     }
@@ -118,6 +118,7 @@ function trackingViewOrder(array $attributes = []): Order
     $driver->setRawAttributes(['uuid' => 'driver-1', 'name' => 'Daniel Okafor', 'phone' => '+15550001111', 'online' => 1, 'heading' => 92, 'location' => new Point(1.30123456, 103.80123456), 'updated_at' => '2026-10-08 08:59:00'], true);
     $order->setRelation('driverAssigned', $driver);
     $order->setRelation('vehicleAssigned', null);
+    $order->setRelation('payload', null);
 
     return $order;
 }
@@ -224,7 +225,9 @@ test('a tracking number alone shows the stage, the last update and how to verify
 
 test('a verified customer sees only their own stop on an order with several customers', function () {
     Carbon::setTestNow(Carbon::parse('2026-10-08 09:00:00'));
-    TrackingPageDatabase::boot();
+    $db = TrackingPageDatabase::boot();
+    TrackingPageDatabase::insert($db, 'tracking_statuses', ['uuid' => 'ts-1', 'tracking_number_uuid' => 'tn-a', 'status' => 'Waypoint Created', 'code' => 'CREATED', 'complete' => 0, 'created_at' => '2026-10-08 08:00:00']);
+    TrackingPageDatabase::insert($db, 'tracking_statuses', ['uuid' => 'ts-2', 'tracking_number_uuid' => 'tn-a', 'status' => 'Out for delivery', 'code' => 'ENROUTE', 'complete' => 0, 'created_at' => '2026-10-08 08:45:00']);
 
     $view           = new TrackingViewProbe();
     $view->stops    = trackingViewStops();
@@ -253,17 +256,20 @@ test('a verified customer sees only their own stop on an order with several cust
         ->and($data['eta'])->toBe(['at' => '2026-10-08T14:24:00.000000Z', 'seconds' => 1500, 'confidence' => 'high'])
         ->and($data['driver'])->toBe(['name' => 'Daniel', 'vehicle' => null, 'online' => true])
         ->and($data['location']['latitude'])->toBe(1.3012)
-        ->and($data['map'])->toBe(['hub' => ['latitude' => 1.29, 'longitude' => 103.85], 'polyline' => null])
-        ->and($data['items'])->toBe([['id' => 'entity_a1', 'name' => 'Item a1', 'description' => 'Boxed', 'quantity' => 2]])
+        // The pickup shows by name; the line would trace the other customer's stop.
+        ->and($data['map'])->toBe(['pickups' => [['name' => 'Sender Warehouse', 'latitude' => 1.2876, 'longitude' => 103.8456, 'complete' => true]], 'polyline' => null])
+        ->and($data['items'])->toBe([['id' => 'entity_a1', 'stop' => 'waypoint_wp-a', 'name' => 'Item a1', 'description' => 'Boxed', 'quantity' => 2]])
+        // The stop's own setup entry is left out; the rest name the stop.
+        ->and($data['timeline'])->toBe([['status' => 'Out for delivery', 'code' => 'enroute', 'complete' => false, 'created_at' => '2026-10-08T08:45:00.000000Z', 'stop' => 'waypoint_wp-a', 'place' => 'Maya Flat']])
         ->and($data['instructions'])->toBe(['text' => 'Leave with concierge', 'editable' => true])
         ->and($data['actions'])->toBe(['report' => true, 'driver_contact' => 'company'])
         ->and($data['session'])->toBe(['expires_at' => '2026-10-09T09:00:00.000000Z'])
         ->and($data['stale_after'])->toBe(300)
         ->and($data['proofs'])->toBe([]);
 
-    // Nothing of the other customer, the sender, the driver or the order internals.
+    // Nothing of the other customer, the driver or the order internals.
     $json = json_encode($data);
-    foreach (['Other Customer House', 'waypoint_wp-b', 'Sender Warehouse', 'Okafor', '+15550001111', 'Gate code', 'internal', 'order-1', 'contact-a', 'co-1', 'SGD'] as $leak) {
+    foreach (['Other Customer House', 'waypoint_wp-b', 'Okafor', '+15550001111', 'Gate code', 'internal', 'order-1', 'contact-a', 'co-1', 'SGD'] as $leak) {
         expect($json)->not->toContain($leak);
     }
 });
@@ -297,7 +303,8 @@ test('the route line, prices and proofs appear only when the customer may see th
         ->and($data['driver'])->toBeNull()
         ->and($data['location'])->toBeNull()
         ->and($data['eta'])->toBeNull()
-        ->and($data['map']['polyline'])->toBeNull()
+        // Every stop is this customer's, so the route line shows with no vehicle on the map.
+        ->and($data['map']['polyline'])->toBe('_p~iF~ps|U_ulLnnqC')
         ->and($data['items'][0])->toMatchArray(['price' => '1500', 'currency' => 'SGD'])
         ->and($data['items'][0]['photo_url'])->toBeString()
         ->and(collect($data['proofs'])->pluck('type')->all())->toBe(['signature', 'scan'])
@@ -348,7 +355,7 @@ test('proof types and proofs a scope may open', function () {
     $view->stops = trackingViewStops(true);
     $view->entities = collect();
     $proof = new Proof();
-    $proof->setRawAttributes(['public_id' => 'proof_a', 'file_uuid' => 'file-a'], true);
+    $proof->setRawAttributes(['public_id' => 'proof_a', 'file_uuid' => 'file-a', 'subject_uuid' => 'wp-a'], true);
     $view->proofRows = collect([$proof]);
     $view->found     = $proof;
 
@@ -357,7 +364,40 @@ test('proof types and proofs a scope may open', function () {
     expect(TrackingView::proofType($signed))->toBe('signature')
         ->and($view->proofFor($target, 'proof_a'))->toBe($proof)
         ->and($view->proofFor($target, 'proof_other'))->toBeNull()
-        ->and($view->proofQueries[0])->toBe(['wp-a']);
+        ->and($view->proofQueries[0])->toBe(['wp-a'])
+        ->and($view->fullView($target, [], TrackingView::VIEWER_VERIFIED)['proofs'][0])->toMatchArray(['id' => 'proof_a', 'stop' => 'waypoint_wp-a']);
+});
+
+test('a storefront order is collected from each store and delivered to the customer', function () {
+    TrackingPageDatabase::boot();
+
+    // The first store is the payload pickup; storefront adds the others as waypoints
+    // with no type, so they read as dropoffs.
+    $order = trackingViewOrder(['type' => 'storefront', 'status' => 'dispatched', 'started' => false]);
+    $order->setRelation('driverAssigned', null);
+    $view        = new TrackingViewProbe();
+    $view->stops = collect([
+        new TrackingStop('place-orchard', 'place_orchard', 'pickup', null, trackingViewPlace('orchard', 'Orchard Grocers', 1.3048, 103.8318), null, false, 1, null),
+        new TrackingStop('place-rochor', 'place_rochor', 'waypoint', null, trackingViewPlace('rochor', 'Rochor Noodle House', 1.3039, 103.8536), trackingViewWaypoint('wp-rochor', null, ['type' => 'dropoff']), false, 2, 'tn-rochor'),
+        new TrackingStop('place-home', 'place_home', 'dropoff', null, trackingViewPlace('home', 'Singapore Home', 1.3007, 103.9106), null, false, 3, null),
+    ]);
+    $view->tracker  = ['route' => ['polyline' => 'abc']];
+    $view->entities = collect();
+
+    $data = $view->fullView(trackingViewTarget($order, new TrackingScope('order-1', Contact::class, 'contact-shipper', $order)), [], TrackingView::VIEWER_STAFF);
+
+    expect($data['stops'])->toHaveCount(1)
+        ->and($data['stops'][0]['place']['name'])->toBe('Singapore Home')
+        ->and(collect($data['map']['pickups'])->pluck('name')->all())->toBe(['Orchard Grocers', 'Rochor Noodle House'])
+        ->and($data['location'])->toBeNull()
+        ->and($data['map']['polyline'])->toBe('abc');
+
+    // Elsewhere, only a waypoint marked as a pickup is one.
+    $marked = new TrackingStop('place-x', 'place_x', 'waypoint', null, null, trackingViewWaypoint('wp-x', null, ['type' => 'pickup']));
+    $drop   = new TrackingStop('place-y', 'place_y', 'waypoint', null, null, trackingViewWaypoint('wp-y', null, ['type' => 'dropoff']));
+    expect(TrackingView::isPickup($marked, null))->toBeTrue()
+        ->and(TrackingView::isPickup($drop, 'default'))->toBeFalse()
+        ->and(TrackingView::isPickup(new TrackingStop('place-z', 'place_z', 'dropoff', null, null), 'storefront'))->toBeFalse();
 });
 
 test('stops, the tracker, items and proofs come from their real sources', function () {
@@ -367,7 +407,7 @@ test('stops, the tracker, items and proofs come from their real sources', functi
     TrackingPageDatabase::insert($db, 'entities', ['uuid' => 'e-b', 'payload_uuid' => 'payload-1', 'destination_uuid' => 'place-b', 'name' => 'Chair']);
     TrackingPageDatabase::insert($db, 'proofs', ['uuid' => 'p-1', 'public_id' => 'proof_one', 'subject_uuid' => 'wp-a', 'created_at' => '2026-10-08 09:00:00']);
 
-    $context = new Fleetbase\FleetOps\Tracking\TrackingContext(trackingViewOrder(), null, null, null, null, collect(['stop']), collect(), collect(), null, null, null);
+    $context = new Fleetbase\FleetOps\Tracking\TrackingContext(trackingViewOrder(), null, null, null, null, trackingViewStops(), collect(), collect(), null, null, null);
     app()->instance(TrackingContextBuilder::class, new class($context) extends TrackingContextBuilder {
         public function __construct(private $context)
         {
@@ -401,7 +441,8 @@ test('stops, the tracker, items and proofs come from their real sources', functi
     $scopeA  = new TrackingScope('order-1', Contact::class, 'contact-a', $order);
     $shipper = new TrackingScope('order-1', Contact::class, 'contact-shipper', $order);
 
-    expect($call('stopsFor', $order)->all())->toBe(['stop'])
+    expect($call('contextStopsFor', $order)->pluck('type')->all())->toBe(['pickup', 'waypoint', 'waypoint'])
+        ->and($call('stopsFor', trackingViewOrder(['type' => 'storefront']))->pluck('type')->all())->toBe(['pickup', 'pickup', 'pickup'])
         ->and($call('trackerFor', $order))->toBe(['provider' => 'fake'])
         ->and($call('trackerFor', trackingViewOrder(['status' => 'completed'])))->toBe([]);
 

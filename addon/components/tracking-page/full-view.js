@@ -113,8 +113,28 @@ export default class TrackingPageFullViewComponent extends Component {
         return this.route.completed_stops + this.route.stops_before + 1;
     }
 
+    get currentStopNumber() {
+        return this.stops.indexOf(this.currentStop) + 1;
+    }
+
+    get stopCardTitle() {
+        return this.hasSeveralStops ? this.intl.t('tracking-page.page.your-stop', { number: this.currentStopNumber }) : this.intl.t('tracking-page.page.stop-card-title');
+    }
+
     @action selectStop(id) {
         this.selectedStopId = id;
+    }
+
+    /**
+     * Entries that belong to one stop, filtered to the selected one; the rest are the
+     * whole order's and always show.
+     */
+    forCurrentStop(entries) {
+        if (!this.hasSeveralStops || !this.currentStop) {
+            return entries;
+        }
+
+        return entries.filter((entry) => !entry.stop || entry.stop === this.currentStop.id);
     }
 
     /* ── Headline ──────────────────────────────────────────────────── */
@@ -276,7 +296,7 @@ export default class TrackingPageFullViewComponent extends Component {
     }
 
     get timeline() {
-        return this.data.timeline ?? [];
+        return this.forCurrentStop(this.data.timeline ?? []);
     }
 
     get timelineGroups() {
@@ -310,11 +330,11 @@ export default class TrackingPageFullViewComponent extends Component {
     }
 
     get items() {
-        return this.data.items ?? [];
+        return this.forCurrentStop(this.data.items ?? []);
     }
 
     get proofs() {
-        return (this.data.proofs ?? []).map((proof) => ({ ...proof, url: this.proofUrls[proof.id] ?? null }));
+        return this.forCurrentStop(this.data.proofs ?? []).map((proof) => ({ ...proof, url: this.proofUrls[proof.id] ?? null }));
     }
 
     @action async loadProofs() {
