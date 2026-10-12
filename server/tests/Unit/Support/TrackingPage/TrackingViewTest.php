@@ -44,10 +44,10 @@ class TrackingViewDriver extends Driver
 class TrackingViewProbe extends TrackingView
 {
     public Collection $stops;
-    public array $tracker       = [];
-    public ?Collection $entities = null;
+    public array $tracker         = [];
+    public ?Collection $entities  = null;
     public ?Collection $proofRows = null;
-    public array $proofQueries  = [];
+    public array $proofQueries    = [];
 
     protected function contextStopsFor(Order $order): Collection
     {
@@ -116,6 +116,10 @@ function trackingViewOrder(array $attributes = []): Order
 
     $driver = new TrackingViewDriver();
     $driver->setRawAttributes(['uuid' => 'driver-1', 'name' => 'Daniel Okafor', 'phone' => '+15550001111', 'online' => 1, 'heading' => 92, 'location' => new Point(1.30123456, 103.80123456), 'updated_at' => '2026-10-08 08:59:00'], true);
+    // A driver's name is their user's.
+    $user = new Fleetbase\Models\User();
+    $user->setRawAttributes(['uuid' => 'user-driver-1', 'name' => 'Daniel Okafor'], true);
+    $driver->setRelation('user', $user);
     $order->setRelation('driverAssigned', $driver);
     $order->setRelation('vehicleAssigned', null);
     $order->setRelation('payload', null);
@@ -189,6 +193,8 @@ test('branding falls back to the company, then the instance', function () {
 });
 
 test('the coarse stage follows the order and the customer stops', function () {
+    // The order's date casts read the date format from its connection.
+    TrackingPageDatabase::boot();
     $view   = new TrackingViewProbe();
     $scopeA = new TrackingScope('order-1', Contact::class, 'contact-a');
     $update = fn (Order $order, bool $complete = false) => new Fleetbase\FleetOps\Support\TrackingUpdate($order, $scopeA, trackingViewStops($complete));
@@ -204,6 +210,8 @@ test('the coarse stage follows the order and the customer stops', function () {
 });
 
 test('a tracking number alone shows the stage, the last update and how to verify', function () {
+    // The order's date casts read the date format from its connection.
+    TrackingPageDatabase::boot();
     $view        = new TrackingViewProbe();
     $view->stops = trackingViewStops();
     $scopeA      = new TrackingScope('order-1', Contact::class, 'contact-a');
@@ -353,9 +361,9 @@ test('proof types and proofs a scope may open', function () {
             return $this->found;
         }
     };
-    $view->stops = trackingViewStops(true);
+    $view->stops    = trackingViewStops(true);
     $view->entities = collect();
-    $proof = new Proof();
+    $proof          = new Proof();
     $proof->setRawAttributes(['public_id' => 'proof_a', 'file_uuid' => 'file-a', 'subject_uuid' => 'wp-a'], true);
     $view->proofRows = collect([$proof]);
     $view->found     = $proof;
