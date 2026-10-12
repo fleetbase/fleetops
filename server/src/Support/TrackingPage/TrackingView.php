@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Support\TrackingPage;
 
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Support\TrackingScope;
 use Fleetbase\FleetOps\Support\TrackingUpdate;
@@ -110,7 +111,7 @@ class TrackingView
         $entities   = $this->entitiesFor($order, $placeUuids, $scope);
         $showMap    = (bool) data_get($config, 'visibility.map', true);
         $location   = $showMap ? $data['location'] : null;
-        $stopsView  = $this->stops($own, collect($data['stops']));
+        $stopsView  = $this->stops($own, collect($data['stops']), $stops);
 
         return [
             'level'           => $viewer === self::VIEWER_ACCOUNT ? 2 : 1,
@@ -181,17 +182,18 @@ class TrackingView
     /**
      * The customer's stops: where, when and their own status, never the pickup's place.
      */
-    protected function stops(Collection $own, Collection $data): array
+    protected function stops(Collection $own, Collection $data, Collection $all): array
     {
         $byId = $data->keyBy(fn ($stop) => $stop['sequence']);
 
-        return $own->filter(fn (TrackingStop $stop) => $stop->type !== 'pickup')->map(function (TrackingStop $stop) use ($byId) {
+        return $own->filter(fn (TrackingStop $stop) => $stop->type !== 'pickup')->map(function (TrackingStop $stop) use ($byId, $all) {
             $point = $stop->point();
             $entry = $byId->get($stop->sequence, []);
 
             return [
                 'id'       => static::stopId($stop),
                 'type'     => $stop->type,
+                'marker'   => static::markerFor($stop, $all),
                 'sequence' => $stop->sequence,
                 'status'   => $stop->status,
                 'complete' => $stop->completed,
@@ -283,11 +285,13 @@ class TrackingView
         $mine = $stops->every(fn (TrackingStop $stop) => $stop->type === 'pickup' || $own->contains(fn (TrackingStop $owned) => $owned === $stop));
 
         return [
-            'pickups'  => $stops->filter(fn (TrackingStop $stop) => $stop->type === 'pickup')->map(function (TrackingStop $stop) {
+            'pickups'  => $stops->filter(fn (TrackingStop $stop) => $stop->type === 'pickup')->map(function (TrackingStop $stop) use ($stops) {
                 $point = $stop->point();
 
                 return $point ? [
                     'name'      => $stop->place?->name,
+                    'marker'    => static::markerFor($stop, $stops),
+                    'store'     => $this->storeFor($stop->place),
                     'latitude'  => round($point->getLat(), self::STOP_PRECISION),
                     'longitude' => round($point->getLng(), self::STOP_PRECISION),
                     'complete'  => $stop->completed,
@@ -387,6 +391,39 @@ class TrackingView
     public static function stopId(TrackingStop $stop): ?string
     {
         return $stop->waypoint?->public_id ?? $stop->place?->public_id;
+    }
+
+    /**
+     * The stop's label on the map, as the console's order maps draw it: P for the
+     * payload's pickup, D for its dropoff, and each waypoint its number in the route.
+     */
+    public static function markerFor(TrackingStop $stop, Collection $stops): string
+    {
+        $isWaypoint = fn (TrackingStop $candidate) => $candidate->waypoint !== null || $candidate->type === 'waypoint';
+        if ($isWaypoint($stop)) {
+            return (string) ($stops->filter($isWaypoint)->values()->search(fn (TrackingStop $candidate) => $candidate === $stop) + 1);
+        }
+
+        return $stop->type === 'pickup' ? 'P' : 'D';
+    }
+
+    /**
+     * The store a pickup is, when it is a storefront store's location: its name and logo
+     * draw the marker.
+     */
+    protected function storeFor(?Place $place): ?array
+    {
+        if (!$place || !str_contains((string) $place->owner_type, 'Storefront')) {
+            return null;
+        }
+
+        try {
+            $store = $place->owner;
+        } catch (\Throwable) {
+            $store = null;
+        }
+
+        return ['logo_url' => data_get($store, 'logo_uuid') ? data_get($store, 'logo_url') : null];
     }
 
     /**

@@ -247,6 +247,7 @@ test('a verified customer sees only their own stop on an order with several cust
         ->and($data['stops'])->toHaveCount(1)
         ->and($data['stops'][0])->toMatchArray([
             'id'       => 'waypoint_wp-a',
+            'marker'   => '1',
             'sequence' => 1,
             'complete' => false,
             'place'    => ['name' => 'Maya Flat', 'address' => 'Maya Flat street', 'latitude' => 1.33333, 'longitude' => 103.77778],
@@ -257,7 +258,7 @@ test('a verified customer sees only their own stop on an order with several cust
         ->and($data['driver'])->toBe(['name' => 'Daniel', 'vehicle' => null, 'online' => true])
         ->and($data['location']['latitude'])->toBe(1.3012)
         // The pickup shows by name; the line would trace the other customer's stop.
-        ->and($data['map'])->toBe(['pickups' => [['name' => 'Sender Warehouse', 'latitude' => 1.2876, 'longitude' => 103.8456, 'complete' => true]], 'polyline' => null])
+        ->and($data['map'])->toBe(['pickups' => [['name' => 'Sender Warehouse', 'marker' => 'P', 'store' => null, 'latitude' => 1.2876, 'longitude' => 103.8456, 'complete' => true]], 'polyline' => null])
         ->and($data['items'])->toBe([['id' => 'entity_a1', 'stop' => 'waypoint_wp-a', 'name' => 'Item a1', 'description' => 'Boxed', 'quantity' => 2]])
         // The stop's own setup entry is left out; the rest name the stop.
         ->and($data['timeline'])->toBe([['status' => 'Out for delivery', 'code' => 'enroute', 'complete' => false, 'created_at' => '2026-10-08T08:45:00.000000Z', 'stop' => 'waypoint_wp-a', 'place' => 'Maya Flat']])
@@ -375,10 +376,18 @@ test('a storefront order is collected from each store and delivered to the custo
     // with no type, so they read as dropoffs.
     $order = trackingViewOrder(['type' => 'storefront', 'status' => 'dispatched', 'started' => false]);
     $order->setRelation('driverAssigned', null);
+    // Both stores are storefront store locations: one with a logo, one whose store
+    // can't be loaded here.
+    $orchard = trackingViewPlace('orchard', 'Orchard Grocers', 1.3048, 103.8318);
+    $orchard->setRawAttributes([...$orchard->getAttributes(), 'owner_type' => 'Fleetbase\\Storefront\\Models\\Store', 'owner_uuid' => 'store-1'], true);
+    $orchard->setRelation('owner', (object) ['logo_uuid' => 'file-1', 'logo_url' => 'https://cdn.example/orchard.png']);
+    $rochor = trackingViewPlace('rochor', 'Rochor Noodle House', 1.3039, 103.8536);
+    $rochor->setRawAttributes([...$rochor->getAttributes(), 'owner_type' => 'Fleetbase\\Storefront\\Models\\Store', 'owner_uuid' => 'store-2'], true);
+
     $view        = new TrackingViewProbe();
     $view->stops = collect([
-        new TrackingStop('place-orchard', 'place_orchard', 'pickup', null, trackingViewPlace('orchard', 'Orchard Grocers', 1.3048, 103.8318), null, false, 1, null),
-        new TrackingStop('place-rochor', 'place_rochor', 'waypoint', null, trackingViewPlace('rochor', 'Rochor Noodle House', 1.3039, 103.8536), trackingViewWaypoint('wp-rochor', null, ['type' => 'dropoff']), false, 2, 'tn-rochor'),
+        new TrackingStop('place-orchard', 'place_orchard', 'pickup', null, $orchard, null, false, 1, null),
+        new TrackingStop('place-rochor', 'place_rochor', 'waypoint', null, $rochor, trackingViewWaypoint('wp-rochor', null, ['type' => 'dropoff']), false, 2, 'tn-rochor'),
         new TrackingStop('place-home', 'place_home', 'dropoff', null, trackingViewPlace('home', 'Singapore Home', 1.3007, 103.9106), null, false, 3, null),
     ]);
     $view->tracker  = ['route' => ['polyline' => 'abc']];
@@ -389,6 +398,10 @@ test('a storefront order is collected from each store and delivered to the custo
     expect($data['stops'])->toHaveCount(1)
         ->and($data['stops'][0]['place']['name'])->toBe('Singapore Home')
         ->and(collect($data['map']['pickups'])->pluck('name')->all())->toBe(['Orchard Grocers', 'Rochor Noodle House'])
+        // Marked as the console's order maps mark them: P, the waypoint's number, D.
+        ->and(collect($data['map']['pickups'])->pluck('marker')->all())->toBe(['P', '1'])
+        ->and($data['stops'][0]['marker'])->toBe('D')
+        ->and(collect($data['map']['pickups'])->pluck('store')->all())->toBe([['logo_url' => 'https://cdn.example/orchard.png'], ['logo_url' => null]])
         ->and($data['location'])->toBeNull()
         ->and($data['map']['polyline'])->toBe('abc');
 

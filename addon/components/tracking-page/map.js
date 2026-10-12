@@ -3,7 +3,20 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { next } from '@ember/runloop';
+import { icon } from '@fortawesome/fontawesome-svg-core';
+import { faStore, faCheck } from '@fortawesome/free-solid-svg-icons';
 import { decodePolyline } from '../../utils/tracking-live-source';
+
+/**
+ * Marker colours, as the console's order maps use them.
+ */
+const PICKUP_COLOR = '#22C55E';
+const DROPOFF_COLOR = '#EF4444';
+const DONE_COLOR = '#6B7280';
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+}
 
 /**
  * The live map on the tracking page: where the order is collected, the customer's stops,
@@ -54,7 +67,7 @@ export default class TrackingPageMapComponent extends Component {
                     number,
                     location: [stop.place.latitude, stop.place.longitude],
                     label: stop.place.name || this.intl.t('tracking-page.page.your-stop', { number }),
-                    icon: this.stopIcon(number, stop.complete, selected, dimmed),
+                    icon: this.stopIcon(stop.marker ?? String(number), stop.complete, selected, dimmed),
                 });
             }
         }
@@ -66,8 +79,9 @@ export default class TrackingPageMapComponent extends Component {
         return (this.data.map?.pickups ?? []).map((pickup) => ({
             ...pickup,
             location: [pickup.latitude, pickup.longitude],
-            label: pickup.name ? this.intl.t('tracking-page.page.map-pickup-named', { name: pickup.name }) : this.intl.t('tracking-page.page.map-pickup'),
-            icon: this.pickupIcon(pickup.complete),
+            label: pickup.name || this.intl.t('tracking-page.page.map-pickup'),
+            title: pickup.name ? this.intl.t('tracking-page.page.map-pickup-named', { name: pickup.name }) : this.intl.t('tracking-page.page.map-pickup'),
+            icon: this.pickupIcon(pickup),
         }));
     }
 
@@ -127,36 +141,84 @@ export default class TrackingPageMapComponent extends Component {
         });
     }
 
-    pickupIcon(complete) {
+    /**
+     * A round marker with a label, as the console's order maps draw them.
+     */
+    markerIcon(content, color, classes = []) {
         return L.divIcon({
-            className: complete ? 'tp-map-marker tp-map-pickup tp-map-pickup-complete' : 'tp-map-marker tp-map-pickup',
-            html: `<span class="tp-map-pickup-pin">${complete ? '✓' : ''}</span>`,
-            iconSize: [22, 22],
-            iconAnchor: [11, 11],
-            tooltipAnchor: [0, -13],
+            className: ['tp-map-marker', 'tp-map-point', ...classes].join(' '),
+            html: `<span class="tp-map-point-dot" style="background:${color}">${content}</span>`,
+            iconSize: [30, 30],
+            iconAnchor: [15, 15],
+            tooltipAnchor: [0, -17],
         });
     }
 
-    stopIcon(number, complete, selected, dimmed) {
-        const classes = ['tp-map-marker', 'tp-map-stop'];
+    /**
+     * P, or the waypoint's number; a storefront store shows its logo, or a store.
+     */
+    pickupIcon(pickup) {
+        if (pickup.complete) {
+            return this.markerIcon(icon(faCheck).html[0], DONE_COLOR, ['tp-map-point-complete']);
+        }
+
+        if (pickup.store?.logo_url) {
+            return this.markerIcon(`<img src="${escapeHtml(pickup.store.logo_url)}" alt="" />`, PICKUP_COLOR, ['tp-map-point-logo']);
+        }
+
+        return this.markerIcon(pickup.store ? icon(faStore).html[0] : escapeHtml(pickup.marker ?? 'P'), PICKUP_COLOR);
+    }
+
+    stopIcon(marker, complete, selected, dimmed) {
+        const classes = [];
         if (complete) {
-            classes.push('tp-map-stop-complete');
+            classes.push('tp-map-point-complete');
         }
 
         if (selected) {
-            classes.push('tp-map-stop-selected');
+            classes.push('tp-map-point-selected');
         }
 
         if (dimmed) {
-            classes.push('tp-map-stop-dimmed');
+            classes.push('tp-map-point-dimmed');
         }
 
-        return L.divIcon({
-            className: classes.join(' '),
-            html: `<span class="tp-map-stop-pin"><span class="tp-map-stop-number">${complete ? '✓' : Number(number)}</span></span>`,
-            iconSize: [30, 38],
-            iconAnchor: [15, 38],
-            tooltipAnchor: [0, -40],
+        const color = complete ? DONE_COLOR : marker === 'D' ? DROPOFF_COLOR : 'var(--tp-accent)';
+
+        return this.markerIcon(complete ? icon(faCheck).html[0] : escapeHtml(marker), color, classes);
+    }
+
+    /* ── Labels ────────────────────────────────────────────────────── */
+
+    /**
+     * Hide the labels that would overlap one already shown, in the order the map gives
+     * them priority: the vehicle, the customer's stops, then the pickups. A hidden label
+     * comes back once there is room, and its marker's title still names it.
+     */
+    @action placeLabels() {
+        if (!this.element) {
+            return;
+        }
+
+        const labels = ['.tp-map-label-vehicle', '.tp-map-label-stop', '.tp-map-label-pickup'].flatMap((selector) => [...this.element.querySelectorAll(selector)]);
+        const shown = [];
+        for (const label of labels) {
+            label.classList.remove('tp-map-label-hidden');
+            const box = label.getBoundingClientRect();
+            const overlaps = shown.some((other) => box.left < other.right + 4 && box.right > other.left - 4 && box.top < other.bottom + 2 && box.bottom > other.top - 2);
+            if (overlaps) {
+                label.classList.add('tp-map-label-hidden');
+            } else {
+                shown.push(box);
+            }
+        }
+    }
+
+    scheduleLabels() {
+        next(() => {
+            if (!this.isDestroyed) {
+                this.placeLabels();
+            }
         });
     }
 
@@ -174,6 +236,7 @@ export default class TrackingPageMapComponent extends Component {
 
     willDestroy() {
         super.willDestroy(...arguments);
+        this.map?.off('zoomend moveend', this.placeLabels);
         document.removeEventListener('fullscreenchange', this.onFullscreenChange);
         document.removeEventListener('keydown', this.onKeydown);
     }
@@ -224,7 +287,9 @@ export default class TrackingPageMapComponent extends Component {
 
     @action setup({ target }) {
         this.map = target;
+        this.map.on('zoomend moveend', this.placeLabels);
         this.fitRoute();
+        this.scheduleLabels();
     }
 
     @action fitRoute() {

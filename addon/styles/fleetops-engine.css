@@ -13361,9 +13361,15 @@ body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-
 }
 
 .tp-map-button {
-    width: 2.75rem;
-    height: 2.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
     border: 0;
+    font-size: 0.875rem;
+    line-height: 1;
     border-radius: 0.75rem;
     background: var(--tp-surface);
     color: var(--tp-text);
@@ -13403,60 +13409,51 @@ body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-
     opacity: 0.5;
 }
 
-.tp-map-stop-pin {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    border: 3px solid var(--tp-surface);
-    border-radius: 999px 999px 999px 0;
-    background: var(--tp-accent);
-    box-shadow: 0 2px 6px rgb(0 0 0 / 25%);
-    transform: translateY(2px) rotate(-45deg);
-}
-
-.tp-map-stop-number {
-    color: var(--tp-ink);
-    font-size: 0.8125rem;
-    font-weight: 700;
-    line-height: 1;
-    transform: rotate(45deg);
-}
-
-.tp-map-stop-complete .tp-map-stop-pin {
-    background: var(--tp-neutral);
-}
-
-.tp-map-stop-selected .tp-map-stop-pin {
-    box-shadow:
-        0 0 0 4px var(--tp-accent-soft),
-        0 2px 6px rgb(0 0 0 / 25%);
-    transform: translateY(2px) rotate(-45deg) scale(1.15);
-}
-
-.tp-map-stop-dimmed {
-    opacity: 0.55;
-}
-
-.tp-map-pickup-pin {
+/* Round markers with a label, as the console's order maps draw them: P, a waypoint's
+   number, D, or a store. */
+.tp-map-point-dot {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
     height: 100%;
-    border: 3px solid var(--tp-text);
-    border-radius: 0.375rem;
-    background: var(--tp-surface);
-    color: var(--tp-text);
-    font-size: 0.6875rem;
+    overflow: hidden;
+    box-sizing: border-box;
+    border: 2.5px solid #fff;
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 45%);
+    color: #fff;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.8125rem;
     font-weight: 700;
     line-height: 1;
 }
 
-.tp-map-pickup-complete .tp-map-pickup-pin {
-    border-color: var(--tp-neutral);
-    color: var(--tp-neutral);
+.tp-map-point-dot svg {
+    width: 0.8125rem;
+    height: 0.8125rem;
+    fill: currentcolor;
+}
+
+.tp-map-point-logo .tp-map-point-dot {
+    background: #fff;
+}
+
+.tp-map-point-dot img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.tp-map-point-selected .tp-map-point-dot {
+    box-shadow:
+        0 0 0 4px var(--tp-accent-soft),
+        0 2px 8px rgb(0 0 0 / 45%);
+    transform: scale(1.15);
+}
+
+.tp-map-point-dimmed {
+    opacity: 0.55;
 }
 
 /* SVG presentation attributes don't resolve CSS variables, so the line takes its
@@ -13486,6 +13483,10 @@ body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-
 
 .tp-root .tp-map-label::before {
     display: none;
+}
+
+.tp-root .tp-map-label-hidden {
+    visibility: hidden;
 }
 
 .tp-root .tp-map-label-vehicle {
@@ -13594,6 +13595,12 @@ body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-
     box-sizing: border-box;
     border: 2px solid var(--tp-border);
     border-radius: 999px;
+}
+
+/* Every update has happened: earlier ones are filled, the latest takes the accent. */
+.tp-timeline-entry .tp-timeline-dot {
+    border-color: var(--tp-neutral);
+    background: var(--tp-neutral);
 }
 
 .tp-timeline-latest .tp-timeline-dot {

@@ -1,4 +1,4 @@
-<div class="tp-map {{if this.expanded 'tp-map-expanded'}}" {{did-insert this.register}} {{did-update this.focusStop @selectedStopId}}>
+<div class="tp-map {{if this.expanded 'tp-map-expanded'}}" {{did-insert this.register}} {{did-update this.focusStop @selectedStopId}} {{did-update this.placeLabels @data}}>
     <span class="tp-sr-only">{{@label}}</span>
     <LeafletMap class="tp-map-canvas" @lat={{get this.center 0}} @lng={{get this.center 1}} @zoom={{13}} @zoomControl={{false}} @onLoad={{this.setup}} as |layers|>
         <layers.tile @url={{(leaflet-tile-url)}} />
@@ -8,7 +8,7 @@
             <layers.polyline @locations={{this.plannedRoute}} @className="tp-map-route tp-map-route-planned" @weight={{3}} @dashArray="6 8" @interactive={{false}} />
         {{/if}}
         {{#each this.pickups as |pickup|}}
-            <layers.marker @location={{pickup.location}} @icon={{pickup.icon}} @title={{pickup.label}} @keyboard={{false}} as |marker|>
+            <layers.marker @location={{pickup.location}} @icon={{pickup.icon}} @title={{pickup.title}} @keyboard={{false}} as |marker|>
                 <marker.tooltip @permanent={{true}} @direction="top" @className="tp-map-label tp-map-label-pickup">{{pickup.label}}</marker.tooltip>
             </layers.marker>
         {{/each}}

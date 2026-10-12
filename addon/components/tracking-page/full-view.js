@@ -4,10 +4,11 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 
 /**
- * Coarse stages, in order, and the step each one has reached.
+ * Coarse stages, in order, and how many steps each one has completed: a dispatched order
+ * has been created and dispatched, and is waiting on the pickup, as its updates say.
  */
 const STEPS = ['created', 'dispatched', 'started', 'enroute', 'delivered'];
-const REACHED = { preparing: 0, scheduled: 0, dispatched: 1, in_transit: 3, delivered: 5 };
+const REACHED = { preparing: 1, scheduled: 1, dispatched: 2, in_transit: 3, delivered: 5 };
 
 function step(key, state, label, last) {
     return {
