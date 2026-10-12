@@ -104,6 +104,26 @@ test('company user status changes sync onto the driver record', function () {
     expect($connection->table('drivers')->value('status'))->toBe('suspended');
 });
 
+test('company user changes only touch the driver profile in that company', function () {
+    $connection = fleetopsObserversBoot();
+    $connection->table('users')->insert(['uuid' => 'user-1', 'company_uuid' => 'company-1']);
+    $connection->table('drivers')->insert([
+        ['uuid' => 'driver-other', 'company_uuid' => 'company-2', 'user_uuid' => 'user-1', 'status' => 'active'],
+        ['uuid' => 'driver-1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1', 'status' => 'active'],
+    ]);
+
+    $companyUser         = fleetopsObserversCompanyUser();
+    $companyUser->status = 'suspended';
+    $companyUser->syncChanges();
+    (new CompanyUserObserver())->updated($companyUser);
+
+    expect($connection->table('drivers')->pluck('status', 'uuid')->all())->toBe(['driver-other' => 'active', 'driver-1' => 'suspended']);
+
+    (new CompanyUserObserver())->deleted($companyUser);
+
+    expect($connection->table('drivers')->whereNull('deleted_at')->pluck('uuid')->all())->toBe(['driver-other']);
+});
+
 test('service area deletion cascades to zones and border derives from country', function () {
     $connection = fleetopsObserversBoot();
     $connection->table('zones')->insert(['uuid' => 'zone-1', 'company_uuid' => 'company-1', 'service_area_uuid' => 'sa-1', 'name' => 'Zone 1']);
