@@ -13429,7 +13429,9 @@ body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-
 }
 
 .tp-map-stop-selected .tp-map-stop-pin {
-    box-shadow: 0 0 0 4px var(--tp-accent-soft), 0 2px 6px rgb(0 0 0 / 25%);
+    box-shadow:
+        0 0 0 4px var(--tp-accent-soft),
+        0 2px 6px rgb(0 0 0 / 25%);
     transform: translateY(2px) rotate(-45deg) scale(1.15);
 }
 
