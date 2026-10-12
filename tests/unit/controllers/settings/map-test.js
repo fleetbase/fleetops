@@ -127,7 +127,7 @@ module('Unit | Controller | settings/map', function (hooks) {
         const controller = this.owner.lookup('controller:settings/map');
         await controller.getSettings.last;
 
-        assert.strictEqual(controller.defaultMapCenterPoint, null, 'no centre loaded');
+        assert.strictEqual(controller.defaultMapCenterPoint, undefined, 'no centre loaded; never null, which CoordinatesInput cannot read');
 
         controller.setDefaultMapCenter({ latitude: '-27.47', longitude: '153.02' });
         controller.defaultMapZoom = '11';

@@ -98,8 +98,9 @@ export default class SettingsMapController extends Controller {
      * @return {Object|null}
      */
     get defaultMapCenterPoint() {
+        // Not null: CoordinatesInput#isPoint reads `.type` on any object, and typeof null is "object".
         if (!this.hasDefaultMapCenter) {
-            return null;
+            return undefined;
         }
 
         return { type: 'Point', coordinates: [this.defaultMapLongitude, this.defaultMapLatitude] };
