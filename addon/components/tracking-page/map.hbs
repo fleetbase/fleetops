@@ -3,16 +3,24 @@
     <LeafletMap class="tp-map-canvas" @lat={{get this.center 0}} @lng={{get this.center 1}} @zoom={{13}} @zoomControl={{false}} @onLoad={{this.setup}} as |layers|>
         <layers.tile @url={{(leaflet-tile-url)}} />
         {{#if this.hasRoute}}
-            <layers.polyline @locations={{this.route}} @color="var(--tp-accent)" @weight={{5}} @opacity={{0.9}} />
+            <layers.polyline @locations={{this.route}} @className="tp-map-route" @weight={{5}} @opacity={{0.9}} @interactive={{false}} />
+        {{else if this.hasPlannedRoute}}
+            <layers.polyline @locations={{this.plannedRoute}} @className="tp-map-route tp-map-route-planned" @weight={{3}} @dashArray="6 8" @interactive={{false}} />
         {{/if}}
         {{#if this.hub}}
-            <layers.marker @location={{this.hub}} @icon={{this.hubIcon}} @keyboard={{false}} />
+            <layers.marker @location={{this.hub}} @icon={{this.hubIcon}} @keyboard={{false}} as |marker|>
+                <marker.tooltip @permanent={{true}} @direction="top" @className="tp-map-label">{{t "tracking-page.page.map-pickup"}}</marker.tooltip>
+            </layers.marker>
         {{/if}}
         {{#each this.stops as |stop|}}
-            <layers.marker @location={{stop.location}} @icon={{this.stopIcon}} @title={{stop.place.name}} />
+            <layers.marker @location={{stop.location}} @icon={{stop.icon}} @title={{stop.label}} @riseOnHover={{true}} as |marker|>
+                <marker.tooltip @permanent={{true}} @direction="top" @className="tp-map-label tp-map-label-stop">{{stop.label}}</marker.tooltip>
+            </layers.marker>
         {{/each}}
         {{#if this.vehicle}}
-            <layers.marker @location={{this.vehicle}} @icon={{this.vehicleIcon}} @zIndexOffset={{1000}} />
+            <layers.marker @location={{this.vehicle}} @icon={{this.vehicleIcon}} @zIndexOffset={{1000}} @title={{this.vehicleLabel}} as |marker|>
+                <marker.tooltip @permanent={{true}} @direction="top" @className="tp-map-label tp-map-label-vehicle">{{this.vehicleLabel}}</marker.tooltip>
+            </layers.marker>
         {{/if}}
     </LeafletMap>
     <div class="tp-map-chip {{if @stale 'tp-map-chip-stale'}}">

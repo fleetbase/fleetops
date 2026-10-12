@@ -128,7 +128,7 @@
             </select>
         </label>
         {{#if this.company.powered_by}}
-            <div>{{t "tracking-page.page.powered-by"}}</div>
+            <FleetbaseAttribution @showPoweredBy={{true}} class="tp-attribution" />
         {{/if}}
     </footer>
 

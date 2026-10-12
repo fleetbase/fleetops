@@ -13356,30 +13356,104 @@ body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-
     cursor: pointer;
 }
 
+/* Leaflet positions markers with an inline transform, so a marker's shape is drawn on
+   its child element; a transform on the marker itself would be overwritten. */
+.tp-map-marker {
+    background: none;
+    border: 0;
+}
+
+.tp-root .tp-attribution,
+.tp-root .tp-attribution .fleetbase-attribution-link,
+.tp-root .tp-attribution .fleetbase-attribution-legal-link {
+    color: var(--tp-muted);
+}
+
 .tp-map-vehicle {
+    transition: transform 1s linear;
+}
+
+.tp-map-vehicle-dot {
+    display: block;
+    width: 100%;
+    height: 100%;
     border: 3px solid var(--tp-surface);
     border-radius: 999px;
     background: var(--tp-accent);
     box-shadow: 0 0 0 6px var(--tp-accent-soft);
-    transition: transform 1s linear;
 }
 
-.tp-map-vehicle-stale {
+.tp-map-vehicle-stale .tp-map-vehicle-dot {
     background: var(--tp-neutral);
     opacity: 0.5;
 }
 
-.tp-map-stop {
+.tp-map-stop-pin {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
     border: 3px solid var(--tp-surface);
     border-radius: 999px 999px 999px 0;
-    background: var(--tp-text);
-    transform: rotate(-45deg);
+    background: var(--tp-accent);
+    box-shadow: 0 2px 6px rgb(0 0 0 / 25%);
+    transform: translateY(2px) rotate(-45deg);
 }
 
-.tp-map-hub {
+.tp-map-stop-number {
+    color: var(--tp-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    line-height: 1;
+    transform: rotate(45deg);
+}
+
+.tp-map-stop-complete .tp-map-stop-pin {
+    background: var(--tp-neutral);
+}
+
+.tp-map-hub-dot {
+    display: block;
+    width: 100%;
+    height: 100%;
     border: 3px solid var(--tp-text);
     border-radius: 999px;
     background: var(--tp-surface);
+}
+
+/* SVG presentation attributes don't resolve CSS variables, so the line takes its
+   colour here rather than from Leaflet's `color` option. */
+.tp-map-route {
+    stroke: var(--tp-accent);
+}
+
+.tp-map-route-planned {
+    stroke: var(--tp-muted);
+}
+
+.tp-root .tp-map-label {
+    max-width: 12rem;
+    padding: 0.125rem 0.5rem;
+    overflow: hidden;
+    border: 1px solid var(--tp-border);
+    border-radius: 999px;
+    background: var(--tp-surface);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 15%);
+    color: var(--tp-text);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tp-root .tp-map-label::before {
+    display: none;
+}
+
+.tp-root .tp-map-label-vehicle {
+    border-color: var(--tp-accent);
+    color: var(--tp-accent);
 }
 
 .tp-eta-time {
@@ -13698,7 +13772,8 @@ body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-
 
 @media (prefers-reduced-motion: reduce) {
     .tp-live-dot,
-    .tp-map-vehicle {
+    .tp-root .tp-map-vehicle,
+    .tp-root .tp-map-vehicle-dot {
         animation: none;
         transition: none;
     }

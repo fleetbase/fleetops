@@ -2531,6 +2531,8 @@ tracking-page:
     stops-private: "{count, plural, =0 {You're next.} one {# stop to go before yours.} other {# stops to go before yours.}} Other stops stay private, so you only see your own."
     map: "Map"
     map-label: "Map of your delivery: the van on its way to your address."
+    map-pickup: "Pickup area"
+    map-driver: "Driver"
     map-hidden: "The map is hidden now your order is delivered. We stop sharing the driver's location at your door."
     last-seen: "Last seen {minutes} min ago"
     recenter: "Center the map on the van"

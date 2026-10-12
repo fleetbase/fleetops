@@ -1,13 +1,21 @@
 import Component from '@glimmer/component';
+import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { decodePolyline } from '../../utils/tracking-live-source';
 
 /**
- * The live map on the tracking page: the customer's stops, where the route starts, the
- * route line when every stop is theirs, and the vehicle while it is on its way to them.
- * It renders below the status text, so the page reads before the map loads.
+ * The live map on the tracking page: the customer's stops, numbered as the stop cards
+ * are, where the route starts, and the vehicle while it is on its way to them. Each
+ * marker carries a label, so the map reads without a legend.
+ *
+ * The road line comes from live routing, which the server sends only while the vehicle
+ * is on its way and every stop is the customer's. Until then a dashed line joins the
+ * points already on the map, in stop order: it shows the order of the trip and gives
+ * away nothing the markers don't.
  */
 export default class TrackingPageMapComponent extends Component {
+    @service intl;
+
     map = null;
 
     get data() {
@@ -20,11 +28,23 @@ export default class TrackingPageMapComponent extends Component {
         return location ? [location.latitude, location.longitude] : null;
     }
 
+    get vehicleLabel() {
+        return this.data.driver?.name || this.intl.t('tracking-page.page.map-driver');
+    }
+
     get stops() {
         const stops = [];
+        let number = 0;
         for (const stop of this.data.stops ?? []) {
+            number += 1;
             if (stop.place?.latitude && stop.place?.longitude) {
-                stops.push({ ...stop, location: [stop.place.latitude, stop.place.longitude] });
+                stops.push({
+                    ...stop,
+                    number,
+                    location: [stop.place.latitude, stop.place.longitude],
+                    label: stop.place.name || this.intl.t('tracking-page.page.your-stop', { number }),
+                    icon: this.stopIcon(number, stop.complete),
+                });
             }
         }
 
@@ -45,13 +65,37 @@ export default class TrackingPageMapComponent extends Component {
         return this.route.length > 1;
     }
 
+    /**
+     * Pickup, then each stop still to come; the vehicle stands in for the pickup once it
+     * is on its way.
+     */
+    get plannedRoute() {
+        const points = [];
+        const start = this.vehicle ?? this.hub;
+        if (start) {
+            points.push(start);
+        }
+
+        for (const stop of this.stops) {
+            if (!stop.complete) {
+                points.push(stop.location);
+            }
+        }
+
+        return points;
+    }
+
+    get hasPlannedRoute() {
+        return !this.hasRoute && this.plannedRoute.length > 1;
+    }
+
     get points() {
         const points = this.stops.map((stop) => stop.location);
         if (this.vehicle) {
             points.push(this.vehicle);
         }
 
-        if (this.hub && points.length < 2) {
+        if (this.hub) {
             points.push(this.hub);
         }
 
@@ -63,15 +107,27 @@ export default class TrackingPageMapComponent extends Component {
     }
 
     get vehicleIcon() {
-        return L.divIcon({ className: this.args.stale ? 'tp-map-vehicle tp-map-vehicle-stale' : 'tp-map-vehicle', iconSize: [28, 28], iconAnchor: [14, 14] });
-    }
-
-    get stopIcon() {
-        return L.divIcon({ className: 'tp-map-stop', iconSize: [22, 22], iconAnchor: [11, 22] });
+        return L.divIcon({
+            className: this.args.stale ? 'tp-map-marker tp-map-vehicle tp-map-vehicle-stale' : 'tp-map-marker tp-map-vehicle',
+            html: '<span class="tp-map-vehicle-dot"></span>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+            tooltipAnchor: [0, -16],
+        });
     }
 
     get hubIcon() {
-        return L.divIcon({ className: 'tp-map-hub', iconSize: [16, 16], iconAnchor: [8, 8] });
+        return L.divIcon({ className: 'tp-map-marker tp-map-hub', html: '<span class="tp-map-hub-dot"></span>', iconSize: [18, 18], iconAnchor: [9, 9], tooltipAnchor: [0, -11] });
+    }
+
+    stopIcon(number, complete) {
+        return L.divIcon({
+            className: complete ? 'tp-map-marker tp-map-stop tp-map-stop-complete' : 'tp-map-marker tp-map-stop',
+            html: `<span class="tp-map-stop-pin"><span class="tp-map-stop-number">${complete ? '✓' : Number(number)}</span></span>`,
+            iconSize: [30, 38],
+            iconAnchor: [15, 38],
+            tooltipAnchor: [0, -40],
+        });
     }
 
     @action setup({ target }) {
@@ -89,7 +145,7 @@ export default class TrackingPageMapComponent extends Component {
             return;
         }
 
-        this.map.fitBounds(L.latLngBounds(this.points), { padding: [36, 36], maxZoom: 15 });
+        this.map.fitBounds(L.latLngBounds(this.points), { padding: [48, 48], maxZoom: 15 });
     }
 
     @action recenter() {
