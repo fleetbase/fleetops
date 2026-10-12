@@ -2578,6 +2578,10 @@ widget:
         title: Geofence Violations
     live-fleet:
         title: Live Fleet Map
+    proof-of-delivery:
+        title: Proof of Delivery
+        open-photo: Open photo
+        empty: No proof of delivery photos yet.
     get-started:
         title: Get Started with Fleet-Ops
         subtitle: Set up the essentials and complete your first dispatch flow.

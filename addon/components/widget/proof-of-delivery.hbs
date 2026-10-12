@@ -1,0 +1,49 @@
+<div class="fleet-ops-widget fleet-ops-proof-of-delivery flex flex-col h-full {{@class}}" data-test-proof-of-delivery-widget ...attributes>
+    <div class="flex items-center justify-between px-3 py-1.5 border dark:border-gray-700 border-gray-200 dark:bg-gray-800 bg-gray-50 rounded-t-md shadow-sm">
+        <span class="text-xs font-bold text-black dark:text-gray-100">{{t "widget.proof-of-delivery.title"}}</span>
+        <FaIcon @icon="camera" class="text-gray-400" />
+    </div>
+
+    <div class="flex-1 p-2 border border-t-0 dark:border-gray-700 border-gray-200 rounded-b-md bg-white dark:bg-gray-900 overflow-auto min-h-0">
+        {{#if this.load.isRunning}}
+            <div class="flex items-center justify-center h-full"><Spinner /></div>
+        {{else if this.error}}
+            <div class="flex items-center justify-center h-full text-xs text-red-500">{{this.error}}</div>
+        {{else if this.photos.length}}
+            <div class="grid grid-cols-3 gap-2">
+                {{#each this.photos as |proof|}}
+                    <div class="min-w-0" data-test-proof-of-delivery-photo={{proof.id}}>
+                        <button
+                            type="button"
+                            class="block w-full aspect-square rounded-md overflow-hidden border dark:border-gray-700 border-gray-200 bg-gray-100 dark:bg-gray-800 hover:opacity-90"
+                            title={{or proof.remarks (t "widget.proof-of-delivery.open-photo")}}
+                            aria-label={{t "widget.proof-of-delivery.open-photo"}}
+                            {{on "click" (fn this.openPhoto proof)}}
+                        >
+                            <img src={{proof.url}} alt={{or proof.remarks (t "widget.proof-of-delivery.title")}} loading="lazy" class="w-full h-full object-cover" />
+                        </button>
+                        <div class="mt-0.5 leading-tight">
+                            {{#if proof.order_id}}
+                                <LinkTo
+                                    @route={{this.orderRoute}}
+                                    @model={{proof.order_id}}
+                                    class="block text-[10px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200 truncate"
+                                    title={{proof.customer_name}}
+                                    data-test-proof-of-delivery-order
+                                >{{proof.order_id}}</LinkTo>
+                            {{/if}}
+                            {{#if proof.timeAgo}}
+                                <div class="text-[9px] text-gray-500 dark:text-gray-400 truncate">{{proof.timeAgo}}</div>
+                            {{/if}}
+                        </div>
+                    </div>
+                {{/each}}
+            </div>
+        {{else}}
+            <div class="flex flex-col items-center justify-center h-full text-center text-gray-500 dark:text-gray-400" data-test-proof-of-delivery-empty>
+                <FaIcon @icon="camera" class="text-lg mb-1 text-gray-300 dark:text-gray-600" />
+                <div class="text-[11px]">{{t "widget.proof-of-delivery.empty"}}</div>
+            </div>
+        {{/if}}
+    </div>
+</div>
