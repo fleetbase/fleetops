@@ -61,6 +61,12 @@ function fleetopsPruneBoot(): SQLiteConnection
         (require $migration)->up();
     }
 
+    // Each run remembers how far compaction got per scope; a watermark left by an earlier
+    // test would hide the rows this one inserts below it.
+    foreach (['company-1', 'company-2', 'orphans'] as $scope) {
+        Illuminate\Support\Facades\Cache::forget(PruneTelematicsData::WATERMARK_PREFIX . $scope);
+    }
+
     Carbon::setTestNow('2026-09-23 12:00:00 UTC');
     DB::table('companies')->insert([
         ['id' => 1, 'uuid' => 'company-1', 'public_id' => 'company_one'],
