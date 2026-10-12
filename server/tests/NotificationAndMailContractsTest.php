@@ -370,8 +370,7 @@ test('order dispatch failed notification exposes channels array and mail payload
         ->and($mail->subject)->toBe('Order TN-FAILED dispatch has failed!')
         ->and($mail->introLines)->toBe(['No driver accepted the order'])
         ->and($mail->actionText)->toBe('Track Order')
-        ->and($mail->actionUrl)->toContain('track-order')
-        ->and($mail->actionUrl)->toContain('TN-FAILED');
+        ->and($mail->actionUrl)->toEndWith('/~/track/TN-FAILED');
 });
 
 test('order dispatched notification exposes channels array and mail payloads', function () {
@@ -449,8 +448,7 @@ test('order assigned notification handles scheduled and unscheduled contracts', 
         ->and($mail->subject)->toBe('New order TN-ASSIGNED assigned!')
         ->and($mail->introLines)->toBe(['You have a new order assigned, tap for details.'])
         ->and($mail->actionText)->toBe('Track Order')
-        ->and($mail->actionUrl)->toContain('track-order')
-        ->and($mail->actionUrl)->toContain('TN-ASSIGNED');
+        ->and($mail->actionUrl)->toEndWith('/~/track/TN-ASSIGNED');
 
     $scheduledOrder      = notificationTestOrderWithRelations(['scheduled_at' => '2026-08-01 10:30:00']);
     $scheduled           = new OrderAssigned($scheduledOrder);
@@ -599,8 +597,7 @@ test('waypoint completed notification exposes channels array and mail payloads',
             'No further action is necessary.',
         ])
         ->and($mail->actionText)->toBe('Track Order')
-        ->and($mail->actionUrl)->toContain('track-order')
-        ->and($mail->actionUrl)->toContain('WP-COMPLETE');
+        ->and($mail->actionUrl)->toEndWith('/~/track/WP-COMPLETE');
 });
 
 test('work order dispatched mail exposes subject and markdown context', function () {

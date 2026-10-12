@@ -74,7 +74,7 @@ test('customer portal welcome email is opt in and does not create organization i
         ->not->toContain('send_invite');
 
     expect($customerCredentials)->toContain('customer portal access is ready')
-        ->and($customerCredentials)->toContain("Utils::consoleUrl(\$accessUrlSlug ?: 'customer-portal')")
+        ->and($customerCredentials)->toContain("Utils::consoleUrl(\$accessUrlSlug ? 'customer-access/' . \$accessUrlSlug : 'customer-portal')")
         ->and($customerEmail)->toContain('Your customer portal access is ready')
         ->and($customerEmail)->toContain('Sign in to customer portal')
         ->and($customerEmail)->toContain('Temporary password:')

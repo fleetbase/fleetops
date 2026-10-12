@@ -141,7 +141,7 @@ test('completed order notification formats mail and array payloads from order tr
             'No further action is necessary.'
         )
         ->and($mail->actionText)->toBe('Track Order')
-        ->and($mail->actionUrl)->toContain('order=ORDER-TRACK');
+        ->and($mail->actionUrl)->toBe('https://console.fleetbase.test/~/track/ORDER-TRACK');
 });
 
 test('failed order notification formats mail and array payloads from waypoint tracking', function () {
@@ -166,7 +166,7 @@ test('failed order notification formats mail and array payloads from waypoint tr
             'No further action is necessary.'
         )
         ->and($mail->actionText)->toBe('Track Order')
-        ->and($mail->actionUrl)->toContain('order=WP-FAILED');
+        ->and($mail->actionUrl)->toBe('https://console.fleetbase.test/~/track/WP-FAILED');
 });
 
 test('dispatched order notification formats mail from waypoint tracking fallback', function () {
@@ -181,5 +181,5 @@ test('dispatched order notification formats mail from waypoint tracking fallback
         ->and($mail->subject)->toBe('Order WP-DISPATCHED has been dispatched!')
         ->and($mail->introLines)->toBe(['An order has just been dispatched to you and is ready to be started.'])
         ->and($mail->actionText)->toBe('Track Order')
-        ->and($mail->actionUrl)->toContain('order=WP-DISPATCHED');
+        ->and($mail->actionUrl)->toBe('https://console.fleetbase.test/~/track/WP-DISPATCHED');
 });

@@ -146,7 +146,21 @@ test('the tracking page path itself is never read as a tracking number', functio
 });
 
 test('tracking page links name the company page when its settings send links there', function () {
-    app()->instance(Fleetbase\FleetOps\Support\TrackingPage\TrackingResolver::class, new class extends Fleetbase\FleetOps\Support\TrackingPage\TrackingResolver {
+    // Page links are built by Utils::consoleUrl(), which needs app()->environment(). The
+    // bare container this suite runs on has no such method, so swap in one that does.
+    $previousContainer = Illuminate\Container\Container::getInstance();
+    $container         = new class extends Illuminate\Container\Container {
+        public function environment(...$environments)
+        {
+            return in_array('testing', $environments, true) || $environments === [] ? 'testing' : false;
+        }
+    };
+    $container->instance('config', new Illuminate\Config\Repository([
+        'fleetbase' => ['console' => ['host' => 'console.fleetbase.test', 'subdomain' => null, 'secure' => true]],
+    ]));
+    Illuminate\Container\Container::setInstance($container);
+
+    $container->instance(Fleetbase\FleetOps\Support\TrackingPage\TrackingResolver::class, new class extends Fleetbase\FleetOps\Support\TrackingPage\TrackingResolver {
         public function linkSlugFor(string $companyUuid): ?string
         {
             if ($companyUuid === 'broken') {
@@ -162,8 +176,8 @@ test('tracking page links name the company page when its settings send links the
             ->and(TrackingCode::pageUrl('NOR1', 'co-2'))->toEndWith('/~/track/NOR1')
             ->and(TrackingCode::pageUrl('NOR1', 'broken'))->toEndWith('/~/track/NOR1')
             ->and(TrackingCode::pageUrl('NOR1'))->toEndWith('/~/track/NOR1')
-            ->and(TrackingCode::pageUrl('A B/1'))->toEndWith('/~/track/A%20B%2F1');
+            ->and(TrackingCode::pageUrl('A B/1'))->toBe('https://console.fleetbase.test/~/track/A%20B%2F1');
     } finally {
-        app()->forgetInstance(Fleetbase\FleetOps\Support\TrackingPage\TrackingResolver::class);
+        Illuminate\Container\Container::setInstance($previousContainer);
     }
 });
