@@ -67,7 +67,11 @@ function trackingChannelBase32(string $bytes): string
 
 function trackingChannelEnable(?string $key = TRACKING_CHANNEL_KEY): void
 {
-    config(['broadcasting.connections.socketcluster.auth_key' => $key]);
+    // Socket authentication needs both the switch and the signing key.
+    config([
+        'broadcasting.connections.socketcluster.auth_enabled' => $key !== null,
+        'broadcasting.connections.socketcluster.auth_key'     => $key,
+    ]);
 }
 
 afterEach(function () {

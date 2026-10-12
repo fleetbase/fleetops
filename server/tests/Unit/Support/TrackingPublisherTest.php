@@ -105,7 +105,11 @@ const TRACKING_PUBLISHER_CONTACT = 'Fleetbase\\FleetOps\\Models\\Contact';
 
 function trackingPublisherBoot(bool $enabled = true): SQLiteConnection
 {
-    config(['broadcasting.connections.socketcluster.auth_key' => $enabled ? TRACKING_PUBLISHER_KEY : null]);
+    // Socket authentication needs both the switch and the signing key.
+    config([
+        'broadcasting.connections.socketcluster.auth_enabled' => $enabled,
+        'broadcasting.connections.socketcluster.auth_key'     => $enabled ? TRACKING_PUBLISHER_KEY : null,
+    ]);
     config(['broadcasting.connections.socketcluster.publish_url' => 'http://socket.test:8001']);
     config(['broadcasting.connections.socketcluster.options' => ['host' => 'socket.test', 'port' => 8000, 'secure' => false, 'path' => '/socketcluster/', 'query' => []]]);
     Cache::flush();
@@ -140,13 +144,13 @@ function trackingPublisherBoot(bool $enabled = true): SQLiteConnection
         ['uuid' => 'driver-2', 'company_uuid' => 'company-1', 'user_uuid' => 'user-2', 'vehicle_uuid' => 'vehicle-2'],
     ]);
     $connection->table('orders')->insert([
-        ['uuid' => 'order-started', 'payload_uuid' => 'payload-1', 'driver_assigned_uuid' => 'driver-1', 'status' => 'enroute', 'started' => '1'],
-        ['uuid' => 'order-status', 'payload_uuid' => 'payload-2', 'driver_assigned_uuid' => 'driver-1', 'status' => 'started', 'started' => null],
-        ['uuid' => 'order-timestamp', 'payload_uuid' => 'payload-3', 'driver_assigned_uuid' => 'driver-1', 'status' => 'arrived', 'started' => '0', 'started_at' => '2026-10-06 09:00:00'],
-        ['uuid' => 'order-completed', 'payload_uuid' => 'payload-4', 'driver_assigned_uuid' => 'driver-1', 'status' => 'completed', 'started' => '1'],
-        ['uuid' => 'order-waiting', 'payload_uuid' => 'payload-5', 'driver_assigned_uuid' => 'driver-1', 'status' => 'dispatched', 'started' => '0'],
-        ['uuid' => 'order-other-driver', 'payload_uuid' => 'payload-6', 'driver_assigned_uuid' => 'driver-2', 'status' => 'started', 'started' => '1'],
-        ['uuid' => 'order-vehicle', 'payload_uuid' => 'payload-7', 'driver_assigned_uuid' => null, 'vehicle_assigned_uuid' => 'vehicle-1', 'status' => 'started', 'started' => '1'],
+        ['uuid' => 'order-started', 'payload_uuid' => 'payload-1', 'driver_assigned_uuid' => 'driver-1', 'status' => 'enroute', 'started' => '1', 'vehicle_assigned_uuid' => null, 'started_at' => null],
+        ['uuid' => 'order-status', 'payload_uuid' => 'payload-2', 'driver_assigned_uuid' => 'driver-1', 'status' => 'started', 'started' => null, 'vehicle_assigned_uuid' => null, 'started_at' => null],
+        ['uuid' => 'order-timestamp', 'payload_uuid' => 'payload-3', 'driver_assigned_uuid' => 'driver-1', 'status' => 'arrived', 'started' => '0', 'started_at' => '2026-10-06 09:00:00', 'vehicle_assigned_uuid' => null],
+        ['uuid' => 'order-completed', 'payload_uuid' => 'payload-4', 'driver_assigned_uuid' => 'driver-1', 'status' => 'completed', 'started' => '1', 'vehicle_assigned_uuid' => null, 'started_at' => null],
+        ['uuid' => 'order-waiting', 'payload_uuid' => 'payload-5', 'driver_assigned_uuid' => 'driver-1', 'status' => 'dispatched', 'started' => '0', 'vehicle_assigned_uuid' => null, 'started_at' => null],
+        ['uuid' => 'order-other-driver', 'payload_uuid' => 'payload-6', 'driver_assigned_uuid' => 'driver-2', 'status' => 'started', 'started' => '1', 'vehicle_assigned_uuid' => null, 'started_at' => null],
+        ['uuid' => 'order-vehicle', 'payload_uuid' => 'payload-7', 'driver_assigned_uuid' => null, 'vehicle_assigned_uuid' => 'vehicle-1', 'status' => 'started', 'started' => '1', 'started_at' => null],
     ]);
     $connection->table('orders')->insert(['uuid' => 'order-job', 'company_uuid' => 'company-1', 'customer_uuid' => 'contact-1111', 'customer_type' => TRACKING_PUBLISHER_CONTACT, 'payload_uuid' => 'payload-8', 'status' => 'enroute', 'started' => '1']);
 
@@ -218,14 +222,14 @@ function trackingPublisherUseStops(Collection $stops, array|Throwable $tracker =
 }
 
 afterEach(function () {
-    config(['broadcasting.connections.socketcluster.auth_key' => null]);
+    config(['broadcasting.connections.socketcluster.auth_enabled' => false, 'broadcasting.connections.socketcluster.auth_key' => null]);
     Http::swap(new HttpFactory());
 });
 
 test('nothing is queued or published while socket authentication is off', function () {
     trackingPublisherBoot(false);
-    $publisher = new TrackingPublisherProbe();
-    $order     = trackingPublisherOrder();
+    $publisher     = new TrackingPublisherProbe();
+    $order         = trackingPublisherOrder();
     $order->status = 'completed';
     $order->syncChanges();
 
@@ -260,7 +264,7 @@ test('order changes queue an update with the most significant reason', function 
         ->and($save(['status' => 'completed', 'distance' => 1]))->toBeTrue()
         ->and($save(['notes' => 'Leave at the door']))->toBeFalse();
 
-    $unsaved = trackingPublisherOrder(['uuid' => null]);
+    $unsaved         = trackingPublisherOrder(['uuid' => null]);
     $unsaved->status = 'started';
     $unsaved->syncChanges();
     expect($publisher->orderChanged($unsaved))->toBeFalse();
@@ -276,14 +280,14 @@ test('waypoint and entity activity queue an update for their order through the l
     trackingPublisherBoot();
     $listener = new PublishTrackingUpdates();
 
-    $waypointEvent = (new ReflectionClass(WaypointActivityChanged::class))->newInstanceWithoutConstructor();
+    $waypointEvent           = (new ReflectionClass(WaypointActivityChanged::class))->newInstanceWithoutConstructor();
     $waypointEvent->waypoint = trackingPublisherWaypoint('waypoint_own', null);
-    $entityEvent = (new ReflectionClass(EntityCompleted::class))->newInstanceWithoutConstructor();
-    $entityEvent->entity = trackingPublisherModel(Entity::class, ['uuid' => 'entity-1', 'payload_uuid' => 'payload-2']);
-    $orphanEvent = (new ReflectionClass(EntityCompleted::class))->newInstanceWithoutConstructor();
-    $orphanEvent->entity = trackingPublisherModel(Entity::class, ['uuid' => 'entity-2', 'payload_uuid' => 'payload-none']);
-    $looseEvent = (new ReflectionClass(EntityCompleted::class))->newInstanceWithoutConstructor();
-    $looseEvent->entity = trackingPublisherModel(Entity::class, ['uuid' => 'entity-3', 'payload_uuid' => null]);
+    $entityEvent             = (new ReflectionClass(EntityCompleted::class))->newInstanceWithoutConstructor();
+    $entityEvent->entity     = trackingPublisherModel(Entity::class, ['uuid' => 'entity-1', 'payload_uuid' => 'payload-2']);
+    $orphanEvent             = (new ReflectionClass(EntityCompleted::class))->newInstanceWithoutConstructor();
+    $orphanEvent->entity     = trackingPublisherModel(Entity::class, ['uuid' => 'entity-2', 'payload_uuid' => 'payload-none']);
+    $looseEvent              = (new ReflectionClass(EntityCompleted::class))->newInstanceWithoutConstructor();
+    $looseEvent->entity      = trackingPublisherModel(Entity::class, ['uuid' => 'entity-3', 'payload_uuid' => null]);
 
     expect($listener->handle($waypointEvent))->toBeTrue()
         ->and($listener->handle($entityEvent))->toBeTrue()

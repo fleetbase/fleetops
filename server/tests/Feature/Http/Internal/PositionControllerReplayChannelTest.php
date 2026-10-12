@@ -33,7 +33,11 @@ class PositionReplayChannelAuthorizerFake
 
 function positionReplayChannelBoot(bool $enabled): PositionReplayChannelAuthorizerFake
 {
-    config(['broadcasting.connections.socketcluster.auth_key' => $enabled ? 'fleetops-position-replay-test-key-0123456789' : null]);
+    // Socket authentication needs both the switch and the signing key.
+    config([
+        'broadcasting.connections.socketcluster.auth_enabled' => $enabled,
+        'broadcasting.connections.socketcluster.auth_key'     => $enabled ? 'fleetops-position-replay-test-key-0123456789' : null,
+    ]);
 
     $pdo = new PDO('sqlite::memory:');
     $pdo->sqliteCreateFunction('ST_PointFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
@@ -82,7 +86,7 @@ function positionReplayChannelUser(): User
 }
 
 afterEach(function () {
-    config(['broadcasting.connections.socketcluster.auth_key' => null]);
+    config(['broadcasting.connections.socketcluster.auth_enabled' => false, 'broadcasting.connections.socketcluster.auth_key' => null]);
 });
 
 test('a replay to a channel the user may subscribe to is started', function () {

@@ -50,6 +50,8 @@ const SOCKET_CHANNELS_COLUMNS = [
     'uuid', 'public_id', 'company_uuid', 'customer_uuid', 'customer_type', 'driver_assigned_uuid', 'vehicle_assigned_uuid',
     'payload_uuid', 'vehicle_uuid', 'user_uuid', 'attachable_uuid', 'attachable_type', 'subject_uuid', 'subject_type',
     'status', 'name', 'email', 'type', 'asset_class', 'started', 'started_at', 'place_uuid', 'service_area_uuid', '_key',
+    // Service quotes are always read through their expiry scope.
+    'expired_at',
 ];
 
 function socketChannelsBoot(): SQLiteConnection
@@ -121,15 +123,15 @@ function socketChannelsBoot(): SQLiteConnection
     ]);
     $connection->table('orders')->insert([
         // driver-a1 drives contact-a1's active order in vehicle-a1
-        ['uuid' => 'order-a1', 'public_id' => 'order_a1', 'company_uuid' => 'company-a', 'customer_uuid' => 'contact-a1', 'driver_assigned_uuid' => 'driver-a1', 'vehicle_assigned_uuid' => 'vehicle-a1', 'status' => 'started'],
+        ['uuid' => 'order-a1', 'public_id' => 'order_a1', 'company_uuid' => 'company-a', 'customer_uuid' => 'contact-a1', 'driver_assigned_uuid' => 'driver-a1', 'vehicle_assigned_uuid' => 'vehicle-a1', 'status' => 'started', 'payload_uuid' => null],
         // driver-a2's order for contact-a2, on which driver-a1 carries an entity
         ['uuid' => 'order-a2', 'public_id' => 'order_a2', 'company_uuid' => 'company-a', 'customer_uuid' => 'contact-a2', 'driver_assigned_uuid' => 'driver-a2', 'vehicle_assigned_uuid' => 'vehicle-a2', 'status' => 'dispatched', 'payload_uuid' => 'payload-a2'],
         // contact-a1's completed order with driver-a2
-        ['uuid' => 'order-a3', 'public_id' => 'order_a3', 'company_uuid' => 'company-a', 'customer_uuid' => 'contact-a1', 'driver_assigned_uuid' => 'driver-a2', 'vehicle_assigned_uuid' => 'vehicle-a2', 'status' => 'completed'],
+        ['uuid' => 'order-a3', 'public_id' => 'order_a3', 'company_uuid' => 'company-a', 'customer_uuid' => 'contact-a1', 'driver_assigned_uuid' => 'driver-a2', 'vehicle_assigned_uuid' => 'vehicle-a2', 'status' => 'completed', 'payload_uuid' => null],
         // driver-a2's order with nothing to do with driver-a1
-        ['uuid' => 'order-a4', 'public_id' => 'order_a4', 'company_uuid' => 'company-a', 'customer_uuid' => 'contact-a2', 'driver_assigned_uuid' => 'driver-a2', 'status' => 'started', 'payload_uuid' => 'payload-a4'],
+        ['uuid' => 'order-a4', 'public_id' => 'order_a4', 'company_uuid' => 'company-a', 'customer_uuid' => 'contact-a2', 'driver_assigned_uuid' => 'driver-a2', 'status' => 'started', 'payload_uuid' => 'payload-a4', 'vehicle_assigned_uuid' => null],
         // contact-a1's active order with driver-a3 and no vehicle assigned to the order
-        ['uuid' => 'order-a5', 'public_id' => 'order_a5', 'company_uuid' => 'company-a', 'customer_uuid' => 'contact-a1', 'driver_assigned_uuid' => 'driver-a3', 'status' => 'created'],
+        ['uuid' => 'order-a5', 'public_id' => 'order_a5', 'company_uuid' => 'company-a', 'customer_uuid' => 'contact-a1', 'driver_assigned_uuid' => 'driver-a3', 'status' => 'created', 'vehicle_assigned_uuid' => null, 'payload_uuid' => null],
     ]);
     $connection->table('entities')->insert([
         ['uuid' => 'entity-a2', 'public_id' => 'entity_a2', 'company_uuid' => 'company-a', 'payload_uuid' => 'payload-a2', 'driver_assigned_uuid' => 'driver-a1'],
