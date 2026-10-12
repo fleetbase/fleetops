@@ -256,6 +256,9 @@ class TrackingView
 
         return $entries
             ->unique(fn ($entry) => ($entry['code'] ?? '') . '|' . ($entry['created_at'] ?? '') . '|' . ($entry['status'] ?? '') . '|' . ($entry['stop'] ?? ''))
+            // Entries arrive oldest first; reversed before the (stable) sort, two at the
+            // same second keep their order rather than swapping.
+            ->reverse()
             ->sortByDesc(fn ($entry) => $entry['created_at'] ?? '')
             ->values()
             ->all();

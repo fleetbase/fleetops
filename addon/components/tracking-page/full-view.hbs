@@ -197,6 +197,11 @@
 
         <section class="tp-card tp-stack-xs" aria-labelledby="tp-timeline-title">
             <h2 id="tp-timeline-title" class="tp-h3">{{t "tracking-page.page.updates"}}</h2>
+            {{#if this.hasOlder}}
+                <button type="button" class="tp-button tp-button-small tp-self-start" aria-expanded={{if this.showOlder "true" "false"}} {{on "click" this.toggleOlder}}>
+                    {{#if this.showOlder}}{{t "tracking-page.page.show-fewer"}}{{else}}{{t "tracking-page.page.show-earlier" count=this.olderCount}}{{/if}}
+                </button>
+            {{/if}}
             {{#each this.timelineGroups as |group|}}
                 <div class="tp-eyebrow tp-timeline-day">{{group.day}}</div>
                 <ol class="tp-timeline">
@@ -216,11 +221,6 @@
             {{else}}
                 <p class="tp-muted">{{t "tracking-page.page.no-updates"}}</p>
             {{/each}}
-            {{#if this.hasOlder}}
-                <button type="button" class="tp-button tp-button-small tp-self-start" aria-expanded={{if this.showOlder "true" "false"}} {{on "click" this.toggleOlder}}>
-                    {{#if this.showOlder}}{{t "tracking-page.page.show-fewer"}}{{else}}{{t "tracking-page.page.show-earlier" count=this.olderCount}}{{/if}}
-                </button>
-            {{/if}}
         </section>
 
         {{#if (gt this.items.length 0)}}

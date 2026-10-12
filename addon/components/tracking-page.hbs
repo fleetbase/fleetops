@@ -8,9 +8,12 @@
             {{/if}}
             <span class="tp-brand-name">{{this.company.name}}</span>
         </div>
-        {{#if (or (eq this.screen "public") (eq this.screen "track"))}}
-            <button type="button" class="tp-link-button" {{on "click" this.lookupAnother}}>{{t "tracking-page.page.track-another"}}</button>
-        {{/if}}
+        <div class="tp-header-actions">
+            {{#if (or (eq this.screen "public") (eq this.screen "track"))}}
+                <button type="button" class="tp-link-button" {{on "click" this.lookupAnother}}>{{t "tracking-page.page.track-another"}}</button>
+            {{/if}}
+            <TrackingPage::LocaleSelector class="tp-locale-selector" @locales={{this.company.locales}} @horizontalPosition="right" />
+        </div>
     </header>
 
     <main class="tp-main">
@@ -119,14 +122,6 @@
                 {{#if this.company.support_email}}<a href="mailto:{{this.company.support_email}}">{{this.company.support_email}}</a>{{/if}}
             </div>
         {{/if}}
-        <label class="tp-footer-language">
-            <span>{{t "tracking-page.page.language"}}</span>
-            <select class="tp-select" {{on "change" this.changeLocale}}>
-                {{#each this.localeOptions as |locale|}}
-                    <option value={{locale.code}} selected={{locale.selected}}>{{locale.label}}</option>
-                {{/each}}
-            </select>
-        </label>
         {{#if this.company.powered_by}}
             <FleetbaseAttribution @showPoweredBy={{true}} class="tp-attribution" />
         {{/if}}

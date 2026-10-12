@@ -191,9 +191,9 @@ export default class TrackingPageMapComponent extends Component {
     /* ── Labels ────────────────────────────────────────────────────── */
 
     /**
-     * Hide the labels that would overlap one already shown, in the order the map gives
-     * them priority: the vehicle, the customer's stops, then the pickups. A hidden label
-     * comes back once there is room, and its marker's title still names it.
+     * Labels sit above their markers. One that would overlap a label already placed, in
+     * the order the map gives them priority (the vehicle, the customer's stops, then the
+     * pickups), moves below its marker instead.
      */
     @action placeLabels() {
         if (!this.element) {
@@ -201,16 +201,21 @@ export default class TrackingPageMapComponent extends Component {
         }
 
         const labels = ['.tp-map-label-vehicle', '.tp-map-label-stop', '.tp-map-label-pickup'].flatMap((selector) => [...this.element.querySelectorAll(selector)]);
-        const shown = [];
+        const placed = [];
+        const overlaps = (box) => placed.some((other) => box.left < other.right + 4 && box.right > other.left - 4 && box.top < other.bottom + 2 && box.bottom > other.top - 2);
         for (const label of labels) {
-            label.classList.remove('tp-map-label-hidden');
-            const box = label.getBoundingClientRect();
-            const overlaps = shown.some((other) => box.left < other.right + 4 && box.right > other.left - 4 && box.top < other.bottom + 2 && box.bottom > other.top - 2);
-            if (overlaps) {
-                label.classList.add('tp-map-label-hidden');
-            } else {
-                shown.push(box);
+            label.classList.remove('tp-map-label-below');
+            label.style.top = '';
+            let box = label.getBoundingClientRect();
+            if (overlaps(box)) {
+                // From above the marker (its centre less 23px) to below it (its centre
+                // plus 21px): the label's height and the marker's 30px, with the gaps.
+                label.classList.add('tp-map-label-below');
+                label.style.top = `${Math.round(box.height + 44)}px`;
+                box = label.getBoundingClientRect();
             }
+
+            placed.push(box);
         }
     }
 

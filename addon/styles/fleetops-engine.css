@@ -12569,6 +12569,22 @@ body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-
     border-bottom: 1px solid var(--tp-border);
 }
 
+.tp-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* The console's locale switcher, in the page's own colours. */
+.tp-root .tp-locale-selector .next-org-button-trigger {
+    color: var(--tp-text);
+}
+
+.tp-root .tp-locale-selector .next-org-button-trigger:hover,
+.tp-root .tp-locale-selector .next-org-button-trigger.is-open {
+    background: var(--tp-surface2);
+}
+
 .tp-brand {
     display: flex;
     align-items: center;
@@ -12810,14 +12826,6 @@ body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-
     resize: vertical;
 }
 
-.tp-select {
-    min-height: 2.25rem;
-    padding: 0 0.5rem;
-    border: 1px solid var(--tp-border);
-    border-radius: 0.5rem;
-    background: var(--tp-surface);
-    color: var(--tp-text);
-}
 
 .tp-button {
     display: inline-flex;
@@ -13485,8 +13493,9 @@ body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-
     display: none;
 }
 
-.tp-root .tp-map-label-hidden {
-    visibility: hidden;
+/* Moved below its marker by the map when it would overlap another label. */
+.tp-root .tp-map-label-below {
+    box-shadow: 0 -1px 3px rgb(0 0 0 / 15%);
 }
 
 .tp-root .tp-map-label-vehicle {
@@ -13692,11 +13701,6 @@ body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-
     text-align: center;
 }
 
-.tp-footer-language {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
 
 .tp-toast-region {
     position: fixed;

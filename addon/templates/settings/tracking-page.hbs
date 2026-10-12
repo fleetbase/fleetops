@@ -41,6 +41,7 @@
                                         type="text"
                                         class="form-input border-0 rounded-none flex-1 min-w-0"
                                         value={{this.config.org_page.slug}}
+                                        placeholder={{t "tracking-page.settings.placeholder-slug"}}
                                         autocomplete="off"
                                         spellcheck="false"
                                         aria-describedby="tracking-page-slug-status"
@@ -73,6 +74,7 @@
                             <InputGroup @name={{t "tracking-page.settings.links-target"}} @helpText={{t "tracking-page.settings.links-target-help"}}>
                                 <Select
                                     class="w-full"
+                                    @placeholder={{t "tracking-page.settings.placeholder-select"}}
                                     @value={{this.config.links.target}}
                                     @options={{this.linkTargetOptions}}
                                     @optionLabel="label"
@@ -114,6 +116,7 @@
                                         class="form-input w-32 font-mono uppercase"
                                         aria-label={{t "tracking-page.settings.accent-hex"}}
                                         value={{this.config.branding.accent}}
+                                        placeholder="#1F5FA8"
                                         {{on "change" (fn this.updateFromEvent "branding.accent")}}
                                     />
                                     <span class="text-xs {{if this.accentReadable 'text-green-700 dark:text-green-400' 'text-red-700 dark:text-red-400'}}">
@@ -142,15 +145,15 @@
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label for="tracking-page-phone" class="block text-sm font-semibold mb-1">{{t "tracking-page.settings.support-phone"}}</label>
-                                    <input id="tracking-page-phone" type="tel" class="form-input w-full" value={{this.config.branding.support_phone}} {{on "input" (fn this.updateFromEvent "branding.support_phone")}} />
+                                    <input id="tracking-page-phone" type="tel" class="form-input w-full" value={{this.config.branding.support_phone}} placeholder={{t "tracking-page.settings.placeholder-phone"}} {{on "input" (fn this.updateFromEvent "branding.support_phone")}} />
                                 </div>
                                 <div>
                                     <label for="tracking-page-email" class="block text-sm font-semibold mb-1">{{t "tracking-page.settings.support-email"}}</label>
-                                    <input id="tracking-page-email" type="email" class="form-input w-full" value={{this.config.branding.support_email}} {{on "input" (fn this.updateFromEvent "branding.support_email")}} />
+                                    <input id="tracking-page-email" type="email" class="form-input w-full" value={{this.config.branding.support_email}} placeholder={{t "tracking-page.settings.placeholder-email"}} {{on "input" (fn this.updateFromEvent "branding.support_email")}} />
                                 </div>
                                 <div>
                                     <label for="tracking-page-website" class="block text-sm font-semibold mb-1">{{t "tracking-page.settings.website"}}</label>
-                                    <input id="tracking-page-website" type="url" class="form-input w-full" value={{this.config.branding.website}} {{on "input" (fn this.updateFromEvent "branding.website")}} />
+                                    <input id="tracking-page-website" type="url" class="form-input w-full" value={{this.config.branding.website}} placeholder={{t "tracking-page.settings.placeholder-website"}} {{on "input" (fn this.updateFromEvent "branding.website")}} />
                                 </div>
                             </div>
                             <p class="-mt-3 text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.support-help"}}</p>
@@ -167,6 +170,7 @@
                                 <InputGroup @name={{t "tracking-page.settings.theme"}}>
                                     <Select
                                         class="w-full"
+                                        @placeholder={{t "tracking-page.settings.placeholder-select"}}
                                         @value={{this.config.branding.theme}}
                                         @options={{this.themeOptions}}
                                         @optionLabel="label"
@@ -177,6 +181,7 @@
                                 <InputGroup @name={{t "tracking-page.settings.default-language"}}>
                                     <Select
                                         class="w-full"
+                                        @placeholder={{t "tracking-page.settings.placeholder-select"}}
                                         @value={{this.config.branding.default_locale}}
                                         @options={{this.defaultLocaleOptions}}
                                         @optionLabel="label"
@@ -240,6 +245,7 @@
                                     max="168"
                                     class="form-input w-32"
                                     value={{this.config.access.session_hours}}
+                                    placeholder="24"
                                     {{on "change" (fn this.updateNumber "access.session_hours")}}
                                 />
                                 <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">{{t "tracking-page.settings.session-hours-help"}}</p>
@@ -284,6 +290,7 @@
                             <InputGroup @name={{t "tracking-page.settings.driver-contact"}} @helpText={{t "tracking-page.settings.driver-contact-help"}}>
                                 <Select
                                     class="w-full"
+                                    @placeholder={{t "tracking-page.settings.placeholder-select"}}
                                     @value={{this.config.visibility.driver_contact}}
                                     @options={{this.driverContactOptions}}
                                     @optionLabel="label"

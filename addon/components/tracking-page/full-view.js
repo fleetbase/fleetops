@@ -296,13 +296,21 @@ export default class TrackingPageFullViewComponent extends Component {
         return this.args.company?.support_email;
     }
 
+    /**
+     * Newest first, as the server sends it.
+     */
     get timeline() {
         return this.forCurrentStop(this.data.timeline ?? []);
     }
 
+    /**
+     * The updates as they read, oldest first, so the order's creation leads and the
+     * latest update closes the list, as the progress line does. Earlier days fold away.
+     */
     get timelineGroups() {
         const groups = [];
-        this.timeline.forEach((entry, index) => {
+        const entries = [...this.timeline].reverse();
+        entries.forEach((entry, index) => {
             const day = this.dayLabel(entry.created_at);
             let group = groups[groups.length - 1];
             if (!group || group.day !== day) {
@@ -310,16 +318,16 @@ export default class TrackingPageFullViewComponent extends Component {
                 groups.push(group);
             }
 
-            group.entries.push({ ...entry, time: this.time(entry.created_at), latest: index === 0 });
+            group.entries.push({ ...entry, time: this.time(entry.created_at), latest: index === entries.length - 1 });
         });
 
-        return this.showOlder ? groups : groups.slice(0, 1);
+        return this.showOlder ? groups : groups.slice(-1);
     }
 
     get olderCount() {
-        const first = this.timelineGroups[0]?.entries.length ?? 0;
+        const shown = this.timelineGroups[this.timelineGroups.length - 1]?.entries.length ?? 0;
 
-        return Math.max(0, this.timeline.length - (this.showOlder ? this.timeline.length : first));
+        return Math.max(0, this.timeline.length - (this.showOlder ? this.timeline.length : shown));
     }
 
     get hasOlder() {

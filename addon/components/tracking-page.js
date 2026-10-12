@@ -19,20 +19,6 @@ const GENTLE_LIMIT_AFTER = 4;
 /** The code length the server issues. */
 export const CODE_LENGTH = 6;
 
-/** Each locale, labelled in its own language. */
-const LOCALE_LABELS = {
-    'en-us': 'English',
-    'ar-ae': 'العربية',
-    'bg-bg': 'Български',
-    'es-pa': 'Español',
-    'fr-fr': 'Français',
-    'mn-mn': 'Монгол',
-    'pt-br': 'Português',
-    'ru-ru': 'Русский',
-    'uk-ua': 'Українська',
-    'vi-vn': 'Tiếng Việt',
-};
-
 /**
  * The customer tracking page.
  *
@@ -123,12 +109,6 @@ export default class TrackingPageComponent extends Component {
 
     get dir() {
         return this.locale.startsWith('ar') ? 'rtl' : 'ltr';
-    }
-
-    get localeOptions() {
-        const enabled = this.company.locales?.length ? this.company.locales : Object.keys(LOCALE_LABELS);
-
-        return enabled.map((code) => ({ code, label: LOCALE_LABELS[code] ?? code, selected: code === this.locale }));
     }
 
     get number() {
@@ -468,10 +448,6 @@ export default class TrackingPageComponent extends Component {
     }
 
     /* ── Page chrome ───────────────────────────────────────────────── */
-
-    @action changeLocale(event) {
-        this.intl.setLocale([event.target.value]);
-    }
 
     @action dismissToast() {
         this.toast = null;
