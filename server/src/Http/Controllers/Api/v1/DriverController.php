@@ -21,6 +21,7 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
+use Fleetbase\FleetOps\Support\ApiCacheThrottle;
 use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
 use Fleetbase\FleetOps\Support\OSRM;
 use Fleetbase\FleetOps\Support\ProfileAccountManager;
@@ -374,6 +375,12 @@ class DriverController extends Controller
             }
         }
 
+        // Location writes are quiet and frequent: invalidate cached lists at most once a window
+        ApiCacheThrottle::invalidate($driver, $driver->company_uuid);
+        if ($vehicle) {
+            ApiCacheThrottle::invalidate($vehicle, $vehicle->company_uuid);
+        }
+
         broadcast(new DriverLocationChanged($driver));
         app(TrackingPublisher::class)->driverMoved($driver);
 
@@ -433,11 +440,13 @@ class DriverController extends Controller
 
         // Perform a single update call
         $driver->updateQuietly(['online' => $onlineValue]);
+        $driver->invalidateApiCache();
 
         // Update vehicle online too
         $driver->loadMissing('vehicle');
         if ($vehicle = $driver->vehicle) {
             $vehicle->updateQuietly(['online' => $onlineValue]);
+            $vehicle->invalidateApiCache();
         }
 
         // Return the updated resource
