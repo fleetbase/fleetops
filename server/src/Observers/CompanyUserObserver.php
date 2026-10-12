@@ -34,9 +34,8 @@ class CompanyUserObserver
 
     protected function deleteDrivers(string $userUuid, ?string $companyUuid): void
     {
-        if (Driver::where(['user_uuid' => $userUuid, 'company_uuid' => $companyUuid])->delete()) {
-            Driver::invalidateApiCacheManually($companyUuid);
-        }
+        // Delete each driver through the model so DriverObserver cleans up after it
+        Driver::where(['user_uuid' => $userUuid, 'company_uuid' => $companyUuid])->get()->each->delete();
     }
 
     protected function findDriver(string $userUuid, ?string $companyUuid): ?Driver
