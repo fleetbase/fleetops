@@ -197,6 +197,38 @@ class Order extends Model
     protected $with = [];
 
     /**
+     * Relation paths and tables the cached order lists embed, so a write to any
+     * of them invalidates those lists (fleetbase/core-api#301).
+     *
+     * They mirror OrderFilter::queryForInternal()'s eager loads and whereHas
+     * membership, the payload relation's own `with`, Payload's `$with` and the
+     * public query's loads. customer and facilitator are morphTo relations, so
+     * their tables (contacts, vendors, integrated_vendors) are named instead;
+     * a vendor loads its place, which payload.pickup already covers. files
+     * (customer photo, vendor logo) is left out: every upload writes it, and a
+     * new photo is set by writing the contact's or vendor's own row.
+     *
+     * @var string[]
+     */
+    protected $apiCacheDependencies = [
+        'payload',
+        'payload.pickup',
+        'payload.dropoff',
+        'payload.return',
+        'payload.entities',
+        'payload.waypoints',
+        'payload.firstWaypointMarker.place',
+        'payload.lastWaypointMarker.place',
+        'trackingNumber',
+        'trackingStatuses',
+        'driverAssigned',
+        'vehicleAssigned',
+        'contacts',
+        'vendors',
+        'integrated_vendors',
+    ];
+
+    /**
      * The attributes that should be cast to native types.
      *
      * @var array

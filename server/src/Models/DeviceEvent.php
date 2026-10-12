@@ -47,6 +47,13 @@ class DeviceEvent extends Model
     protected $table = 'device_events';
 
     /**
+     * Relation paths the cached device event lists embed (fleetbase/core-api#301).
+     *
+     * @var string[]
+     */
+    protected $apiCacheDependencies = ['device', 'device.telematic'];
+
+    /**
      * The type of public Id to generate.
      *
      * @var string

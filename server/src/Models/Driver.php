@@ -172,6 +172,17 @@ class Driver extends Model
     protected $with = [];
 
     /**
+     * Relation paths the cached driver lists depend on (fleetbase/core-api#301).
+     *
+     * Lists eager load nothing, but which drivers they hold depends on the
+     * user (existence, name, email and phone search), the vehicle (vehicle
+     * search) and the fleets (fleet filter, through fleet_drivers).
+     *
+     * @var string[]
+     */
+    protected $apiCacheDependencies = ['user', 'vehicle', 'fleets'];
+
+    /**
      * Dynamic attributes that are appended to object.
      *
      * @var array

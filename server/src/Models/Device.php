@@ -57,6 +57,18 @@ class Device extends Model
     protected $table = 'devices';
 
     /**
+     * Relation paths and tables the cached device lists embed (fleetbase/core-api#301).
+     *
+     * Lists load telematic, warranty and attachable and count sensors.
+     * attachable is a morphTo to a vehicle or trailer, so its tables are named.
+     * photo (public list) is left out: files is written by every upload, and a
+     * new photo is set by writing the device's own photo_uuid.
+     *
+     * @var string[]
+     */
+    protected $apiCacheDependencies = ['telematic', 'warranty', 'sensors', 'vehicles', 'assets'];
+
+    /**
      * The type of public Id to generate.
      *
      * @var string

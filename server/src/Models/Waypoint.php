@@ -8,6 +8,7 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
 use Fleetbase\FleetOps\Traits\PayloadAccessors;
 use Fleetbase\Models\Model;
+use Fleetbase\Traits\HasApiModelCache;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
@@ -20,6 +21,8 @@ use Illuminate\Support\Str;
 class Waypoint extends Model
 {
     use HasUuid;
+    // Writes bump the waypoints API cache version, which cached order lists embed.
+    use HasApiModelCache;
     use HasPublicId;
     use TracksApiCredential;
     use HasTrackingNumber;

@@ -82,6 +82,19 @@ class Vehicle extends Model
     protected $with = [];
 
     /**
+     * Relation paths the cached vehicle lists embed or filter on (fleetbase/core-api#301).
+     *
+     * The public list loads vendor (with its place), category, warranty and
+     * driver; driver, devices, current trailers (through asset_connections) and
+     * fleets (through fleet_vehicles) decide which vehicles the filters return.
+     * photo is left out: files is written by every upload, and a new photo is
+     * set by writing the vehicle's own photo_uuid.
+     *
+     * @var string[]
+     */
+    protected $apiCacheDependencies = ['vendor', 'vendor.place', 'category', 'warranty', 'driver', 'devices', 'currentTrailers', 'fleets'];
+
+    /**
      * Get the activity log options for the model.
      */
     public function getActivitylogOptions(): LogOptions
