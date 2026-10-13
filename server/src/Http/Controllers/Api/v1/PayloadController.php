@@ -2,12 +2,15 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
+use Fleetbase\FleetOps\Exceptions\OrderEditLockedException;
 use Fleetbase\FleetOps\Http\Requests\CreatePayloadRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdatePayloadRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Payload as PayloadResource;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Support\OrderEdit;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -103,6 +106,18 @@ class PayloadController extends Controller
         $return                 = $routeShape['return'];
         $hasWaypointsField      = $routeShape['has_waypoints_field'];
         $hasRouteEndpointFields = $routeShape['has_route_endpoint_fields'];
+        $entitiesMode           = OrderEdit::entitiesMode($input['entities_mode'] ?? null);
+
+        // when the payload belongs to an order, refuse changes the order's status locks
+        $order = $this->orderForPayload($payload);
+        $edit  = $order ? $this->beginOrderEdit($order) : null;
+        if ($edit) {
+            try {
+                $edit->guard($edit->requestedChanges(Arr::only($input, ['pickup', 'dropoff', 'return', 'waypoints', 'entities', 'cod_amount']), $entitiesMode));
+            } catch (OrderEditLockedException $exception) {
+                return $this->lockedEditResponse($exception);
+            }
+        }
 
         // pickup assignment
         if ($pickup) {
@@ -126,21 +141,29 @@ class PayloadController extends Controller
             $payload->removeWaypoints();
         }
 
-        // set entities
-        if ($entities) {
+        // set entities: appended, or with `entities_mode=replace` the full list
+        if ($entitiesMode === OrderEdit::ENTITIES_REPLACE && is_array($entities)) {
+            $payload->syncEntities($entities);
+        } elseif ($entities) {
             $payload->setEntities($entities);
         }
 
-        // update the payload
-        $payload->fill(array_filter($this->payloadFillInputFromInput($input)));
+        // update the payload; empty values are skipped, but a cash-to-collect of 0 is kept
+        $payload->fill($this->payloadUpdateFillInput($input));
 
         // save the payload
         $payload->save();
 
-        // set the first / current waypoint from the effective route shape
-        $firstWaypoint = $payload->getPickupOrFirstWaypoint();
-        if ($firstWaypoint instanceof Place) {
-            $payload->setCurrentWaypoint($firstWaypoint);
+        if ($edit) {
+            // the order's edit moves the current waypoint only when the route changed, keeps
+            // an order under way on its stop and announces the change
+            $this->commitOrderEdit($edit);
+        } else {
+            // set the first / current waypoint from the effective route shape
+            $firstWaypoint = $payload->getPickupOrFirstWaypoint();
+            if ($firstWaypoint instanceof Place) {
+                $payload->setCurrentWaypoint($firstWaypoint);
+            }
         }
 
         // make sure entities and waypoints is loaded
@@ -235,6 +258,51 @@ class PayloadController extends Controller
     protected function payloadFillInputFromInput(array $input): array
     {
         return Arr::only($input, ['type', 'provider', 'meta', 'cod_amount', 'cod_currency', 'cod_payment_method']);
+    }
+
+    /**
+     * The payload attributes an update fills: empty values are skipped as before,
+     * except a numeric cash-to-collect, so 0 clears it.
+     */
+    protected function payloadUpdateFillInput(array $input): array
+    {
+        $fill = $this->payloadFillInputFromInput($input);
+        $cod  = $fill['cod_amount'] ?? null;
+        $fill = array_filter($fill);
+
+        if (is_numeric($cod)) {
+            $fill['cod_amount'] = $cod;
+        }
+
+        return $fill;
+    }
+
+    protected function orderForPayload(Payload $payload): ?Order
+    {
+        if (!$payload->uuid) {
+            return null;
+        }
+
+        try {
+            return Order::where('payload_uuid', $payload->uuid)->first();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    protected function beginOrderEdit(Order $order): OrderEdit
+    {
+        return OrderEdit::begin($order);
+    }
+
+    protected function commitOrderEdit(OrderEdit $edit): array
+    {
+        return $edit->commit();
+    }
+
+    protected function lockedEditResponse(OrderEditLockedException $exception)
+    {
+        return response()->apiError($exception->getMessage(), 422, $exception->toResponseData());
     }
 
     protected function newPayload(array $input): Payload

@@ -3,8 +3,10 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\FleetOps\Events\OrderDispatchFailed;
+use Fleetbase\FleetOps\Events\OrderOfferChanged;
 use Fleetbase\FleetOps\Events\OrderStarted;
 use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
+use Fleetbase\FleetOps\Exceptions\OrderEditLockedException;
 use Fleetbase\FleetOps\Exceptions\UserAlreadyExistsException;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Requests\CreateOrderRequest;
@@ -24,6 +26,8 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Notifications\OrderOfferDeclined;
+use Fleetbase\FleetOps\Support\OrderEdit;
 use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
 use Fleetbase\FleetOps\Support\TrackingCode;
 use Fleetbase\FleetOps\Support\Utils;
@@ -32,7 +36,9 @@ use Fleetbase\Http\Resources\Comment as CommentResource;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Setting;
+use Fleetbase\Models\User;
 use Fleetbase\Support\Auth;
+use Fleetbase\Support\NotificationRegistry;
 use Fleetbase\Support\TemplateString;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -353,6 +359,19 @@ class OrderController extends Controller
         // get request input
         $input = $this->orderUpdateInputFromRequest($request);
 
+        // `entities_mode=replace` makes the entities sent the payload's full list
+        // (update by id, create new, delete missing); by default they are appended
+        $entitiesMode = OrderEdit::entitiesMode($request->input('entities_mode', $request->input('payload.entities_mode')));
+        $codAmount    = $this->codAmountFromRequest($request);
+
+        // refuse changes the order's status locks before anything is written
+        $edit = $this->beginOrderEdit($order);
+        try {
+            $edit->guard($edit->requestedChanges($this->orderEditInputFromRequest($request, $codAmount), $entitiesMode));
+        } catch (OrderEditLockedException $exception) {
+            return $this->lockedEditResponse($exception);
+        }
+
         // update payload if new input or change payload by id
         if ($request->isArray('payload')) {
             $payload = data_get($order, 'payload', $this->newPayload());
@@ -384,6 +403,10 @@ class OrderController extends Controller
                 $payload->setReturn($return);
             }
 
+            if ($codAmount !== null) {
+                $payload->cod_amount = $codAmount;
+            }
+
             $payload->save();
 
             // set waypoints and entities after payload is saved
@@ -393,14 +416,10 @@ class OrderController extends Controller
                 $payload->removeWaypoints();
             }
 
-            if ($entities) {
-                $payload->setEntities($entities);
-            }
+            $this->applyPayloadEntities($payload, $entities, $entitiesMode);
 
-            $firstWaypoint = $payload->getPickupOrFirstWaypoint();
-            if ($firstWaypoint instanceof Place) {
-                $payload->setCurrentWaypoint($firstWaypoint);
-            }
+            // the current waypoint is reconciled once the edit is committed: it is only
+            // moved when the route changed, and an order under way keeps its stop
 
             $input['payload_uuid'] = $payload->uuid;
         } elseif ($request->has('payload')) {
@@ -409,6 +428,11 @@ class OrderController extends Controller
                 'company_uuid' => $this->sessionCompany(),
             ]);
             unset($input['payload']);
+
+            if ($codAmount !== null && is_string($input['payload_uuid']) && ($switchedPayload = $this->findPayloadByUuid($input['payload_uuid']))) {
+                $switchedPayload->cod_amount = $codAmount;
+                $switchedPayload->save();
+            }
         }
 
         // create a payload if missing payload[] but has pickup/dropoff/etc
@@ -442,6 +466,10 @@ class OrderController extends Controller
                 $payload->setReturn($return);
             }
 
+            if ($codAmount !== null) {
+                $payload->cod_amount = $codAmount;
+            }
+
             $payload->save();
 
             // set waypoints and entities after payload is saved
@@ -451,14 +479,10 @@ class OrderController extends Controller
                 $payload->removeWaypoints();
             }
 
-            if ($entities) {
-                $payload->setEntities($entities);
-            }
+            $this->applyPayloadEntities($payload, $entities, $entitiesMode);
 
-            $firstWaypoint = $payload->getPickupOrFirstWaypoint();
-            if ($firstWaypoint instanceof Place) {
-                $payload->setCurrentWaypoint($firstWaypoint);
-            }
+            // the current waypoint is reconciled once the edit is committed: it is only
+            // moved when the route changed, and an order under way keeps its stop
 
             $input['payload_uuid'] = $payload->uuid;
         }
@@ -538,11 +562,88 @@ class OrderController extends Controller
         $order->update($input);
         $order->flushAttributesCache();
 
+        // reroute, recompute distance and time, republish tracking and announce
+        // `order.changed` for whatever this update changed
+        $this->commitOrderEdit($edit);
+
         // load required relations
         $order->load(['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate.serviceQuote.items', 'customer', 'facilitator']);
 
         // response the order resource
         return $this->orderResource($order);
+    }
+
+    /**
+     * The cash to collect sent with an order update, as `payload.cod_amount` or a
+     * top-level `cod_amount`. Zero is a valid amount; anything not numeric is ignored.
+     */
+    protected function codAmountFromRequest(Request $request): int|float|string|null
+    {
+        $value = null;
+        if ($request->isArray('payload') && Arr::has((array) $request->input('payload'), 'cod_amount')) {
+            $value = data_get($request->input('payload'), 'cod_amount');
+        } elseif ($request->has('cod_amount')) {
+            $value = $request->input('cod_amount');
+        }
+
+        return is_numeric($value) ? $value : null;
+    }
+
+    /**
+     * The parts of an order update the edit policy looks at.
+     */
+    protected function orderEditInputFromRequest(Request $request, mixed $codAmount = null): array
+    {
+        $routeKeys = ['pickup', 'dropoff', 'return', 'waypoints', 'entities'];
+
+        if ($request->isArray('payload')) {
+            $edit = Arr::only((array) $request->input('payload'), $routeKeys);
+        } elseif ($request->has('payload')) {
+            // switching to another payload replaces the whole route
+            $edit = ['pickup' => true, 'dropoff' => true, 'waypoints' => true];
+        } else {
+            $edit = $request->only($routeKeys);
+        }
+
+        foreach (['scheduled_at', 'notes', 'customer'] as $key) {
+            if ($request->has($key)) {
+                $edit[$key] = $request->input($key);
+            }
+        }
+
+        if ($codAmount !== null) {
+            $edit['cod_amount'] = $codAmount;
+        }
+
+        return $edit;
+    }
+
+    protected function applyPayloadEntities(Payload $payload, mixed $entities, string $mode): void
+    {
+        if ($mode === OrderEdit::ENTITIES_REPLACE && is_array($entities)) {
+            $payload->syncEntities($entities);
+
+            return;
+        }
+
+        if ($entities) {
+            $payload->setEntities($entities);
+        }
+    }
+
+    protected function beginOrderEdit(Order $order): OrderEdit
+    {
+        return OrderEdit::begin($order);
+    }
+
+    protected function commitOrderEdit(OrderEdit $edit): array
+    {
+        return $edit->commit();
+    }
+
+    protected function lockedEditResponse(OrderEditLockedException $exception)
+    {
+        return response()->apiError($exception->getMessage(), 422, $exception->toResponseData());
     }
 
     protected function orderCreateInputFromRequest(Request $request): array
@@ -965,9 +1066,15 @@ class OrderController extends Controller
             return response()->apiError('Order has already started.');
         }
 
-        // if the order is adhoc and the parameter of `assign` is set with a valid driver id, assign the driver and continue
+        // if the order is adhoc and the parameter of `assign` is set with a valid driver id, assign the driver and continue;
+        // the driver took the order themselves, so their offer starts accepted
         if ($order->adhoc && $assignAdhocDriver && Str::startsWith($assignAdhocDriver, 'driver_')) {
-            $order->assignDriver($assignAdhocDriver, true);
+            $order->acceptOfferOnAssign = true;
+            try {
+                $order->assignDriver($assignAdhocDriver, true);
+            } finally {
+                $order->acceptOfferOnAssign = false;
+            }
         }
 
         /** @var \Fleetbase\Models\Driver */
@@ -999,9 +1106,10 @@ class OrderController extends Controller
             return response()->apiError('Order has not been dispatched yet and cannot be started.');
         }
 
-        // set order to started
+        // set order to started; starting the order answers an open offer
         $order->started    = true;
         $order->started_at = now();
+        $order->acceptOffer(false);
         $order->save();
 
         // trigger start event
@@ -1279,8 +1387,12 @@ class OrderController extends Controller
      *
      * @return \Fleetbase\Http\Resources\v1\Order
      */
-    public function cancelOrder(string $id)
+    public function cancelOrder(string $id, ?Request $request = null)
     {
+        // Laravel does not inject a class-typed parameter that has a default, so the
+        // current request is read here; the default keeps cancelOrder($id) callable.
+        $request = $request ?? request();
+
         try {
             $order = $this->findOrder($id);
         } catch (ModelNotFoundException $exception) {
@@ -1292,9 +1404,154 @@ class OrderController extends Controller
             );
         }
 
-        $order->cancel();
+        // the reason becomes the canceled status details and is sent with the canceled notifications
+        $reason = $this->reasonFromRequest($request);
+        if ($reason !== null) {
+            $order->cancelWithReason($reason);
+        } else {
+            $order->cancel();
+        }
 
         return $this->orderResource($order);
+    }
+
+    /**
+     * The assigned driver accepts the order offered to them. An adhoc order that
+     * has no driver yet is assigned to the accepting driver.
+     *
+     * @return \Fleetbase\Http\Resources\v1\Order
+     */
+    public function acceptOrder(string $id, Request $request)
+    {
+        try {
+            $order = $this->findOrder($id, ['driverAssigned']);
+        } catch (ModelNotFoundException $exception) {
+            return $this->apiError('Order resource not found.', 404);
+        }
+
+        $driver = $this->offerDriverFromRequest($request);
+        if (!$driver) {
+            return $this->apiError('No driver found to accept the order.', 404);
+        }
+
+        if ($order->editPolicy()->isTerminal()) {
+            return $this->apiError('This order can no longer be accepted.', 422);
+        }
+
+        if (!$order->driver_assigned_uuid && $order->adhoc) {
+            $order->acceptOfferOnAssign = true;
+            try {
+                $order->assignDriver($driver, true);
+            } finally {
+                $order->acceptOfferOnAssign = false;
+            }
+        } elseif (!$order->isDriver($driver)) {
+            return $this->apiError('This order is not offered to you.', 403);
+        } elseif (!$order->acceptOffer() && $order->offerStatus() !== Order::OFFER_ACCEPTED) {
+            // no offer recorded (assigned before offers existed): record it as accepted
+            $order->acceptOfferOnAssign = true;
+            $order->syncOfferWithAssignment();
+            $order->acceptOfferOnAssign = false;
+            $order->saveQuietly();
+            $order->invalidateApiCache();
+        }
+
+        $this->broadcastOfferChange($order, Order::OFFER_ACCEPTED);
+
+        return $this->orderResource($order->refresh());
+    }
+
+    /**
+     * The assigned driver declines the order offered to them: the order is
+     * unassigned and dispatch is told.
+     *
+     * @return \Fleetbase\Http\Resources\v1\Order
+     */
+    public function declineOrder(string $id, Request $request)
+    {
+        try {
+            $order = $this->findOrder($id, ['driverAssigned']);
+        } catch (ModelNotFoundException $exception) {
+            return $this->apiError('Order resource not found.', 404);
+        }
+
+        $driver = $this->offerDriverFromRequest($request);
+        if (!$driver) {
+            return $this->apiError('No driver found to decline the order.', 404);
+        }
+
+        if (!$order->isDriver($driver)) {
+            return $this->apiError('This order is not offered to you.', 403);
+        }
+
+        if ($order->started) {
+            return $this->apiError('This order has already been started and cannot be declined.', 422);
+        }
+
+        $reason = $this->reasonFromRequest($request);
+        $order->declineOffer($reason);
+
+        $this->broadcastOfferChange($order, Order::OFFER_DECLINED);
+        $this->notifyOfferDeclined($order, $driver, $reason);
+
+        return $this->orderResource($order->refresh());
+    }
+
+    /**
+     * The free-text `reason` sent with a cancel or decline, trimmed to 1000 characters.
+     */
+    protected function reasonFromRequest(Request $request): ?string
+    {
+        $reason = $request->input('reason');
+        if (!is_string($reason) || trim($reason) === '') {
+            return null;
+        }
+
+        return Str::limit(trim($reason), 1000, '');
+    }
+
+    /**
+     * The driver answering an offer: the `driver` named in the request, or the
+     * driver profile of the authenticated user.
+     */
+    protected function offerDriverFromRequest(Request $request): ?Driver
+    {
+        if ($request->filled('driver')) {
+            return $this->findDriverByPublicId($request->input('driver'));
+        }
+
+        $user = $request->user();
+        if (!$user instanceof User) {
+            $user = User::where('uuid', session('user'))->first();
+        }
+
+        if (!$user) {
+            return null;
+        }
+
+        return Driver::where(['user_uuid' => $user->uuid, 'company_uuid' => $this->sessionCompany()])->first();
+    }
+
+    protected function broadcastOfferChange(Order $order, string $status): void
+    {
+        try {
+            event(new OrderOfferChanged($order, $status));
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to broadcast order offer change', ['order' => $order->public_id, 'error' => $exception->getMessage()]);
+        }
+    }
+
+    protected function notifyOfferDeclined(Order $order, Driver $driver, ?string $reason): void
+    {
+        try {
+            NotificationRegistry::notify(OrderOfferDeclined::class, $order, [
+                'driver'      => $driver->public_id,
+                'driver_name' => $driver->name,
+                'reason'      => $reason,
+            ]);
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to notify dispatch of declined order', ['order' => $order->public_id, 'error' => $exception->getMessage()]);
+        }
     }
 
     /**

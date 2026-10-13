@@ -35,6 +35,17 @@ class OrderObserver
     }
 
     /**
+     * Handle the Order "saving" event: a driver assignment being saved starts
+     * (or clears) the driver offer in the same write.
+     */
+    public function saving(Order $order): void
+    {
+        if ($order->isDirty('driver_assigned_uuid')) {
+            $order->syncOfferWithAssignment();
+        }
+    }
+
+    /**
      * Handle the Order "updating" event.
      *
      * This event is fired before the order is persisted to the database.
@@ -58,7 +69,15 @@ class OrderObserver
         $order->setDriverLocationAsPickup();
 
         if ($order->wasChanged('driver_assigned_uuid')) {
-            $order->notifyDriverAssigned();
+            // The driver taken off the order hears about it, whether it was unassigned or reassigned.
+            $previousDriverUuid = $order->getOriginal('driver_assigned_uuid');
+            if ($previousDriverUuid) {
+                $order->notifyDriverUnassigned($previousDriverUuid);
+            }
+
+            if (!$order->silentDriverAssignment) {
+                $order->notifyDriverAssigned();
+            }
         }
 
         $this->invalidateCache($order);

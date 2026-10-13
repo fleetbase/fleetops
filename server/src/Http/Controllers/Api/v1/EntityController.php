@@ -2,13 +2,17 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
+use Fleetbase\FleetOps\Exceptions\OrderEditLockedException;
 use Fleetbase\FleetOps\Http\Requests\CreateEntityRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateEntityRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Entity as EntityResource;
 use Fleetbase\FleetOps\Models\Entity;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Support\OrderEdit;
+use Fleetbase\FleetOps\Support\OrderEditPolicy;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -79,8 +83,15 @@ class EntityController extends Controller
         // make sure company is set
         $input['company_uuid'] = session('company');
 
+        // adding an item to an order is refused once the order's status locks its items
+        $edit = $this->orderEditForPayload($input['payload_uuid'] ?? null);
+        if ($locked = $this->guardItemsEdit($edit, true)) {
+            return $locked;
+        }
+
         // create the entity
         $entity = $this->createEntity($input);
+        $this->commitItemsEdit($edit);
 
         // response the driver resource
         return $this->entityResource($entity);
@@ -159,8 +170,15 @@ class EntityController extends Controller
             }
         }
 
+        // changing an order's item is refused once the order's status locks its items
+        $edit = $this->orderEditForPayload($entity->payload_uuid);
+        if ($locked = $this->guardItemsEdit($edit, true)) {
+            return $locked;
+        }
+
         // update the entity
         $entity->update($input);
+        $this->commitItemsEdit($edit);
 
         // response the entity resource
         return $this->entityResource($entity);
@@ -220,11 +238,59 @@ class EntityController extends Controller
             );
         }
 
+        // removing an order's item is refused once the order's status locks its items
+        $edit = $this->orderEditForPayload($entity->payload_uuid);
+        if ($locked = $this->guardItemsEdit($edit, false)) {
+            return $locked;
+        }
+
         // delete the entity
         $entity->delete();
+        $this->commitItemsEdit($edit);
 
         // response the entity resource
         return $this->deletedEntityResource($entity);
+    }
+
+    /**
+     * Begin an edit of the order the payload belongs to, if it belongs to one.
+     */
+    protected function orderEditForPayload(?string $payloadUuid): ?OrderEdit
+    {
+        if (!$payloadUuid) {
+            return null;
+        }
+
+        try {
+            $order = Order::where('payload_uuid', $payloadUuid)->first();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $order ? OrderEdit::begin($order) : null;
+    }
+
+    /**
+     * A 422 response when the order's status locks the item change, otherwise null.
+     */
+    protected function guardItemsEdit(?OrderEdit $edit, bool $adds)
+    {
+        if (!$edit) {
+            return null;
+        }
+
+        try {
+            $edit->guard([OrderEditPolicy::FIELD_ITEMS => ['adds' => $adds]]);
+        } catch (OrderEditLockedException $exception) {
+            return response()->apiError($exception->getMessage(), 422, $exception->toResponseData());
+        }
+
+        return null;
+    }
+
+    protected function commitItemsEdit(?OrderEdit $edit): void
+    {
+        $edit?->commit();
     }
 
     protected function entityInputFromRequest(Request $request): array

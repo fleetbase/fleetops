@@ -3,9 +3,12 @@
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\PayloadController;
 use Fleetbase\FleetOps\Http\Requests\CreatePayloadRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdatePayloadRequest;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Support\OrderEdit;
+use Fleetbase\FleetOps\Support\OrderEditPolicy;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 
@@ -122,6 +125,15 @@ class FleetOpsApiPayloadEndpointFake extends Payload
         $this->entityAssignments[] = $entities;
 
         return $this;
+    }
+
+    public array $entitySyncs = [];
+
+    public function syncEntities($entities = []): array
+    {
+        $this->entitySyncs[] = $entities;
+
+        return ['created' => [], 'updated' => [], 'deleted' => []];
     }
 
     public function getPickupOrFirstWaypoint(): ?Place
@@ -312,3 +324,112 @@ test('api payload controller returns not found responses for missing payloads', 
         'status' => 404,
     ]);
 })->with(['update', 'find', 'delete']);
+
+/**
+ * A payload that belongs to an order: the order's edit is recorded instead of read from the database.
+ */
+class FleetOpsApiPayloadOrderControllerProbe extends FleetOpsApiPayloadControllerProbe
+{
+    public ?Order $order = null;
+
+    public ?FleetOpsApiPayloadOrderEditFake $edit = null;
+
+    protected function orderForPayload(Payload $payload): ?Order
+    {
+        return $this->order;
+    }
+
+    protected function beginOrderEdit(Order $order): OrderEdit
+    {
+        return $this->edit ??= new FleetOpsApiPayloadOrderEditFake($order);
+    }
+}
+
+class FleetOpsApiPayloadOrderEditFake extends OrderEdit
+{
+    public array $requested = [];
+    public int $commits     = 0;
+
+    public function __construct(public Order $order)
+    {
+        $this->policy = OrderEditPolicy::for($order);
+    }
+
+    public function requestedChanges(array $input, string $entitiesMode = self::ENTITIES_APPEND): array
+    {
+        $this->requested[] = [$input, $entitiesMode];
+
+        return parent::requestedChanges(array_diff_key($input, ['entities' => true, 'cod_amount' => true]), $entitiesMode)
+            + (isset($input['entities']) ? ['items' => ['adds' => $entitiesMode !== self::ENTITIES_REPLACE]] : []);
+    }
+
+    public function commit(array $extra = [], bool $notifyDriver = true): array
+    {
+        $this->commits++;
+
+        return [];
+    }
+}
+
+function fleetopsApiPayloadOrderController(string $status): FleetOpsApiPayloadOrderControllerProbe
+{
+    $controller                         = new FleetOpsApiPayloadOrderControllerProbe();
+    $controller->payload                = new FleetOpsApiPayloadEndpointFake();
+    $controller->payload->firstWaypoint = fleetopsApiPayloadPlace();
+    $controller->order                  = new Order();
+    $controller->order->setRawAttributes(['uuid' => 'order-uuid', 'public_id' => 'order_payload', 'status' => $status], true);
+
+    return $controller;
+}
+
+test('api payload controller keeps a cash to collect of zero and still skips empty values', function () {
+    $controller = fleetopsApiPayloadController();
+
+    $response = $controller->update('payload-public', fleetopsUpdatePayloadRequest([
+        'cod_amount' => 0,
+        'type'       => '',
+        'provider'   => null,
+    ]));
+
+    // the first fill is the model constructor's
+    expect(end($response['payload']->filledPayloads))->toBe(['cod_amount' => 0])
+        ->and($response['payload']->getAttributes()['cod_amount'])->toBe(0);
+});
+
+test('api payload controller edits an order payload through the order edit', function () {
+    $controller = fleetopsApiPayloadOrderController('dispatched');
+
+    $response = $controller->update('payload-public', fleetopsUpdatePayloadRequest([
+        'dropoff'    => ['public_id' => 'dropoff-public'],
+        'cod_amount' => 1500,
+    ]));
+
+    expect($response['payload']->dropoffAssignments)->toBe([['public_id' => 'dropoff-public']])
+        ->and($response['payload']->currentWaypointAssignments)->toBe([])
+        ->and($controller->edit->requested[0])->toBe([['dropoff' => ['public_id' => 'dropoff-public'], 'cod_amount' => 1500], 'append'])
+        ->and($controller->edit->commits)->toBe(1);
+});
+
+test('api payload controller replaces entities on request and refuses locked item edits', function () {
+    $controller = fleetopsApiPayloadOrderController('created');
+
+    $response = $controller->update('payload-public', fleetopsUpdatePayloadRequest([
+        'entities'      => [['id' => 'entity_keep']],
+        'entities_mode' => 'replace',
+    ]));
+
+    expect($response['payload']->entitySyncs)->toBe([[['id' => 'entity_keep']]])
+        ->and($response['payload']->entityAssignments)->toBe([]);
+
+    $locked   = fleetopsApiPayloadOrderController('dispatched');
+    $response = $locked->update('payload-public', fleetopsUpdatePayloadRequest([
+        'entities' => [['name' => 'Extra']],
+    ]));
+
+    expect($response->getStatusCode())->toBe(422)
+        ->and($response->getData(true)['error'])->toBe('Items cannot be changed once a driver has the order.')
+        ->and($response->getData(true)['locked'])->toBe(['items' => 'Items cannot be changed once a driver has the order.'])
+        ->and($locked->payload->entityAssignments)->toBe([])
+        ->and($locked->payload->savedForTest)->toBeFalse()
+        ->and($locked->edit->commits)->toBe(0);
+});

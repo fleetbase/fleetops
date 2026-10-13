@@ -113,6 +113,7 @@ class Order extends FleetbaseResource
             'is_scheduled'                         => $this->when($isInternal, $this->is_scheduled),
             'transaction_amount'                   => $this->transaction_amount,
             'currency'                             => $this->transaction_currency,
+            'offer'                                => data_get($this, 'meta.offer'),
 
             // Timestamps
             'scheduled_at'         => $this->scheduled_at,

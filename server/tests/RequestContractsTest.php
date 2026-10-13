@@ -507,7 +507,7 @@ namespace {
                 'service_area' => 'service area',
                 'parent_fleet' => 'parent fleet',
             ])
-            ->and(requestRules(CancelOrderRequest::class))->toBe(['order' => 'required|exists:orders,uuid'])
+            ->and(requestRules(CancelOrderRequest::class))->toBe(['order' => 'required|exists:orders,uuid', 'reason' => 'nullable|string|max:1000'])
             ->and(requestRules(DecodeTrackingNumberQR::class))->toBe(['code' => 'required|string'])
             ->and(requestRules(CreateServiceQuoteRequest::class))->toBe([]);
     });

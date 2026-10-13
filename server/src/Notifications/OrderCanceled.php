@@ -82,6 +82,11 @@ class OrderCanceled extends Notification implements ShouldQueue
         $this->title       = 'Order ' . $this->getTrackingNumber() . ' was canceled';
         $this->message     = 'Order ' . $this->getTrackingNumber() . ' has been canceled.';
         $this->data        = ['id' => $this->order->public_id, 'type' => 'order_canceled'];
+
+        // apps show why the order was canceled when a reason was given
+        if ($reason !== '') {
+            $this->data['reason'] = $reason;
+        }
     }
 
     /**

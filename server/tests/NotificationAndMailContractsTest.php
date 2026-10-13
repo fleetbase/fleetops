@@ -543,7 +543,7 @@ test('terminal order notifications expose shared broadcast and array payload con
             'event' => 'order.canceled_notification',
             'title' => 'Order WP-TRACK-123 was canceled',
             'body'  => 'Order WP-TRACK-123 has been canceled. customer requested cancel',
-            'data'  => ['id' => 'order_public', 'type' => 'order_canceled'],
+            'data'  => ['id' => 'order_public', 'type' => 'order_canceled', 'reason' => 'customer requested cancel'],
         ])
         ->and($failed->toArray())->toMatchArray([
             'event' => 'order.failed_notification',

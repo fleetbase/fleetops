@@ -96,7 +96,7 @@ function fleetopsInternalOrderHelpersBoot(): SQLiteConnection
 
     $schema = $connection->getSchemaBuilder();
     $tables = [
-        'orders'           => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'tracking_number_uuid', 'driver_assigned_uuid', 'status'],
+        'orders'           => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'tracking_number_uuid', 'driver_assigned_uuid', 'status', 'meta'],
         'contacts'         => ['uuid', 'public_id', 'company_uuid', 'name', 'type'],
         'vendors'          => ['uuid', 'public_id', 'company_uuid', 'name'],
         'drivers'          => ['uuid', 'public_id', 'company_uuid', 'user_uuid'],
@@ -168,7 +168,9 @@ test('assign driver to orders updates the assignment column', function () {
 
     (new FleetOpsInternalOrderHelpersProbe())->callProtected('assignDriverToOrders', ['order-1', 'order-2'], $driver);
 
-    expect($connection->table('orders')->where('driver_assigned_uuid', 'driver-1')->count())->toBe(2);
+    // the bulk update bypasses the model, so each order's driver offer is started explicitly
+    expect($connection->table('orders')->where('driver_assigned_uuid', 'driver-1')->count())->toBe(2)
+        ->and(json_decode($connection->table('orders')->where('uuid', 'order-1')->value('meta'), true)['offer']['status'] ?? null)->toBe('offered');
 });
 
 test('dispatch domain event helper emits and returns the event', function () {

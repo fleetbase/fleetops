@@ -1,5 +1,6 @@
 <?php
 
+use Fleetbase\FleetOps\Exceptions\OrderEditLockedException;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrderController;
 use Fleetbase\FleetOps\Http\Requests\BulkDispatchRequest;
@@ -14,6 +15,8 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Support\OrderEdit;
+use Fleetbase\FleetOps\Support\OrderEditPolicy;
 use Fleetbase\FleetOps\Support\OrderTracker;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Models\Type;
@@ -36,6 +39,43 @@ if (!function_exists('Fleetbase\FleetOps\Http\Controllers\Internal\v1\event')) {
 
 if (!class_exists('Fleetbase\Http\Requests\ExportRequest', false)) {
     eval('namespace Fleetbase\Http\Requests; class ExportRequest extends \Illuminate\Http\Request {}');
+}
+
+/**
+ * Records the route edit guard and commit instead of reading and announcing through the database.
+ */
+class FleetOpsInternalOrderEditFake extends OrderEdit
+{
+    public array $guarded  = [];
+    public array $lockWith = [];
+    public int $commits    = 0;
+
+    public function __construct(public Order $order)
+    {
+        $this->policy = OrderEditPolicy::for($order);
+    }
+
+    public function requestedChanges(array $input, string $entitiesMode = self::ENTITIES_APPEND): array
+    {
+        return $input;
+    }
+
+    public function guard(array $changes): static
+    {
+        $this->guarded[] = $changes;
+        if ($this->lockWith) {
+            throw new OrderEditLockedException($this->lockWith);
+        }
+
+        return $this;
+    }
+
+    public function commit(array $extra = [], bool $notifyDriver = true): array
+    {
+        $this->commits++;
+
+        return [];
+    }
 }
 
 class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
@@ -257,6 +297,18 @@ class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
         return $this->order;
     }
 
+    public ?FleetOpsInternalOrderEditFake $edit = null;
+
+    public array $editLockedWith = [];
+
+    protected function beginOrderEdit(Order $order): OrderEdit
+    {
+        $this->edit ??= new FleetOpsInternalOrderEditFake($order);
+        $this->edit->lockWith = $this->editLockedWith;
+
+        return $this->edit;
+    }
+
     protected function orderResponse(Order $order): array
     {
         return ['order' => $order];
@@ -414,6 +466,15 @@ class FleetOpsInternalOrderLifecycleOrderFake extends Order
         $this->forceFill(['status' => 'canceled']);
 
         return $this;
+    }
+
+    public ?string $cancelReasonForTest = null;
+
+    public function cancelWithReason(?string $reason = null)
+    {
+        $this->cancelReasonForTest = $reason;
+
+        return $this->cancel();
     }
 
     public function dispatch(bool $save = true): Order
@@ -911,8 +972,27 @@ test('internal order controller edits order routes and refreshes current destina
         ->and($payload->calls)->toContain(['setDropoff', ['name' => 'Dropoff'], ['save' => true]])
         ->and($payload->calls)->toContain(['setReturn', ['name' => 'Return'], ['save' => true]])
         ->and($payload->calls)->toContain(['updateWaypoints', [['name' => 'Waypoint']]])
-        ->and($payload->calls)->toContain(['setCurrentWaypoint', $startingDestination, true])
+        // the current waypoint is reconciled by the committed edit, not reset to the first stop here
+        ->and(collect($payload->calls)->where(0, 'setCurrentWaypoint')->all())->toBe([])
+        ->and($controller->edit->guarded)->toBe([['pickup' => true, 'dropoff' => true, 'return' => true, 'waypoints' => true]])
+        ->and($controller->edit->commits)->toBe(1)
         ->and($order->loadedRelations)->toBe([['payload.pickup', 'payload.dropoff', 'payload.return', 'payload.waypoints']]);
+});
+
+test('internal order controller refuses route edits on finished orders with a 422', function () {
+    $payload = fleetopsInternalOrderLifecyclePayload(fleetopsInternalOrderLifecyclePlace('starting-place'));
+    $order   = fleetopsInternalOrderLifecycleOrder('order-route', 'completed');
+    $order->setRelation('payload', $payload);
+    $controller                 = fleetopsInternalOrderLifecycleController([$order]);
+    $controller->editLockedWith = ['dropoff' => 'The order is completed and can no longer be changed.'];
+
+    $response = $controller->editOrderRoute('order-route', new Request(['dropoff' => ['name' => 'Dropoff']]));
+
+    // the harness response factory keeps only the message; the app's error macro adds `locked`
+    expect($response->getStatusCode())->toBe(422)
+        ->and($response->getData(true)['error'])->toBe('The order is completed and can no longer be changed.')
+        ->and($payload->calls)->toBe([])
+        ->and($controller->edit->commits)->toBe(0);
 });
 
 test('internal order controller clears route endpoints and falls back to dropoff destination', function () {
@@ -933,7 +1013,7 @@ test('internal order controller clears route endpoints and falls back to dropoff
         ->and($payload->calls)->toContain(['removePlace', 'dropoff', ['save' => true]])
         ->and($payload->calls)->toContain(['removePlace', 'return', ['save' => true]])
         ->and($payload->calls)->toContain(['removeWaypoints'])
-        ->and($payload->calls)->toContain(['setCurrentWaypoint', $fallbackDestination, true]);
+        ->and($controller->edit->commits)->toBe(1);
 });
 
 test('internal order controller reports missing order route edits', function () {
@@ -1057,7 +1137,15 @@ test('internal order controller cancels and dispatches individual orders', funct
         'order'   => 'order-uuid',
     ])
         ->and($order->lookup_uuid)->toBe('order-uuid')
-        ->and($order->canceledForTest)->toBeTrue();
+        ->and($order->canceledForTest)->toBeTrue()
+        ->and($order->cancelReasonForTest)->toBeNull();
+
+    $order      = fleetopsInternalOrderLifecycleOrder('order-uuid', 'created');
+    $controller = fleetopsInternalOrderLifecycleController([$order]);
+    $controller->cancel(fleetopsCancelOrderRequest(['order' => 'order-uuid', 'reason' => 'Customer asked to cancel']));
+
+    expect($order->canceledForTest)->toBeTrue()
+        ->and($order->cancelReasonForTest)->toBe('Customer asked to cancel');
 
     $order      = fleetopsInternalOrderLifecycleOrder('order-dispatch', 'created');
     $controller = fleetopsInternalOrderLifecycleController([$order]);
