@@ -130,12 +130,13 @@ class FleetOpsPasswordDriverFake extends Driver
 
 class FleetOpsPasswordControllerProbe extends DriverController
 {
-    public static ?Driver $driver     = null;
-    public static bool $driverMissing = false;
-    public static ?User $identityUser = null;
-    public static mixed $resetCode    = null;
-    public static array $sentCodes    = [];
-    public static bool $sendThrows    = false;
+    public static ?Driver $driver         = null;
+    public static bool $driverMissing     = false;
+    public static ?User $identityUser     = null;
+    public static mixed $resetCode        = null;
+    public static array $sentCodes        = [];
+    public static bool $sendThrows        = false;
+    public static ?Throwable $sendRefusal = null;
 
     public function findDriver(string $id, array $with = []): Driver
     {
@@ -180,6 +181,9 @@ class FleetOpsPasswordControllerProbe extends DriverController
 
     protected static function sendResetCode(User $user, string $identity): void
     {
+        if (static::$sendRefusal) {
+            throw static::$sendRefusal;
+        }
         if (static::$sendThrows) {
             throw new RuntimeException('sms gateway down');
         }
@@ -205,6 +209,7 @@ beforeEach(function () {
     FleetOpsPasswordControllerProbe::$resetCode     = null;
     FleetOpsPasswordControllerProbe::$sentCodes     = [];
     FleetOpsPasswordControllerProbe::$sendThrows    = false;
+    FleetOpsPasswordControllerProbe::$sendRefusal   = null;
 });
 
 test('change password requires both the current and the new one', function () {
@@ -329,6 +334,16 @@ test('forgot password reports a delivery failure rather than pretending it sent'
     $response = (new FleetOpsPasswordControllerProbe())->forgotPassword(new Request(['identity' => '+6581000001']));
 
     expect($response->getStatusCode())->toBe(400);
+});
+
+test('forgot password passes an sms guard refusal through with its status', function () {
+    FleetOpsPasswordControllerProbe::$identityUser = fleetopsPasswordUser();
+    FleetOpsPasswordControllerProbe::$sendRefusal  = Fleetbase\Exceptions\SmsBlockedException::limited('destination_cooldown', 30);
+
+    $response = (new FleetOpsPasswordControllerProbe())->forgotPassword(new Request(['identity' => '+6581000001']));
+
+    expect($response->getStatusCode())->toBe(429)
+        ->and($response->getData())->toBe(['error' => 'Unable to send a verification code right now. Try again in a minute.']);
 });
 
 test('reset password requires identity, code and a new password', function () {
