@@ -283,10 +283,7 @@ class Driver extends Model
         return $this->belongsTo(\Fleetbase\Models\Company::class);
     }
 
-    /**
-     * @return BelongsTo
-     */
-    public function vehicle()
+    public function vehicle(): BelongsTo
     {
         return $this->belongsTo(Vehicle::class)->select([
             'uuid',

@@ -33,7 +33,8 @@ use Illuminate\Database\SQLiteConnection;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Sluggable\SlugOptions;
 
-class FleetOpsFleetUnitCountingRelationFake
+// Extends the relation the model method now declares, so the override stays compatible; the parent constructor is skipped on purpose.
+class FleetOpsFleetUnitCountingRelationFake extends HasManyThrough
 {
     public array $wheres = [];
 
@@ -59,7 +60,7 @@ class FleetOpsFleetUnitCountingFake extends Fleet
     public array $driverRelations  = [];
     public array $vehicleRelations = [];
 
-    public function drivers()
+    public function drivers(): HasManyThrough
     {
         $relation                = new FleetOpsFleetUnitCountingRelationFake(5);
         $this->driverRelations[] = $relation;
@@ -67,7 +68,7 @@ class FleetOpsFleetUnitCountingFake extends Fleet
         return $relation;
     }
 
-    public function vehicles()
+    public function vehicles(): HasManyThrough
     {
         $relation                 = new FleetOpsFleetUnitCountingRelationFake(8);
         $this->vehicleRelations[] = $relation;

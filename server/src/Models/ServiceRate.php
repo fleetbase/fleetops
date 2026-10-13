@@ -12,6 +12,8 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ServiceRate extends Model
 {
@@ -110,42 +112,30 @@ class ServiceRate extends Model
      */
     protected $filterParams = [];
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function rateFees()
+    public function rateFees(): HasMany
     {
         return $this->hasMany(ServiceRateFee::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function parcelFees()
+    public function parcelFees(): HasMany
     {
         return $this->hasMany(ServiceRateParcelFee::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function orderConfig()
     {
         return $this->belongsTo(OrderConfig::class)->withTrashed();
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function serviceArea()
+    public function serviceArea(): BelongsTo
     {
         return $this->belongsTo(ServiceArea::class)->whereNull('deleted_at');
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function zone()
+    public function zone(): BelongsTo
     {
         return $this->belongsTo(Zone::class);
     }

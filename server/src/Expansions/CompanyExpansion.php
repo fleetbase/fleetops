@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Expansions;
 
 use Fleetbase\Build\Expansion;
 use Fleetbase\FleetOps\Models\Driver;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CompanyExpansion implements Expansion
 {
@@ -18,11 +19,11 @@ class CompanyExpansion implements Expansion
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * @return HasMany
      */
     public static function drivers()
     {
-        return function () {
+        return function (): HasMany {
             /** @var \Illuminate\Database\Eloquent\Model $this */
             return $this->hasMany(Driver::class);
         };

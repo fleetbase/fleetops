@@ -3,6 +3,8 @@
 namespace Fleetbase\FleetOps\Http\Resources\v1\Concerns;
 
 use Fleetbase\Support\Http;
+use Fleetbase\Support\RequestRelations;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Resources\MissingValue;
 
 /**
@@ -30,6 +32,13 @@ trait ResolvesPublicRelationFields
      * model actually defines are kept — a parent's expansion must never reach
      * this model's loader, where it raises RelationNotFoundException.
      *
+     * The result is handed to `loadMissing()`, and Eloquent loads a name by
+     * calling it as a method on a blank model, so a name that is merely a
+     * method (`with=saveInstance`) would run it. When core's RequestRelations
+     * is available an Eloquent model keeps only declared relations, each
+     * segment named as the model's method (`service_area` → `serviceArea`).
+     * Older core releases without it keep the root-method check below.
+     *
      * @return array<int, string>
      */
     protected function requestedRelations($request): array
@@ -45,6 +54,10 @@ trait ResolvesPublicRelationFields
         }
 
         $with = array_values(array_filter(array_map('strval', $with), 'strlen'));
+
+        if ($this->resource instanceof Model && class_exists(RequestRelations::class)) {
+            return RequestRelations::eagerLoads($this->resource, $with);
+        }
 
         return array_values(array_filter($with, fn (string $relation): bool => $this->definesRelation($relation)));
     }
@@ -77,7 +90,7 @@ trait ResolvesPublicRelationFields
      * loaded on the public endpoints, so the key was absent unless `with` named
      * it. Absent stays absent; it never becomes a string.
      *
-     * @param array<int, string> $with camelCased relations the caller asked for
+     * @param array<int, string> $with the relation paths requestedRelations() kept, named as the model's methods
      */
     protected function publicRelationObject(string $relation, array $with, \Closure $resource): mixed
     {

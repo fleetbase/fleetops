@@ -32,7 +32,8 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\SQLiteConnection;
 
-class FleetOpsPayloadUnitRelationCountFake
+// Extends the relation the model method now declares, so the override stays compatible; the parent constructor is skipped on purpose.
+class FleetOpsPayloadUnitRelationCountFake extends HasManyThrough
 {
     public function __construct(private readonly Payload $payload, private readonly string $relation)
     {
@@ -41,6 +42,19 @@ class FleetOpsPayloadUnitRelationCountFake
     public function count(): int
     {
         return $this->payload->getRelation($this->relation)?->count() ?? 0;
+    }
+}
+
+// Extends the relation the model method now declares, so the override stays compatible; the parent constructor is skipped on purpose.
+class FleetOpsPayloadUnitEntityCountFake extends HasMany
+{
+    public function __construct(private readonly Payload $payload)
+    {
+    }
+
+    public function count(): int
+    {
+        return $this->payload->getRelation('entities')?->count() ?? 0;
     }
 }
 
@@ -147,14 +161,14 @@ class FleetOpsPayloadUnitFake extends Payload
     public array $activityUpdates        = [];
     public array $currentWaypointWrites  = [];
 
-    public function waypoints()
+    public function waypoints(): HasManyThrough
     {
         return new FleetOpsPayloadUnitRelationCountFake($this, 'waypoints');
     }
 
-    public function entities()
+    public function entities(): HasMany
     {
-        return new FleetOpsPayloadUnitRelationCountFake($this, 'entities');
+        return new FleetOpsPayloadUnitEntityCountFake($this);
     }
 
     public function hasMeta($key): bool
