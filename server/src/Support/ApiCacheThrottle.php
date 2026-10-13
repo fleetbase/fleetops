@@ -23,6 +23,33 @@ class ApiCacheThrottle
     public const LOCATION_WINDOW = 60;
 
     /**
+     * Run a frequent write (a telemetry save) with its model events, but invalidate
+     * the model's cached lists at most once per window instead of on every write.
+     *
+     * Order and food truck lists embed vehicles, so invalidating them on every
+     * telemetry event would keep them from ever being served from cache for any
+     * company with streaming devices. Needs ApiModelCache::withoutInvalidating()
+     * (fleetbase/core-api#301); with an older core the write invalidates as before.
+     *
+     * @template T
+     *
+     * @param \Closure(): T $write
+     *
+     * @return T
+     */
+    public static function telemetryWrite(Model $model, \Closure $write, int $seconds = self::LOCATION_WINDOW): mixed
+    {
+        if (!method_exists(ApiModelCache::class, 'withoutInvalidating')) {
+            return $write();
+        }
+
+        $result = ApiModelCache::withoutInvalidating($write);
+        static::invalidate($model, $model->company_uuid, $seconds);
+
+        return $result;
+    }
+
+    /**
      * Invalidate the model's table for the company unless that was done within the window.
      */
     public static function invalidate(Model $model, ?string $companyUuid, int $seconds = self::LOCATION_WINDOW): void

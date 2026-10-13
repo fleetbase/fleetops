@@ -308,3 +308,30 @@ test('a cache outage never fails a throttled location invalidation', function ()
 
     expect(true)->toBeTrue();
 });
+
+test('telemetry writes fire their model events but invalidate at most once per window', function () {
+    Carbon::setTestNow('2026-10-12 12:00:00');
+    $vehicle = new Vehicle();
+    $vehicle->setRawAttributes(['uuid' => 'vehicle-1', 'company_uuid' => 'co-1'], true);
+    $writes = 0;
+    // Stands in for an evented save, whose model hooks invalidate the table
+    $save = function () use ($vehicle, &$writes) {
+        $writes++;
+        Fleetbase\Support\ApiModelCache::invalidateModelCache($vehicle, 'co-1');
+
+        return true;
+    };
+
+    foreach (range(1, 3) as $ping) {
+        expect(ApiCacheThrottle::telemetryWrite($vehicle, $save))->toBeTrue();
+    }
+
+    expect($writes)->toBe(3);
+    if (method_exists(Fleetbase\Support\ApiModelCache::class, 'withoutInvalidating')) {
+        // fleetbase/core-api#301: the saves' own invalidations are coalesced into one per window
+        expect(apiCacheQueryVersion('vehicles', 'co-1'))->toBe(1);
+    } else {
+        // An older core keeps invalidating on every save, as before, with no extra throttled bump
+        expect(apiCacheQueryVersion('vehicles', 'co-1'))->toBe(3);
+    }
+});
