@@ -21,6 +21,7 @@ use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -251,6 +252,11 @@ class Payload extends Model
         $this->attributes['cod_amount'] = Utils::numbersOnly($value);
     }
 
+    /**
+     * Add entities to the payload. Every entry creates a new entity, so sending
+     * the payload's current entities again duplicates them; use syncEntities()
+     * to replace the list.
+     */
     public function setEntities($entities = [])
     {
         if (empty($entities) || !is_array($entities)) {
@@ -258,49 +264,228 @@ class Payload extends Model
         }
 
         foreach ($entities as $attributes) {
-            if (isset($attributes['_import_id'])) {
-                $waypoint = $this->waypoints->firstWhere('_import_id', $attributes['_import_id']);
-
-                if ($waypoint) {
-                    $attributes['destination_uuid'] = $waypoint->uuid;
-                }
-            }
-
-            // if a destination or waypoint is explicitly set
-            if (empty($attributes['destination_uuid'])) {
-                $destinationKey = Utils::or($attributes, ['waypoint', 'destination']);
-                $destination    = $this->findDestinationFromKey($destinationKey);
-                if ($destination instanceof Place) {
-                    $attributes['destination_uuid'] = $destination->uuid;
-                }
-            }
-
-            // Validate destination actually exists
-            if (isset($attributes['destination_uuid']) && Place::where('uuid', $attributes['destination_uuid'])->doesntExist()) {
-                $validDestination = $this->_findCorrectDestinationForEntity($attributes);
-                if ($validDestination) {
-                    $attributes['destination_uuid'] = $validDestination->uuid;
-                }
-            }
-
-            // Handle entity photo upload
-            if (isset($attributes['photo'])) {
-                $path = 'uploads/' . session('company') . '/entities';
-                $file = app(\Fleetbase\Services\FileResolverService::class)->resolve($attributes['photo'], $path);
-
-                if ($file) {
-                    $attributes['photo_uuid'] = $file->uuid;
-                }
-
-                // Clean up raw photo data
-                unset($attributes['photo']);
-            }
-
-            $entity = new Entity($attributes);
+            $entity = new Entity($this->prepareEntityAttributes($attributes));
             $this->entities()->save($entity);
         }
 
         return $this;
+    }
+
+    /**
+     * Replace the payload's entities with the given list: entries naming an
+     * existing entity of this payload (by `id` public id or `uuid`) update it,
+     * entries without one create a new entity, and entities left out are deleted.
+     *
+     * @return array{created: string[], updated: string[], deleted: string[]} entity uuids by outcome
+     */
+    public function syncEntities($entities = []): array
+    {
+        $result = ['created' => [], 'updated' => [], 'deleted' => []];
+        if (!is_array($entities)) {
+            return $result;
+        }
+
+        $existing = $this->entities()->get();
+        $kept     = [];
+
+        foreach ($entities as $attributes) {
+            if (!is_array($attributes)) {
+                continue;
+            }
+
+            $entity = $this->findOwnEntity($existing, $attributes);
+            $values = $this->prepareEntityAttributes(Arr::except($attributes, ['id', 'uuid', 'public_id', 'payload_uuid', 'company_uuid']));
+
+            if ($entity) {
+                $entity->fill(Arr::only($values, $entity->getFillable()));
+                if ($entity->isDirty()) {
+                    $entity->save();
+                    $result['updated'][] = $entity->uuid;
+                }
+                $kept[] = $entity->uuid;
+
+                continue;
+            }
+
+            $entity = new Entity($values);
+            $this->entities()->save($entity);
+            $result['created'][] = $entity->uuid;
+            $kept[]              = $entity->uuid;
+        }
+
+        foreach ($existing as $entity) {
+            if (!in_array($entity->uuid, $kept, true)) {
+                $entity->delete();
+                $result['deleted'][] = $entity->uuid;
+            }
+        }
+
+        $this->unsetRelation('entities');
+
+        return $result;
+    }
+
+    /**
+     * Whether every entry names an entity this payload already has, i.e. applying the
+     * list with syncEntities() would only update or remove entities, never add one.
+     */
+    public function entitiesListOnlyNamesExisting(array $entities): bool
+    {
+        $existing = $this->entities()->get();
+
+        foreach ($entities as $attributes) {
+            if (!is_array($attributes) || !$this->findOwnEntity($existing, $attributes)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Find the payload entity an entity entry refers to by `id` (public id) or `uuid`.
+     */
+    protected function findOwnEntity($existing, array $attributes): ?Entity
+    {
+        $key = $attributes['id'] ?? $attributes['public_id'] ?? $attributes['uuid'] ?? null;
+        if (!is_string($key) || $key === '') {
+            return null;
+        }
+
+        return $existing->first(fn (Entity $entity) => $entity->public_id === $key || $entity->uuid === $key);
+    }
+
+    /**
+     * Resolve an entity entry's destination and photo into storable attributes.
+     */
+    protected function prepareEntityAttributes(array $attributes): array
+    {
+        if (isset($attributes['_import_id'])) {
+            $waypoint = $this->waypoints->firstWhere('_import_id', $attributes['_import_id']);
+
+            if ($waypoint) {
+                $attributes['destination_uuid'] = $waypoint->uuid;
+            }
+        }
+
+        // if a destination or waypoint is explicitly set
+        if (empty($attributes['destination_uuid'])) {
+            $destinationKey = Utils::or($attributes, ['waypoint', 'destination']);
+            $destination    = $this->findDestinationFromKey($destinationKey);
+            if ($destination instanceof Place) {
+                $attributes['destination_uuid'] = $destination->uuid;
+            }
+        }
+
+        // Validate destination actually exists
+        if (isset($attributes['destination_uuid']) && Place::where('uuid', $attributes['destination_uuid'])->doesntExist()) {
+            $validDestination = $this->_findCorrectDestinationForEntity($attributes);
+            if ($validDestination) {
+                $attributes['destination_uuid'] = $validDestination->uuid;
+            }
+        }
+
+        // Handle entity photo upload
+        if (isset($attributes['photo'])) {
+            $path = 'uploads/' . session('company') . '/entities';
+            $file = app(\Fleetbase\Services\FileResolverService::class)->resolve($attributes['photo'], $path);
+
+            if ($file) {
+                $attributes['photo_uuid'] = $file->uuid;
+            }
+
+            // Clean up raw photo data
+            unset($attributes['photo']);
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * The payload's stops as stored: pickup, dropoff and return place uuids, the
+     * waypoint place uuids in order and the current waypoint. Compare two
+     * signatures with routeChanges() to see what an edit changed.
+     */
+    public function routeSignature(): array
+    {
+        return [
+            'payload'   => $this->uuid,
+            'pickup'    => $this->pickup_uuid,
+            'dropoff'   => $this->dropoff_uuid,
+            'return'    => $this->return_uuid,
+            'waypoints' => $this->uuid ? Waypoint::where('payload_uuid', $this->uuid)->whereNull('deleted_at')->orderBy('order')->pluck('place_uuid')->values()->all() : [],
+            'current'   => $this->current_waypoint_uuid,
+        ];
+    }
+
+    /**
+     * The route parts (pickup, dropoff, return, waypoints) that differ between two route signatures.
+     */
+    public static function routeChanges(array $before, array $after): array
+    {
+        $changes = [];
+        foreach (['pickup', 'dropoff', 'return', 'waypoints'] as $part) {
+            if (($before[$part] ?? null) !== ($after[$part] ?? null)) {
+                $changes[] = $part;
+            }
+        }
+
+        return $changes;
+    }
+
+    /**
+     * Point the payload at the right stop after its route changed.
+     *
+     * Before the order is under way this is the first stop, as it always was. Once
+     * the driver is under way the stop they are heading to is kept when it is still
+     * on the route; when it was replaced the stop that took its place is used (the
+     * new pickup, dropoff or return), and a removed waypoint moves them on to the
+     * next stop they have not completed.
+     *
+     * @param array $before the routeSignature() taken before the edit
+     */
+    public function reconcileCurrentWaypoint(array $before, bool $inProgress): ?Place
+    {
+        $this->unsetRelation('waypoints');
+        $this->unsetRelation('waypointMarkers');
+        $this->loadMissing(['pickup', 'dropoff', 'return']);
+
+        $destination = null;
+
+        if ($inProgress) {
+            $after   = $this->routeSignature();
+            $current = $before['current'] ?? null;
+            $stops   = array_filter(array_merge([$after['pickup'], $after['dropoff'], $after['return']], $after['waypoints']));
+
+            if ($current && in_array($current, $stops, true)) {
+                $destination = Place::where('uuid', $current)->first();
+            } elseif ($current) {
+                foreach (['pickup', 'dropoff', 'return'] as $role) {
+                    if ($current === ($before[$role] ?? null) && $this->{$role} instanceof Place) {
+                        $destination = $this->{$role};
+                        break;
+                    }
+                }
+
+                if (!$destination) {
+                    $next = $this->waypointMarkers()->orderBy('order')->get()->first(function (Waypoint $waypoint) {
+                        return !$waypoint->complete;
+                    });
+                    $destination = $next ? $next->getPlace() : ($this->dropoff instanceof Place ? $this->dropoff : null);
+                }
+            }
+        }
+
+        if (!$destination) {
+            $destination = $this->getPickupOrFirstWaypoint() ?? $this->getDropoffOrLastWaypoint();
+        }
+
+        if ($destination instanceof Place) {
+            $this->setCurrentWaypoint($destination);
+            $this->setRelation('currentWaypoint', $destination);
+        }
+
+        return $destination instanceof Place ? $destination : null;
     }
 
     public function insertEntities($entities = [])

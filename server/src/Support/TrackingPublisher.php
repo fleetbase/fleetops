@@ -80,6 +80,18 @@ class TrackingPublisher
     }
 
     /**
+     * An order's stops were edited: queue an update so customers see the new route and ETAs.
+     */
+    public function routeChanged(Order $order): bool
+    {
+        if (!static::enabled() || !$order->uuid) {
+            return false;
+        }
+
+        return $this->queue($order->uuid, TrackingUpdate::REASON_ROUTE, $order->getConnectionName());
+    }
+
+    /**
      * A waypoint or entity activity changed: queue an update for its order.
      */
     public function stopChanged(Waypoint|Entity|null $subject): bool

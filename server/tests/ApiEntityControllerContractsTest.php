@@ -4,8 +4,11 @@ use Fleetbase\FleetOps\Http\Controllers\Api\v1\EntityController;
 use Fleetbase\FleetOps\Http\Requests\CreateEntityRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateEntityRequest;
 use Fleetbase\FleetOps\Models\Entity;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Support\OrderEdit;
+use Fleetbase\FleetOps\Support\OrderEditPolicy;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 
@@ -327,3 +330,84 @@ test('api entity controller returns not found responses for missing entities', f
         'status' => 404,
     ]);
 })->with(['update', 'find', 'delete']);
+
+/**
+ * Entities that belong to an order: the order's edit uses the real lock policy and records its commit.
+ */
+class FleetOpsApiEntityOrderControllerProbe extends FleetOpsApiEntityControllerProbe
+{
+    public ?Order $order = null;
+
+    public array $edits = [];
+
+    protected function orderEditForPayload(?string $payloadUuid): ?OrderEdit
+    {
+        if (!$this->order) {
+            return null;
+        }
+
+        return $this->edits[] = new FleetOpsApiEntityOrderEditFake($this->order);
+    }
+}
+
+class FleetOpsApiEntityOrderEditFake extends OrderEdit
+{
+    public int $commits = 0;
+
+    public function __construct(public Order $order)
+    {
+        $this->policy = OrderEditPolicy::for($order);
+    }
+
+    public function commit(array $extra = [], bool $notifyDriver = true): array
+    {
+        $this->commits++;
+
+        return ['items'];
+    }
+}
+
+function fleetopsApiEntityOrderController(string $status): FleetOpsApiEntityOrderControllerProbe
+{
+    $controller        = new FleetOpsApiEntityOrderControllerProbe();
+    $controller->order = new Order();
+    $controller->order->setRawAttributes(['uuid' => 'order-uuid', 'public_id' => 'order_entity', 'status' => $status], true);
+    $controller->entity = new FleetOpsApiEntityFake();
+    $controller->entity->setRawAttributes(['uuid' => 'entity-uuid', 'payload_uuid' => 'payload-uuid'], true);
+
+    return $controller;
+}
+
+test('api entity controller announces item edits on orders that allow them', function () {
+    $controller = fleetopsApiEntityOrderController('created');
+
+    $controller->create(new FleetOpsCreateEntityRequestFake(['name' => 'Latte', 'payload' => 'payload_public']));
+    $controller->update('entity_public', new FleetOpsUpdateEntityRequestFake(['name' => 'Iced Latte']));
+    $controller->delete('entity_public', new Request());
+
+    expect(array_map(fn ($edit) => $edit->commits, $controller->edits))->toBe([1, 1, 1])
+        ->and($controller->createdEntities)->toHaveCount(1)
+        ->and($controller->entity->deletedForTest)->toBeTrue();
+});
+
+test('api entity controller refuses item edits the order status locks', function () {
+    $dispatched = fleetopsApiEntityOrderController('dispatched');
+    $created    = $dispatched->create(new FleetOpsCreateEntityRequestFake(['name' => 'Latte', 'payload' => 'payload_public']));
+    $deleted    = $dispatched->delete('entity_public', new Request());
+
+    expect($created->getStatusCode())->toBe(422)
+        ->and($created->getData(true)['locked'])->toBe(['items' => 'Items cannot be changed once a driver has the order.'])
+        ->and($deleted->getStatusCode())->toBe(422)
+        ->and($dispatched->createdEntities)->toBe([])
+        ->and($dispatched->entity->deletedForTest)->toBeFalse();
+
+    // once ready, an item may be removed but not changed
+    $ready   = fleetopsApiEntityOrderController('ready');
+    $updated = $ready->update('entity_public', new FleetOpsUpdateEntityRequestFake(['name' => 'Iced Latte']));
+    $ready->delete('entity_public', new Request());
+
+    expect($updated->getStatusCode())->toBe(422)
+        ->and($updated->getData(true)['error'])->toBe('Once the order is ready, items can only be removed.')
+        ->and($ready->entity->updatedPayloads)->toBe([])
+        ->and($ready->entity->deletedForTest)->toBeTrue();
+});

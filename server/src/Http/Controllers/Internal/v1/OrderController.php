@@ -10,6 +10,7 @@ use Fleetbase\FleetOps\Events\OrderDispatchFailed;
 use Fleetbase\FleetOps\Events\OrderStarted;
 use Fleetbase\FleetOps\Events\WaypointActivityChanged;
 use Fleetbase\FleetOps\Events\WaypointCompleted;
+use Fleetbase\FleetOps\Exceptions\OrderEditLockedException;
 use Fleetbase\FleetOps\Exports\OrderExport;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
@@ -34,6 +35,7 @@ use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Notifications\OrderPing;
+use Fleetbase\FleetOps\Support\OrderEdit;
 use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
@@ -320,6 +322,19 @@ class OrderController extends FleetOpsController
             return $this->errorResponse('Unable to find order to update route for.');
         }
 
+        // Refuse a route edit the order's status locks (completed, canceled, expired)
+        $edit = $this->beginOrderEdit($order);
+        try {
+            $edit->guard($edit->requestedChanges(array_filter([
+                'pickup'    => $hasPickupInput ? true : null,
+                'dropoff'   => $hasDropoffInput ? true : null,
+                'return'    => $hasReturnInput ? true : null,
+                'waypoints' => ($hasWaypointsInput || $hasPickupInput || $hasDropoffInput || $hasReturnInput) ? true : null,
+            ])));
+        } catch (OrderEditLockedException $exception) {
+            return $this->errorResponse($exception->getMessage(), 422, $exception->toResponseData());
+        }
+
         if ($hasPickupInput) {
             if ($pickup) {
                 $order->payload->setPickup($pickup, ['save' => true]);
@@ -354,14 +369,9 @@ class OrderController extends FleetOpsController
             $order->payload->removeWaypoints();
         }
 
-        $startingDestination = $order->payload->getPickupOrFirstWaypoint();
-        if (!$startingDestination) {
-            $startingDestination = $order->payload->getDropoffOrLastWaypoint();
-        }
-
-        if ($startingDestination instanceof Place || $startingDestination instanceof Waypoint) {
-            $order->payload->setCurrentWaypoint($startingDestination);
-        }
+        // Only a changed route moves the current waypoint, and an order under way keeps
+        // the driver's stop; distance, time, tracking and `order.changed` follow the change
+        $this->commitOrderEdit($edit);
 
         $order->load(['payload.pickup', 'payload.dropoff', 'payload.return', 'payload.waypoints']);
 
@@ -794,9 +804,19 @@ class OrderController extends FleetOpsController
         return response()->json($payload);
     }
 
-    protected function errorResponse(string $message, int $status = 400)
+    protected function errorResponse(string $message, int $status = 400, array $data = [])
     {
-        return response()->error($message, $status);
+        return response()->error($message, $status, $data);
+    }
+
+    protected function beginOrderEdit(Order $order): OrderEdit
+    {
+        return OrderEdit::begin($order);
+    }
+
+    protected function commitOrderEdit(OrderEdit $edit): array
+    {
+        return $edit->commit();
     }
 
     /**

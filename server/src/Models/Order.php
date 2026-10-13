@@ -10,6 +10,7 @@ use Fleetbase\FleetOps\Events\OrderDispatched;
 use Fleetbase\FleetOps\Events\OrderDriverAssigned;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Support\LabelPdf;
+use Fleetbase\FleetOps\Support\OrderEditPolicy;
 use Fleetbase\FleetOps\Support\OrderTracker;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
@@ -1459,6 +1460,14 @@ class Order extends Model
         if ($this->driver_assigned_uuid) {
             return event(new OrderDriverAssigned($this));
         }
+    }
+
+    /**
+     * The edit policy for the order at its current status.
+     */
+    public function editPolicy(): OrderEditPolicy
+    {
+        return OrderEditPolicy::for($this);
     }
 
     /**

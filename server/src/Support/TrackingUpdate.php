@@ -36,6 +36,8 @@ final class TrackingUpdate
 
     public const REASON_LOCATION = 'location';
 
+    public const REASON_ROUTE = 'route';
+
     /**
      * Decimal places kept on published coordinates: 4 places is roughly 11 m.
      */
