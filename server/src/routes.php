@@ -54,14 +54,16 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
             // drivers routes
             $router->group(['prefix' => 'drivers', 'middleware' => []], function () use ($router) {
                 $router->post('register-device', 'DriverController@registerDevice');
-                $router->post('login-with-sms', 'DriverController@loginWithPhone');
+                // Routes that send a text message carry a small per-address bucket on top
+                // of the API credential throttle; the SMS guard in core bounds the spend.
+                $router->post('login-with-sms', 'DriverController@loginWithPhone')->middleware('throttle:5,1,fleetops-sms');
                 $router->post('verify-code', 'DriverController@verifyCode');
                 $router->post('login', 'DriverController@login');
                 // Password management. Deliberately separate from the driver
                 // update: changing a password requires proving the old one, and
                 // resetting it requires a code, neither of which a general PUT
                 // can express.
-                $router->post('forgot-password', 'DriverController@forgotPassword');
+                $router->post('forgot-password', 'DriverController@forgotPassword')->middleware('throttle:5,1,fleetops-sms');
                 $router->post('reset-password', 'DriverController@resetPassword');
                 $router->post('{id}/change-password', 'DriverController@changePassword');
                 $router->post('{id}/simulate', 'DriverController@simulate');
@@ -97,12 +99,12 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
             //  - Authenticated endpoints: API key + `Customer-Token` header (Sanctum)
             $router->group(['prefix' => 'customers', 'middleware' => []], function () use ($router) {
                 // Public auth flows
-                $router->post('request-creation-code', 'CustomerController@requestCreationCode');
+                $router->post('request-creation-code', 'CustomerController@requestCreationCode')->middleware('throttle:5,1,fleetops-sms');
                 $router->post('/', 'CustomerController@create');
                 $router->post('login', 'CustomerController@login');
-                $router->post('login-with-sms', 'CustomerController@loginWithPhone');
+                $router->post('login-with-sms', 'CustomerController@loginWithPhone')->middleware('throttle:5,1,fleetops-sms');
                 $router->post('verify-code', 'CustomerController@verifyCode');
-                $router->post('forgot-password', 'CustomerController@forgotPassword');
+                $router->post('forgot-password', 'CustomerController@forgotPassword')->middleware('throttle:5,1,fleetops-sms');
                 $router->post('reset-password', 'CustomerController@resetPassword');
 
                 // Authenticated (require Customer-Token)
