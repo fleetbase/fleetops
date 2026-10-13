@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\Cache;
 
 /**
  * Covers how the order observer follows driver assignment: a replaced driver is
- * told they were unassigned, the new driver is notified exactly once (and not at
- * all for a silent assignment), and saving an assignment starts the driver offer.
+ * told they were unassigned, and the new driver is notified exactly once (and not
+ * at all for a silent assignment).
  */
 class FleetOpsOrderAssignmentObserverOrder extends Order
 {
@@ -48,13 +48,6 @@ class FleetOpsOrderAssignmentObserverOrder extends Order
         $this->events[] = 'unassigned:' . $driver;
 
         return true;
-    }
-
-    public function syncOfferWithAssignment(): Order
-    {
-        $this->events[] = 'offer';
-
-        return $this;
     }
 }
 
@@ -96,21 +89,6 @@ test('unassigning tells the driver and a silent assignment sends no assignment n
 
     expect($unassigned->events)->toBe(['unassigned:driver-old', 'assigned:'])
         ->and($silent->events)->toBe([]);
-});
-
-test('saving a driver assignment starts the offer in the same write', function () {
-    $order              = new FleetOpsOrderAssignmentObserverOrder();
-    $order->driverDirty = true;
-
-    (new OrderObserver())->saving($order);
-
-    $unchanged              = new FleetOpsOrderAssignmentObserverOrder();
-    $unchanged->driverDirty = false;
-
-    (new OrderObserver())->saving($unchanged);
-
-    expect($order->events)->toBe(['offer'])
-        ->and($unchanged->events)->toBe([]);
 });
 
 test('assign driver relies on the observer instead of notifying before the save', function () {
