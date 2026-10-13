@@ -362,23 +362,13 @@ test('reset password gives one answer for an unknown identity and a bad code ali
         ->and($unknownIdentity->getData())->toBe($badCode->getData());
 });
 
-test('reset password sets the password, spends the code, and ends every session', function () {
+test('reset password sets the password and ends every session once the code verified', function () {
     $user                                          = fleetopsPasswordUser();
     FleetOpsPasswordControllerProbe::$identityUser = $user;
 
-    $deleted                                    = false;
-    FleetOpsPasswordControllerProbe::$resetCode = new class($deleted) {
-        public function __construct(public bool &$deleted)
-        {
-        }
-
-        public function delete(): bool
-        {
-            $this->deleted = true;
-
-            return true;
-        }
-    };
+    // findResetCode() hands back the code it verified and used up; nothing more is done
+    // to it here.
+    FleetOpsPasswordControllerProbe::$resetCode = (object) ['uuid' => 'reset-code'];
 
     $response = (new FleetOpsPasswordControllerProbe())->resetPassword(
         new Request(['identity' => 'driver@example.test', 'code' => '123456', 'password' => 'newpassword'])
@@ -386,7 +376,6 @@ test('reset password sets the password, spends the code, and ends every session'
 
     expect($response->getStatusCode())->toBe(200)
         ->and($user->saved)->toHaveCount(1)
-        ->and($deleted)->toBeTrue()
         // A reset is a recovery from losing control; nothing keeps working.
         ->and($user->tokensDeleted)->toBeTrue();
 });

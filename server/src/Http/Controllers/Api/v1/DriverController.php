@@ -57,6 +57,11 @@ class DriverController extends Controller
     public const DEACTIVATED_LOGIN_MESSAGE = 'This driver login has been deactivated.';
 
     /**
+     * Wrong guesses a single code tolerates before it locks itself (core's check()).
+     */
+    public const CODE_CHECK_ATTEMPTS = 5;
+
+    /**
      * Public expansion name => Eloquent relation name.
      *
      * `user` and `company` are deliberately absent. Both are already published
@@ -588,6 +593,7 @@ class DriverController extends Controller
         // generate verification token
         try {
             VerificationCode::generateSmsVerificationFor($user, 'driver_login', [
+                'hashed'          => true,
                 'company_uuid'    => $company->uuid,
                 'messageCallback' => function ($verification) use ($company) {
                     return 'Your ' . data_get($company, 'name', config('app.name')) . ' verification code is ' . $verification->code;
@@ -652,8 +658,8 @@ class DriverController extends Controller
             return response()->apiError(static::DEACTIVATED_LOGIN_MESSAGE, 403);
         }
 
-        // find and verify code
-        $verificationCode = VerificationCode::where(['subject_uuid' => $user->uuid, 'code' => $code, 'for' => $for])->exists();
+        // find and verify code: the user's newest live code for this purpose, used up
+        $verificationCode = static::spendCode($user, $for, (string) $code);
         if (!$verificationCode && !static::verificationBypassMatches($identity, $code)) {
             return response()->apiError('Invalid verification code!');
         }
@@ -1387,7 +1393,7 @@ class DriverController extends Controller
         $user->password = $password;
         $user->save();
 
-        $verification->delete();
+        // The code was used up when it verified (findResetCode); every session ends.
         $user->tokens()->delete();
 
         return response()->json(['status' => 'ok']);
@@ -1422,14 +1428,40 @@ class DriverController extends Controller
         return Hash::check($plain, $user->password);
     }
 
-    /** The unexpired reset code for this user, if the one supplied matches. */
+    /**
+     * The live reset code the supplied one verified against, used up so it cannot
+     * verify again, or null.
+     */
     protected static function findResetCode(User $user, string $code)
     {
-        return VerificationCode::where([
-            'subject_uuid' => $user->uuid,
-            'code'         => $code,
-            'for'          => 'driver_password_reset',
-        ])->where('expires_at', '>', now())->first();
+        return static::spendCode($user, 'driver_password_reset', $code);
+    }
+
+    /**
+     * Verify a code against the user's live codes for a purpose and use it up. Codes are
+     * checked newest first; a wrong guess counts against each until it locks (core's
+     * check()). Plaintext rows written before codes were hashed verify the same way.
+     */
+    protected static function spendCode(User $user, string $for, string $code): ?VerificationCode
+    {
+        $live = VerificationCode::query()
+            ->where('for', $for)
+            ->where('subject_uuid', $user->uuid)
+            ->where(function ($query) {
+                $query->whereNull('status')->orWhereNotIn('status', [VerificationCode::STATUS_USED, VerificationCode::STATUS_LOCKED]);
+            })
+            ->orderByDesc('created_at')
+            ->get();
+
+        foreach ($live as $verificationCode) {
+            if ($verificationCode->check($code, static::CODE_CHECK_ATTEMPTS) === VerificationCode::CHECK_VALID) {
+                $verificationCode->consume();
+
+                return $verificationCode;
+            }
+        }
+
+        return null;
     }
 
     /** Sends the reset code by whichever channel the identity names. */
@@ -1444,6 +1476,7 @@ class DriverController extends Controller
             ]);
         } else {
             VerificationCode::generateSmsVerificationFor($user, 'driver_password_reset', [
+                'hashed'          => true,
                 'messageCallback' => fn ($v) => 'Your ' . config('app.name') . ' password reset code is ' . $v->code,
             ]);
         }

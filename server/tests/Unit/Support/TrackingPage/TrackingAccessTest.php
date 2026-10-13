@@ -126,8 +126,10 @@ test('codes are issued hashed, checked, and pause the scope after three wrong on
     expect($access->checkCode($scope, $wrong))->toBe(['status' => VerificationCode::CHECK_INVALID, 'attempts_left' => 2])
         ->and($access->pausedFor($scope))->toBe(0);
 
+    // A used code stays on the table for the ledger, marked used, and never verifies again.
     expect($access->checkCode($scope, $second->plainCode))->toBe(['status' => VerificationCode::CHECK_VALID, 'channel' => 'email'])
-        ->and(VerificationCode::withoutGlobalScope(ExpiryScope::class)->count())->toBe(0)
+        ->and(VerificationCode::withoutGlobalScope(ExpiryScope::class)->count())->toBe(1)
+        ->and(VerificationCode::withoutGlobalScope(ExpiryScope::class)->value('status'))->toBe(VerificationCode::STATUS_USED)
         ->and($access->checkCode($scope, $second->plainCode))->toBe(['status' => VerificationCode::CHECK_EXPIRED]);
 
     $third = $access->issueCode($scope, null, 'sms');

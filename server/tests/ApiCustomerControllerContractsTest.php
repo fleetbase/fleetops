@@ -692,12 +692,9 @@ test('api customer controller sends creation verification codes and updates stub
     ]));
 
     expect($created)->toBe(['status' => 'ok'])
-        ->and($controller->createdUsers[0])->toMatchArray([
-            'company_uuid' => 'company-uuid',
-            'name'         => 'Jane',
-            'email'        => 'jane@example.test',
-            'phone'        => '+15551234567',
-        ])
+        // Nothing is persisted for an unverified identity: the code's subject is an unsaved user.
+        ->and($controller->createdUsers)->toBe([])
+        ->and($controller->emailVerifications[0][0])->toBeNull()
         ->and($controller->emailVerifications[0][1])->toBe('fleetops_create_customer')
         ->and($updated)->toBe(['status' => 'ok'])
         ->and($stub->name)->toBe('Stub Name')
@@ -844,7 +841,6 @@ test('api customer controller resets forgotten passwords', function () {
         ->and(fleetopsApiCustomerJson($reset))->toBe(['status' => 'ok'])
         ->and($controller->genericUser->savedForTest)->toBeTrue()
         ->and($controller->genericUser->tokensDeleted)->toBeTrue()
-        ->and($controller->verificationCode->deleted)->toBeTrue()
         ->and(fleetopsApiCustomerJson($unknown->forgotPassword(Request::create('/v1/customers/forgot-password', 'POST', [
             'identity' => 'missing@example.test',
         ]))))->toBe(['status' => 'ok'])

@@ -829,3 +829,27 @@ test('customer place photo and quote seams resolve through their real bodies', f
     expect($connection->table('contacts')->where('uuid', '88888888-8888-4888-8888-888888888820')->value('photo_uuid'))->toBe('file-b64-1');
     app()->forgetInstance(CustomerAuth::APP_BINDING);
 });
+
+test('a wrong code counts against the live code, a right one uses it up, and a used code never verifies again', function () {
+    $connection = fleetopsCustomerHelperBoot();
+    $controller = new CustomerController();
+
+    $connection->table('verification_codes')->insert([
+        ['uuid' => 'vc-older', 'code' => '101010', 'for' => 'fleetops_create_customer', 'meta' => json_encode(['identity' => 'spend@example.com']), 'status' => 'active', 'created_at' => '2026-10-13 09:00:00'],
+        ['uuid' => 'vc-newer', 'code' => '202020', 'for' => 'fleetops_create_customer', 'meta' => json_encode(['identity' => 'spend@example.com']), 'status' => 'active', 'created_at' => '2026-10-13 09:05:00'],
+    ]);
+
+    $wrong = $controller->create(CreateCustomerRequest::create('/v1/customers', 'POST', ['code' => '999999', 'identity' => 'spend@example.com', 'name' => 'Spender', 'password' => 'secret']));
+    expect($wrong->getData(true)['error'])->toContain('Invalid verification code')
+        ->and(json_decode($connection->table('verification_codes')->where('uuid', 'vc-newer')->value('meta'), true)['attempts'])->toBe(1)
+        ->and(json_decode($connection->table('verification_codes')->where('uuid', 'vc-older')->value('meta'), true)['attempts'])->toBe(1);
+
+    // The older code still verifies while it is live, and is used up by doing so.
+    $controller->create(CreateCustomerRequest::create('/v1/customers', 'POST', ['code' => '101010', 'identity' => 'spend@example.com', 'name' => 'Spender', 'password' => 'secret']));
+    expect($connection->table('contacts')->where('email', 'spend@example.com')->count())->toBe(1)
+        ->and($connection->table('verification_codes')->where('uuid', 'vc-older')->value('status'))->toBe('used')
+        ->and($connection->table('verification_codes')->where('uuid', 'vc-newer')->value('status'))->toBe('active');
+
+    $again = $controller->create(CreateCustomerRequest::create('/v1/customers', 'POST', ['code' => '101010', 'identity' => 'spend@example.com', 'name' => 'Spender', 'password' => 'secret']));
+    expect($again->getData(true)['error'])->toContain('Invalid verification code');
+});
