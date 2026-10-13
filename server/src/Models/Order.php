@@ -18,6 +18,7 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Model;
+use Fleetbase\Models\Setting;
 use Fleetbase\Models\Transaction;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasApiModelCache;
@@ -281,9 +282,28 @@ class Order extends Model
     ];
 
     /**
+     * Offer statuses kept in `meta.offer.status`.
+     */
+    public const OFFER_OFFERED  = 'offered';
+    public const OFFER_ACCEPTED = 'accepted';
+    public const OFFER_DECLINED = 'declined';
+    public const OFFER_EXPIRED  = 'expired';
+
+    /**
+     * Minutes a driver has to accept an order offered to them, unless the company
+     * sets `fleetops.offer_timeout_minutes`. Zero means offers never expire.
+     */
+    public const DEFAULT_OFFER_TIMEOUT_MINUTES = 5;
+
+    /**
      * Set for one save: the driver assignment being saved sends no assignment notification.
      */
     public bool $silentDriverAssignment = false;
+
+    /**
+     * Set for one save: the driver being assigned has already accepted the order (adhoc start).
+     */
+    public bool $acceptOfferOnAssign = false;
 
     /**
      * Set for one save: the driver taken off the order is not sent an unassigned push (they declined it themselves).
@@ -1519,6 +1539,154 @@ class Order extends Model
     public function editPolicy(): OrderEditPolicy
     {
         return OrderEditPolicy::for($this);
+    }
+
+    /**
+     * The driver offer on the order (`meta.offer`), or null when there is none.
+     */
+    public function getOffer(): ?array
+    {
+        $offer = $this->getMeta('offer');
+
+        return is_array($offer) && !empty($offer) ? $offer : null;
+    }
+
+    /**
+     * The status of the driver offer on the order, or null when there is none.
+     */
+    public function offerStatus(): ?string
+    {
+        return data_get($this->getOffer(), 'status');
+    }
+
+    /**
+     * Minutes a driver has to accept an offer, from the company setting
+     * `fleetops.offer_timeout_minutes` (default 5). Zero disables expiry.
+     */
+    public function offerTimeoutMinutes(): int
+    {
+        try {
+            $minutes = Setting::lookupForCompany($this->company_uuid ?? session('company'), 'fleetops.offer_timeout_minutes', static::DEFAULT_OFFER_TIMEOUT_MINUTES);
+        } catch (\Throwable) {
+            $minutes = static::DEFAULT_OFFER_TIMEOUT_MINUTES;
+        }
+
+        return is_numeric($minutes) ? max(0, (int) $minutes) : static::DEFAULT_OFFER_TIMEOUT_MINUTES;
+    }
+
+    /**
+     * Keep `meta.offer` in step with the driver assignment being saved: a newly
+     * assigned driver gets a fresh offer (accepted straight away when they took
+     * the order themselves), and removing the driver drops an open offer.
+     * Only sets attributes; the save in progress persists them.
+     */
+    public function syncOfferWithAssignment(): self
+    {
+        $driverUuid = $this->driver_assigned_uuid;
+
+        if (!$driverUuid) {
+            if (in_array($this->offerStatus(), [static::OFFER_OFFERED, static::OFFER_ACCEPTED], true)) {
+                $this->setMeta('offer', null);
+            }
+
+            return $this;
+        }
+
+        if ($this->exists && $this->editPolicy()->isTerminal()) {
+            return $this;
+        }
+
+        $driverPublicId = data_get($this->relationLoaded('driverAssigned') ? $this->getRelation('driverAssigned') : null, 'public_id');
+        if (!$driverPublicId || data_get($this->getRelation('driverAssigned'), 'uuid') !== $driverUuid) {
+            try {
+                $driverPublicId = Driver::where('uuid', $driverUuid)->withoutGlobalScopes()->value('public_id');
+            } catch (\Throwable) {
+                $driverPublicId = null;
+            }
+        }
+
+        $now   = Carbon::now();
+        $offer = [
+            'driver'      => $driverPublicId,
+            'offered_at'  => $now->toIso8601ZuluString(),
+            'expires_at'  => null,
+            'accepted_at' => null,
+            'declined_at' => null,
+            'status'      => static::OFFER_OFFERED,
+        ];
+
+        if ($this->acceptOfferOnAssign) {
+            $offer['accepted_at'] = $offer['offered_at'];
+            $offer['status']      = static::OFFER_ACCEPTED;
+        } elseif ($minutes = $this->offerTimeoutMinutes()) {
+            $offer['expires_at'] = $now->copy()->addMinutes($minutes)->toIso8601ZuluString();
+        }
+
+        $this->setMeta('offer', $offer);
+
+        return $this;
+    }
+
+    /**
+     * Mark the open offer accepted. Returns false when there is no open offer.
+     */
+    public function acceptOffer(bool $save = true): bool
+    {
+        $offer = $this->getOffer();
+        if (!$offer || !in_array($offer['status'] ?? null, [static::OFFER_OFFERED, static::OFFER_EXPIRED], true)) {
+            return false;
+        }
+
+        $offer['status']      = static::OFFER_ACCEPTED;
+        $offer['accepted_at'] = Carbon::now()->toIso8601ZuluString();
+        $this->setMeta('offer', $offer);
+
+        if ($save) {
+            $this->saveQuietly();
+            $this->invalidateApiCache();
+        }
+
+        return true;
+    }
+
+    /**
+     * Record that the driver declined the offer and take the order off them.
+     */
+    public function declineOffer(?string $reason = null): self
+    {
+        $offer = $this->getOffer() ?? ['driver' => data_get($this, 'driverAssigned.public_id'), 'offered_at' => null, 'expires_at' => null, 'accepted_at' => null];
+
+        $offer['status']      = static::OFFER_DECLINED;
+        $offer['declined_at'] = Carbon::now()->toIso8601ZuluString();
+        if ($reason) {
+            $offer['reason'] = $reason;
+        }
+
+        $this->setMeta('offer', $offer);
+        $this->quietDriverUnassignment = true;
+        $this->driver_assigned_uuid    = null;
+        $this->save();
+        $this->quietDriverUnassignment = false;
+
+        return $this;
+    }
+
+    /**
+     * Mark an open offer expired. Returns false when there is no open offer.
+     */
+    public function expireOffer(): bool
+    {
+        $offer = $this->getOffer();
+        if (!$offer || ($offer['status'] ?? null) !== static::OFFER_OFFERED) {
+            return false;
+        }
+
+        $offer['status'] = static::OFFER_EXPIRED;
+        $this->setMeta('offer', $offer);
+        $this->saveQuietly();
+        $this->invalidateApiCache();
+
+        return true;
     }
 
     /**

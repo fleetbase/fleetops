@@ -797,6 +797,15 @@ class OrderController extends FleetOpsController
         foreach ($replaced as $order) {
             $order->notifyDriverUnassigned($order->driver_assigned_uuid);
         }
+
+        // The bulk update bypasses the model, so each order's driver offer is started here
+        $this->scopedToCompany(Order::whereIn('uuid', $orderUuids))->get()->each(function (Order $order) use ($driver) {
+            $order->setRelation('driverAssigned', $driver);
+            $order->syncOfferWithAssignment();
+            if ($order->isDirty('meta')) {
+                $order->saveQuietly();
+            }
+        });
     }
 
     protected function dispatchBulkAssignedDriverNotification(array $orderUuids, Driver $driver): void
@@ -863,9 +872,10 @@ class OrderController extends FleetOpsController
             return response()->error('No driver assigned to order.');
         }
 
-        // set order to started
+        // set order to started; starting the order answers an open offer
         $order->started    = true;
         $order->started_at = now();
+        $order->acceptOffer(false);
         $order->save();
 
         // trigger start event

@@ -98,6 +98,21 @@ test('unassigning tells the driver and a silent assignment sends no assignment n
         ->and($silent->events)->toBe([]);
 });
 
+test('saving a driver assignment starts the offer in the same write', function () {
+    $order              = new FleetOpsOrderAssignmentObserverOrder();
+    $order->driverDirty = true;
+
+    (new OrderObserver())->saving($order);
+
+    $unchanged              = new FleetOpsOrderAssignmentObserverOrder();
+    $unchanged->driverDirty = false;
+
+    (new OrderObserver())->saving($unchanged);
+
+    expect($order->events)->toBe(['offer'])
+        ->and($unchanged->events)->toBe([]);
+});
+
 test('assign driver relies on the observer instead of notifying before the save', function () {
     $source = file_get_contents(dirname(__DIR__, 3) . '/src/Models/Order.php');
     preg_match('/public function assignDriver\(.*?\n    }\n/s', $source, $matches);

@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\FleetOps\Events\OrderDispatchFailed;
+use Fleetbase\FleetOps\Events\OrderOfferChanged;
 use Fleetbase\FleetOps\Events\OrderStarted;
 use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
 use Fleetbase\FleetOps\Exceptions\OrderEditLockedException;
@@ -25,6 +26,7 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Notifications\OrderOfferDeclined;
 use Fleetbase\FleetOps\Support\OrderEdit;
 use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
 use Fleetbase\FleetOps\Support\TrackingCode;
@@ -34,7 +36,9 @@ use Fleetbase\Http\Resources\Comment as CommentResource;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Setting;
+use Fleetbase\Models\User;
 use Fleetbase\Support\Auth;
+use Fleetbase\Support\NotificationRegistry;
 use Fleetbase\Support\TemplateString;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -1062,9 +1066,15 @@ class OrderController extends Controller
             return response()->apiError('Order has already started.');
         }
 
-        // if the order is adhoc and the parameter of `assign` is set with a valid driver id, assign the driver and continue
+        // if the order is adhoc and the parameter of `assign` is set with a valid driver id, assign the driver and continue;
+        // the driver took the order themselves, so their offer starts accepted
         if ($order->adhoc && $assignAdhocDriver && Str::startsWith($assignAdhocDriver, 'driver_')) {
-            $order->assignDriver($assignAdhocDriver, true);
+            $order->acceptOfferOnAssign = true;
+            try {
+                $order->assignDriver($assignAdhocDriver, true);
+            } finally {
+                $order->acceptOfferOnAssign = false;
+            }
         }
 
         /** @var \Fleetbase\Models\Driver */
@@ -1096,9 +1106,10 @@ class OrderController extends Controller
             return response()->apiError('Order has not been dispatched yet and cannot be started.');
         }
 
-        // set order to started
+        // set order to started; starting the order answers an open offer
         $order->started    = true;
         $order->started_at = now();
+        $order->acceptOffer(false);
         $order->save();
 
         // trigger start event
@@ -1392,6 +1403,145 @@ class OrderController extends Controller
         $order->cancel();
 
         return $this->orderResource($order);
+    }
+
+    /**
+     * The assigned driver accepts the order offered to them. An adhoc order that
+     * has no driver yet is assigned to the accepting driver.
+     *
+     * @return \Fleetbase\Http\Resources\v1\Order
+     */
+    public function acceptOrder(string $id, Request $request)
+    {
+        try {
+            $order = $this->findOrder($id, ['driverAssigned']);
+        } catch (ModelNotFoundException $exception) {
+            return $this->apiError('Order resource not found.', 404);
+        }
+
+        $driver = $this->offerDriverFromRequest($request);
+        if (!$driver) {
+            return $this->apiError('No driver found to accept the order.', 404);
+        }
+
+        if ($order->editPolicy()->isTerminal()) {
+            return $this->apiError('This order can no longer be accepted.', 422);
+        }
+
+        if (!$order->driver_assigned_uuid && $order->adhoc) {
+            $order->acceptOfferOnAssign = true;
+            try {
+                $order->assignDriver($driver, true);
+            } finally {
+                $order->acceptOfferOnAssign = false;
+            }
+        } elseif (!$order->isDriver($driver)) {
+            return $this->apiError('This order is not offered to you.', 403);
+        } elseif (!$order->acceptOffer() && $order->offerStatus() !== Order::OFFER_ACCEPTED) {
+            // no offer recorded (assigned before offers existed): record it as accepted
+            $order->acceptOfferOnAssign = true;
+            $order->syncOfferWithAssignment();
+            $order->acceptOfferOnAssign = false;
+            $order->saveQuietly();
+            $order->invalidateApiCache();
+        }
+
+        $this->broadcastOfferChange($order, Order::OFFER_ACCEPTED);
+
+        return $this->orderResource($order->refresh());
+    }
+
+    /**
+     * The assigned driver declines the order offered to them: the order is
+     * unassigned and dispatch is told.
+     *
+     * @return \Fleetbase\Http\Resources\v1\Order
+     */
+    public function declineOrder(string $id, Request $request)
+    {
+        try {
+            $order = $this->findOrder($id, ['driverAssigned']);
+        } catch (ModelNotFoundException $exception) {
+            return $this->apiError('Order resource not found.', 404);
+        }
+
+        $driver = $this->offerDriverFromRequest($request);
+        if (!$driver) {
+            return $this->apiError('No driver found to decline the order.', 404);
+        }
+
+        if (!$order->isDriver($driver)) {
+            return $this->apiError('This order is not offered to you.', 403);
+        }
+
+        if ($order->started) {
+            return $this->apiError('This order has already been started and cannot be declined.', 422);
+        }
+
+        $reason = $this->reasonFromRequest($request);
+        $order->declineOffer($reason);
+
+        $this->broadcastOfferChange($order, Order::OFFER_DECLINED);
+        $this->notifyOfferDeclined($order, $driver, $reason);
+
+        return $this->orderResource($order->refresh());
+    }
+
+    /**
+     * The free-text `reason` sent with a cancel or decline, trimmed to 1000 characters.
+     */
+    protected function reasonFromRequest(Request $request): ?string
+    {
+        $reason = $request->input('reason');
+        if (!is_string($reason) || trim($reason) === '') {
+            return null;
+        }
+
+        return Str::limit(trim($reason), 1000, '');
+    }
+
+    /**
+     * The driver answering an offer: the `driver` named in the request, or the
+     * driver profile of the authenticated user.
+     */
+    protected function offerDriverFromRequest(Request $request): ?Driver
+    {
+        if ($request->filled('driver')) {
+            return $this->findDriverByPublicId($request->input('driver'));
+        }
+
+        $user = $request->user();
+        if (!$user instanceof User) {
+            $user = User::where('uuid', session('user'))->first();
+        }
+
+        if (!$user) {
+            return null;
+        }
+
+        return Driver::where(['user_uuid' => $user->uuid, 'company_uuid' => $this->sessionCompany()])->first();
+    }
+
+    protected function broadcastOfferChange(Order $order, string $status): void
+    {
+        try {
+            event(new OrderOfferChanged($order, $status));
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to broadcast order offer change', ['order' => $order->public_id, 'error' => $exception->getMessage()]);
+        }
+    }
+
+    protected function notifyOfferDeclined(Order $order, Driver $driver, ?string $reason): void
+    {
+        try {
+            NotificationRegistry::notify(OrderOfferDeclined::class, $order, [
+                'driver'      => $driver->public_id,
+                'driver_name' => $driver->name,
+                'reason'      => $reason,
+            ]);
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to notify dispatch of declined order', ['order' => $order->public_id, 'error' => $exception->getMessage()]);
+        }
     }
 
     /**

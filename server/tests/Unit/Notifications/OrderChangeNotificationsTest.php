@@ -54,3 +54,34 @@ test('order unassigned tells the driver the order is no longer theirs', function
         ->and($notification->via(null))->toBe([FcmChannel::class, ApnChannel::class])
         ->and($notification->toArray()['event'])->toBe('order.unassigned_notification');
 });
+
+test('offer alerts describe the declined or unanswered offer for dispatch', function () {
+    $order    = fleetopsOrderChangeNotificationOrder();
+    $declined = new OrderOfferDeclined($order, ['driver' => 'driver_one', 'driver_name' => 'Dee', 'reason' => 'Too far']);
+    $silent   = new DriverNotAccepted($order, ['driver' => 'driver_one']);
+
+    expect($declined->toArray(null))->toMatchArray([
+        'event'    => 'order.offer_declined',
+        'order_id' => 'order_change',
+        'message'  => 'Dee declined order FLB-CHANGE-1: Too far',
+    ])
+        ->and($declined->via(null))->toBe(['mail', 'database'])
+        ->and($silent->toArray(null))->toMatchArray([
+            'event'    => 'order.driver_not_accepted',
+            'order_id' => 'order_change',
+            'context'  => ['driver' => 'driver_one'],
+        ]);
+});
+
+test('offer changes broadcast as order offer status on the order and company channels', function () {
+    $event = new OrderOfferChanged(fleetopsOrderChangeNotificationOrder(), Order::OFFER_EXPIRED);
+
+    expect($event->broadcastAs())->toBe('order.offer_expired')
+        ->and(array_map(fn ($channel) => $channel->name, $event->broadcastOn()))->toBe(['order.order_change', 'order.order-uuid', 'company.company-1'])
+        ->and($event->broadcastWith())->toMatchArray(['event' => 'order.offer_expired'])
+        ->and($event->broadcastWith()['data'])->toBe([
+            'id'     => 'order_change',
+            'driver' => 'driver_one',
+            'offer'  => ['driver' => 'driver_one', 'status' => 'expired', 'expires_at' => '2026-10-13T12:05:00Z'],
+        ]);
+});

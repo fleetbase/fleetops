@@ -99,6 +99,7 @@ class Order extends FleetbaseResource
                 return $this->resource->eta ?? ($tracker ? $tracker->eta() : null);
             }),
             'meta'                 => data_get($this, 'meta', Utils::createObject()),
+            'offer'                => data_get($this, 'meta.offer'),
             'dispatched_at'        => $this->dispatched_at,
             'started_at'           => $this->started_at,
             'scheduled_at'         => $this->scheduled_at,
@@ -207,6 +208,7 @@ class Order extends FleetbaseResource
             'status'          => $this->status,
             'adhoc'           => $this->adhoc,
             'meta'            => data_get($this, 'meta', Utils::createObject()),
+            'offer'           => data_get($this, 'meta.offer'),
             'dispatched_at'   => $this->dispatched_at,
             'started_at'      => $this->started_at,
             'scheduled_at'    => $this->scheduled_at,
