@@ -377,3 +377,18 @@ test('requested changes name the policy fields an edit touches', function () {
         ->and(OrderEdit::entitiesMode('sync'))->toBe('replace')
         ->and(OrderEdit::entitiesMode(null))->toBe('append');
 });
+
+test('a driver taken off an order is told and loses it as their current job', function () {
+    $connection = fleetopsOrderOpsBoot();
+    $order      = fleetopsOrderOpsOrder($connection);
+
+    expect($order->notifyDriverUnassigned('driver-1'))->toBeTrue()
+        ->and($connection->table('drivers')->where('uuid', 'driver-1')->value('current_job_uuid'))->toBeNull()
+        ->and($order->notifyDriverUnassigned('missing-driver'))->toBeFalse();
+
+    $events = fleetopsOrderOpsEvents()->of(Fleetbase\FleetOps\Events\OrderDriverUnassigned::class);
+    expect($events)->toHaveCount(1)
+        ->and($events[0]->broadcastAs())->toBe('order.driver_unassigned')
+        ->and($events[0]->channelNames)->toBe(['driver.driver_one', 'driver.driver-1', 'company.company-1'])
+        ->and($events[0]->broadcastWith()['data'])->toBe(['id' => 'order_one', 'driver' => 'driver_one']);
+});

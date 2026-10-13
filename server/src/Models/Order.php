@@ -8,7 +8,9 @@ use Fleetbase\FleetOps\Events\OrderCanceled;
 use Fleetbase\FleetOps\Events\OrderCompleted;
 use Fleetbase\FleetOps\Events\OrderDispatched;
 use Fleetbase\FleetOps\Events\OrderDriverAssigned;
+use Fleetbase\FleetOps\Events\OrderDriverUnassigned;
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\FleetOps\Notifications\OrderUnassigned;
 use Fleetbase\FleetOps\Support\LabelPdf;
 use Fleetbase\FleetOps\Support\OrderEditPolicy;
 use Fleetbase\FleetOps\Support\OrderTracker;
@@ -36,6 +38,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -276,6 +279,16 @@ class Order extends Model
         'id',
         '_key',
     ];
+
+    /**
+     * Set for one save: the driver assignment being saved sends no assignment notification.
+     */
+    public bool $silentDriverAssignment = false;
+
+    /**
+     * Set for one save: the driver taken off the order is not sent an unassigned push (they declined it themselves).
+     */
+    public bool $quietDriverUnassignment = false;
 
     /**
      * Enforce a morph map.
@@ -1463,6 +1476,44 @@ class Order extends Model
     }
 
     /**
+     * Tell a driver the order was taken off them: broadcasts `order.driver_unassigned`
+     * on their channels and pushes `{ type: "order_unassigned", id }` to their devices.
+     * The order is cleared as the driver's current job.
+     *
+     * @param Driver|string|null $driver the driver (or driver uuid) removed from the order
+     */
+    public function notifyDriverUnassigned($driver): bool
+    {
+        if (is_string($driver)) {
+            $driver = Driver::where('uuid', $driver)->withoutGlobalScopes()->first();
+        }
+
+        if (!$driver instanceof Driver) {
+            return false;
+        }
+
+        if ($driver->current_job_uuid && $driver->current_job_uuid === $this->uuid) {
+            $driver->forceFill(['current_job_uuid' => null])->saveQuietly();
+        }
+
+        try {
+            event(new OrderDriverUnassigned($this, $driver));
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to broadcast order.driver_unassigned', ['order' => $this->public_id, 'error' => $exception->getMessage()]);
+        }
+
+        if (!$this->quietDriverUnassignment) {
+            try {
+                $driver->notify(new OrderUnassigned($this));
+            } catch (\Throwable $exception) {
+                Log::warning('Unable to notify driver of unassignment', ['order' => $this->public_id, 'error' => $exception->getMessage()]);
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * The edit policy for the order at its current status.
      */
     public function editPolicy(): OrderEditPolicy
@@ -1727,7 +1778,7 @@ class Order extends Model
                         return $this;
                     }
 
-                    return $this->assignDriver($driver);
+                    return $this->assignDriver($driver, $silent);
                 }
 
                 throw new \Exception('Invalid driver provided for assignment!');
@@ -1740,11 +1791,15 @@ class Order extends Model
             $this->setRelation('driverAssigned', $driver);
         }
 
-        if (!$silent) {
-            $this->notifyDriverAssigned();
+        // The order observer sends OrderDriverAssigned once the assignment is saved
+        // (and tells a replaced driver they were unassigned), so it is not fired here
+        // as well. A silent assignment is flagged for that one save.
+        $this->silentDriverAssignment = (bool) $silent;
+        try {
+            $this->save();
+        } finally {
+            $this->silentDriverAssignment = false;
         }
-
-        $this->save();
 
         return $this;
     }

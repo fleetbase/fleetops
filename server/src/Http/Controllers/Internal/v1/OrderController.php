@@ -782,11 +782,21 @@ class OrderController extends FleetOpsController
 
     protected function assignDriverToOrders($orderUuids, Driver $driver): void
     {
+        // Drivers being replaced are told once the assignment is written
+        $replaced = $this->scopedToCompany(Order::whereIn('uuid', $orderUuids))
+            ->whereNotNull('driver_assigned_uuid')
+            ->where('driver_assigned_uuid', '!=', $driver->uuid)
+            ->get();
+
         $this->scopedToCompany(Order::whereIn('uuid', $orderUuids))->update([
             'driver_assigned_uuid' => $driver->uuid,
             'updated_at'           => now(),
         ]);
         Order::invalidateApiCacheManually(session('company'));
+
+        foreach ($replaced as $order) {
+            $order->notifyDriverUnassigned($order->driver_assigned_uuid);
+        }
     }
 
     protected function dispatchBulkAssignedDriverNotification(array $orderUuids, Driver $driver): void

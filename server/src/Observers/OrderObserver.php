@@ -58,7 +58,15 @@ class OrderObserver
         $order->setDriverLocationAsPickup();
 
         if ($order->wasChanged('driver_assigned_uuid')) {
-            $order->notifyDriverAssigned();
+            // The driver taken off the order hears about it, whether it was unassigned or reassigned.
+            $previousDriverUuid = $order->getOriginal('driver_assigned_uuid');
+            if ($previousDriverUuid) {
+                $order->notifyDriverUnassigned($previousDriverUuid);
+            }
+
+            if (!$order->silentDriverAssignment) {
+                $order->notifyDriverAssigned();
+            }
         }
 
         $this->invalidateCache($order);

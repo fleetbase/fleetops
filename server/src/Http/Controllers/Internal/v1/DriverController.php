@@ -596,6 +596,15 @@ class DriverController extends FleetOpsController
             'updated_at'           => now(),
         ]);
         Order::invalidateApiCacheManually(session('company'));
+
+        // The bulk update bypasses the order observer, so the driver taken off each
+        // order is told here
+        foreach ($orders as $order) {
+            $previousDriverUuid = $order->driver_assigned_uuid;
+            if ($previousDriverUuid) {
+                $order->notifyDriverUnassigned($previousDriverUuid);
+            }
+        }
     }
 
     protected function freshOrders($orders, array $with)

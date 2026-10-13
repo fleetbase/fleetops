@@ -45,3 +45,12 @@ test('order changed pushes the changes to the driver with fcm safe data', functi
         ->and(array_map(fn ($channel) => $channel->name, $notification->broadcastOn()))->toContain('driver.driver-uuid')
         ->and((new OrderChanged(fleetopsOrderChangeNotificationOrder()))->message)->toBe('This order was changed, tap for details.');
 });
+
+test('order unassigned tells the driver the order is no longer theirs', function () {
+    $notification = new OrderUnassigned(fleetopsOrderChangeNotificationOrder());
+
+    expect($notification->title)->toBe('Order FLB-CHANGE-1 unassigned')
+        ->and($notification->data)->toBe(['type' => 'order_unassigned', 'id' => 'order_change'])
+        ->and($notification->via(null))->toBe([FcmChannel::class, ApnChannel::class])
+        ->and($notification->toArray()['event'])->toBe('order.unassigned_notification');
+});
