@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
+use Fleetbase\Exceptions\SmsBlockedException;
 use Fleetbase\FleetOps\Events\DriverLocationChanged;
 use Fleetbase\FleetOps\Events\GeofenceEntered;
 use Fleetbase\FleetOps\Events\GeofenceExited;
@@ -44,6 +45,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response;
 
 class DriverController extends Controller
 {
@@ -590,6 +592,11 @@ class DriverController extends Controller
         // Get the user's company for this driver profile
         $company = static::getDriverCompanyFromUser($user);
 
+        // A guard refusal (paused, over budget, unusable number) falls back to email like
+        // a provider failure does; with no email to fall back to, the refusal itself is the
+        // answer, with its status, not the generic error.
+        $smsFailure = null;
+
         // generate verification token
         try {
             VerificationCode::generateSmsVerificationFor($user, 'driver_login', [
@@ -602,6 +609,8 @@ class DriverController extends Controller
 
             return response()->json(['status' => 'OK', 'method' => 'sms']);
         } catch (\Throwable $e) {
+            $smsFailure = $e;
+
             if (app()->bound('sentry')) {
                 app('sentry')->captureException($e);
             }
@@ -625,7 +634,7 @@ class DriverController extends Controller
             }
         }
 
-        return response()->apiError('Unable to send SMS Verification code.');
+        return static::sendFailureResponse($smsFailure, 'Unable to send SMS Verification code.');
     }
 
     /**
@@ -1353,6 +1362,8 @@ class DriverController extends Controller
 
         try {
             static::sendResetCode($user, $identity);
+        } catch (SmsBlockedException $e) {
+            return static::smsBlockedResponse($e);
         } catch (\Throwable $e) {
             return response()->apiError(static::debugEnabled() ? $e->getMessage() : 'Unable to send reset code.');
         }
@@ -1480,6 +1491,36 @@ class DriverController extends Controller
                 'messageCallback' => fn ($v) => 'Your ' . config('app.name') . ' password reset code is ' . $v->code,
             ]);
         }
+    }
+
+    /**
+     * Answer a refusal from the SMS guard with the status it carries: 422 for a number that
+     * can never be texted, 429 with Retry-After for a cooldown or budget, 423 while texting
+     * is paused. The sends here sit inside catch-alls so a provider outage becomes an email
+     * fallback or a generic error; a refusal must not be flattened into that generic error,
+     * or an app can neither explain it to the person nor back off.
+     */
+    protected static function smsBlockedResponse(SmsBlockedException $e)
+    {
+        $response = response()->apiError($e->getMessage(), $e->status());
+        if ($response instanceof Response) {
+            $response->headers->add($e->headers());
+        }
+
+        return $response;
+    }
+
+    /**
+     * The response when a code could not be sent: the guard's refusal when that is why,
+     * otherwise the flow's own generic message.
+     */
+    protected static function sendFailureResponse(?\Throwable $failure, string $message)
+    {
+        if ($failure instanceof SmsBlockedException) {
+            return static::smsBlockedResponse($failure);
+        }
+
+        return response()->apiError($message);
     }
 
     /** Resolve a driver's user account from an email address or a phone number. */

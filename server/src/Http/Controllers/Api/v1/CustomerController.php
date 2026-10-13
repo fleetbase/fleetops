@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
+use Fleetbase\Exceptions\SmsBlockedException;
 use Fleetbase\FleetOps\Exceptions\UserAlreadyExistsException;
 use Fleetbase\FleetOps\Http\Requests\CreateCustomerOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\CreateCustomerRequest;
@@ -28,6 +29,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Customer-facing Fleet-Ops API.
@@ -126,6 +128,8 @@ class CustomerController extends Controller
                     'meta'            => $meta,
                 ]);
             }
+        } catch (SmsBlockedException $e) {
+            return static::smsBlockedResponse($e);
         } catch (\Twilio\Exceptions\RestException $e) {
             return response()->apiError($e->getMessage());
         } catch (\Exception $e) {
@@ -395,6 +399,11 @@ class CustomerController extends Controller
             return response()->apiError(static::DEACTIVATED_LOGIN_MESSAGE, 403);
         }
 
+        // A guard refusal (paused, over budget, unusable number) falls back to email like
+        // a provider failure does; with no email to fall back to, the refusal itself is the
+        // answer, with its status, not the generic error.
+        $smsFailure = null;
+
         try {
             $this->generateSmsVerification($user, 'fleetops_customer_login', [
                 'hashed'          => true,
@@ -403,6 +412,8 @@ class CustomerController extends Controller
 
             return response()->json(['status' => 'ok', 'method' => 'sms']);
         } catch (\Throwable $e) {
+            $smsFailure = $e;
+
             if ($user->email) {
                 try {
                     $this->generateEmailVerification($user, 'fleetops_customer_login', [
@@ -412,12 +423,12 @@ class CustomerController extends Controller
 
                     return response()->json(['status' => 'ok', 'method' => 'email']);
                 } catch (\Throwable $inner) {
-                    return response()->apiError('Unable to send verification code.');
+                    return static::sendFailureResponse($smsFailure, 'Unable to send verification code.');
                 }
             }
         }
 
-        return response()->apiError('Unable to send verification code.');
+        return static::sendFailureResponse($smsFailure, 'Unable to send verification code.');
     }
 
     /**
@@ -504,6 +515,8 @@ class CustomerController extends Controller
                     'meta'            => $meta,
                 ]);
             }
+        } catch (SmsBlockedException $e) {
+            return static::smsBlockedResponse($e);
         } catch (\Throwable $e) {
             return response()->apiError(app()->hasDebugModeEnabled() ? $e->getMessage() : 'Unable to send reset code.');
         }
@@ -949,6 +962,36 @@ class CustomerController extends Controller
     protected function generateSmsVerification(User $user, string $for, array $options): mixed
     {
         return VerificationCode::generateSmsVerificationFor($user, $for, $options);
+    }
+
+    /**
+     * Answer a refusal from the SMS guard with the status it carries: 422 for a number that
+     * can never be texted, 429 with Retry-After for a cooldown or budget, 423 while texting
+     * is paused. The sends here sit inside catch-alls so a provider outage becomes an email
+     * fallback or a generic error; a refusal must not be flattened into that generic error,
+     * or an app can neither explain it to the person nor back off.
+     */
+    protected static function smsBlockedResponse(SmsBlockedException $e)
+    {
+        $response = response()->apiError($e->getMessage(), $e->status());
+        if ($response instanceof Response) {
+            $response->headers->add($e->headers());
+        }
+
+        return $response;
+    }
+
+    /**
+     * The response when a code could not be sent: the guard's refusal when that is why,
+     * otherwise the flow's own generic message.
+     */
+    protected static function sendFailureResponse(?\Throwable $failure, string $message)
+    {
+        if ($failure instanceof SmsBlockedException) {
+            return static::smsBlockedResponse($failure);
+        }
+
+        return response()->apiError($message);
     }
 
     /**
