@@ -17,6 +17,9 @@ use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -140,7 +143,7 @@ class Payload extends Model
     /**
      * Entities in the payload.
      */
-    public function entities()
+    public function entities(): HasMany
     {
         return $this->hasMany(Entity::class);
     }
@@ -194,7 +197,7 @@ class Payload extends Model
     /**
      * The address the shipment will be delivered to.
      */
-    public function dropoff()
+    public function dropoff(): BelongsTo
     {
         return $this->belongsTo(Place::class, 'dropoff_uuid')->whereNull('deleted_at')->withoutGlobalScopes();
     }
@@ -202,7 +205,7 @@ class Payload extends Model
     /**
      * The address the shipment will be delivered from.
      */
-    public function pickup()
+    public function pickup(): BelongsTo
     {
         return $this->belongsTo(Place::class, 'pickup_uuid')->whereNull('deleted_at')->withoutGlobalScopes();
     }
@@ -210,7 +213,7 @@ class Payload extends Model
     /**
      * The address the shipment will be sent to upon failed delivery.
      */
-    public function return()
+    public function return(): BelongsTo
     {
         return $this->belongsTo(Place::class)->withoutGlobalScopes();
     }
@@ -233,10 +236,8 @@ class Payload extends Model
 
     /**
      * Waypoints between start and end.
-     *
-     * @return \Illuminate\Database\Eloquent\Concerns\HasManyThrough
      */
-    public function waypoints()
+    public function waypoints(): HasManyThrough
     {
         return $this->hasManyThrough(Place::class, Waypoint::class, 'payload_uuid', 'uuid', 'uuid', 'place_uuid')->whereNull('waypoints.deleted_at')->withoutGlobalScopes();
     }

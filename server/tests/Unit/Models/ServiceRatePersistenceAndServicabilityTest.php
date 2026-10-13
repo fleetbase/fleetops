@@ -92,12 +92,12 @@ class FleetOpsServicableRate extends ServiceRate
         return parent::getAttribute($key);
     }
 
-    public function rateFees()
+    public function rateFees(): Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Fleetbase\FleetOps\Models\ServiceRateFee::class, 'service_rate_uuid', 'uuid');
     }
 
-    public function parcelFees()
+    public function parcelFees(): Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Fleetbase\FleetOps\Models\ServiceRateParcelFee::class, 'service_rate_uuid', 'uuid');
     }

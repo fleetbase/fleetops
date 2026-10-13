@@ -20,7 +20,8 @@ use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 
-class ActivityFlowRelationCountFake
+// Extends the relation the model method now declares, so the override stays compatible; the parent constructor is skipped on purpose.
+class ActivityFlowRelationCountFake extends Illuminate\Database\Eloquent\Relations\HasManyThrough
 {
     public function __construct(private int $count)
     {
@@ -67,7 +68,7 @@ class ActivityFlowPayloadFake extends Payload
         return $this;
     }
 
-    public function waypoints()
+    public function waypoints(): Illuminate\Database\Eloquent\Relations\HasManyThrough
     {
         return new ActivityFlowRelationCountFake($this->waypoints?->count() ?? 0);
     }

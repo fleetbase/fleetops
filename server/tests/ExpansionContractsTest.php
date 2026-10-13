@@ -11,7 +11,9 @@ function bindFleetOpsExpansionClosure(Closure $closure, object $target): Closure
     return $closure->bindTo($target, $target::class);
 }
 
-class FleetOpsExpansionRelationFake
+// The expansion closures declare HasOne / HasMany return types, so the fakes extend
+// those relations; the parent constructor is skipped on purpose.
+trait FleetOpsExpansionRecordsRelationCalls
 {
     public array $calls = [];
 
@@ -34,6 +36,16 @@ class FleetOpsExpansionRelationFake
     }
 }
 
+class FleetOpsExpansionRelationFake extends Illuminate\Database\Eloquent\Relations\HasOne
+{
+    use FleetOpsExpansionRecordsRelationCalls;
+}
+
+class FleetOpsExpansionManyRelationFake extends Illuminate\Database\Eloquent\Relations\HasMany
+{
+    use FleetOpsExpansionRecordsRelationCalls;
+}
+
 class FleetOpsExpansionModelFake
 {
     public array $calls     = [];
@@ -41,9 +53,10 @@ class FleetOpsExpansionModelFake
 
     public function __construct()
     {
-        foreach (['driver', 'driverProfiles', 'customer', 'contact'] as $name) {
+        foreach (['driver', 'customer', 'contact'] as $name) {
             $this->relations[$name] = new FleetOpsExpansionRelationFake($name);
         }
+        $this->relations['driverProfiles'] = new FleetOpsExpansionManyRelationFake('driverProfiles');
     }
 
     public function hasMany($class)

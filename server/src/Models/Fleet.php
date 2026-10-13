@@ -11,6 +11,9 @@ use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -105,66 +108,42 @@ class Fleet extends Model
      */
     protected $hidden = [];
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function photo()
+    public function photo(): BelongsTo
     {
         return $this->belongsTo(\Fleetbase\Models\File::class, 'image_uuid', 'uuid');
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function serviceArea()
+    public function serviceArea(): BelongsTo
     {
         return $this->belongsTo(ServiceArea::class)->select(['uuid', 'public_id', 'name', 'type', 'border']);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function zone()
+    public function zone(): BelongsTo
     {
         return $this->belongsTo(Zone::class)->select(['uuid', 'public_id', 'name', 'border']);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function vendor()
+    public function vendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class)->select(['uuid', 'public_id', 'name']);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function parentFleet()
+    public function parentFleet(): BelongsTo
     {
         return $this->belongsTo(Fleet::class)->without(['subFleets']);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function subFleets()
+    public function subFleets(): HasMany
     {
         return $this->hasMany(Fleet::class, 'parent_fleet_uuid', 'uuid')->without(['parentFleet']);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasManyThrough
-     */
-    public function drivers()
+    public function drivers(): HasManyThrough
     {
         return $this->hasManyThrough(Driver::class, FleetDriver::class, 'fleet_uuid', 'uuid', 'uuid', 'driver_uuid');
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasManyThrough
-     */
-    public function vehicles()
+    public function vehicles(): HasManyThrough
     {
         return $this->hasManyThrough(Vehicle::class, FleetVehicle::class, 'fleet_uuid', 'uuid', 'uuid', 'vehicle_uuid');
     }
