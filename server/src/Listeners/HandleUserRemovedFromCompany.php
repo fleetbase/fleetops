@@ -26,7 +26,8 @@ class HandleUserRemovedFromCompany implements ShouldQueue
 
     protected function deleteDriversForCompanyUser(string $companyUuid, string $userUuid): void
     {
-        $this->driverQueryForCompanyUser($companyUuid, $userUuid)->delete();
+        // Delete each driver through the model so DriverObserver cleans up after it
+        $this->driverQueryForCompanyUser($companyUuid, $userUuid)->get()->each->delete();
     }
 
     protected function driverQueryForCompanyUser(string $companyUuid, string $userUuid): mixed

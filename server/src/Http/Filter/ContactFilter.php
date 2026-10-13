@@ -64,7 +64,7 @@ class ContactFilter extends Filter
     public function address(?string $address)
     {
         $this->builder->whereHas(
-            'addresses',
+            'place',
             function ($query) use ($address) {
                 $query->search($address);
             }

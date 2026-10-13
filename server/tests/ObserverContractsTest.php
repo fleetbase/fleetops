@@ -286,7 +286,7 @@ class FleetOpsVehicleObserverProbe extends VehicleObserver
         return $this->driver && $identifier === $this->identifier ? $this->driver : null;
     }
 
-    protected function deleteDriversAssignedTo(Vehicle $vehicle): mixed
+    protected function unassignDriversFrom(Vehicle $vehicle): int
     {
         $this->deleted[] = $vehicle->uuid;
 
@@ -536,12 +536,12 @@ class FleetOpsCompanyUserObserverProbe extends CompanyUserObserver
     public array $deleted  = [];
     public ?Driver $driver = null;
 
-    protected function deleteDrivers(string $userUuid): void
+    protected function deleteDrivers(string $userUuid, ?string $companyUuid): void
     {
         $this->deleted[] = $userUuid;
     }
 
-    protected function findDriver(string $userUuid): ?Driver
+    protected function findDriver(string $userUuid, ?string $companyUuid): ?Driver
     {
         return $this->driver;
     }

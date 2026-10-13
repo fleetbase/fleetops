@@ -20,9 +20,7 @@ class UserObserver
 
     protected function deleteDrivers(string $userUuid): void
     {
-        // A user's drivers can belong to several companies, so this invalidates every company's driver lists
-        if (Driver::where('user_uuid', $userUuid)->delete()) {
-            Driver::invalidateApiCacheManually();
-        }
+        // Delete each driver through the model so DriverObserver cleans up after it
+        Driver::where('user_uuid', $userUuid)->get()->each->delete();
     }
 }
