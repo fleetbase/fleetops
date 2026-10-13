@@ -141,7 +141,7 @@ class TrackingAccess
         $result = $verificationCode->check($code, self::MAX_ATTEMPTS);
         if ($result === VerificationCode::CHECK_VALID) {
             $channel = $verificationCode->getMeta('channel');
-            $this->deleteCode($verificationCode);
+            $this->consumeCode($verificationCode);
 
             return ['status' => $result, 'channel' => $channel];
         }
@@ -290,14 +290,26 @@ class TrackingAccess
         return VerificationCode::issue($recipient, self::CODE_PURPOSE, $options);
     }
 
+    /**
+     * The scope's newest code that has not been used. Read without the expiry scope so an
+     * expired code is reported as such rather than as missing; a used code stays on the
+     * table for the ledger but never verifies again.
+     */
     protected function latestCode(TrackingScope $scope): ?VerificationCode
     {
-        return VerificationCode::withoutGlobalScope(ExpiryScope::class)->where('for', self::CODE_PURPOSE)->where('meta->scope', $scope->key())->latest()->first();
+        return VerificationCode::withoutGlobalScope(ExpiryScope::class)
+            ->where('for', self::CODE_PURPOSE)
+            ->where('meta->scope', $scope->key())
+            ->where(function ($query) {
+                $query->whereNull('status')->orWhere('status', '!=', VerificationCode::STATUS_USED);
+            })
+            ->latest()
+            ->first();
     }
 
-    protected function deleteCode(VerificationCode $verificationCode): void
+    protected function consumeCode(VerificationCode $verificationCode): void
     {
-        $verificationCode->delete();
+        $verificationCode->consume();
     }
 
     protected function findSession(string $tokenHash): ?TrackingSession
