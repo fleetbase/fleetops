@@ -100,6 +100,17 @@ class FleetOpsVehicleModelFindResultFake
     {
     }
 
+    public function where($column, $operator = null): static
+    {
+        if (is_callable($column)) {
+            $column($this->query);
+        } else {
+            $this->query->calls[] = ['where', [$column, $operator]];
+        }
+
+        return $this;
+    }
+
     public function first(): ?Vehicle
     {
         return $this->result;
@@ -117,6 +128,8 @@ class FleetOpsVehicleModelFindableFake extends Vehicle
 
         if (is_callable($column)) {
             $column($query);
+        } else {
+            $query->calls[] = ['where', [$column, $operator]];
         }
 
         self::$lastQuery = $query;
@@ -258,9 +271,10 @@ test('vehicle import parses single vehicle name and find by name builds identifi
     FleetOpsVehicleModelFindableFake::$result = $found;
 
     expect(FleetOpsVehicleModelFindableFake::findByName('ABC-123'))->toBe($found)
+        ->and(FleetOpsVehicleModelFindableFake::$lastQuery->calls[0])->toBe(['where', ['company_uuid', 'company-vehicle']])
         ->and(FleetOpsVehicleModelFindableFake::$lastQuery->calls)->toContain(['where', ['public_id', 'ABC-123']])
         ->and(FleetOpsVehicleModelFindableFake::$lastQuery->calls)->toContain(['orWhere', ['plate_number', 'ABC-123']])
         ->and(FleetOpsVehicleModelFindableFake::$lastQuery->calls)->toContain(['orWhere', ['fuel_card_number', 'ABC-123']])
-        ->and(FleetOpsVehicleModelFindableFake::$lastQuery->calls[7][0])->toBe('orWhereRaw')
-        ->and(FleetOpsVehicleModelFindableFake::$lastQuery->calls[8][0])->toBe('orWhereRaw');
+        ->and(FleetOpsVehicleModelFindableFake::$lastQuery->calls[8][0])->toBe('orWhereRaw')
+        ->and(FleetOpsVehicleModelFindableFake::$lastQuery->calls[9][0])->toBe('orWhereRaw');
 });
