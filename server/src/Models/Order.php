@@ -1464,10 +1464,32 @@ class Order extends Model
      */
     public function cancel()
     {
+        return $this->cancelWithReason(null);
+    }
+
+    /**
+     * Cancels the order, recording why.
+     *
+     * The reason becomes the details of the canceled tracking status and is carried on
+     * the OrderCanceled event's activity, which the canceled notifications read.
+     *
+     * @return mixed the result of the OrderCanceled event
+     */
+    public function cancelWithReason(?string $reason = null)
+    {
         // The canceled activity comes from the order config, which may define its own code.
         $this->loadMissing('orderConfig');
         $orderConfig      = $this->orderConfig ?? $this->config();
         $canceledActivity = $orderConfig->getCanceledActivity();
+
+        // A reason given for the cancellation becomes the canceled status details, which
+        // the canceled notifications read. The config's activity itself is left untouched.
+        $reason         = is_string($reason) ? trim($reason) : null;
+        $reasonActivity = null;
+        if ($reason !== null && $reason !== '' && $canceledActivity instanceof Activity) {
+            $canceledActivity = $reasonActivity = (clone $canceledActivity)->set('details', $reason);
+        }
+
         $this->status     = $canceledActivity->code ?? 'canceled';
         $this->updateActivity($canceledActivity);
 
@@ -1479,7 +1501,13 @@ class Order extends Model
             }
         }
 
-        return dispatch(fn () => event(new OrderCanceled($this)))->afterCommit();
+        // The event carries the activity when a reason was given, so the canceled
+        // notifications (which read the activity details) include it.
+        return dispatch(function () use ($reasonActivity) {
+            $event           = new OrderCanceled($this);
+            $event->activity = $reasonActivity;
+            event($event);
+        })->afterCommit();
     }
 
     /**

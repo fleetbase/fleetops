@@ -452,6 +452,16 @@ class FleetOpsApiOrderCrudFake extends Order
         return $this;
     }
 
+    public ?string $cancelReasonForTest = null;
+
+    public function cancelWithReason(?string $reason = null)
+    {
+        $this->cancelledForTest    = true;
+        $this->cancelReasonForTest = $reason;
+
+        return $this;
+    }
+
     public bool $declinedForTest = false;
 
     public ?string $declineReasonForTest = null;
@@ -1248,6 +1258,25 @@ test('api order controller reads a top-level cod amount and appends entities by 
         ->and($payload->getAttributes()['cod_amount'])->toBe(2500)
         ->and($controller->edit->guarded[0]['input'])->toMatchArray(['cod_amount' => '2500'])
         ->and($controller->edit->guarded[0]['entities_mode'])->toBe('append');
+});
+
+test('api order controller cancels with a reason when one is given', function () {
+    $order             = new FleetOpsApiOrderCrudFake();
+    $controller        = new FleetOpsApiOrderCrudControllerProbe();
+    $controller->order = $order;
+
+    $controller->cancelOrder('order-public', new Request(['reason' => '  Customer moved away  ']));
+
+    expect($order->cancelledForTest)->toBeTrue()
+        ->and($order->cancelReasonForTest)->toBe('Customer moved away');
+
+    $plain             = new FleetOpsApiOrderCrudFake();
+    $controller        = new FleetOpsApiOrderCrudControllerProbe();
+    $controller->order = $plain;
+    $controller->cancelOrder('order-public', new Request());
+
+    expect($plain->cancelledForTest)->toBeTrue()
+        ->and($plain->cancelReasonForTest)->toBeNull();
 });
 
 test('api order controller accepts and declines offers for the assigned driver only', function () {

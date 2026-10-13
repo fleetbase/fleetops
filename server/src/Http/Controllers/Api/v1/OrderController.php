@@ -1387,8 +1387,12 @@ class OrderController extends Controller
      *
      * @return \Fleetbase\Http\Resources\v1\Order
      */
-    public function cancelOrder(string $id)
+    public function cancelOrder(string $id, ?Request $request = null)
     {
+        // Laravel does not inject a class-typed parameter that has a default, so the
+        // current request is read here; the default keeps cancelOrder($id) callable.
+        $request = $request ?? request();
+
         try {
             $order = $this->findOrder($id);
         } catch (ModelNotFoundException $exception) {
@@ -1400,7 +1404,13 @@ class OrderController extends Controller
             );
         }
 
-        $order->cancel();
+        // the reason becomes the canceled status details and is sent with the canceled notifications
+        $reason = $this->reasonFromRequest($request);
+        if ($reason !== null) {
+            $order->cancelWithReason($reason);
+        } else {
+            $order->cancel();
+        }
 
         return $this->orderResource($order);
     }

@@ -13,6 +13,11 @@ class HandleOrderCanceled implements ShouldQueue
     use InteractsWithQueue;
 
     /**
+     * The reason the order being handled was canceled.
+     */
+    protected string $reason = '';
+
+    /**
      * Handle the event.
      *
      * @param object $event
@@ -21,6 +26,9 @@ class HandleOrderCanceled implements ShouldQueue
      */
     public function handle(OrderCanceled $event)
     {
+        // the cancellation reason travels as the canceled activity's details
+        $this->reason = (string) ($event->activity ? $event->activity->get('details', '') : '');
+
         /** @var \Fleetbase\FleetOps\Models\Order $order */
         $order    = $event->getModelRecord();
         if ($order->isIntegratedVendorOrder()) {
@@ -50,6 +58,6 @@ class HandleOrderCanceled implements ShouldQueue
 
     protected function notifyAssignedDriver(Driver $driver, $order): void
     {
-        $driver->notify(new OrderCanceledNotification($order));
+        $driver->notify(new OrderCanceledNotification($order, $this->reason));
     }
 }

@@ -20,7 +20,8 @@ class CancelOrderRequest extends FleetbaseRequest
     public function rules(): array
     {
         return [
-            'order' => 'required|exists:orders,uuid',
+            'order'  => 'required|exists:orders,uuid',
+            'reason' => 'nullable|string|max:1000',
         ];
     }
 }

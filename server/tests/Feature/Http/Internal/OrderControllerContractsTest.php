@@ -468,6 +468,14 @@ class FleetOpsInternalOrderLifecycleOrderFake extends Order
         return $this;
     }
 
+    public ?string $cancelReasonForTest = null;
+
+    public function cancelWithReason(?string $reason = null)
+    {
+        $this->cancelReasonForTest = $reason;
+
+        return $this->cancel();
+    }
 
     public function dispatch(bool $save = true): Order
     {
@@ -1129,7 +1137,15 @@ test('internal order controller cancels and dispatches individual orders', funct
         'order'   => 'order-uuid',
     ])
         ->and($order->lookup_uuid)->toBe('order-uuid')
-        ->and($order->canceledForTest)->toBeTrue();
+        ->and($order->canceledForTest)->toBeTrue()
+        ->and($order->cancelReasonForTest)->toBeNull();
+
+    $order      = fleetopsInternalOrderLifecycleOrder('order-uuid', 'created');
+    $controller = fleetopsInternalOrderLifecycleController([$order]);
+    $controller->cancel(fleetopsCancelOrderRequest(['order' => 'order-uuid', 'reason' => 'Customer asked to cancel']));
+
+    expect($order->canceledForTest)->toBeTrue()
+        ->and($order->cancelReasonForTest)->toBe('Customer asked to cancel');
 
     $order      = fleetopsInternalOrderLifecycleOrder('order-dispatch', 'created');
     $controller = fleetopsInternalOrderLifecycleController([$order]);

@@ -612,7 +612,12 @@ class OrderController extends FleetOpsController
             return $this->errorResponse('No order found to cancel.');
         }
 
-        $order->cancel();
+        $reason = $request->input('reason');
+        if (is_string($reason) && trim($reason) !== '') {
+            $order->cancelWithReason($reason);
+        } else {
+            $order->cancel();
+        }
 
         return $this->jsonResponse(
             [
