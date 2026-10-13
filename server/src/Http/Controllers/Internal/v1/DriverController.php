@@ -598,20 +598,12 @@ class DriverController extends FleetOpsController
         Order::invalidateApiCacheManually(session('company'));
 
         // The bulk update bypasses the order observer, so the driver taken off each
-        // order is told here and the offer made to them is dropped
+        // order is told here
         foreach ($orders as $order) {
             $previousDriverUuid = $order->driver_assigned_uuid;
-            if (!$previousDriverUuid) {
-                continue;
+            if ($previousDriverUuid) {
+                $order->notifyDriverUnassigned($previousDriverUuid);
             }
-
-            $order->driver_assigned_uuid = null;
-            $order->syncOfferWithAssignment();
-            if ($order->isDirty('meta')) {
-                $order->saveQuietly();
-            }
-            $order->syncOriginal();
-            $order->notifyDriverUnassigned($previousDriverUuid);
         }
     }
 

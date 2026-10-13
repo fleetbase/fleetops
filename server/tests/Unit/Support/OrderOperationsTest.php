@@ -15,9 +15,7 @@ if (!function_exists('event')) {
     }
 }
 
-use Fleetbase\FleetOps\Console\Commands\ExpireOrderOffers;
 use Fleetbase\FleetOps\Events\OrderChanged;
-use Fleetbase\FleetOps\Events\OrderOfferChanged;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Order;
@@ -26,12 +24,11 @@ use Fleetbase\FleetOps\Support\OrderEdit;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\SQLiteConnection;
-use Illuminate\Support\Carbon;
 
 /**
  * Covers order edits against SQLite: replacing a payload's entities, keeping the
- * driver's stop when an in-progress route changes, the order.changed event an edit
- * commits, and the driver offer lifecycle with its expiry command.
+ * driver's stop when an in-progress route changes, and the order.changed event an
+ * edit commits.
  */
 class FleetOpsOrderOpsEventRecorder
 {
@@ -376,79 +373,6 @@ test('requested changes name the policy fields an edit touches', function () {
         ->and(OrderEdit::entitiesMode('replace'))->toBe('replace')
         ->and(OrderEdit::entitiesMode('sync'))->toBe('replace')
         ->and(OrderEdit::entitiesMode(null))->toBe('append');
-});
-
-test('assigning a driver starts an offer that is accepted declined or expired', function () {
-    $connection = fleetopsOrderOpsBoot();
-    Carbon::setTestNow('2026-10-13 12:00:00');
-    $order = fleetopsOrderOpsOrder($connection);
-
-    $order->driver_assigned_uuid = 'driver-1';
-    $order->syncOfferWithAssignment();
-
-    expect($order->getOffer())->toBe([
-        'driver'      => 'driver_one',
-        'offered_at'  => '2026-10-13T12:00:00Z',
-        'expires_at'  => '2026-10-13T12:05:00Z',
-        'accepted_at' => null,
-        'declined_at' => null,
-        'status'      => 'offered',
-    ]);
-    $order->saveQuietly();
-
-    // adhoc drivers who took the order themselves start accepted
-    $adhoc                      = new Order(['driver_assigned_uuid' => 'driver-1']);
-    $adhoc->acceptOfferOnAssign = true;
-    $adhoc->syncOfferWithAssignment();
-    expect($adhoc->offerStatus())->toBe('accepted')
-        ->and($adhoc->getOffer()['accepted_at'])->toBe('2026-10-13T12:00:00Z');
-
-    // the expiry command leaves an offer alone until it runs out
-    $command = new ExpireOrderOffers();
-    expect($command->expire($order, Carbon::parse('2026-10-13 12:04:00')))->toBeFalse();
-
-    expect($command->expire($order, Carbon::parse('2026-10-13 12:06:00')))->toBeTrue();
-    $stored = Order::where('uuid', 'order-1')->first();
-    expect($stored->offerStatus())->toBe('expired')
-        ->and($stored->getMeta('operational_alerts.driver_not_accepted.context'))->toBe([
-            'driver'     => 'driver_one',
-            'offered_at' => '2026-10-13T12:00:00Z',
-            'expires_at' => '2026-10-13T12:05:00Z',
-        ])
-        ->and(fleetopsOrderOpsEvents()->of(OrderOfferChanged::class)[0]->broadcastAs())->toBe('order.offer_expired')
-        ->and(fleetopsOrderOpsEvents()->of(OrderOfferChanged::class)[0]->channelNames)->toBe(['order.order_one', 'order.order-1', 'company.company-1'])
-        ->and($command->expire($stored, Carbon::parse('2026-10-13 12:07:00')))->toBeFalse();
-
-    // a late acceptance still counts
-    expect($stored->acceptOffer())->toBeTrue()
-        ->and(Order::where('uuid', 'order-1')->first()->offerStatus())->toBe('accepted');
-
-    // declining records it and takes the order off the driver
-    $stored->setMeta('offer', array_merge($stored->getOffer(), ['status' => 'offered']));
-    $stored->declineOffer('Too far');
-    $declined = Order::where('uuid', 'order-1')->first();
-    expect($declined->driver_assigned_uuid)->toBeNull()
-        ->and($declined->offerStatus())->toBe('declined')
-        ->and($declined->getOffer()['reason'])->toBe('Too far');
-
-    // removing the driver drops an open offer but keeps a declined one
-    $declined->syncOfferWithAssignment();
-    expect($declined->offerStatus())->toBe('declined');
-    $open = new Order();
-    $open->setMeta('offer', ['status' => 'offered']);
-    $open->syncOfferWithAssignment();
-    expect($open->getOffer())->toBeNull();
-
-    Carbon::setTestNow();
-});
-
-test('the expiry command drops offers left on orders without a driver', function () {
-    $connection = fleetopsOrderOpsBoot();
-    $order      = fleetopsOrderOpsOrder($connection, ['meta' => json_encode(['offer' => ['driver' => 'driver_one', 'status' => 'offered', 'expires_at' => '2026-10-13T12:05:00Z']])]);
-
-    expect((new ExpireOrderOffers())->expire($order, Carbon::parse('2026-10-13 12:06:00')))->toBeFalse()
-        ->and(Order::where('uuid', 'order-1')->first()->getOffer())->toBeNull()
-        ->and(fleetopsOrderOpsEvents()->of(OrderOfferChanged::class))->toBe([]);
 });
 
 test('a driver taken off an order is told and loses it as their current job', function () {

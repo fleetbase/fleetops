@@ -72,20 +72,6 @@ class FleetOpsApiOrderCrudControllerProbe extends OrderController
         return ['apiError' => $exception->getMessage(), 'status' => 422, 'locked' => $exception->locked];
     }
 
-    public ?Fleetbase\FleetOps\Models\Driver $offerDriver = null;
-
-    public array $offerNotifications = [];
-
-    protected function offerDriverFromRequest(Request $request): ?Fleetbase\FleetOps\Models\Driver
-    {
-        return $this->offerDriver;
-    }
-
-    protected function notifyOfferDeclined(Order $order, Fleetbase\FleetOps\Models\Driver $driver, ?string $reason): void
-    {
-        $this->offerNotifications[] = [$order->uuid, $driver->public_id, $reason];
-    }
-
     protected function drivingDistanceAndTime(mixed $origin, mixed $destination): mixed
     {
         return $this->matrix ?? (object) ['distance' => 1200, 'time' => 360];
@@ -460,23 +446,6 @@ class FleetOpsApiOrderCrudFake extends Order
         $this->cancelReasonForTest = $reason;
 
         return $this;
-    }
-
-    public bool $declinedForTest = false;
-
-    public ?string $declineReasonForTest = null;
-
-    public function declineOffer(?string $reason = null): Order
-    {
-        $this->declinedForTest      = true;
-        $this->declineReasonForTest = $reason;
-        $this->setMeta('offer', ['status' => Order::OFFER_DECLINED]);
-
-        return $this;
-    }
-
-    public function invalidateApiCache(): void
-    {
     }
 
     public function tracker(): OrderTracker
@@ -1277,46 +1246,4 @@ test('api order controller cancels with a reason when one is given', function ()
 
     expect($plain->cancelledForTest)->toBeTrue()
         ->and($plain->cancelReasonForTest)->toBeNull();
-});
-
-test('api order controller accepts and declines offers for the assigned driver only', function () {
-    $driver = new FleetOpsApiOrderDriverFake();
-    $driver->setRawAttributes(['uuid' => 'driver-uuid', 'public_id' => 'driver_offer', 'name' => 'Dee'], true);
-
-    $order = new FleetOpsApiOrderCrudFake(['status' => 'created']);
-    $order->setRawAttributes(array_merge($order->getAttributes(), ['driver_assigned_uuid' => 'driver-uuid']));
-    $order->setMeta('offer', ['driver' => 'driver_offer', 'status' => Order::OFFER_OFFERED, 'offered_at' => '2026-10-13T12:00:00Z', 'expires_at' => '2026-10-13T12:05:00Z']);
-
-    $controller              = new FleetOpsApiOrderCrudControllerProbe();
-    $controller->order       = $order;
-    $controller->offerDriver = $driver;
-
-    $accepted = $controller->acceptOrder('order-public', new Request());
-
-    expect($accepted)->toBe(['resource' => 'order', 'order' => $order])
-        ->and($order->offerStatus())->toBe(Order::OFFER_ACCEPTED)
-        ->and($order->getOffer()['accepted_at'])->not->toBeNull();
-
-    $declined = $controller->declineOrder('order-public', new Request(['reason' => 'Too far']));
-
-    expect($declined)->toBe(['resource' => 'order', 'order' => $order])
-        ->and($order->declinedForTest)->toBeTrue()
-        ->and($order->declineReasonForTest)->toBe('Too far')
-        ->and($controller->offerNotifications)->toBe([['order-uuid', 'driver_offer', 'Too far']]);
-
-    $other = new FleetOpsApiOrderDriverFake();
-    $other->setRawAttributes(['uuid' => 'other-uuid', 'public_id' => 'driver_other'], true);
-    $controller->offerDriver = $other;
-
-    expect($controller->acceptOrder('order-public', new Request()))->toBe(['apiError' => 'This order is not offered to you.', 'status' => 403])
-        ->and($controller->declineOrder('order-public', new Request()))->toBe(['apiError' => 'This order is not offered to you.', 'status' => 403]);
-
-    $controller->offerDriver = null;
-    expect($controller->acceptOrder('order-public', new Request()))->toBe(['apiError' => 'No driver found to accept the order.', 'status' => 404]);
-
-    $done                    = new FleetOpsApiOrderCrudFake(['status' => 'canceled']);
-    $controller              = new FleetOpsApiOrderCrudControllerProbe();
-    $controller->order       = $done;
-    $controller->offerDriver = $driver;
-    expect($controller->acceptOrder('order-public', new Request()))->toBe(['apiError' => 'This order can no longer be accepted.', 'status' => 422]);
 });

@@ -75,7 +75,6 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         \Fleetbase\FleetOps\Console\Commands\ProcessMaintenanceTriggers::class,
         \Fleetbase\FleetOps\Console\Commands\SendMaintenanceReminders::class,
         \Fleetbase\FleetOps\Console\Commands\ProcessOperationalAlerts::class,
-        \Fleetbase\FleetOps\Console\Commands\ExpireOrderOffers::class,
         \Fleetbase\FleetOps\Console\Commands\SyncTelematics::class,
         \Fleetbase\FleetOps\Console\Commands\DrainTelematicInbox::class,
         \Fleetbase\FleetOps\Console\Commands\PruneTelematicsData::class,
@@ -151,7 +150,6 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             $schedule->command('fleetops:process-maintenance-triggers')->daily()->withoutOverlapping()->storeOutputInDb();
             $schedule->command('fleetops:send-maintenance-reminders')->daily()->withoutOverlapping()->storeOutputInDb();
             $schedule->command('fleetops:process-operational-alerts')->everyMinute()->withoutOverlapping()->storeOutputInDb();
-            $schedule->command('fleetops:expire-offers')->everyMinute()->withoutOverlapping();
             // These commands dispatch bounded jobs. A scheduler restart must not
             // leave the default 24-hour overlap lease blocking telemetry recovery.
             $schedule->command('fleetops:sync-telematics')->everyMinute()->withoutOverlapping(2)->storeOutputInDb();
@@ -254,8 +252,6 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             \Fleetbase\FleetOps\Notifications\LateDeparture::class,
             \Fleetbase\FleetOps\Notifications\RouteDeviation::class,
             \Fleetbase\FleetOps\Notifications\ProlongedStoppage::class,
-            \Fleetbase\FleetOps\Notifications\DriverNotAccepted::class,
-            \Fleetbase\FleetOps\Notifications\OrderOfferDeclined::class,
             \Fleetbase\FleetOps\Notifications\OrderChanged::class,
             \Fleetbase\FleetOps\Notifications\OrderUnassigned::class,
         ]);
