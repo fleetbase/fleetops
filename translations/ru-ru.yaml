@@ -892,8 +892,8 @@ place:
     province: Провинция
     country: Страна
     state: Штат
-    street-1: Улица 1
-    street-2: Улица 2
+    street-1: Улица, дом (строка 1)
+    street-2: Квартира/офис (строка 2)
     coordinates: Координаты
     phone: Телефон
   prompts:
