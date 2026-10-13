@@ -137,7 +137,7 @@
 
             <InputGroup @name={{t "device.fields.installation-date"}}>
                 <DatePicker
-                    @value={{@resource.installation_date}}
+                    @value={{format-date-fns @resource.installation_date "yyyy-MM-dd"}}
                     @onChange={{fn (mut @resource.installation_date)}}
                     @placeholder={{t "device.fields.installation-date-placeholder"}}
                     @disabled={{cannot-write @resource}}
@@ -147,7 +147,7 @@
 
             <InputGroup @name={{t "device.fields.last-maintenance-date"}}>
                 <DatePicker
-                    @value={{@resource.last_maintenance_date}}
+                    @value={{format-date-fns @resource.last_maintenance_date "yyyy-MM-dd"}}
                     @onChange={{fn (mut @resource.last_maintenance_date)}}
                     @placeholder={{t "device.fields.last-maintenance-date-placeholder"}}
                     @disabled={{cannot-write @resource}}

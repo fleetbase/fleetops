@@ -185,7 +185,7 @@
             </div>
             <InputGroup @name="Scheduled At">
                 <DatePicker
-                    @value={{or (format-date-fns @resource.scheduled_at "dd-MM-yyyy") null}}
+                    @value={{or (format-date-fns @resource.scheduled_at "yyyy-MM-dd") null}}
                     @onChange={{fn (mut @resource.scheduled_at)}}
                     @placeholder="DD-MM-YYYY"
                     class="filter-date-input w-full flex-1"
@@ -193,7 +193,7 @@
             </InputGroup>
             <InputGroup @name="Started At">
                 <DatePicker
-                    @value={{or (format-date-fns @resource.started_at "dd-MM-yyyy") null}}
+                    @value={{or (format-date-fns @resource.started_at "yyyy-MM-dd") null}}
                     @onChange={{fn (mut @resource.started_at)}}
                     @placeholder="DD-MM-YYYY"
                     class="filter-date-input w-full flex-1"
@@ -201,7 +201,7 @@
             </InputGroup>
             <InputGroup @name="Completed At">
                 <DatePicker
-                    @value={{or (format-date-fns @resource.completed_at "dd-MM-yyyy") null}}
+                    @value={{or (format-date-fns @resource.completed_at "yyyy-MM-dd") null}}
                     @onChange={{fn (mut @resource.completed_at)}}
                     @placeholder="DD-MM-YYYY"
                     class="filter-date-input w-full flex-1"

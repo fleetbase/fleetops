@@ -159,7 +159,7 @@
             </InputGroup>
             <InputGroup @name="Purchase Date">
                 <DatePicker
-                    @value={{or (format-date-fns @resource.purchased_at "dd-MM-yyyy") null}}
+                    @value={{or (format-date-fns @resource.purchased_at "yyyy-MM-dd") null}}
                     @onChange={{fn (mut @resource.purchased_at)}}
                     @placeholder="DD-MM-YYYY"
                     class="filter-date-input w-full flex-1"

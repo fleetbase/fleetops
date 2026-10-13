@@ -389,7 +389,7 @@
 
             <InputGroup @name={{t "trailer.fields.purchased-at"}}>
                 <DatePicker
-                    @value={{or (format-date-fns @resource.purchased_at "dd-MM-yyyy") null}}
+                    @value={{or (format-date-fns @resource.purchased_at "yyyy-MM-dd") null}}
                     @onChange={{fn (mut @resource.purchased_at)}}
                     @placeholder={{t "trailer.placeholders.date"}}
                     @disabled={{cannot-write @resource}}
@@ -400,7 +400,7 @@
             {{#if this.showLeaseExpiry}}
                 <InputGroup @name={{t "trailer.fields.lease-expires-at"}} @helpText={{t "trailer.help.lease-expires-at"}}>
                     <DatePicker
-                        @value={{or (format-date-fns @resource.lease_expires_at "dd-MM-yyyy") null}}
+                        @value={{or (format-date-fns @resource.lease_expires_at "yyyy-MM-dd") null}}
                         @onChange={{fn (mut @resource.lease_expires_at)}}
                         @placeholder={{t "trailer.placeholders.date"}}
                         @disabled={{cannot-write @resource}}

@@ -527,7 +527,7 @@
 
             <InputGroup @name="Purchase Date">
                 <DatePicker
-                    @value={{or (format-date-fns @resource.purchased_at "dd-MM-yyyy") null}}
+                    @value={{or (format-date-fns @resource.purchased_at "yyyy-MM-dd") null}}
                     @onChange={{fn (mut @resource.purchased_at)}}
                     @placeholder="DD-MM-YYYY"
                     class="filter-date-input w-full flex-1"
@@ -536,7 +536,7 @@
 
             <InputGroup @name="Lease Expiry Date">
                 <DatePicker
-                    @value={{or (format-date-fns @resource.lease_expires_at "dd-MM-yyyy") null}}
+                    @value={{or (format-date-fns @resource.lease_expires_at "yyyy-MM-dd") null}}
                     @onChange={{fn (mut @resource.lease_expires_at)}}
                     @placeholder="DD-MM-YYYY"
                     class="filter-date-input w-full flex-1"
@@ -555,7 +555,7 @@
 
             <InputGroup @name="First Payment Date">
                 <DatePicker
-                    @value={{or (format-date-fns @resource.loan_first_payment "dd-MM-yyyy") null}}
+                    @value={{or (format-date-fns @resource.loan_first_payment "yyyy-MM-dd") null}}
                     @onChange={{fn (mut @resource.loan_first_payment)}}
                     @placeholder="DD-MM-YYYY"
                     class="filter-date-input w-full flex-1"
