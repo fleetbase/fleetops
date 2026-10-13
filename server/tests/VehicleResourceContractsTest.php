@@ -350,3 +350,49 @@ test('requested relations are empty when the resource cannot load any', function
         ->and(fleetopsVehicleResourceRequestedRelations((object) ['uuid' => 'vehicle-uuid'], ['with' => ['driver']]))->toBe([])
         ->and(fleetopsVehicleResourceRequestedRelations(fleetopsVehicleResourceFixture(), ['with' => ['driver']]))->toBe([]);
 });
+
+class FleetOpsVehicleResourceRelationModel extends Illuminate\Database\Eloquent\Model
+{
+    public static int $saved = 0;
+
+    protected $table = 'vehicles';
+
+    public function driver(): Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(FleetOpsVehicleResourceRelationModel::class, 'driver_id');
+    }
+
+    public function parentVehicle(): Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(FleetOpsVehicleResourceRelationModel::class, 'parent_id');
+    }
+
+    public function untypedDriver()
+    {
+        return $this->belongsTo(FleetOpsVehicleResourceRelationModel::class, 'driver_id');
+    }
+
+    public function saveInstance(): self
+    {
+        static::$saved++;
+
+        return $this;
+    }
+}
+
+test('requested relations drop names that are methods but not declared relations', function () {
+    $resolver = new Illuminate\Database\ConnectionResolver(['default' => new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'))]);
+    $resolver->setDefaultConnection('default');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    FleetOpsVehicleResourceRelationModel::$saved = 0;
+
+    $vehicle = new FleetOpsVehicleResourceRelationModel();
+
+    // `with=saveInstance` used to reach loadMissing(), which calls the method on a
+    // blank model. Only methods that declare a Relation return type survive, named
+    // as the model declares them, and nested segments are checked the same way.
+    expect(fleetopsVehicleResourceRequestedRelations($vehicle, ['with' => ['driver', 'saveInstance', 'untypedDriver', 'delete', 'driver.saveInstance', 'parent_vehicle', 'payload']]))
+        ->toBe(['driver', 'parentVehicle'])
+        ->and(fleetopsVehicleResourceRequestedRelations($vehicle, ['with' => 'saveInstance']))->toBe([])
+        ->and(FleetOpsVehicleResourceRelationModel::$saved)->toBe(0);
+})->skip(fn () => !class_exists(Fleetbase\Support\RequestRelations::class), 'needs fleetbase/core-api with Fleetbase\Support\RequestRelations');
