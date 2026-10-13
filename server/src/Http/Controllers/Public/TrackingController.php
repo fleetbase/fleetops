@@ -340,6 +340,7 @@ class TrackingController extends Controller
         $instructions[sha1($scope->key())] = $text;
         $order->setMeta('recipient_instructions', $instructions);
         $order->saveQuietly();
+        $order->invalidateApiCache();
     }
 
     protected function dataUrl(string $raw): string

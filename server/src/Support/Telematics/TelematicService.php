@@ -13,6 +13,7 @@ use Fleetbase\FleetOps\Models\Sensor;
 use Fleetbase\FleetOps\Models\Telematic;
 use Fleetbase\FleetOps\Models\Trailer;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\ApiCacheThrottle;
 use Fleetbase\FleetOps\Support\TrackingPublisher;
 use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
 use Illuminate\Support\Carbon;
@@ -760,7 +761,8 @@ class TelematicService
             'last_provider'       => $event->provider,
             'last_telemetry_data' => array_filter($eventData, fn ($value) => $value !== null),
         ]);
-        $trailer->save();
+        // Every telemetry event saves the trailer: model events fire, cache invalidation is coalesced
+        ApiCacheThrottle::telemetryWrite($trailer, fn () => $trailer->save());
 
         $broadcast = new TrailerLocationChanged($trailer, ['source' => 'telematics', 'device_event_uuid' => $event->uuid, 'provider' => $event->provider, 'position_at' => $event->occurred_at?->toISOString()]);
         $this->broadcastTelemetry($broadcast, $eventData['_ordered_telemetry'] ?? false);
@@ -803,7 +805,8 @@ class TelematicService
                 'fuel_level' => $eventData['fuel_level'] ?? null,
             ], fn ($value) => $value !== null),
         ]);
-        $vehicle->save();
+        // Every telemetry event saves the vehicle: model events fire, cache invalidation is coalesced
+        ApiCacheThrottle::telemetryWrite($vehicle, fn () => $vehicle->save());
 
         $broadcast = new VehicleLocationChanged($vehicle, [
             'source'            => 'telematics',

@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Support\Telematics\Telemetry;
 
 use Fleetbase\FleetOps\Jobs\ProcessTelematicDelivery;
 use Fleetbase\FleetOps\Models\Telematic;
+use Fleetbase\Support\ApiModelCache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -98,10 +99,16 @@ class Inbox
                 return;
             }
             // Written without model events: sweeps run every minute and the model logs every save.
+            $connectionStatus = in_array($connection->status, ['error', 'synchronizing'], true) ? 'active' : $connection->status;
             DB::table('telematics')->where('uuid', $connection->uuid)->update([
-                'status' => in_array($connection->status, ['error', 'synchronizing'], true) ? 'active' : $connection->status,
+                'status' => $connectionStatus,
                 'meta'   => json_encode(array_merge($meta, $result), JSON_THROW_ON_ERROR),
             ]);
+            // Cached device lists embed the telematic. Only a status change invalidates
+            // them: the sync meta changes on every sweep and may lag by the list TTL.
+            if ($connectionStatus !== $connection->status) {
+                ApiModelCache::invalidateModelCache($connection, $connection->company_uuid);
+            }
         });
     }
 }

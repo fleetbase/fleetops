@@ -776,6 +776,7 @@ class OrderController extends FleetOpsController
             'driver_assigned_uuid' => $driver->uuid,
             'updated_at'           => now(),
         ]);
+        Order::invalidateApiCacheManually(session('company'));
     }
 
     protected function dispatchBulkAssignedDriverNotification(array $orderUuids, Driver $driver): void
@@ -2005,6 +2006,7 @@ class OrderController extends FleetOpsController
         }
 
         $order->saveQuietly();
+        $order->invalidateApiCache();
 
         return response()->json([
             'status'       => 'OK',

@@ -92,6 +92,13 @@ class ServiceArea extends Model
     protected $with = ['zones'];
 
     /**
+     * Relation paths the cached service area lists embed through `$with` (fleetbase/core-api#301).
+     *
+     * @var string[]
+     */
+    protected $apiCacheDependencies = ['zones'];
+
+    /**
      * Dynamic attributes that are appended to object.
      *
      * @var array

@@ -10,6 +10,7 @@ use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\LiveCacheService;
 use Fleetbase\FleetOps\Support\TrackingPublisher;
+use Fleetbase\Support\ApiModelCache;
 use Illuminate\Support\Facades\Cache;
 
 class OrderObserver
@@ -126,6 +127,8 @@ class OrderObserver
         $trackingNumbers = TrackingNumber::where(fn ($query) => $query->whereIn('uuid', $tree['tracking_numbers'])->orWhereIn('owner_uuid', $tree['owners']))->pluck('uuid')->all();
         TrackingStatus::whereIn('tracking_number_uuid', $trackingNumbers)->update(['deleted_at' => $deletedAt]);
         TrackingNumber::whereIn('uuid', $trackingNumbers)->update(['deleted_at' => $deletedAt]);
+
+        $this->invalidateChildApiCaches($order);
     }
 
     /**
@@ -146,6 +149,19 @@ class OrderObserver
             $trashed(Payload::class)->where('uuid', $tree['payload'])->update(['deleted_at' => null]);
             $trashed(Entity::class)->whereIn('uuid', $tree['entities'])->update(['deleted_at' => null]);
             $trashed(Waypoint::class)->whereIn('uuid', $tree['waypoints'])->update(['deleted_at' => null]);
+        }
+
+        $this->invalidateChildApiCaches($order);
+    }
+
+    /**
+     * The cascades write their tables without model events, so invalidate the API
+     * caches of every table they touch.
+     */
+    protected function invalidateChildApiCaches(Order $order): void
+    {
+        foreach ([Payload::class, Entity::class, Waypoint::class, TrackingNumber::class, TrackingStatus::class] as $modelClass) {
+            ApiModelCache::invalidateModelCache(new $modelClass(), $order->company_uuid);
         }
     }
 

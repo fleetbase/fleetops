@@ -189,6 +189,7 @@ class ProcessOperationalAlerts extends Command
                 'context'     => $context,
             ]);
             $order->saveQuietly();
+            $order->invalidateApiCache();
         }
 
         return true;

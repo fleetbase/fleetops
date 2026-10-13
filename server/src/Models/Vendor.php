@@ -118,6 +118,13 @@ class Vendor extends Model
     protected $with = ['place'];
 
     /**
+     * Relation paths the cached vendor lists embed through `$with` (fleetbase/core-api#301).
+     *
+     * @var string[]
+     */
+    protected $apiCacheDependencies = ['place'];
+
+    /**
      * Get the activity log options for the model.
      */
     public function getActivitylogOptions(): LogOptions

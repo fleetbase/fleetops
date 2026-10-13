@@ -197,6 +197,38 @@ class Order extends Model
     protected $with = [];
 
     /**
+     * Relation paths and tables the cached order lists embed, so a write to any
+     * of them invalidates those lists (fleetbase/core-api#301).
+     *
+     * They mirror OrderFilter::queryForInternal()'s eager loads and whereHas
+     * membership, the payload relation's own `with`, Payload's `$with` and the
+     * public query's loads. customer and facilitator are morphTo relations, so
+     * their tables (contacts, vendors, integrated_vendors) are named instead;
+     * a vendor loads its place, which payload.pickup already covers. files
+     * (customer photo, vendor logo) is left out: every upload writes it, and a
+     * new photo is set by writing the contact's or vendor's own row.
+     *
+     * @var string[]
+     */
+    protected $apiCacheDependencies = [
+        'payload',
+        'payload.pickup',
+        'payload.dropoff',
+        'payload.return',
+        'payload.entities',
+        'payload.waypoints',
+        'payload.firstWaypointMarker.place',
+        'payload.lastWaypointMarker.place',
+        'trackingNumber',
+        'trackingStatuses',
+        'driverAssigned',
+        'vehicleAssigned',
+        'contacts',
+        'vendors',
+        'integrated_vendors',
+    ];
+
+    /**
      * The attributes that should be cast to native types.
      *
      * @var array
@@ -1059,6 +1091,7 @@ class Order extends Model
         $route->save();
 
         $this->updateQuietly(['route_uuid' => $route->uuid]);
+        $this->invalidateApiCache();
 
         return $this;
     }
@@ -1194,6 +1227,7 @@ class Order extends Model
         ]);
 
         if ($attached) {
+            $this->invalidateApiCache();
             $this->setRelation('purchaseRate', $purchaseRate);
 
             if ($purchaseRate->transaction_uuid) {
@@ -1256,6 +1290,7 @@ class Order extends Model
             ]);
 
             $this->updateQuietly(['transaction_uuid' => $transaction->uuid]);
+            $this->invalidateApiCache();
         } catch (\Throwable $e) {
         }
 
@@ -1295,6 +1330,7 @@ class Order extends Model
         if ($save) {
             $this->saveQuietly();
             $this->flushAttributesCache();
+            $this->invalidateApiCache();
         }
 
         dispatch(fn () => event(new OrderDispatched($this)))->afterCommit();
@@ -1782,6 +1818,7 @@ class Order extends Model
         $matrix = Utils::getPreliminaryDistanceMatrix($origin, $destination);
 
         $this->updateQuietly(['distance' => $matrix->distance, 'time' => $matrix->time]);
+        $this->invalidateApiCache();
 
         return $this;
     }
@@ -1819,6 +1856,7 @@ class Order extends Model
                 'distance' => $matrix->distance,
                 'time'     => $matrix->time,
             ]);
+            $this->invalidateApiCache();
         }
 
         return $this;

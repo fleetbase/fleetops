@@ -9,6 +9,7 @@ use Fleetbase\FleetOps\Models\TrackingNumber;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\Support\ApiModelCache;
 use Fleetbase\Support\TemplateString;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,7 @@ trait HasTrackingNumber
             ], $model);
 
             DB::table($model->getTable())->where('uuid', $model->uuid)->update(['tracking_number_uuid' => $trackingNumberId]);
+            ApiModelCache::invalidateModelCache($model, data_get($model, 'company_uuid', session('company')));
 
             if ($model->isFillable('tracking_number_uuid')) {
                 $model->tracking_number_uuid = $trackingNumberId;

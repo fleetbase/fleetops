@@ -8,6 +8,7 @@ use Fleetbase\FleetOps\Support\TrackingCode;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Model;
+use Fleetbase\Support\ApiModelCache;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
@@ -387,7 +388,11 @@ class TrackingNumber extends Model
 
             // silent update
             static::updateOwnerStatusColumn($owner, $initialCode ?? 'created');
+            ApiModelCache::invalidateModelCache($owner, data_get($owner, 'company_uuid', $values['company_uuid']));
         }
+
+        // Inserted and updated without model events
+        ApiModelCache::invalidateModelCache($instance, $values['company_uuid']);
 
         return $uuid;
     }

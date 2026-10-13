@@ -83,7 +83,12 @@ class VehicleObserver
 
     protected function deleteDriversAssignedTo(Vehicle $vehicle): mixed
     {
-        return Driver::where(['vehicle_uuid' => $vehicle->uuid])->delete();
+        $deleted = Driver::where(['vehicle_uuid' => $vehicle->uuid])->delete();
+        if ($deleted) {
+            Driver::invalidateApiCacheManually($vehicle->company_uuid);
+        }
+
+        return $deleted;
     }
 
     protected function invalidateLiveCache(): void

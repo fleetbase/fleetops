@@ -82,6 +82,23 @@ class Vehicle extends Model
     protected $with = [];
 
     /**
+     * Relation paths the cached vehicle lists embed or filter on (fleetbase/core-api#301).
+     *
+     * The public list loads vendor (with its place), category, warranty and
+     * driver; driver, current trailers (through asset_connections) and fleets
+     * (through fleet_vehicles) decide which vehicles the filters return.
+     * photo is left out: files is written by every upload, and a new photo is
+     * set by writing the vehicle's own photo_uuid. devices is left out too: the
+     * device filters only read which devices are attached, but telemetry saves
+     * the device row on every ping, which would keep vehicle lists from ever
+     * being served from cache. Device::attachTo() and detach() invalidate the
+     * vehicle lists instead.
+     *
+     * @var string[]
+     */
+    protected $apiCacheDependencies = ['vendor', 'vendor.place', 'category', 'warranty', 'driver', 'currentTrailers', 'fleets'];
+
+    /**
      * Get the activity log options for the model.
      */
     public function getActivitylogOptions(): LogOptions
@@ -629,6 +646,7 @@ class Vehicle extends Model
     public function unassignDriver(): self
     {
         Driver::where('vehicle_uuid', $this->uuid)->update(['vehicle_uuid' => null]);
+        Driver::invalidateApiCacheManually($this->company_uuid);
         $this->unsetRelation('driver');
 
         return $this;
