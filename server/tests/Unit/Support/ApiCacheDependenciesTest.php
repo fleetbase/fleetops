@@ -232,3 +232,79 @@ test('throttled invalidation runs at most once per window and table', function (
 
     expect(apiCacheQueryVersion('vehicles', 'co-1'))->toBe(2);
 });
+
+test('attaching or detaching a device invalidates the attached model lists, and device pings do not', function () {
+    $db = apiCacheDatabase();
+    $db->getSchemaBuilder()->create('devices', function ($table) {
+        $table->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'attachable_type', 'attachable_uuid', 'name', 'status'] as $column) {
+            $table->string($column)->nullable();
+        }
+        $table->text('meta')->nullable();
+        $table->timestamps();
+        $table->softDeletes();
+    });
+    TrackingPageDatabase::insert($db, 'devices', ['uuid' => 'device-1', 'company_uuid' => 'co-1']);
+    // attachTo() and detach() log activity; only the cache versions matter here
+    app()->instance(Spatie\Activitylog\ActivityLogger::class, new class extends Spatie\Activitylog\ActivityLogger {
+        public function __construct()
+        {
+        }
+
+        public function useLog(?string $logName): static
+        {
+            return $this;
+        }
+
+        public function setLogStatus(Spatie\Activitylog\ActivityLogStatus $logStatus): static
+        {
+            return $this;
+        }
+
+        public function performedOn(EloquentModel $model): static
+        {
+            return $this;
+        }
+
+        public function withProperties(mixed $properties): static
+        {
+            return $this;
+        }
+
+        public function log(string $description): ?Spatie\Activitylog\Contracts\Activity
+        {
+            return null;
+        }
+    });
+    app()->instance(Spatie\Activitylog\ActivityLogStatus::class, new Spatie\Activitylog\ActivityLogStatus(new Illuminate\Config\Repository(['activitylog' => ['enabled' => false]])));
+
+    $vehicle = new Vehicle();
+    $vehicle->setRawAttributes(['uuid' => 'vehicle-1', 'company_uuid' => 'co-1'], true);
+    $device = Device::where('uuid', 'device-1')->first();
+
+    expect($device->attachTo($vehicle))->toBeTrue()
+        ->and(apiCacheQueryVersion('vehicles', 'co-1'))->toBe(1);
+
+    // Telemetry saves the device row on every ping; vehicle lists no longer depend on it
+    $device->update(['status' => 'online']);
+    expect(apiCacheQueryVersion('vehicles', 'co-1'))->toBe(1);
+
+    expect($device->detach())->toBeTrue()
+        ->and(apiCacheQueryVersion('vehicles', 'co-1'))->toBe(2);
+
+    app()->forgetInstance(Spatie\Activitylog\ActivityLogger::class);
+    app()->forgetInstance(Spatie\Activitylog\ActivityLogStatus::class);
+});
+
+test('a cache outage never fails a throttled location invalidation', function () {
+    Cache::swap(new Repository(new class extends ArrayStore {
+        public function add($key, $value, $seconds)
+        {
+            throw new RuntimeException('cache unavailable');
+        }
+    }));
+
+    ApiCacheThrottle::invalidate(new Vehicle(), 'co-1');
+
+    expect(true)->toBeTrue();
+});

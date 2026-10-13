@@ -32,8 +32,14 @@ class ApiCacheThrottle
         }
 
         $key = 'fleetops:api_cache_throttle:' . $model->getTable() . ':' . ($companyUuid ?? 'all');
-        if (Cache::add($key, true, $seconds)) {
-            ApiModelCache::invalidateModelCache($model, $companyUuid);
+
+        try {
+            if (Cache::add($key, true, $seconds)) {
+                ApiModelCache::invalidateModelCache($model, $companyUuid);
+            }
+        } catch (\Throwable $e) {
+            // A location ping must never fail on cache bookkeeping; cached lists then
+            // show the location until their TTL. Core versions before #301 can throw here.
         }
     }
 }

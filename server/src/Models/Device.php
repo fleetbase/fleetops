@@ -465,6 +465,10 @@ class Device extends Model
         });
 
         if ($updated) {
+            // Cached vehicle and trailer lists filter on attached devices without depending on
+            // the device table, which telemetry writes on every ping
+            static::invalidateAttachableApiCache($attachable, $this->company_uuid);
+
             activity('device_attached')
                 ->performedOn($this)
                 ->withProperties([
@@ -476,6 +480,14 @@ class Device extends Model
         }
 
         return $updated;
+    }
+
+    /**
+     * Invalidate the cached lists of the attached model's table (vehicles or trailers).
+     */
+    protected static function invalidateAttachableApiCache(\Illuminate\Database\Eloquent\Model $attachable, ?string $companyUuid): void
+    {
+        \Fleetbase\Support\ApiModelCache::invalidateModelCache($attachable, $companyUuid);
     }
 
     /**
@@ -494,6 +506,10 @@ class Device extends Model
 
             return $this->update(['attachable_type' => null, 'attachable_uuid' => null]);
         });
+
+        if ($updated && $oldAttachableType && is_a($oldAttachableType, \Illuminate\Database\Eloquent\Model::class, true)) {
+            static::invalidateAttachableApiCache(new $oldAttachableType(), $this->company_uuid);
+        }
 
         if ($updated) {
             activity('device_detached')
