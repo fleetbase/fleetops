@@ -21,6 +21,11 @@ class FleetOpsUserRemovedCompanyDriverQueryFake
 {
     public bool $deleted = false;
 
+    public function get(): Illuminate\Support\Collection
+    {
+        return collect([$this]);
+    }
+
     public function delete(): void
     {
         $this->deleted = true;

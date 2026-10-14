@@ -159,6 +159,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         });
         $this->registerNotifications();
         $this->registerAiCapabilities();
+        $this->registerSocketChannels();
         $this->registerExpansionsFrom(__DIR__ . '/../Expansions');
 
         // Register built-in orchestration engines.
@@ -251,6 +252,8 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             \Fleetbase\FleetOps\Notifications\LateDeparture::class,
             \Fleetbase\FleetOps\Notifications\RouteDeviation::class,
             \Fleetbase\FleetOps\Notifications\ProlongedStoppage::class,
+            \Fleetbase\FleetOps\Notifications\OrderChanged::class,
+            \Fleetbase\FleetOps\Notifications\OrderUnassigned::class,
         ]);
 
         // Register Notifiables
@@ -263,6 +266,16 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             'dynamic:driver',
             'dynamic:facilitator',
         ]);
+    }
+
+    /**
+     * Register who may subscribe to FleetOps realtime channels, and the driver socket principal.
+     */
+    protected function registerSocketChannels(): void
+    {
+        $this->callAfterResolving(\Fleetbase\Support\SocketCluster\SocketChannelRegistry::class, function (\Fleetbase\Support\SocketCluster\SocketChannelRegistry $registry) {
+            \Fleetbase\FleetOps\Support\SocketChannels::register($registry);
+        });
     }
 
     protected function registerAiCapabilities(): void

@@ -3,12 +3,16 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Jobs\DispatchTelematicsRetentionJobs;
+use Fleetbase\FleetOps\Orchestration\Support\OrchestratorSettings;
 use Fleetbase\FleetOps\Support\Telematics\Retention\RetentionPolicy;
 use Fleetbase\FleetOps\Support\Telematics\Telemetry\Queue;
+use Fleetbase\FleetOps\Support\TrackingPage\TrackingPageConfig;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Tracking\TrackingProviderRegistry;
 use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
+use Fleetbase\Services\SmsService;
 use Fleetbase\Support\Auth;
 use Fleetbase\Support\NotificationRegistry;
 use Illuminate\Database\MySqlConnection;
@@ -47,6 +51,11 @@ class SettingController extends Controller
             'saveTelematicsSettings'                  => 'update telematics-settings',
             'getTelematicsStorageUsage'               => 'admin',
             'runTelematicsRetention'                  => 'admin',
+            'getTrackingPageSettings'                 => 'view tracking-page-settings',
+            'saveTrackingPageSettings'                => 'update tracking-page-settings',
+            'validateTrackingPageSlug'                => 'update tracking-page-settings',
+            'getAdminTrackingPageSettings'            => 'admin',
+            'saveAdminTrackingPageSettings'           => 'admin',
         ]);
     }
 
@@ -387,6 +396,10 @@ class SettingController extends Controller
             'googleMapsMapType'           => 'roadmap',
             'showGoogleMapsTrafficLayer'  => false,
             'showGoogleMapsTransitLayer'  => false,
+            'defaultMapLatitude'          => null,
+            'defaultMapLongitude'         => null,
+            'defaultMapZoom'              => null,
+            'fitMapToVehicles'            => false,
         ];
 
         $systemMapSettings          = $this->lookupSetting('fleet-ops.map-settings', []);
@@ -399,6 +412,12 @@ class SettingController extends Controller
         // single source of truth and avoids duplicating key management.
         $mapSettings['googleMapsApiKey'] = $this->googleMapsApiKey();
         $mapSettings['googleMapsMapId']  = data_get($systemMapSettings, 'googleMapsMapId', '');
+
+        // Last-resort starting point for the live map when the company has no
+        // configured default view and the browser cannot locate the user: the
+        // centre of the company's country, so a fresh account opens in the
+        // right part of the world instead of a hardcoded city.
+        $mapSettings['companyMapCenter'] = $this->companyMapCenter();
 
         return response()->json($mapSettings);
     }
@@ -420,6 +439,9 @@ class SettingController extends Controller
         // The API key is managed at the system level via core-api — strip it
         // from the payload in case a client accidentally sends it.
         unset($settings['googleMapsApiKey']);
+
+        // Derived server-side on every read, never persisted.
+        unset($settings['companyMapCenter']);
 
         // Validate provider value
         $settings = $this->normalizeCompanyMapSettings($settings);
@@ -479,7 +501,97 @@ class SettingController extends Controller
             'googleMapsMapType'          => $googleMapsMapType,
             'showGoogleMapsTrafficLayer' => filter_var(data_get($settings, 'showGoogleMapsTrafficLayer', false), FILTER_VALIDATE_BOOLEAN),
             'showGoogleMapsTransitLayer' => filter_var(data_get($settings, 'showGoogleMapsTransitLayer', false), FILTER_VALIDATE_BOOLEAN),
+            ...$this->normalizeDefaultMapView($settings),
         ];
+    }
+
+    /**
+     * Normalize the company's default live map view. A centre is only kept as
+     * a valid latitude/longitude pair — half a coordinate would send the map
+     * to the equator or the meridian — and the zoom is clamped to the range
+     * both map providers support.
+     */
+    protected function normalizeDefaultMapView(array $settings): array
+    {
+        $latitude  = $this->normalizeCoordinate(data_get($settings, 'defaultMapLatitude'), 90);
+        $longitude = $this->normalizeCoordinate(data_get($settings, 'defaultMapLongitude'), 180);
+        $hasCenter = $latitude !== null && $longitude !== null;
+        $zoom      = filter_var(data_get($settings, 'defaultMapZoom'), FILTER_VALIDATE_INT);
+
+        return [
+            'defaultMapLatitude'  => $hasCenter ? $latitude : null,
+            'defaultMapLongitude' => $hasCenter ? $longitude : null,
+            'defaultMapZoom'      => $zoom === false ? null : max(1, min(20, $zoom)),
+            'fitMapToVehicles'    => filter_var(data_get($settings, 'fitMapToVehicles', false), FILTER_VALIDATE_BOOLEAN),
+        ];
+    }
+
+    protected function normalizeCoordinate($value, float $limit): ?float
+    {
+        if ($value === null || $value === '' || !is_numeric($value)) {
+            return null;
+        }
+
+        $value = (float) $value;
+
+        return abs($value) <= $limit ? $value : null;
+    }
+
+    /**
+     * Resolve the centre of the current company's country, from its country
+     * code or, when none was recorded, the country of its timezone.
+     */
+    protected function companyMapCenter(): ?array
+    {
+        $company = $this->currentCompany();
+        $country = $this->normalizeCountryCode(data_get($company, 'country')) ?? $this->countryFromTimezone(data_get($company, 'timezone'));
+        if ($country === null) {
+            return null;
+        }
+
+        $coordinates = data_get($this->countryData($country), 'coordinates', []);
+        $latitude    = $this->normalizeCoordinate(data_get($coordinates, 'latitude'), 90);
+        $longitude   = $this->normalizeCoordinate(data_get($coordinates, 'longitude'), 180);
+        if ($latitude === null || $longitude === null || ($latitude == 0 && $longitude == 0)) {
+            return null;
+        }
+
+        return [
+            'country'   => $country,
+            'latitude'  => $latitude,
+            'longitude' => $longitude,
+        ];
+    }
+
+    protected function normalizeCountryCode($country): ?string
+    {
+        return is_string($country) && preg_match('/^[A-Za-z]{2}$/', $country) ? strtoupper($country) : null;
+    }
+
+    protected function countryFromTimezone($timezone): ?string
+    {
+        if (!is_string($timezone) || $timezone === '') {
+            return null;
+        }
+
+        try {
+            $location = (new \DateTimeZone($timezone))->getLocation();
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        // UTC and other non-geographic zones report the country code "??".
+        return $this->normalizeCountryCode(data_get($location, 'country_code'));
+    }
+
+    protected function countryData(string $country): ?array
+    {
+        try {
+            return Utils::getCountryData($country);
+        } catch (\Throwable $e) {
+            // The countries package throws for codes it does not know.
+            return null;
+        }
     }
 
     /**
@@ -547,14 +659,7 @@ class SettingController extends Controller
      */
     public function getOrchestratorSettings()
     {
-        $defaults = [
-            'allocation_engine'           => 'vroom',
-            'auto_allocate_on_create'     => false,
-            'auto_reallocate_on_complete' => false,
-            'max_travel_time_seconds'     => 3600,
-            'balance_workload'            => false,
-        ];
-        $settings = $this->lookupFromCompanySetting('fleet-ops.allocation-settings', $defaults);
+        $settings = $this->lookupFromCompanySetting(OrchestratorSettings::KEY, OrchestratorSettings::defaults());
 
         return response()->json($settings);
     }
@@ -567,13 +672,13 @@ class SettingController extends Controller
     public function saveOrchestratorSettings(Request $request)
     {
         $settings = [
-            'allocation_engine'           => $request->input('allocation_engine', 'vroom'),
+            'allocation_engine'           => $request->input('allocation_engine', OrchestratorSettings::DEFAULT_ENGINE),
             'auto_allocate_on_create'     => (bool) $request->input('auto_allocate_on_create', false),
             'auto_reallocate_on_complete' => (bool) $request->input('auto_reallocate_on_complete', false),
             'max_travel_time_seconds'     => (int) $request->input('max_travel_time_seconds', 3600),
             'balance_workload'            => (bool) $request->input('balance_workload', false),
         ];
-        $this->configureCompanySetting('fleet-ops.allocation-settings', $settings);
+        $this->configureCompanySetting(OrchestratorSettings::KEY, $settings);
 
         return response()->json($settings);
     }
@@ -1072,6 +1177,194 @@ class SettingController extends Controller
         }
 
         return $statistics;
+    }
+
+    /**
+     * The company's customer tracking page settings, with what the settings screen needs to
+     * explain them: whether the slug is usable, whether SMS can be sent, and whether the
+     * customer portal is there for sign-in.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTrackingPageSettings()
+    {
+        return response()->json($this->trackingPageView($this->trackingPageConfig()));
+    }
+
+    /**
+     * Save the company's tracking page settings.
+     *
+     * The slug is indexed so the public page can find the company in one read. A slug that
+     * is invalid, reserved or taken can't be saved while the organization page is on; while
+     * it is off, the slug is kept but not indexed.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveTrackingPageSettings(Request $request)
+    {
+        $previous   = $this->trackingPageConfig();
+        $config     = TrackingPageConfig::sanitize((array) $request->input('trackingPage', []), $this->trackingPageAdminConfig(), $this->trackingPageCompanyName());
+        $slug       = $config['org_page']['slug'];
+        $validation = $this->trackingPageSlugValidation($slug);
+
+        if ($config['org_page']['enabled'] && !$validation['valid']) {
+            return response()->error($validation['message'], 422);
+        }
+
+        if ($validation['valid']) {
+            $previousSlug = $previous['org_page']['slug'];
+            if ($previousSlug !== $slug && $this->trackingPageSlugOwner($previousSlug) === $this->trackingPageCompanyUuid()) {
+                $this->configureSetting(TrackingPageConfig::SLUG_INDEX_PREFIX . $previousSlug, null);
+            }
+
+            $this->configureSetting(TrackingPageConfig::SLUG_INDEX_PREFIX . $slug, $this->trackingPageCompanyUuid());
+        }
+
+        $this->configureCompanySetting(TrackingPageConfig::SETTING_KEY, $config);
+
+        return response()->json($this->trackingPageView($config));
+    }
+
+    /**
+     * Check a slug while it is typed.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function validateTrackingPageSlug(Request $request)
+    {
+        $slug = strtolower(trim((string) $request->input('slug', '')));
+
+        return response()->json(array_merge(['slug' => $slug], $this->trackingPageSlugValidation($slug)));
+    }
+
+    /**
+     * Instance-wide defaults for the generic tracking page.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAdminTrackingPageSettings()
+    {
+        return response()->json($this->trackingPageAdminConfig());
+    }
+
+    /**
+     * Save the instance-wide defaults for the generic tracking page.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveAdminTrackingPageSettings(Request $request)
+    {
+        $config = TrackingPageConfig::sanitizeAdmin((array) $request->input('trackingPage', []));
+        $this->configureSetting(TrackingPageConfig::ADMIN_SETTING_KEY, $config);
+
+        return response()->json($config);
+    }
+
+    protected function trackingPageConfig(): array
+    {
+        return TrackingPageConfig::sanitize(
+            (array) $this->lookupCompanySetting(TrackingPageConfig::SETTING_KEY, []),
+            $this->trackingPageAdminConfig(),
+            $this->trackingPageCompanyName()
+        );
+    }
+
+    protected function trackingPageAdminConfig(): array
+    {
+        return TrackingPageConfig::sanitizeAdmin((array) $this->lookupSetting(TrackingPageConfig::ADMIN_SETTING_KEY, []));
+    }
+
+    /**
+     * The saved config plus the read-only facts the settings screen shows beside it.
+     */
+    protected function trackingPageView(array $config): array
+    {
+        $accent = $config['branding']['accent'];
+
+        return array_merge($config, [
+            'slug_validation'           => $this->trackingPageSlugValidation($config['org_page']['slug']),
+            'accent_ink'                => TrackingPageConfig::inkFor($accent),
+            'accent_contrast'           => TrackingPageConfig::contrastRatio($accent, TrackingPageConfig::inkFor($accent)),
+            'sms_available'             => $this->smsProviderConfigured(),
+            'customer_portal_installed' => $this->customerPortalInstalled(),
+            'admin'                     => $this->trackingPageAdminConfig(),
+        ]);
+    }
+
+    /**
+     * @return array{valid: bool, code: string, message: string}
+     */
+    protected function trackingPageSlugValidation(string $slug): array
+    {
+        $error = TrackingPageConfig::slugError($slug);
+        if ($error === 'invalid') {
+            return ['valid' => false, 'code' => 'invalid', 'message' => 'Use 3 to 40 lowercase letters, numbers and single hyphens, starting and ending with a letter or number.'];
+        }
+
+        if ($error === 'reserved') {
+            return ['valid' => false, 'code' => 'reserved', 'message' => 'This address is reserved. Please choose another.'];
+        }
+
+        $owner = $this->trackingPageSlugOwner($slug);
+        if ($owner !== null && $owner !== $this->trackingPageCompanyUuid()) {
+            return ['valid' => false, 'code' => 'taken', 'message' => 'Another organization already uses this address.'];
+        }
+
+        return ['valid' => true, 'code' => 'available', 'message' => 'This address is available.'];
+    }
+
+    protected function trackingPageSlugOwner(string $slug): ?string
+    {
+        $owner = $this->lookupSetting(TrackingPageConfig::SLUG_INDEX_PREFIX . $slug);
+
+        return is_string($owner) && $owner !== '' ? $owner : null;
+    }
+
+    protected function trackingPageCompanyUuid(): ?string
+    {
+        return data_get($this->currentCompany(), 'uuid');
+    }
+
+    protected function trackingPageCompanyName(): ?string
+    {
+        return data_get($this->currentCompany(), 'name');
+    }
+
+    /**
+     * Whether the instance can send SMS. Twilio is listed as always available, so it counts
+     * only with credentials; other providers report their own configuration.
+     */
+    protected function smsProviderConfigured(): bool
+    {
+        if (filled(config('services.twilio.sid')) && filled(config('services.twilio.token'))) {
+            return true;
+        }
+
+        return collect($this->smsProviders())
+            ->except(SmsService::PROVIDER_TWILIO)
+            ->contains(fn ($provider) => (bool) data_get($provider, 'available'));
+    }
+
+    protected function smsProviders(): array
+    {
+        // @codeCoverageIgnoreStart
+        // Reads the live SMS provider configuration; tests replace this seam.
+        return (new SmsService())->getAvailableProviders();
+        // @codeCoverageIgnoreEnd
+    }
+
+    protected function customerPortalInstalled(): bool
+    {
+        return collect($this->installedFleetbaseExtensions())
+            ->contains(fn ($package) => data_get($package, 'name') === 'fleetbase/customer-portal-api');
+    }
+
+    protected function installedFleetbaseExtensions(): array
+    {
+        // @codeCoverageIgnoreStart
+        // Reads the installed composer packages; tests replace this seam.
+        return Utils::getInstalledFleetbaseExtensions();
+        // @codeCoverageIgnoreEnd
     }
 
     protected function dispatchTelematicsPrune(): void

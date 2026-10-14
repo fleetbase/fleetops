@@ -3,12 +3,15 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Models\Model;
+use Fleetbase\Traits\HasApiModelCache;
 use Fleetbase\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FleetDriver extends Model
 {
     use HasUuid;
+    // Writes bump the fleet_drivers API cache version, which cached driver lists filter on.
+    use HasApiModelCache;
 
     /**
      * The database table used by the model.

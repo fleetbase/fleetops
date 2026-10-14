@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Model;
+use Fleetbase\Support\ApiModelCache;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
@@ -176,6 +177,11 @@ class TrackingStatus extends Model
         }
 
         $result = static::insertTrackingStatus($values);
+
+        // Inserted without model events
+        if ($result) {
+            ApiModelCache::invalidateModelCache($instance, $values['company_uuid']);
+        }
 
         return $result ? $uuid : false;
     }

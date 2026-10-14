@@ -2,6 +2,7 @@ import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { getLeafletTileUrl } from '../utils/leaflet-tile-url';
+import { defaultMapCenter, companyCountryCenter } from '../utils/map-default-view';
 
 const DEFAULT_SETTINGS = {
     mapProvider: 'leaflet',
@@ -12,6 +13,11 @@ const DEFAULT_SETTINGS = {
     googleMapsMapType: 'roadmap',
     showGoogleMapsTrafficLayer: false,
     showGoogleMapsTransitLayer: false,
+    defaultMapLatitude: null,
+    defaultMapLongitude: null,
+    defaultMapZoom: null,
+    fitMapToVehicles: false,
+    companyMapCenter: null,
 };
 
 export default class MapSettingsService extends Service {
@@ -45,6 +51,28 @@ export default class MapSettingsService extends Service {
 
     get showGoogleMapsTransitLayer() {
         return Boolean(this.settings.showGoogleMapsTransitLayer);
+    }
+
+    /**
+     * The company's configured default centre for the live map, or null.
+     *
+     * @return {{latitude: Number, longitude: Number, zoom: Number}|null}
+     */
+    get defaultMapCenter() {
+        return defaultMapCenter(this.settings);
+    }
+
+    /**
+     * The centre of the company's country, used when nothing better is known.
+     *
+     * @return {{latitude: Number, longitude: Number, zoom: Number}|null}
+     */
+    get companyCountryCenter() {
+        return companyCountryCenter(this.settings);
+    }
+
+    get fitMapToVehicles() {
+        return Boolean(this.settings.fitMapToVehicles);
     }
 
     get isGoogleMaps() {

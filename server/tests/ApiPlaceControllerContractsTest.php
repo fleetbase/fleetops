@@ -537,5 +537,5 @@ test('api place controller returns not found errors for missing places', functio
         ? $controller->update('missing-place', fleetopsUpdatePlaceRequest([]))
         : $controller->{$method}('missing-place', new Request());
 
-    expect($response)->toBe(['apiError' => 'Place resource not found.', 'status' => 400]);
+    expect($response)->toBe(['apiError' => 'Place resource not found.', 'status' => 404]);
 })->with(['update', 'find', 'delete']);

@@ -217,7 +217,11 @@ test('tracking number observer seams generate numbers barcodes and statuses', fu
 
     // Numbers are generated for the record's region
     expect(fleetopsQuerySeamInvoke($observer, $class, 'generateTrackingNumber', [$trackingNumber]))->toBeString()
-        ->and(fleetopsQuerySeamInvoke($observer, $class, 'generateBarcode', ['tn-seam-1', 'C39']))->toBe('generated-barcode');
+        // Both label images are rendered from the tracking number
+        ->and(fleetopsQuerySeamInvoke($observer, $class, 'generateCodeImages', ['tn-seam-1', 'order_public']))->toBe([
+            'qr_code' => 'generated-barcode',
+            'barcode' => 'generated-barcode',
+        ]);
 
     // Statuses are persisted through the model
     $status = fleetopsQuerySeamInvoke($observer, $class, 'createTrackingStatus', [[

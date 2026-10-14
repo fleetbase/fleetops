@@ -14,8 +14,11 @@ use Fleetbase\FleetOps\Listeners\HandleGeofenceEntered;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\GeofenceEventLog;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Payload;
+use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
@@ -96,8 +99,12 @@ function fleetopsHandleGeofenceEnteredConnection(): SQLiteConnection
     $connection = new SQLiteConnection($pdo, 'default');
     $connection->statement('create table geofence_events_log (uuid varchar(64) primary key, company_uuid varchar(64), driver_uuid varchar(64) null, vehicle_uuid varchar(64) null, order_uuid varchar(64) null, subject_uuid varchar(64) null, subject_type varchar(255) null, subject_name varchar(255) null, geofence_uuid varchar(64), geofence_type varchar(64), geofence_name varchar(255) null, event_type varchar(64), latitude numeric null, longitude numeric null, speed_kmh numeric null, dwell_duration_minutes integer null, occurred_at datetime null, created_at datetime null, updated_at datetime null)');
 
+    $connection->statement('create table tracking_numbers (id integer primary key autoincrement, uuid varchar(64), public_id varchar(64) null, company_uuid varchar(64) null, status_uuid varchar(64) null, created_at datetime null, updated_at datetime null, deleted_at datetime null)');
+    $connection->statement('create table tracking_statuses (id integer primary key autoincrement, uuid varchar(64), public_id varchar(64) null, company_uuid varchar(64) null, tracking_number_uuid varchar(64) null, code varchar(64) null, complete integer null, created_at datetime null, updated_at datetime null, deleted_at datetime null)');
+
     $resolver = new ConnectionResolver([
         'default' => $connection,
+        'mysql'   => $connection,
     ]);
     $resolver->setDefaultConnection('default');
     EloquentModel::setConnectionResolver($resolver);
@@ -212,7 +219,73 @@ test('geofence entered listener writes vehicle entry logs with current order con
         ->and($log->subject_name)->toBe('Dock Van');
 });
 
+function fleetopsEnteredZone(string $name, float $lat, float $lng): object
+{
+    return new class($name, $lat, $lng) {
+        public string $uuid;
+        public string $public_id;
+
+        public function __construct(public string $name, private float $lat, private float $lng)
+        {
+            $this->uuid      = $name . '-uuid';
+            $this->public_id = $name . '-public';
+        }
+
+        public function getLatitudeAttribute(): float
+        {
+            return $this->lat;
+        }
+
+        public function getLongitudeAttribute(): float
+        {
+            return $this->lng;
+        }
+    };
+}
+
+function fleetopsEnteredPlace(string $uuid, ?Point $location): Place
+{
+    $place = new Place();
+    $place->setRawAttributes(['uuid' => $uuid, 'public_id' => $uuid . '-public', 'location' => $location], true);
+
+    return $place;
+}
+
+/**
+ * Build a pickup -> dropoff payload. The pickup sits on the default event
+ * zone centroid; the dropoff is roughly 9km away.
+ */
+function fleetopsEnteredEndpointPayload(?string $currentWaypointUuid = null, ?string $pickupTrackingNumberUuid = null): Payload
+{
+    $payload = new Payload();
+    $payload->setRawAttributes([
+        'uuid'                        => 'payload-uuid',
+        'current_waypoint_uuid'       => $currentWaypointUuid,
+        'pickup_tracking_number_uuid' => $pickupTrackingNumberUuid,
+    ], true);
+    $payload->setRelation('pickup', fleetopsEnteredPlace('pickup-place', new Point(1.3521, 103.8198)));
+    $payload->setRelation('dropoff', fleetopsEnteredPlace('dropoff-place', new Point(1.3000, 103.9000)));
+    $payload->setRelation('waypoints', collect());
+    $payload->setRelation('waypointMarkers', collect());
+
+    return $payload;
+}
+
+function fleetopsEnteredCompleteStatus(SQLiteConnection $connection, string $trackingNumberUuid): void
+{
+    $connection->table('tracking_numbers')->insert(['uuid' => $trackingNumberUuid, 'status_uuid' => $trackingNumberUuid . '-status']);
+    $connection->table('tracking_statuses')->insert(['uuid' => $trackingNumberUuid . '-status', 'tracking_number_uuid' => $trackingNumberUuid, 'code' => 'completed', 'complete' => 1]);
+}
+
+function fleetopsEnteredArrive(Order $order, object $zone): void
+{
+    $driver = fleetopsEnteredDriver($order);
+
+    (new HandleGeofenceEntered())->handle(fleetopsEnteredEvent($driver, $zone));
+}
+
 test('geofence entered arrival handles destination and status failures', function () {
+    fleetopsHandleGeofenceEnteredConnection();
     $listener = new HandleGeofenceEntered();
     $arrival  = new ReflectionMethod(HandleGeofenceEntered::class, 'handleOrderArrival');
     $arrival->setAccessible(true);
@@ -220,37 +293,124 @@ test('geofence entered arrival handles destination and status failures', functio
     $driver = fleetopsEnteredDriver();
     $event  = fleetopsEnteredEvent($driver);
 
-    $destinationFailure = fleetopsEnteredOrder(new class {
-        public function getPickupOrCurrentWaypoint(): mixed
+    $throwingPayload = new class extends Payload {
+        public function loadMissing($relations)
         {
             throw new RuntimeException('destination failed');
         }
-    });
+    };
+    $destinationFailure = fleetopsEnteredOrder($throwingPayload);
     $arrival->invoke($listener, $driver, $event->geofence, $destinationFailure, $event);
 
-    $placeFailure = fleetopsEnteredOrder(new class {
-        public function getPickupOrCurrentWaypoint(): object
-        {
-            return new class {
-                public function getPlace(): mixed
-                {
-                    throw new RuntimeException('place failed');
-                }
-            };
-        }
-    });
-    $arrival->invoke($listener, $driver, $event->geofence, $placeFailure, $event);
+    $emptyPayload = new Payload();
+    $emptyPayload->setRelation('pickup', null);
+    $emptyPayload->setRelation('dropoff', null);
+    $emptyPayload->setRelation('waypoints', collect());
+    $emptyPayload->setRelation('waypointMarkers', collect());
+    $noStops = fleetopsEnteredOrder($emptyPayload);
+    $arrival->invoke($listener, $driver, $event->geofence, $noStops, $event);
 
-    $statusFailure = fleetopsEnteredOrder(new class {
-        public function getPickupOrCurrentWaypoint(): object
-        {
-            return (object) ['place' => (object) ['location' => new Point(1.3521, 103.8198)]];
-        }
-    });
+    $statusFailure                = fleetopsEnteredOrder(fleetopsEnteredEndpointPayload());
     $statusFailure->throwOnStatus = true;
     $arrival->invoke($listener, $driver, $event->geofence, $statusFailure, $event);
 
     expect($destinationFailure->calls)->toBe([])
-        ->and($placeFailure->calls)->toBe([])
+        ->and($noStops->calls)->toBe([])
         ->and($statusFailure->calls)->toBe([]);
+});
+
+test('geofence entered arrival targets the pickup before the pickup is completed', function () {
+    fleetopsHandleGeofenceEnteredConnection();
+
+    $atDropoff = fleetopsEnteredOrder(fleetopsEnteredEndpointPayload());
+    fleetopsEnteredArrive($atDropoff, fleetopsEnteredZone('dropoff-zone', 1.3000, 103.9000));
+
+    $atPickup = fleetopsEnteredOrder(fleetopsEnteredEndpointPayload('pickup-place'));
+    fleetopsEnteredArrive($atPickup, fleetopsEnteredZone('pickup-zone', 1.3521, 103.8198));
+
+    expect($atDropoff->calls)->toBe([])
+        ->and($atDropoff->status)->toBe('dispatched')
+        ->and($atPickup->calls[0])->toBe(['setStatus', 'arrived', true])
+        ->and($atPickup->calls[1][1]->get('details'))->toBe('Driver entered destination geofence "pickup-zone".');
+});
+
+test('geofence entered arrival targets the dropoff once the order has advanced past the pickup', function () {
+    fleetopsHandleGeofenceEnteredConnection();
+
+    $atPickup = fleetopsEnteredOrder(fleetopsEnteredEndpointPayload('dropoff-place'));
+    fleetopsEnteredArrive($atPickup, fleetopsEnteredZone('pickup-zone', 1.3521, 103.8198));
+
+    $atDropoff = fleetopsEnteredOrder(fleetopsEnteredEndpointPayload('dropoff-place'));
+    fleetopsEnteredArrive($atDropoff, fleetopsEnteredZone('dropoff-zone', 1.3000, 103.9000));
+
+    expect($atPickup->calls)->toBe([])
+        ->and($atDropoff->calls[0])->toBe(['setStatus', 'arrived', true])
+        ->and($atDropoff->calls[1][1]->get('details'))->toBe('Driver entered destination geofence "dropoff-zone".');
+});
+
+test('geofence entered arrival skips a completed pickup the payload pointer has not advanced past', function () {
+    $connection = fleetopsHandleGeofenceEnteredConnection();
+    fleetopsEnteredCompleteStatus($connection, 'pickup-tracking');
+
+    $atPickup = fleetopsEnteredOrder(fleetopsEnteredEndpointPayload('pickup-place', 'pickup-tracking'));
+    fleetopsEnteredArrive($atPickup, fleetopsEnteredZone('pickup-zone', 1.3521, 103.8198));
+
+    $atDropoff = fleetopsEnteredOrder(fleetopsEnteredEndpointPayload(null, 'pickup-tracking'));
+    fleetopsEnteredArrive($atDropoff, fleetopsEnteredZone('dropoff-zone', 1.3000, 103.9000));
+
+    expect($atPickup->calls)->toBe([])
+        ->and($atDropoff->calls[0])->toBe(['setStatus', 'arrived', true]);
+});
+
+test('geofence entered arrival targets the current stop of a multi-waypoint order', function () {
+    $connection = fleetopsHandleGeofenceEnteredConnection();
+    fleetopsEnteredCompleteStatus($connection, 'first-tracking');
+
+    $multiDropPayload = function (?string $currentWaypointUuid): Payload {
+        $payload = new Payload();
+        $payload->setRawAttributes(['uuid' => 'multi-payload-uuid', 'current_waypoint_uuid' => $currentWaypointUuid], true);
+        $payload->setRelation('pickup', null);
+        $payload->setRelation('dropoff', null);
+        $payload->setRelation('waypoints', collect());
+
+        $markers = collect([
+            ['first', 'first-tracking', new Point(1.3521, 103.8198)],
+            ['second', null, new Point(1.3000, 103.9000)],
+            ['third', null, new Point(1.4000, 103.7000)],
+        ])->map(function (array $stop, int $index) {
+            [$name, $trackingNumberUuid, $location] = $stop;
+
+            $waypoint = new Waypoint();
+            $waypoint->setRawAttributes([
+                'uuid'                 => $name . '-waypoint',
+                'place_uuid'           => $name . '-place',
+                'tracking_number_uuid' => $trackingNumberUuid,
+                'order'                => $index,
+            ], true);
+            $waypoint->setRelation('place', fleetopsEnteredPlace($name . '-place', $location));
+            $waypoint->setRelation('trackingNumber', null);
+
+            return $waypoint;
+        });
+        $payload->setRelation('waypointMarkers', $markers);
+
+        return $payload;
+    };
+
+    $atCompletedStop = fleetopsEnteredOrder($multiDropPayload('second-place'));
+    fleetopsEnteredArrive($atCompletedStop, fleetopsEnteredZone('first-zone', 1.3521, 103.8198));
+
+    $atLaterStop = fleetopsEnteredOrder($multiDropPayload('second-place'));
+    fleetopsEnteredArrive($atLaterStop, fleetopsEnteredZone('third-zone', 1.4000, 103.7000));
+
+    $atCurrentStop = fleetopsEnteredOrder($multiDropPayload('second-place'));
+    fleetopsEnteredArrive($atCurrentStop, fleetopsEnteredZone('second-zone', 1.3000, 103.9000));
+
+    $staleFirstStop = fleetopsEnteredOrder($multiDropPayload(null));
+    fleetopsEnteredArrive($staleFirstStop, fleetopsEnteredZone('second-zone', 1.3000, 103.9000));
+
+    expect($atCompletedStop->calls)->toBe([])
+        ->and($atLaterStop->calls)->toBe([])
+        ->and($atCurrentStop->calls[0])->toBe(['setStatus', 'arrived', true])
+        ->and($staleFirstStop->calls[0])->toBe(['setStatus', 'arrived', true]);
 });

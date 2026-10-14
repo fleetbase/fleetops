@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 use Fleetbase\FleetOps\Events\OrderDispatchFailed;
 use Fleetbase\FleetOps\Events\OrderStarted;
 use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
+use Fleetbase\FleetOps\Exceptions\OrderEditLockedException;
 use Fleetbase\FleetOps\Exceptions\UserAlreadyExistsException;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Requests\CreateOrderRequest;
@@ -24,7 +25,9 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Support\OrderEdit;
 use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
+use Fleetbase\FleetOps\Support\TrackingCode;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Http\Resources\Comment as CommentResource;
@@ -352,6 +355,19 @@ class OrderController extends Controller
         // get request input
         $input = $this->orderUpdateInputFromRequest($request);
 
+        // `entities_mode=replace` makes the entities sent the payload's full list
+        // (update by id, create new, delete missing); by default they are appended
+        $entitiesMode = OrderEdit::entitiesMode($request->input('entities_mode', $request->input('payload.entities_mode')));
+        $codAmount    = $this->codAmountFromRequest($request);
+
+        // refuse changes the order's status locks before anything is written
+        $edit = $this->beginOrderEdit($order);
+        try {
+            $edit->guard($edit->requestedChanges($this->orderEditInputFromRequest($request, $codAmount), $entitiesMode));
+        } catch (OrderEditLockedException $exception) {
+            return $this->lockedEditResponse($exception);
+        }
+
         // update payload if new input or change payload by id
         if ($request->isArray('payload')) {
             $payload = data_get($order, 'payload', $this->newPayload());
@@ -383,6 +399,10 @@ class OrderController extends Controller
                 $payload->setReturn($return);
             }
 
+            if ($codAmount !== null) {
+                $payload->cod_amount = $codAmount;
+            }
+
             $payload->save();
 
             // set waypoints and entities after payload is saved
@@ -392,14 +412,10 @@ class OrderController extends Controller
                 $payload->removeWaypoints();
             }
 
-            if ($entities) {
-                $payload->setEntities($entities);
-            }
+            $this->applyPayloadEntities($payload, $entities, $entitiesMode);
 
-            $firstWaypoint = $payload->getPickupOrFirstWaypoint();
-            if ($firstWaypoint instanceof Place) {
-                $payload->setCurrentWaypoint($firstWaypoint);
-            }
+            // the current waypoint is reconciled once the edit is committed: it is only
+            // moved when the route changed, and an order under way keeps its stop
 
             $input['payload_uuid'] = $payload->uuid;
         } elseif ($request->has('payload')) {
@@ -408,6 +424,11 @@ class OrderController extends Controller
                 'company_uuid' => $this->sessionCompany(),
             ]);
             unset($input['payload']);
+
+            if ($codAmount !== null && is_string($input['payload_uuid']) && ($switchedPayload = $this->findPayloadByUuid($input['payload_uuid']))) {
+                $switchedPayload->cod_amount = $codAmount;
+                $switchedPayload->save();
+            }
         }
 
         // create a payload if missing payload[] but has pickup/dropoff/etc
@@ -441,6 +462,10 @@ class OrderController extends Controller
                 $payload->setReturn($return);
             }
 
+            if ($codAmount !== null) {
+                $payload->cod_amount = $codAmount;
+            }
+
             $payload->save();
 
             // set waypoints and entities after payload is saved
@@ -450,14 +475,10 @@ class OrderController extends Controller
                 $payload->removeWaypoints();
             }
 
-            if ($entities) {
-                $payload->setEntities($entities);
-            }
+            $this->applyPayloadEntities($payload, $entities, $entitiesMode);
 
-            $firstWaypoint = $payload->getPickupOrFirstWaypoint();
-            if ($firstWaypoint instanceof Place) {
-                $payload->setCurrentWaypoint($firstWaypoint);
-            }
+            // the current waypoint is reconciled once the edit is committed: it is only
+            // moved when the route changed, and an order under way keeps its stop
 
             $input['payload_uuid'] = $payload->uuid;
         }
@@ -537,11 +558,88 @@ class OrderController extends Controller
         $order->update($input);
         $order->flushAttributesCache();
 
+        // reroute, recompute distance and time, republish tracking and announce
+        // `order.changed` for whatever this update changed
+        $this->commitOrderEdit($edit);
+
         // load required relations
         $order->load(['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate.serviceQuote.items', 'customer', 'facilitator']);
 
         // response the order resource
         return $this->orderResource($order);
+    }
+
+    /**
+     * The cash to collect sent with an order update, as `payload.cod_amount` or a
+     * top-level `cod_amount`. Zero is a valid amount; anything not numeric is ignored.
+     */
+    protected function codAmountFromRequest(Request $request): int|float|string|null
+    {
+        $value = null;
+        if ($request->isArray('payload') && Arr::has((array) $request->input('payload'), 'cod_amount')) {
+            $value = data_get($request->input('payload'), 'cod_amount');
+        } elseif ($request->has('cod_amount')) {
+            $value = $request->input('cod_amount');
+        }
+
+        return is_numeric($value) ? $value : null;
+    }
+
+    /**
+     * The parts of an order update the edit policy looks at.
+     */
+    protected function orderEditInputFromRequest(Request $request, mixed $codAmount = null): array
+    {
+        $routeKeys = ['pickup', 'dropoff', 'return', 'waypoints', 'entities'];
+
+        if ($request->isArray('payload')) {
+            $edit = Arr::only((array) $request->input('payload'), $routeKeys);
+        } elseif ($request->has('payload')) {
+            // switching to another payload replaces the whole route
+            $edit = ['pickup' => true, 'dropoff' => true, 'waypoints' => true];
+        } else {
+            $edit = $request->only($routeKeys);
+        }
+
+        foreach (['scheduled_at', 'notes', 'customer'] as $key) {
+            if ($request->has($key)) {
+                $edit[$key] = $request->input($key);
+            }
+        }
+
+        if ($codAmount !== null) {
+            $edit['cod_amount'] = $codAmount;
+        }
+
+        return $edit;
+    }
+
+    protected function applyPayloadEntities(Payload $payload, mixed $entities, string $mode): void
+    {
+        if ($mode === OrderEdit::ENTITIES_REPLACE && is_array($entities)) {
+            $payload->syncEntities($entities);
+
+            return;
+        }
+
+        if ($entities) {
+            $payload->setEntities($entities);
+        }
+    }
+
+    protected function beginOrderEdit(Order $order): OrderEdit
+    {
+        return OrderEdit::begin($order);
+    }
+
+    protected function commitOrderEdit(OrderEdit $edit): array
+    {
+        return $edit->commit();
+    }
+
+    protected function lockedEditResponse(OrderEditLockedException $exception)
+    {
+        return response()->apiError($exception->getMessage(), 422, $exception->toResponseData());
     }
 
     protected function orderCreateInputFromRequest(Request $request): array
@@ -628,24 +726,6 @@ class OrderController extends Controller
             if ($request->has('return')) {
                 $query->whereHas('payload.return', function ($q) use ($request) {
                     $q->where('public_id', $request->input('return'));
-                });
-            }
-
-            if ($request->has('facilitator')) {
-                $query->whereHas('facilitator', function ($q) use ($request) {
-                    $q->where(function ($q) use ($request) {
-                        $q->where('public_id', $request->input('facilitator'));
-                        $q->orWhere('internal_id', $request->input('facilitator'));
-                    });
-                });
-            }
-
-            if ($request->has('customer')) {
-                $query->whereHas('customer', function ($q) use ($request) {
-                    $q->where(function ($q) use ($request) {
-                        $q->where('public_id', $request->input('customer'));
-                        $q->orWhere('internal_id', $request->input('customer'));
-                    });
                 });
             }
 
@@ -1296,8 +1376,12 @@ class OrderController extends Controller
      *
      * @return \Fleetbase\Http\Resources\v1\Order
      */
-    public function cancelOrder(string $id)
+    public function cancelOrder(string $id, ?Request $request = null)
     {
+        // Laravel does not inject a class-typed parameter that has a default, so the
+        // current request is read here; the default keeps cancelOrder($id) callable.
+        $request = $request ?? request();
+
         try {
             $order = $this->findOrder($id);
         } catch (ModelNotFoundException $exception) {
@@ -1309,9 +1393,28 @@ class OrderController extends Controller
             );
         }
 
-        $order->cancel();
+        // the reason becomes the canceled status details and is sent with the canceled notifications
+        $reason = $this->reasonFromRequest($request);
+        if ($reason !== null) {
+            $order->cancelWithReason($reason);
+        } else {
+            $order->cancel();
+        }
 
         return $this->orderResource($order);
+    }
+
+    /**
+     * The free-text `reason` sent with a cancel, trimmed to 1000 characters.
+     */
+    protected function reasonFromRequest(Request $request): ?string
+    {
+        $reason = $request->input('reason');
+        if (!is_string($reason) || trim($reason) === '') {
+            return null;
+        }
+
+        return Str::limit(trim($reason), 1000, '');
     }
 
     /**
@@ -1444,8 +1547,8 @@ class OrderController extends Controller
             return $this->apiError('Unable to capture QR code data.');
         }
 
-        // validate
-        if ($subject && $code === $subject->uuid) {
+        // validate: the scan must name this subject, in any code format still in circulation
+        if (TrackingCode::matches($code, $subject)) {
             // create verification proof
             $proof = $this->createProof([
                 'company_uuid' => session('company'),

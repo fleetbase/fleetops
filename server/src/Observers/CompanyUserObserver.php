@@ -14,8 +14,8 @@ class CompanyUserObserver
      */
     public function deleted(CompanyUser $companyUser)
     {
-        // if the company user deleted is a driver, delete their driver record to
-        $this->deleteDrivers($companyUser->user_uuid);
+        // if the company user deleted is a driver, delete their driver record in that company
+        $this->deleteDrivers($companyUser->user_uuid, $companyUser->company_uuid);
     }
 
     /**
@@ -26,19 +26,20 @@ class CompanyUserObserver
     public function updated(CompanyUser $companyUser)
     {
         // If the company user has any driver assosciated update status to same as company_users
-        $driver = $this->findDriver($companyUser->user_uuid);
+        $driver = $this->findDriver($companyUser->user_uuid, $companyUser->company_uuid);
         if ($driver && $companyUser->wasChanged('status')) {
             $driver->update(['status' => $companyUser->status]);
         }
     }
 
-    protected function deleteDrivers(string $userUuid): void
+    protected function deleteDrivers(string $userUuid, ?string $companyUuid): void
     {
-        Driver::where('user_uuid', $userUuid)->delete();
+        // Delete each driver through the model so DriverObserver cleans up after it
+        Driver::where(['user_uuid' => $userUuid, 'company_uuid' => $companyUuid])->get()->each->delete();
     }
 
-    protected function findDriver(string $userUuid): ?Driver
+    protected function findDriver(string $userUuid, ?string $companyUuid): ?Driver
     {
-        return Driver::where('user_uuid', $userUuid)->first();
+        return Driver::where(['user_uuid' => $userUuid, 'company_uuid' => $companyUuid])->first();
     }
 }

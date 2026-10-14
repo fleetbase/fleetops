@@ -304,6 +304,29 @@ test('phone login reports the sms method when the transport delivers', function 
         ->and($connection->table('verification_codes')->where('for', 'driver_login')->count())->toBe(1);
 });
 
+test('phone login passes an sms guard refusal through once no email can carry the code', function () {
+    $connection = fleetopsDriverAuthBoot();
+    app()->instance('twilio', new class {
+        public function message($to, $text, $mediaUrls = [], $params = [])
+        {
+            throw Fleetbase\Exceptions\SmsBlockedException::paused('platform', 300);
+        }
+    });
+    Fleetbase\Twilio\Support\Laravel\Facade::clearResolvedInstances();
+
+    // With an email on file the refusal is handled like any send failure: by email.
+    app()->instance('request', Request::create('/x', 'POST', ['phone' => '6591234567']));
+    $byEmail = (new DriverController())->loginWithPhone();
+    expect($byEmail->getData(true))->toBe(['status' => 'OK', 'method' => 'email']);
+
+    // Without one, the app gets the refusal itself: 423 and how long to wait.
+    $connection->table('users')->where('uuid', 'user-1')->update(['email' => null]);
+    $refused = (new DriverController())->loginWithPhone();
+    expect($refused->getStatusCode())->toBe(423)
+        ->and($refused->headers->get('Retry-After'))->toBe('300')
+        ->and($refused->getData(true)['error'])->toBe('Text messages are temporarily unavailable. Try again later.');
+});
+
 test('code verification handles unknown users invalid codes bypass and success', function () {
     $connection = fleetopsDriverAuthBoot();
     $controller = new DriverController();

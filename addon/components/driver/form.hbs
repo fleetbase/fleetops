@@ -66,7 +66,7 @@
 
             <InputGroup @name={{t "driver.fields.license-expiry"}}>
                 <DatePicker
-                    @value={{@resource.license_expiry}}
+                    @value={{format-date-fns @resource.license_expiry "yyyy-MM-dd"}}
                     @onChange={{fn (mut @resource.license_expiry)}}
                     @placeholder={{t "driver.fields.license-expiry"}}
                     @disabled={{cannot-write @resource}}

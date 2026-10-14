@@ -14,7 +14,7 @@ use Illuminate\Http\Request;
  * through ProfileAccountManager, and the exception-to-error-response
  * branches. Role assignment requires the full spatie permission boot, which
  * this fixture leaves out, so flows settle in the documented error branch
- * after the user record is persisted (see
+ * and the account created for the failed driver is removed again (see
  * DriverControllerExistingUserAdoptionTest for the full flow).
  */
 if (!function_exists('Fleetbase\Support\session')) {
@@ -157,6 +157,17 @@ function fleetopsInternalDriverCreateBoot(): SQLiteConnection
     return $connection;
 }
 
+/**
+ * Keep a copy of every removed user row so a test can inspect the account
+ * that was created and then cleaned up when the driver failed.
+ */
+function fleetopsInternalDriverCreateTrackRemovedUsers(SQLiteConnection $connection): void
+{
+    $columns = $connection->getSchemaBuilder()->getColumnListing('users');
+    $connection->statement('create table removed_users as select * from users where 0');
+    $connection->statement('create trigger keep_removed_users after delete on users begin insert into removed_users (' . implode(', ', $columns) . ') values (' . implode(', ', array_map(fn ($column) => 'old.' . $column, $columns)) . '); end');
+}
+
 function fleetopsInternalDriverCreateRequest(array $driver): Request
 {
     return Request::create('/int/v1/drivers', 'POST', ['driver' => $driver]);
@@ -164,6 +175,7 @@ function fleetopsInternalDriverCreateRequest(array $driver): Request
 
 test('create record provisions a driver-typed user before role assignment', function () {
     $connection = fleetopsInternalDriverCreateBoot();
+    fleetopsInternalDriverCreateTrackRemovedUsers($connection);
 
     $result = (new DriverController())->createRecord(fleetopsInternalDriverCreateRequest([
         'name'  => 'New Driver',
@@ -172,17 +184,18 @@ test('create record provisions a driver-typed user before role assignment', func
     ]));
 
     // The user record is created and typed before role assignment fails in
-    // the harness; the exception surfaces through the error response branch.
+    // the harness; the exception surfaces through the error response branch
+    // and the account is removed so no orphan login is left behind.
     expect($result)->toBeInstanceOf(JsonResponse::class)
         ->and($result->getData(true))->toHaveKey('error')
-        ->and($connection->table('users')->count())->toBe(1)
-        ->and($connection->table('users')->value('type'))->toBe('driver')
-        ->and($connection->table('users')->value('email'))->toBe('newdriver@example.com')
-        ->and($connection->table('company_users')->count())->toBeGreaterThanOrEqual(0);
+        ->and($connection->table('users')->count())->toBe(0)
+        ->and($connection->table('removed_users')->value('type'))->toBe('driver')
+        ->and($connection->table('removed_users')->value('email'))->toBe('newdriver@example.com');
 });
 
 test('create record ignores a picked user account and resolves the login from the email', function () {
     $connection = fleetopsInternalDriverCreateBoot();
+    fleetopsInternalDriverCreateTrackRemovedUsers($connection);
     $connection->table('users')->insert(['uuid' => '11111111-1111-4111-8111-111111111111', 'company_uuid' => 'company-1', 'name' => 'Existing', 'email' => 'existing@example.com', 'type' => 'driver']);
 
     (new DriverController())->createRecord(fleetopsInternalDriverCreateRequest([
@@ -193,13 +206,14 @@ test('create record ignores a picked user account and resolves the login from th
 
     // The login account is managed by the profile: a new driver account is
     // created for the email rather than the picked account being taken over
-    expect($connection->table('users')->count())->toBe(2)
-        ->and($connection->table('users')->where('email', 'someone@example.com')->value('type'))->toBe('driver')
+    expect($connection->table('users')->count())->toBe(1)
+        ->and($connection->table('removed_users')->where('email', 'someone@example.com')->value('type'))->toBe('driver')
         ->and($connection->table('users')->where('uuid', '11111111-1111-4111-8111-111111111111')->value('name'))->toBe('Existing');
 });
 
 test('create record applies photo avatars to the new driver account', function () {
     $connection = fleetopsInternalDriverCreateBoot();
+    fleetopsInternalDriverCreateTrackRemovedUsers($connection);
 
     $result = (new DriverController())->createRecord(fleetopsInternalDriverCreateRequest([
         'name'       => 'Photo Driver',
@@ -208,7 +222,7 @@ test('create record applies photo avatars to the new driver account', function (
 
     // Avatar is set when the account is created, before the harness
     // role-assignment limitation.
-    expect($connection->table('users')->value('avatar_uuid'))->toBe('22222222-2222-4222-8222-222222222222')
+    expect($connection->table('removed_users')->value('avatar_uuid'))->toBe('22222222-2222-4222-8222-222222222222')
         ->and($result)->toBeInstanceOf(JsonResponse::class)
         ->and($result->getData(true))->toHaveKey('error');
 });

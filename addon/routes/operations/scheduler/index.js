@@ -61,7 +61,7 @@ export default class OperationsSchedulerIndexRoute extends Route {
     }
 
     resetController(controller) {
-        // Close all socket channels when the dispatcher navigates away
+        // Close the board's own socket channels when the dispatcher navigates away
         // to prevent memory leaks and stale event handlers.
         controller.unsubscribeFromRealTimeUpdates();
     }

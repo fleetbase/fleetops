@@ -94,12 +94,12 @@ class Order extends FleetbaseResource
 
             // Latest status only, not full array
             'latest_status'        => $this->whenLoaded('trackingStatuses', function () {
-                $latest = $this->trackingStatuses->first();
+                $latest = $this->latestTrackingStatus();
 
                 return $latest ? $latest->status : 'created';
             }),
             'latest_status_code'   => $this->whenLoaded('trackingStatuses', function () {
-                $latest = $this->trackingStatuses->first();
+                $latest = $this->latestTrackingStatus();
 
                 return $latest ? $latest->code : null;
             }),
@@ -126,5 +126,14 @@ class Order extends FleetbaseResource
                 '_index_resource' => true,
             ],
         ];
+    }
+
+    /**
+     * The newest loaded tracking status. The relation has no order, so the
+     * statuses are sorted here, newest insert first within the same second.
+     */
+    protected function latestTrackingStatus(): mixed
+    {
+        return $this->trackingStatuses->sortBy([['created_at', 'desc'], ['id', 'desc']])->first();
     }
 }

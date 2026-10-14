@@ -1,0 +1,44 @@
+<div class="tp-map {{if this.expanded 'tp-map-expanded'}}" {{did-insert this.register}} {{did-update this.focusStop @selectedStopId}} {{did-update this.placeLabels @data}}>
+    <span class="tp-sr-only">{{@label}}</span>
+    <LeafletMap class="tp-map-canvas" @lat={{get this.center 0}} @lng={{get this.center 1}} @zoom={{13}} @zoomControl={{false}} @onLoad={{this.setup}} as |layers|>
+        <layers.tile @url={{(leaflet-tile-url)}} />
+        {{#if this.hasRoute}}
+            <layers.polyline @locations={{this.route}} @className="tp-map-route" @weight={{5}} @opacity={{0.9}} @interactive={{false}} />
+        {{else if this.hasPlannedRoute}}
+            <layers.polyline @locations={{this.plannedRoute}} @className="tp-map-route tp-map-route-planned" @weight={{3}} @dashArray="6 8" @interactive={{false}} />
+        {{/if}}
+        {{#each this.pickups as |pickup|}}
+            <layers.marker @location={{pickup.location}} @icon={{pickup.icon}} @title={{pickup.title}} @keyboard={{false}} as |marker|>
+                <marker.tooltip @permanent={{true}} @direction="top" @className="tp-map-label tp-map-label-pickup">{{pickup.label}}</marker.tooltip>
+            </layers.marker>
+        {{/each}}
+        {{#each this.stops as |stop|}}
+            <layers.marker @location={{stop.location}} @icon={{stop.icon}} @title={{stop.label}} @riseOnHover={{true}} as |marker|>
+                <marker.tooltip @permanent={{true}} @direction="top" @className="tp-map-label tp-map-label-stop">{{stop.label}}</marker.tooltip>
+            </layers.marker>
+        {{/each}}
+        {{#if this.vehicle}}
+            <layers.marker @location={{this.vehicle}} @icon={{this.vehicleIcon}} @zIndexOffset={{1000}} @title={{this.vehicleLabel}} as |marker|>
+                <marker.tooltip @permanent={{true}} @direction="top" @className="tp-map-label tp-map-label-vehicle">{{this.vehicleLabel}}</marker.tooltip>
+            </layers.marker>
+        {{/if}}
+    </LeafletMap>
+    <div class="tp-map-chip {{if @stale 'tp-map-chip-stale'}}">
+        {{#if @stale}}
+            {{@staleText}}
+        {{else if @live}}
+            <span class="tp-live-dot" aria-hidden="true"></span>{{t "tracking-page.page.live"}}
+        {{else}}
+            {{t "tracking-page.page.map"}}
+        {{/if}}
+    </div>
+    <div class="tp-map-controls">
+        {{#if this.vehicle}}
+            <button type="button" class="tp-map-button" aria-label={{t "tracking-page.page.recenter"}} {{on "click" this.recenter}}><FaIcon @icon="crosshairs" /></button>
+        {{/if}}
+        <button type="button" class="tp-map-button" aria-label={{t "tracking-page.page.fit-route"}} {{on "click" this.fitRoute}}><FaIcon @icon="route" /></button>
+        <button type="button" class="tp-map-button" aria-label={{this.fullscreenLabel}} aria-pressed={{if this.expanded "true" "false"}} {{on "click" this.toggleFullscreen}}>
+            <FaIcon @icon={{if this.expanded "compress" "expand"}} />
+        </button>
+    </div>
+</div>

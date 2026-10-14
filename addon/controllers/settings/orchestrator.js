@@ -17,7 +17,8 @@ export default class SettingsOrchestratorController extends Controller {
     @service intl;
     @service('orchestration-engine') engineRegistry;
 
-    @tracked allocationEngine = 'vroom';
+    @tracked allocationEngine = 'greedy';
+    @tracked serverEngines = null;
     @tracked autoAllocateOnCreate = false;
     @tracked autoReallocateOnComplete = false;
     @tracked maxTravelTimeSeconds = 3600;
@@ -26,18 +27,19 @@ export default class SettingsOrchestratorController extends Controller {
 
     /**
      * Engine options for the selector dropdown.
-     * Populated from the allocation-engine registry so new engines appear
-     * automatically without modifying this controller.
+     * Populated from the engines registered on the server (the ones a run can
+     * actually use), falling back to the frontend allocation-engine registry.
      */
     get engineOptions() {
-        return this.engineRegistry.availableEngines;
+        return this.serverEngines ?? this.engineRegistry.availableEngines;
     }
 
     @task *loadSettings() {
         this.isLoading = true;
         try {
-            const settings = yield this.fetch.get('fleet-ops/settings/orchestrator-settings');
-            this.allocationEngine = settings.allocation_engine ?? 'vroom';
+            const [settings, engines] = yield Promise.all([this.fetch.get('fleet-ops/settings/orchestrator-settings'), this.fetch.get('fleet-ops/orchestrator/engines').catch(() => null)]);
+            this.serverEngines = engines?.engines ?? null;
+            this.allocationEngine = settings.allocation_engine ?? 'greedy';
             this.autoAllocateOnCreate = settings.auto_allocate_on_create ?? false;
             this.autoReallocateOnComplete = settings.auto_reallocate_on_complete ?? false;
             this.maxTravelTimeSeconds = settings.max_travel_time_seconds ?? 3600;

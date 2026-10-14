@@ -6,6 +6,10 @@ use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Jobs\ReplayPositions;
 use Fleetbase\FleetOps\Models\Position;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Models\User;
+use Fleetbase\Support\SocketCluster\ChannelAuthorizer;
+use Fleetbase\Support\SocketCluster\SocketPrincipal;
+use Fleetbase\Support\SocketCluster\SocketToken;
 use Illuminate\Http\Request;
 
 class PositionController extends FleetOpsController
@@ -37,6 +41,11 @@ class PositionController extends FleetOpsController
             return response()->error('Position IDs are required');
         }
 
+        // With socket authentication on, the replay may only publish to a channel the user could subscribe to.
+        if (SocketToken::enabled() && !$this->canReplayTo($request, $channelId)) {
+            return response()->error('You are not allowed to replay positions to this channel.', 403);
+        }
+
         $positions = Position::whereIn('uuid', $positionIds)
             ->where('company_uuid', session('company'))
             ->orderBy('created_at')
@@ -55,6 +64,19 @@ class PositionController extends FleetOpsController
             'channel_id'      => $channelId,
             'total_positions' => $positions->count(),
         ]);
+    }
+
+    /**
+     * Whether the requesting user may subscribe to, and so receive a replay on, the channel.
+     */
+    protected function canReplayTo(Request $request, mixed $channelId): bool
+    {
+        $user = $request->user();
+        if (!$user instanceof User || !is_string($channelId) || $channelId === '' || strlen($channelId) > 255 || preg_match('/\s/', $channelId)) {
+            return false;
+        }
+
+        return app(ChannelAuthorizer::class)->authorize(SocketPrincipal::forUser($user, session('company')), $channelId)->allow;
     }
 
     /**

@@ -6,7 +6,6 @@ use Fleetbase\FleetOps\Models\TrackingNumber;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Str;
-use Milon\Barcode\Facades\DNS2DFacade as DNS2D;
 
 class TrackingNumberObserver
 {
@@ -17,10 +16,9 @@ class TrackingNumberObserver
      */
     public function creating(TrackingNumber $trackingNumber)
     {
-        // generate a barcode annd qr code
+        // generate the tracking number, then the qr code and barcode printed from it
         $trackingNumber->tracking_number = $this->generateTrackingNumber($trackingNumber);
-        $trackingNumber->qr_code         = $this->generateBarcode($trackingNumber->owner_uuid, 'QRCODE');
-        $trackingNumber->barcode         = $this->generateBarcode($trackingNumber->owner_uuid, 'PDF417');
+        $trackingNumber->fill($this->generateCodeImages($trackingNumber->tracking_number, $this->ownerPublicId($trackingNumber)));
     }
 
     /**
@@ -47,9 +45,23 @@ class TrackingNumberObserver
         return TrackingNumber::generateNumber($trackingNumber->region);
     }
 
-    protected function generateBarcode(string $ownerUuid, string $type): string
+    /**
+     * @return array{qr_code: string, barcode: string}
+     */
+    protected function generateCodeImages(string $trackingNumber, ?string $ownerPublicId): array
     {
-        return DNS2D::getBarcodePNG($ownerUuid, $type);
+        return TrackingNumber::codeImages($trackingNumber, $ownerPublicId);
+    }
+
+    protected function ownerPublicId(TrackingNumber $trackingNumber): ?string
+    {
+        if (empty($trackingNumber->owner_uuid)) {
+            return null;
+        }
+
+        $publicId = data_get($trackingNumber, 'owner.public_id');
+
+        return is_string($publicId) && $publicId !== '' ? $publicId : null;
     }
 
     protected function createTrackingStatus(array $attributes): TrackingStatus

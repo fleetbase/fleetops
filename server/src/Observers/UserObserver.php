@@ -20,6 +20,7 @@ class UserObserver
 
     protected function deleteDrivers(string $userUuid): void
     {
-        Driver::where('user_uuid', $userUuid)->delete();
+        // Delete each driver through the model so DriverObserver cleans up after it
+        Driver::where('user_uuid', $userUuid)->get()->each->delete();
     }
 }

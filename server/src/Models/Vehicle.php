@@ -82,6 +82,23 @@ class Vehicle extends Model
     protected $with = [];
 
     /**
+     * Relation paths the cached vehicle lists embed or filter on (fleetbase/core-api#301).
+     *
+     * The public list loads vendor (with its place), category, warranty and
+     * driver; driver, current trailers (through asset_connections) and fleets
+     * (through fleet_vehicles) decide which vehicles the filters return.
+     * photo is left out: files is written by every upload, and a new photo is
+     * set by writing the vehicle's own photo_uuid. devices is left out too: the
+     * device filters only read which devices are attached, but telemetry saves
+     * the device row on every ping, which would keep vehicle lists from ever
+     * being served from cache. Device::attachTo() and detach() invalidate the
+     * vehicle lists instead.
+     *
+     * @var string[]
+     */
+    protected $apiCacheDependencies = ['vendor', 'vendor.place', 'category', 'warranty', 'driver', 'currentTrailers', 'fleets'];
+
+    /**
      * Get the activity log options for the model.
      */
     public function getActivitylogOptions(): LogOptions
@@ -525,7 +542,8 @@ class Vehicle extends Model
             return static::getAvatar($value);
         }
 
-        return $value;
+        // legacy rows hold an absolute URL; re-sign it if it points into the private media bucket
+        return Utils::signStoredFileUrl($value);
     }
 
     /**
@@ -628,6 +646,7 @@ class Vehicle extends Model
     public function unassignDriver(): self
     {
         Driver::where('vehicle_uuid', $this->uuid)->update(['vehicle_uuid' => null]);
+        Driver::invalidateApiCacheManually($this->company_uuid);
         $this->unsetRelation('driver');
 
         return $this;
@@ -794,7 +813,7 @@ class Vehicle extends Model
             return null;
         }
 
-        return static::where(function ($query) use ($vehicleName) {
+        return static::where('company_uuid', session('company'))->where(function ($query) use ($vehicleName) {
             $query->where('public_id', $vehicleName)
                     ->orWhere('internal_id', $vehicleName)
                     ->orWhere('plate_number', $vehicleName)

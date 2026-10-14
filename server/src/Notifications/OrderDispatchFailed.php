@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Notifications;
 use Fleetbase\FleetOps\Events\OrderDispatchFailed as OrderDispatchFailedEvent;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Support\TrackingCode;
 use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Bus\Queueable;
@@ -127,6 +128,6 @@ class OrderDispatchFailed extends Notification implements ShouldQueue
         return (new MailMessage())
             ->subject($this->title)
             ->line($this->message)
-            ->action('Track Order', Utils::consoleUrl('track-order', ['order' => $this->order->trackingNumber->tracking_number]));
+            ->action('Track Order', TrackingCode::pageUrl($this->order->trackingNumber->tracking_number, data_get($this, 'order.company_uuid')));
     }
 }

@@ -1,0 +1,109 @@
+<div class="tp-stack">
+    <span class="tp-icon-badge {{if (eq @step 'success') 'tp-icon-badge-solid'}} {{if (eq @step 'locked') 'tp-icon-badge-warn'}}" aria-hidden="true">
+        {{#if (eq @step "success")}}
+            <FaIcon @icon="check" />
+        {{else if (eq @step "locked")}}
+            <FaIcon @icon="lock" />
+        {{else if (eq @step "none")}}
+            <FaIcon @icon="phone" />
+        {{else}}
+            <FaIcon @icon="shield-halved" />
+        {{/if}}
+    </span>
+
+    {{#if (or (eq @step "choose") (eq @step "sending"))}}
+        <div class="tp-stack-xs">
+            <h1 class="tp-h1">{{t "tracking-page.page.verify-title-short"}}</h1>
+            <p class="tp-muted">{{t "tracking-page.page.verify-choose-help"}}</p>
+        </div>
+        <fieldset class="tp-stack-sm">
+            <legend class="tp-label">{{t "tracking-page.page.send-by"}}</legend>
+            {{#each @channels as |channel|}}
+                <label class="tp-option {{if (eq channel.type @selectedChannel) 'tp-option-selected'}}">
+                    <input type="radio" name="tp-channel" value={{channel.type}} checked={{eq channel.type @selectedChannel}} disabled={{eq @step "sending"}} {{on "change" (fn @onPick channel.type)}} />
+                    <span class="tp-stack-xs">
+                        <span class="tp-strong">{{t (concat "tracking-page.page.channel-" channel.type)}}</span>
+                        <span class="tp-mono tp-muted">{{channel.masked}}</span>
+                    </span>
+                </label>
+            {{/each}}
+        </fieldset>
+        {{#if (eq @message "failed")}}
+            <p class="tp-notice" role="alert">{{t "tracking-page.page.send-failed"}}</p>
+        {{/if}}
+        <button type="button" class="tp-button tp-button-primary" disabled={{eq @step "sending"}} {{on "click" @onSend}}>
+            {{#if (eq @step "sending")}}{{t "tracking-page.page.sending"}}{{else}}{{t "tracking-page.page.send-code"}}{{/if}}
+        </button>
+        <p class="tp-small tp-muted">{{t "tracking-page.page.masked-note"}}</p>
+    {{else if (eq @step "none")}}
+        <div class="tp-stack-xs">
+            <h1 class="tp-h1">{{t "tracking-page.page.no-contact-title"}}</h1>
+            <p class="tp-muted">{{t "tracking-page.page.no-contact-help" name=@company.name}}</p>
+        </div>
+        {{#if @company.support_phone}}
+            <a class="tp-button tp-button-primary" href="tel:{{@company.support_phone}}">{{t "tracking-page.page.call" phone=@company.support_phone}}</a>
+        {{/if}}
+        {{#if @company.support_email}}
+            <a class="tp-button tp-button-secondary" href="mailto:{{@company.support_email}}">{{@company.support_email}}</a>
+        {{/if}}
+    {{else if (eq @step "renew")}}
+        <div class="tp-stack-xs">
+            <h1 class="tp-h1">{{t "tracking-page.page.renew-title"}}</h1>
+            <p class="tp-notice">{{t (concat "tracking-page.page.renew-" (or @message "expired"))}}</p>
+        </div>
+        <button type="button" class="tp-button tp-button-primary" {{on "click" @onSend}}>{{t "tracking-page.page.send-new-code"}}</button>
+    {{else}}
+        <div class="tp-stack-xs">
+            <h1 class="tp-h1">
+                {{#if (eq @step "success")}}{{t "tracking-page.page.verified-title"}}{{else if (eq @step "locked")}}{{t "tracking-page.page.locked-title"}}{{else}}{{t "tracking-page.page.enter-code"}}{{/if}}
+            </h1>
+            <p class="tp-muted">{{t (concat "tracking-page.page.code-sent-" @selectedChannel) masked=@masked}}</p>
+        </div>
+        <div class="tp-otp">
+            <label for="tp-otp-input" class="tp-sr-only">{{t "tracking-page.page.code-label"}}</label>
+            <input
+                id="tp-otp-input"
+                class="tp-otp-input"
+                value={{@code}}
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                pattern="[0-9]*"
+                maxlength="6"
+                disabled={{or (eq @step "locked") (eq @step "success")}}
+                aria-invalid={{if (eq @step "wrong") "true" "false"}}
+                aria-describedby="tp-otp-message"
+                {{on "input" @onCode}}
+            />
+            <div class="tp-otp-boxes" aria-hidden="true">
+                {{#each @boxes as |box|}}
+                    <span class="tp-otp-box {{if box.active 'tp-otp-box-active'}} {{if (eq @step 'wrong') 'tp-otp-box-wrong'}} {{if (eq @step 'success') 'tp-otp-box-success'}} {{if (eq @step 'locked') 'tp-otp-box-locked'}}">{{box.digit}}</span>
+                {{/each}}
+            </div>
+        </div>
+        <div id="tp-otp-message" aria-live="assertive">
+            {{#if (eq @step "sent")}}
+                <p class="tp-small tp-muted">{{t "tracking-page.page.code-expires"}}</p>
+            {{else if (eq @step "wrong")}}
+                <p class="tp-warn-text tp-strong">{{t "tracking-page.page.code-wrong" count=@attemptsLeft}}</p>
+            {{else if (eq @step "locked")}}
+                <p class="tp-notice tp-notice-warn">{{t "tracking-page.page.code-locked" time=@lockText}}</p>
+            {{else if (eq @step "success")}}
+                <p class="tp-accent-text tp-strong">{{t "tracking-page.page.code-success"}}</p>
+            {{/if}}
+        </div>
+        {{#if (or (eq @step "sent") (eq @step "wrong"))}}
+            <div class="tp-row-wrap">
+                {{#if @cooldown}}
+                    <span class="tp-muted tp-touch">{{t "tracking-page.page.resend-in" time=@cooldownText}}</span>
+                {{else}}
+                    <button type="button" class="tp-link-button" {{on "click" @onResend}}>{{t "tracking-page.page.resend"}}</button>
+                {{/if}}
+                {{#if @otherChannel}}
+                    <button type="button" class="tp-link-button" {{on "click" @onSwitch}}>{{t (concat "tracking-page.page.switch-to-" @otherChannel.type)}}</button>
+                {{/if}}
+            </div>
+        {{/if}}
+    {{/if}}
+
+    <p class="tp-small tp-muted">{{t "tracking-page.page.stay-verified" hours=(or @sessionHours 24)}}</p>
+</div>

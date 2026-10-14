@@ -323,6 +323,7 @@ export default buildRoutes(function () {
         this.route('map');
         this.route('orchestrator');
         this.route('scheduling');
+        this.route('tracking-page');
         this.route('telematics');
         this.route('payments', function () {
             this.route('index', { path: '/' });

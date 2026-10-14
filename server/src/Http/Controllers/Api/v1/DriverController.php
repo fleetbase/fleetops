@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
+use Fleetbase\Exceptions\SmsBlockedException;
 use Fleetbase\FleetOps\Events\DriverLocationChanged;
 use Fleetbase\FleetOps\Events\GeofenceEntered;
 use Fleetbase\FleetOps\Events\GeofenceExited;
@@ -21,9 +22,11 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
+use Fleetbase\FleetOps\Support\ApiCacheThrottle;
 use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
 use Fleetbase\FleetOps\Support\OSRM;
 use Fleetbase\FleetOps\Support\ProfileAccountManager;
+use Fleetbase\FleetOps\Support\TrackingPublisher;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Http\Requests\SwitchOrganizationRequest;
@@ -42,6 +45,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response;
 
 class DriverController extends Controller
 {
@@ -53,6 +57,11 @@ class DriverController extends Controller
      * Returned when a driver whose login was deactivated from the console tries to sign in.
      */
     public const DEACTIVATED_LOGIN_MESSAGE = 'This driver login has been deactivated.';
+
+    /**
+     * Wrong guesses a single code tolerates before it locks itself (core's check()).
+     */
+    public const CODE_CHECK_ATTEMPTS = 5;
 
     /**
      * Public expansion name => Eloquent relation name.
@@ -373,7 +382,14 @@ class DriverController extends Controller
             }
         }
 
+        // Location writes are quiet and frequent: invalidate cached lists at most once a window
+        ApiCacheThrottle::invalidate($driver, $driver->company_uuid);
+        if ($vehicle) {
+            ApiCacheThrottle::invalidate($vehicle, $vehicle->company_uuid);
+        }
+
         broadcast(new DriverLocationChanged($driver));
+        app(TrackingPublisher::class)->driverMoved($driver);
 
         // ----------------------------------------------------------------
         // Geofence intersection detection
@@ -431,11 +447,13 @@ class DriverController extends Controller
 
         // Perform a single update call
         $driver->updateQuietly(['online' => $onlineValue]);
+        $driver->invalidateApiCache();
 
         // Update vehicle online too
         $driver->loadMissing('vehicle');
         if ($vehicle = $driver->vehicle) {
             $vehicle->updateQuietly(['online' => $onlineValue]);
+            $vehicle->invalidateApiCache();
         }
 
         // Return the updated resource
@@ -574,9 +592,15 @@ class DriverController extends Controller
         // Get the user's company for this driver profile
         $company = static::getDriverCompanyFromUser($user);
 
+        // A guard refusal (paused, over budget, unusable number) falls back to email like
+        // a provider failure does; with no email to fall back to, the refusal itself is the
+        // answer, with its status, not the generic error.
+        $smsFailure = null;
+
         // generate verification token
         try {
             VerificationCode::generateSmsVerificationFor($user, 'driver_login', [
+                'hashed'          => true,
                 'company_uuid'    => $company->uuid,
                 'messageCallback' => function ($verification) use ($company) {
                     return 'Your ' . data_get($company, 'name', config('app.name')) . ' verification code is ' . $verification->code;
@@ -585,6 +609,8 @@ class DriverController extends Controller
 
             return response()->json(['status' => 'OK', 'method' => 'sms']);
         } catch (\Throwable $e) {
+            $smsFailure = $e;
+
             if (app()->bound('sentry')) {
                 app('sentry')->captureException($e);
             }
@@ -608,7 +634,7 @@ class DriverController extends Controller
             }
         }
 
-        return response()->apiError('Unable to send SMS Verification code.');
+        return static::sendFailureResponse($smsFailure, 'Unable to send SMS Verification code.');
     }
 
     /**
@@ -641,8 +667,8 @@ class DriverController extends Controller
             return response()->apiError(static::DEACTIVATED_LOGIN_MESSAGE, 403);
         }
 
-        // find and verify code
-        $verificationCode = VerificationCode::where(['subject_uuid' => $user->uuid, 'code' => $code, 'for' => $for])->exists();
+        // find and verify code: the user's newest live code for this purpose, used up
+        $verificationCode = static::spendCode($user, $for, (string) $code);
         if (!$verificationCode && !static::verificationBypassMatches($identity, $code)) {
             return response()->apiError('Invalid verification code!');
         }
@@ -1336,6 +1362,8 @@ class DriverController extends Controller
 
         try {
             static::sendResetCode($user, $identity);
+        } catch (SmsBlockedException $e) {
+            return static::smsBlockedResponse($e);
         } catch (\Throwable $e) {
             return response()->apiError(static::debugEnabled() ? $e->getMessage() : 'Unable to send reset code.');
         }
@@ -1376,7 +1404,7 @@ class DriverController extends Controller
         $user->password = $password;
         $user->save();
 
-        $verification->delete();
+        // The code was used up when it verified (findResetCode); every session ends.
         $user->tokens()->delete();
 
         return response()->json(['status' => 'ok']);
@@ -1411,14 +1439,40 @@ class DriverController extends Controller
         return Hash::check($plain, $user->password);
     }
 
-    /** The unexpired reset code for this user, if the one supplied matches. */
+    /**
+     * The live reset code the supplied one verified against, used up so it cannot
+     * verify again, or null.
+     */
     protected static function findResetCode(User $user, string $code)
     {
-        return VerificationCode::where([
-            'subject_uuid' => $user->uuid,
-            'code'         => $code,
-            'for'          => 'driver_password_reset',
-        ])->where('expires_at', '>', now())->first();
+        return static::spendCode($user, 'driver_password_reset', $code);
+    }
+
+    /**
+     * Verify a code against the user's live codes for a purpose and use it up. Codes are
+     * checked newest first; a wrong guess counts against each until it locks (core's
+     * check()). Plaintext rows written before codes were hashed verify the same way.
+     */
+    protected static function spendCode(User $user, string $for, string $code): ?VerificationCode
+    {
+        $live = VerificationCode::query()
+            ->where('for', $for)
+            ->where('subject_uuid', $user->uuid)
+            ->where(function ($query) {
+                $query->whereNull('status')->orWhereNotIn('status', [VerificationCode::STATUS_USED, VerificationCode::STATUS_LOCKED]);
+            })
+            ->orderByDesc('created_at')
+            ->get();
+
+        foreach ($live as $verificationCode) {
+            if ($verificationCode->check($code, static::CODE_CHECK_ATTEMPTS) === VerificationCode::CHECK_VALID) {
+                $verificationCode->consume();
+
+                return $verificationCode;
+            }
+        }
+
+        return null;
     }
 
     /** Sends the reset code by whichever channel the identity names. */
@@ -1433,9 +1487,40 @@ class DriverController extends Controller
             ]);
         } else {
             VerificationCode::generateSmsVerificationFor($user, 'driver_password_reset', [
+                'hashed'          => true,
                 'messageCallback' => fn ($v) => 'Your ' . config('app.name') . ' password reset code is ' . $v->code,
             ]);
         }
+    }
+
+    /**
+     * Answer a refusal from the SMS guard with the status it carries: 422 for a number that
+     * can never be texted, 429 with Retry-After for a cooldown or budget, 423 while texting
+     * is paused. The sends here sit inside catch-alls so a provider outage becomes an email
+     * fallback or a generic error; a refusal must not be flattened into that generic error,
+     * or an app can neither explain it to the person nor back off.
+     */
+    protected static function smsBlockedResponse(SmsBlockedException $e)
+    {
+        $response = response()->apiError($e->getMessage(), $e->status());
+        if ($response instanceof Response) {
+            $response->headers->add($e->headers());
+        }
+
+        return $response;
+    }
+
+    /**
+     * The response when a code could not be sent: the guard's refusal when that is why,
+     * otherwise the flow's own generic message.
+     */
+    protected static function sendFailureResponse(?\Throwable $failure, string $message)
+    {
+        if ($failure instanceof SmsBlockedException) {
+            return static::smsBlockedResponse($failure);
+        }
+
+        return response()->apiError($message);
     }
 
     /** Resolve a driver's user account from an email address or a phone number. */

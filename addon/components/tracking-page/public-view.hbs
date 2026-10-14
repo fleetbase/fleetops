@@ -1,0 +1,60 @@
+<div class="tp-narrow tp-stack">
+    <span class="tp-chip"><FaIcon @icon="lock" /> {{t "tracking-page.page.chip-limited"}}</span>
+
+    <section class="tp-card tp-stack" aria-labelledby="tp-public-status">
+        {{#if @data.stage}}
+            <div class="tp-stack-xs">
+                <div class="tp-eyebrow">{{t "tracking-page.page.status"}}</div>
+                <h1 id="tp-public-status" class="tp-h1">{{t (concat "tracking-page.page.stage-" @data.stage)}}</h1>
+                {{#if @data.last_update_on}}
+                    <div class="tp-muted">{{t "tracking-page.page.last-update" date=@data.last_update_on}}</div>
+                {{/if}}
+            </div>
+            <div class="tp-coarse" aria-hidden="true">
+                <span class="tp-coarse-bar tp-coarse-done"></span>
+                <span class="tp-coarse-bar {{if (or (eq @data.stage 'in_transit') (eq @data.stage 'dispatched') (eq @data.stage 'delivered')) 'tp-coarse-done'}}"></span>
+                <span class="tp-coarse-bar {{if (eq @data.stage 'delivered') 'tp-coarse-done'}}"></span>
+            </div>
+        {{else}}
+            <h1 id="tp-public-status" class="tp-h1">{{t "tracking-page.page.verify-to-see"}}</h1>
+        {{/if}}
+        <div class="tp-row-between tp-top-border">
+            <div class="tp-stack-xs">
+                <span class="tp-small tp-muted">{{t "tracking-page.page.tracking-number"}}</span>
+                <span class="tp-mono tp-strong">{{@data.tracking_number}}</span>
+            </div>
+            <ClickToCopy class="tp-button tp-button-small" @value={{@data.tracking_number}}>{{t "tracking-page.page.copy"}}</ClickToCopy>
+        </div>
+    </section>
+
+    <section class="tp-card tp-card-accent tp-stack" aria-labelledby="tp-verify-title">
+        <span class="tp-icon-badge" aria-hidden="true"><FaIcon @icon="shield-halved" /></span>
+        <div class="tp-stack-xs">
+            <h2 id="tp-verify-title" class="tp-h2">{{t "tracking-page.page.verify-title"}}</h2>
+            <p class="tp-muted">{{t "tracking-page.page.verify-help"}}</p>
+        </div>
+        <div class="tp-row-wrap">
+            <button type="button" class="tp-button tp-button-primary tp-grow" {{on "click" @onVerify}}>{{t "tracking-page.page.verify-button"}}</button>
+            {{#if @data.sign_in}}
+                <a class="tp-button tp-button-secondary tp-grow" href={{@signInUrl}}>{{t "tracking-page.page.sign-in-account"}}</a>
+            {{/if}}
+        </div>
+    </section>
+
+    <div class="tp-locked-grid">
+        {{#each (array "map" "arrival" "details") as |section|}}
+            <div class="tp-locked">
+                <div class="tp-locked-blur" aria-hidden="true">
+                    <div class="tp-skeleton tp-skeleton-title"></div>
+                    <div class="tp-skeleton tp-skeleton-line"></div>
+                    <div class="tp-skeleton tp-skeleton-line"></div>
+                </div>
+                <div class="tp-locked-overlay">
+                    <FaIcon @icon="lock" />
+                    <span class="tp-strong">{{t (concat "tracking-page.page.locked-" section)}}</span>
+                    <button type="button" class="tp-chip tp-chip-button" {{on "click" @onVerify}}>{{t "tracking-page.page.verify-unlock"}}</button>
+                </div>
+            </div>
+        {{/each}}
+    </div>
+</div>

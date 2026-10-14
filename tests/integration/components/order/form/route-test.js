@@ -104,4 +104,51 @@ module('Integration | Component | order/form/route', function (hooks) {
             'requests refresh for the current order'
         );
     });
+    test('editing a place saves it without refreshing the route', async function (assert) {
+        const edits = [];
+        const requests = [];
+
+        class PlaceActionsStub extends Service {
+            modal = {
+                edit: (place, options, saveOptions) => edits.push({ place, options, saveOptions }),
+            };
+        }
+
+        class OrderCreationStub extends Service {
+            requestServiceQuoteRefresh(reason) {
+                requests.push(reason);
+            }
+        }
+
+        this.owner.register('service:place-actions', PlaceActionsStub);
+        this.owner.register('service:order-creation', OrderCreationStub);
+        const pickup = { id: 'place_pickup', address: '1 Pickup Street' };
+        this.set('resource', {
+            customer: null,
+            driver_assigned: null,
+            id: 'test-order',
+            facilitator: {
+                isIntegratedVendor: false,
+            },
+            payload: {
+                pickup,
+                dropoff: null,
+                return: null,
+                waypoints: A([]),
+            },
+        });
+
+        await render(hbs`<Order::Form::Route @resource={{this.resource}} />`);
+        await click('[data-test-edit-place="pickup"]');
+
+        assert.strictEqual(edits.length, 1);
+        assert.strictEqual(edits[0].place, pickup);
+        // A refresh would re-enter the new order route and wipe the draft (fleetbase/fleetbase#651).
+        assert.false(edits[0].saveOptions.refresh);
+
+        edits[0].saveOptions.callback(pickup);
+        await settled();
+
+        assert.true(requests.includes('route.place.updated'), 'requests a new quote for the saved place');
+    });
 });

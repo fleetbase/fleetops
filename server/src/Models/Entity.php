@@ -9,6 +9,7 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
 use Fleetbase\FleetOps\Traits\PayloadAccessors;
 use Fleetbase\Models\Model;
+use Fleetbase\Support\ApiModelCache;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasInternalId;
@@ -437,6 +438,7 @@ class Entity extends Model
             Entity::where('uuid', $values['uuid'])->update([
                 'payload_uuid' => $payload->uuid,
             ]);
+            ApiModelCache::invalidateModelCache(new static(), $payload->company_uuid ?? session('company'));
 
             return $values['uuid'];
         }
@@ -471,14 +473,20 @@ class Entity extends Model
         if ($result && $payload) {
             // create tracking number for entity
             $trackingNumberId = TrackingNumber::insertGetUuid([
-                'owner_uuid' => $uuid,
-                'owner_type' => Utils::getModelClassName('entity'),
-                'region'     => $payload->getPickupRegion(),
-                'location'   => Utils::parsePointToWkt($payload->getPickupLocation()),
+                'owner_uuid'      => $uuid,
+                'owner_type'      => Utils::getModelClassName('entity'),
+                'owner_public_id' => $values['public_id'],
+                'region'          => $payload->getPickupRegion(),
+                'location'        => Utils::parsePointToWkt($payload->getPickupLocation()),
             ]);
 
             // set tracking number
             static::where('uuid', $uuid)->update(['tracking_number_uuid' => $trackingNumberId]);
+        }
+
+        // Inserted and updated without model events
+        if ($result) {
+            ApiModelCache::invalidateModelCache($instance, $values['company_uuid']);
         }
 
         return $result ? $uuid : false;

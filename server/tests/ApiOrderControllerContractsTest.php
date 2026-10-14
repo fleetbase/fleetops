@@ -1,5 +1,6 @@
 <?php
 
+use Fleetbase\FleetOps\Exceptions\OrderEditLockedException;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\OrderController;
 use Fleetbase\FleetOps\Http\Requests\CreateOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\ScheduleOrderRequest;
@@ -12,6 +13,8 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Support\OrderEdit;
+use Fleetbase\FleetOps\Support\OrderEditPolicy;
 use Fleetbase\FleetOps\Support\OrderTracker;
 use Fleetbase\Models\File;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -41,6 +44,8 @@ class FleetOpsApiOrderCrudControllerProbe extends OrderController
     public bool $missingOrderConfig              = false;
     public mixed $resolvedSubject                = null;
     public ?string $companyUuid                  = 'company-uuid';
+    public ?FleetOpsApiOrderEditFake $edit       = null;
+    public array $editLockedWith                 = [];
 
     protected function findOrder(string $id, array $with = [], array $withCount = []): Order
     {
@@ -52,6 +57,26 @@ class FleetOpsApiOrderCrudControllerProbe extends OrderController
         $this->order->lookups[] = [$id, $with, $withCount];
 
         return $this->order;
+    }
+
+    public ?FleetOpsApiOrderPayloadFake $switchedPayload = null;
+
+    protected function findPayloadByUuid(?string $uuid): ?Payload
+    {
+        return $this->switchedPayload;
+    }
+
+    protected function beginOrderEdit(Order $order): OrderEdit
+    {
+        $this->edit ??= new FleetOpsApiOrderEditFake($order);
+        $this->edit->lockWith = $this->editLockedWith;
+
+        return $this->edit;
+    }
+
+    protected function lockedEditResponse(OrderEditLockedException $exception)
+    {
+        return ['apiError' => $exception->getMessage(), 'status' => 422, 'locked' => $exception->locked];
     }
 
     protected function drivingDistanceAndTime(mixed $origin, mixed $destination): mixed
@@ -244,6 +269,43 @@ class FleetOpsApiOrderCrudControllerProbe extends OrderController
     }
 }
 
+/**
+ * Records the edit guard and commit instead of reading and announcing through the database.
+ */
+class FleetOpsApiOrderEditFake extends OrderEdit
+{
+    public array $guarded  = [];
+    public array $lockWith = [];
+    public int $commits    = 0;
+
+    public function __construct(public Order $order)
+    {
+        $this->policy = OrderEditPolicy::for($order);
+    }
+
+    public function requestedChanges(array $input, string $entitiesMode = self::ENTITIES_APPEND): array
+    {
+        return ['input' => $input, 'entities_mode' => $entitiesMode];
+    }
+
+    public function guard(array $changes): static
+    {
+        $this->guarded[] = $changes;
+        if ($this->lockWith) {
+            throw new OrderEditLockedException($this->lockWith);
+        }
+
+        return $this;
+    }
+
+    public function commit(array $extra = [], bool $notifyDriver = true): array
+    {
+        $this->commits++;
+
+        return [];
+    }
+}
+
 class FleetOpsApiOrderCrudFake extends Order
 {
     public array $lookups                  = [];
@@ -383,6 +445,16 @@ class FleetOpsApiOrderCrudFake extends Order
         return $this;
     }
 
+    public ?string $cancelReasonForTest = null;
+
+    public function cancelWithReason(?string $reason = null)
+    {
+        $this->cancelledForTest    = true;
+        $this->cancelReasonForTest = $reason;
+
+        return $this;
+    }
+
     public function tracker(): OrderTracker
     {
         return $this->trackerFake;
@@ -445,6 +517,13 @@ class FleetOpsApiOrderPayloadFake extends Payload
         $this->calls[] = ['entities', $entities];
 
         return $this;
+    }
+
+    public function syncEntities($entities = []): array
+    {
+        $this->calls[] = ['sync-entities', $entities];
+
+        return ['created' => [], 'updated' => [], 'deleted' => []];
     }
 
     public function setCurrentWaypoint(Place|Waypoint $destination, bool $save = true): Payload
@@ -753,6 +832,25 @@ test('api order controller updates by payload id and clears route waypoints', fu
         ->and($payload->removedWaypoints)->toBeTrue();
 });
 
+test('api order controller moves the cash to collect onto the payload it switches to by id', function () {
+    $order          = new FleetOpsApiOrderCrudFake();
+    $order->payload = new FleetOpsApiOrderPayloadFake();
+    $switched       = new FleetOpsApiOrderPayloadFake();
+
+    $controller                  = new FleetOpsApiOrderCrudControllerProbe();
+    $controller->order           = $order;
+    $controller->switchedPayload = $switched;
+
+    $controller->update('order-public', new FleetOpsApiOrderUpdateRequestFake([
+        'payload'    => 'payload_public',
+        'cod_amount' => '1800',
+    ]));
+
+    expect($order->updates[0])->toMatchArray(['payload_uuid' => 'payloads-uuid'])
+        ->and($switched->getAttributes()['cod_amount'])->toBe(1800)
+        ->and($switched->savedForTest)->toBeTrue();
+});
+
 test('api order controller finds deletes and updates distance matrices without database records', function () {
     $order              = new FleetOpsApiOrderCrudFake();
     $controller         = new FleetOpsApiOrderCrudControllerProbe();
@@ -1027,4 +1125,151 @@ test('api order controller captures QR proof payloads and validates error branch
         'apiError' => 'Unable to validate QR code data.',
         'status'   => 400,
     ]);
+});
+
+test('api order controller captures QR proof from tracking url codes and barcodes', function () {
+    session(['company' => 'company-uuid']);
+
+    $subject = (object) [
+        'uuid'           => 'subject-uuid',
+        'public_id'      => 'waypoint_subject',
+        'trackingNumber' => (object) ['tracking_number' => 'ACM1234567890SG'],
+    ];
+
+    // The url printed by current labels, from any host, and the Code 128 barcode.
+    foreach ([
+        'https://console.fleetbase.test/track-order?order=ACM1234567890SG&r=waypoint_subject&v=1',
+        'https://old-host.example/track-order?order=ACM1234567890SG&r=waypoint_subject&v=1',
+        'ACM1234567890SG',
+    ] as $code) {
+        $controller                  = new FleetOpsApiOrderCrudControllerProbe();
+        $controller->order           = new FleetOpsApiOrderCrudFake();
+        $controller->resolvedSubject = $subject;
+
+        expect($controller->captureQrScan(new Request(['code' => $code]), 'order-public', 'waypoint_subject')['resource'])->toBe('proof')
+            ->and($controller->createdProofs[0]['subject_uuid'])->toBe('subject-uuid');
+    }
+
+    // A scanner's whole result object, rather than its value, is refused as before
+    // instead of failing the request.
+    $controller                  = new FleetOpsApiOrderCrudControllerProbe();
+    $controller->order           = new FleetOpsApiOrderCrudFake();
+    $controller->resolvedSubject = $subject;
+
+    expect($controller->captureQrScan(new Request(['code' => ['type' => 'qr', 'value' => 'ACM1234567890SG']]), 'order-public', 'waypoint_subject'))->toBe([
+        'apiError' => 'Unable to validate QR code data.',
+        'status'   => 400,
+    ]);
+
+    // Another parcel's label is refused, whether it names another owner or, naming none,
+    // another tracking number.
+    foreach ([
+        'https://console.fleetbase.test/track-order?order=ACM1234567890SG&r=waypoint_other&v=1',
+        'https://console.fleetbase.test/track-order?order=ACM0000000000SG&v=1',
+    ] as $code) {
+        $controller                  = new FleetOpsApiOrderCrudControllerProbe();
+        $controller->order           = new FleetOpsApiOrderCrudFake();
+        $controller->resolvedSubject = $subject;
+
+        expect($controller->captureQrScan(new Request(['code' => $code]), 'order-public', 'waypoint_subject'))->toBe([
+            'apiError' => 'Unable to validate QR code data.',
+            'status'   => 400,
+        ])->and($controller->createdProofs)->toBe([]);
+    }
+});
+
+test('api order controller refuses order edits the status locks with a 422 and writes nothing', function () {
+    $order          = new FleetOpsApiOrderCrudFake(['status' => 'completed']);
+    $payload        = new FleetOpsApiOrderPayloadFake();
+    $order->payload = $payload;
+
+    $controller                 = new FleetOpsApiOrderCrudControllerProbe();
+    $controller->order          = $order;
+    $controller->editLockedWith = ['dropoff' => 'The order is completed and can no longer be changed.'];
+
+    $response = $controller->update('order-public', new FleetOpsApiOrderUpdateRequestFake([
+        'payload' => ['dropoff' => ['name' => 'Somewhere else']],
+    ]));
+
+    expect($response)->toBe([
+        'apiError' => 'The order is completed and can no longer be changed.',
+        'status'   => 422,
+        'locked'   => ['dropoff' => 'The order is completed and can no longer be changed.'],
+    ])
+        ->and($payload->calls)->toBe([])
+        ->and($payload->savedForTest)->toBeFalse()
+        ->and($order->updates)->toBe([])
+        ->and($controller->edit->commits)->toBe(0);
+});
+
+test('api order controller passes the edit to the guard, keeps cod 0, replaces entities and commits once', function () {
+    $order          = new FleetOpsApiOrderCrudFake(['status' => 'dispatched']);
+    $payload        = new FleetOpsApiOrderPayloadFake();
+    $order->payload = $payload;
+
+    $controller        = new FleetOpsApiOrderCrudControllerProbe();
+    $controller->order = $order;
+
+    $controller->update('order-public', new FleetOpsApiOrderUpdateRequestFake([
+        'payload' => [
+            'dropoff'       => ['name' => 'New drop'],
+            'entities'      => [['id' => 'entity_keep', 'name' => 'Latte']],
+            'entities_mode' => 'replace',
+            'cod_amount'    => 0,
+        ],
+        'notes'   => 'Leave at the door',
+    ]));
+
+    expect($controller->edit->guarded)->toBe([[
+        'input' => [
+            'dropoff'    => ['name' => 'New drop'],
+            'entities'   => [['id' => 'entity_keep', 'name' => 'Latte']],
+            'notes'      => 'Leave at the door',
+            'cod_amount' => 0,
+        ],
+        'entities_mode' => 'replace',
+    ]])
+        ->and($payload->calls)->toContain(['sync-entities', [['id' => 'entity_keep', 'name' => 'Latte']]])
+        ->and(collect($payload->calls)->where(0, 'entities')->all())->toBe([])
+        ->and($payload->getAttributes()['cod_amount'])->toBe(0)
+        ->and(collect($payload->calls)->where(0, 'current')->all())->toBe([])
+        ->and($controller->edit->commits)->toBe(1);
+});
+
+test('api order controller reads a top-level cod amount and appends entities by default', function () {
+    $order          = new FleetOpsApiOrderCrudFake();
+    $payload        = new FleetOpsApiOrderPayloadFake();
+    $order->payload = $payload;
+
+    $controller        = new FleetOpsApiOrderCrudControllerProbe();
+    $controller->order = $order;
+
+    $controller->update('order-public', new FleetOpsApiOrderUpdateRequestFake([
+        'entities'   => [['name' => 'Crate']],
+        'cod_amount' => '2500',
+    ]));
+
+    expect($payload->calls)->toContain(['entities', [['name' => 'Crate']]])
+        ->and($payload->getAttributes()['cod_amount'])->toBe(2500)
+        ->and($controller->edit->guarded[0]['input'])->toMatchArray(['cod_amount' => '2500'])
+        ->and($controller->edit->guarded[0]['entities_mode'])->toBe('append');
+});
+
+test('api order controller cancels with a reason when one is given', function () {
+    $order             = new FleetOpsApiOrderCrudFake();
+    $controller        = new FleetOpsApiOrderCrudControllerProbe();
+    $controller->order = $order;
+
+    $controller->cancelOrder('order-public', new Request(['reason' => '  Customer moved away  ']));
+
+    expect($order->cancelledForTest)->toBeTrue()
+        ->and($order->cancelReasonForTest)->toBe('Customer moved away');
+
+    $plain             = new FleetOpsApiOrderCrudFake();
+    $controller        = new FleetOpsApiOrderCrudControllerProbe();
+    $controller->order = $plain;
+    $controller->cancelOrder('order-public', new Request());
+
+    expect($plain->cancelledForTest)->toBeTrue()
+        ->and($plain->cancelReasonForTest)->toBeNull();
 });

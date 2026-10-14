@@ -1220,8 +1220,8 @@ class Utils extends FleetbaseUtils
     {
         $latitude  = deg2rad($latitude);
         $longitude = deg2rad($longitude);
-        // convert meters to km
-        $radius = ($meters * 1000) / 6378137;
+        // angular radius: metres over the earth's equatorial radius in metres
+        $radius = $meters / 6378137;
         // create circle coordinates
         $coords = collect();
         // loop through the array and write path linestrings — stop short of 360
@@ -1231,7 +1231,8 @@ class Utils extends FleetbaseUtils
             $radial   = deg2rad($i);
             $lat_rad  = asin(sin($latitude) * cos($radius) + cos($latitude) * sin($radius) * cos($radial));
             $dlon_rad = atan2(sin($radial) * sin($radius) * cos($latitude), cos($radius) - sin($latitude) * sin($lat_rad));
-            $lon_rad  = fmod($longitude + $dlon_rad + M_PI, 2 * M_PI) - M_PI;
+            // shift by 3π, not π: fmod keeps the dividend's sign, so a negative sum would not wrap
+            $lon_rad  = fmod($longitude + $dlon_rad + 3 * M_PI, 2 * M_PI) - M_PI;
             $coords->push([rad2deg($lat_rad), rad2deg($lon_rad)]);
         }
 
@@ -1602,5 +1603,16 @@ class Utils extends FleetbaseUtils
         }
 
         return $phone;
+    }
+
+    /**
+     * Re-sign a URL stored as a string (e.g. a legacy `avatar_url` value) when it points into the
+     * private S3 media bucket, so it keeps working once the bucket stops allowing public reads.
+     * Other values pass through unchanged. Falls back to the raw value on core-api releases that
+     * predate File::signStoredUrl().
+     */
+    public static function signStoredFileUrl(?string $url): ?string
+    {
+        return method_exists(\Fleetbase\Models\File::class, 'signStoredUrl') ? \Fleetbase\Models\File::signStoredUrl($url) : $url;
     }
 }

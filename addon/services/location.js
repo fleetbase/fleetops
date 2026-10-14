@@ -4,7 +4,7 @@ import { isBlank } from '@ember/utils';
 import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
 import { debug } from '@ember/debug';
-import getWithDefault from '@fleetbase/ember-core/utils/get-with-default';
+import { isLatitude, isLongitude, isZoom } from '../utils/map-default-view';
 
 /**
  * Service for managing and retrieving user location data.
@@ -47,16 +47,29 @@ export default class LocationService extends Service {
     @service fetch;
 
     /**
+     * Company map settings, which carry the default map view.
+     * @type {MapSettingsService}
+     */
+    @service mapSettings;
+
+    /**
      * Current latitude of the user.
      * @type {number}
      */
-    @tracked latitude = this.DEFAULT_LATITUDE;
+    @tracked latitude = LocationService.DEFAULT_LATITUDE;
 
     /**
      * Current longitude of the user.
      * @type {number}
      */
-    @tracked longitude = this.DEFAULT_LONGITUDE;
+    @tracked longitude = LocationService.DEFAULT_LONGITUDE;
+
+    /**
+     * Zoom suggested by the source of the location (a company default view or
+     * a country centre), or null to let the map use its own default.
+     * @type {number|null}
+     */
+    @tracked zoom = null;
 
     /**
      * Flag indicating whether the user's location has been located.
@@ -73,7 +86,7 @@ export default class LocationService extends Service {
         if (typeof this.latitude === 'number' && !isNaN(this.latitude) && this.latitude >= -90 && this.latitude <= 90) {
             return this.latitude;
         }
-        return this.constructor.DEFAULT_LATITUDE;
+        return LocationService.DEFAULT_LATITUDE;
     }
 
     /**
@@ -85,14 +98,23 @@ export default class LocationService extends Service {
         if (typeof this.longitude === 'number' && !isNaN(this.longitude) && this.longitude >= -180 && this.longitude <= 180) {
             return this.longitude;
         }
-        return this.constructor.DEFAULT_LONGITUDE;
+        return LocationService.DEFAULT_LONGITUDE;
     }
 
     /**
-     * Attempts to fetch the user's location from various sources including cached data,
-     * navigator geolocation, or WHOIS data. It first tries to get the cached coordinates.
-     * If not available or outdated, it tries the browser's geolocation API.
-     * As a fallback, it uses WHOIS data associated with the user's account.
+     * Retrieves the zoom suggested by the current location source, or null.
+     * @returns {number|null}
+     */
+    getZoom() {
+        return isZoom(this.zoom) ? this.zoom : null;
+    }
+
+    /**
+     * Resolves where maps should open. A company-configured default centre
+     * (Settings > Map) wins outright. Otherwise it tries the active order
+     * destinations, then the browser's geolocation API, then the IP lookup,
+     * then the centre of the company's country, then the hardcoded default.
+     * See utils/map-default-view for the full precedence.
      *
      * @returns {Promise<Object>} A promise that resolves to an object containing latitude and longitude.
      */
@@ -100,6 +122,14 @@ export default class LocationService extends Service {
         // If the location has already been located, return the existing coordinates
         if (this.located) {
             return { latitude: this.latitude, longitude: this.longitude };
+        }
+
+        // The company's chosen starting point beats any guess about the user.
+        await this.mapSettings.load();
+        const defaultCenter = this.mapSettings.defaultMapCenter;
+        if (defaultCenter) {
+            this.updateLocation(defaultCenter);
+            return { latitude: defaultCenter.latitude, longitude: defaultCenter.longitude };
         }
 
         try {
@@ -185,32 +215,50 @@ export default class LocationService extends Service {
     }
 
     /**
+     * Discards the resolved location and resolves it again, e.g. after the
+     * company's default map view changed. Listeners of `user.located` (the
+     * live map) move to the new location.
+     *
+     * @returns {Promise<Object>} The newly resolved coordinates.
+     */
+    async relocate() {
+        this.located = false;
+        return this.getUserLocation();
+    }
+
+    /**
      * Retrieves the user's location based on WHOIS data associated with their account.
-     * Defaults to predefined coordinates if WHOIS data is not available.
+     * When the IP lookup failed it falls back to the centre of the company's
+     * country, and only then to the predefined coordinates.
      *
      * @returns {Object} An object containing latitude and longitude from WHOIS data or default values.
      */
     getUserLocationFromWhois() {
-        const whois = this.currentUser.getOption('whois', {});
-        const coordinates = {
-            latitude: getWithDefault(whois, 'latitude', this.DEFAULT_LATITUDE),
-            longitude: getWithDefault(whois, 'longitude', this.DEFAULT_LONGITUDE),
-        };
+        const whois = this.currentUser.getOption('whois', {}) ?? {};
+        const latitude = Number(whois.latitude);
+        const longitude = Number(whois.longitude);
+        // The IP lookup's fallback reports null coordinates, which Number() turns into Null Island.
+        const hasWhoisCoordinates = whois.latitude != null && whois.longitude != null && isLatitude(latitude) && isLongitude(longitude);
 
-        this.updateLocation(coordinates);
-        return coordinates;
+        const location = hasWhoisCoordinates
+            ? { latitude, longitude }
+            : (this.mapSettings.companyCountryCenter ?? { latitude: LocationService.DEFAULT_LATITUDE, longitude: LocationService.DEFAULT_LONGITUDE });
+
+        this.updateLocation(location);
+        return { latitude: location.latitude, longitude: location.longitude };
     }
 
     /**
      * Updates the service's tracked properties with the new location data.
      * Triggers an event to notify other parts of the application that the user's location has been updated.
      *
-     * @param {Object} coordinates - An object containing the latitude and longitude to be set.
+     * @param {Object} coordinates - An object containing the latitude and longitude to be set, and optionally a suggested zoom.
      */
-    updateLocation({ latitude, longitude }) {
+    updateLocation({ latitude, longitude, zoom = null }) {
         this.latitude = latitude;
         this.longitude = longitude;
+        this.zoom = isZoom(zoom) ? zoom : null;
         this.located = true;
-        this.universe.trigger('user.located', { latitude, longitude });
+        this.universe.trigger('user.located', { latitude, longitude, zoom: this.zoom });
     }
 }

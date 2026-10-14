@@ -205,10 +205,12 @@ test('assign driver covers instance string and invalid identifier branches', fun
     expect($assigned->assignDriver($driver))->toBe($assigned)
         ->and($assigned->notified)->toBe([]);
 
-    // Driver instance assignment notifies and saves
+    // Driver instance assignment saves; the order observer sends the assignment
+    // notification after the save, so assignDriver does not send it as well
     $order->assignDriver($driver);
     expect($order->driver_assigned_uuid)->toBe('driver-1')
-        ->and($order->notified)->toBe(['driver-assigned'])
+        ->and($order->notified)->toBe([])
+        ->and($order->silentDriverAssignment)->toBeFalse()
         ->and($connection->table('orders')->value('driver_assigned_uuid'))->toBe('driver-1');
 
     // Public id resolution recurses into instance assignment

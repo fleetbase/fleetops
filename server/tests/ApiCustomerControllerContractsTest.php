@@ -1,5 +1,6 @@
 <?php
 
+use Fleetbase\Exceptions\SmsBlockedException;
 use Fleetbase\FleetOps\Exceptions\UserAlreadyExistsException;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\CustomerController;
 use Fleetbase\FleetOps\Http\Requests\CreateCustomerOrderRequest;
@@ -14,6 +15,7 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\Models\User;
+use Fleetbase\Support\Sms\PhoneValidator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 
@@ -56,6 +58,7 @@ class FleetOpsApiCustomerControllerProbe extends CustomerController
     public mixed $placesResult                                        = null;
     public bool $emailVerificationFails                               = false;
     public bool $smsVerificationFails                                 = false;
+    public ?Throwable $smsVerificationThrows                          = null;
     public bool $verificationExists                                   = true;
     public bool $passwordMatches                                      = true;
     public bool $findOrderFails                                       = false;
@@ -164,6 +167,9 @@ class FleetOpsApiCustomerControllerProbe extends CustomerController
 
     protected function generateSmsVerification(User $user, string $for, array $options): mixed
     {
+        if ($this->smsVerificationThrows) {
+            throw $this->smsVerificationThrows;
+        }
         if ($this->smsVerificationFails) {
             throw new RuntimeException('sms failed');
         }
@@ -692,12 +698,9 @@ test('api customer controller sends creation verification codes and updates stub
     ]));
 
     expect($created)->toBe(['status' => 'ok'])
-        ->and($controller->createdUsers[0])->toMatchArray([
-            'company_uuid' => 'company-uuid',
-            'name'         => 'Jane',
-            'email'        => 'jane@example.test',
-            'phone'        => '+15551234567',
-        ])
+        // Nothing is persisted for an unverified identity: the code's subject is an unsaved user.
+        ->and($controller->createdUsers)->toBe([])
+        ->and($controller->emailVerifications[0][0])->toBeNull()
         ->and($controller->emailVerifications[0][1])->toBe('fleetops_create_customer')
         ->and($updated)->toBe(['status' => 'ok'])
         ->and($stub->name)->toBe('Stub Name')
@@ -844,7 +847,6 @@ test('api customer controller resets forgotten passwords', function () {
         ->and(fleetopsApiCustomerJson($reset))->toBe(['status' => 'ok'])
         ->and($controller->genericUser->savedForTest)->toBeTrue()
         ->and($controller->genericUser->tokensDeleted)->toBeTrue()
-        ->and($controller->verificationCode->deleted)->toBeTrue()
         ->and(fleetopsApiCustomerJson($unknown->forgotPassword(Request::create('/v1/customers/forgot-password', 'POST', [
             'identity' => 'missing@example.test',
         ]))))->toBe(['status' => 'ok'])
@@ -980,6 +982,51 @@ test('api customer controller handles verification delivery fallbacks and profil
         ->and(fleetopsApiCustomerJson($updateFailure->updateMe(new UpdateContactRequest([
             'name' => 'explode',
         ]))))->toBe(['error' => 'update failed']);
+});
+
+test('api customer controller answers an sms guard refusal with its status, not the generic error', function () {
+    // A paused organization: the sign-up code request answers 423 with the wait.
+    $paused                        = fleetopsApiCustomerController();
+    $paused->activeUser            = null;
+    $paused->smsVerificationThrows = SmsBlockedException::paused('company:company-uuid', 120);
+    $creation                      = $paused->requestCreationCode(new VerifyCreateCustomerRequest([
+        'mode'     => 'sms',
+        'identity' => '15550000000',
+    ]));
+
+    // Over budget with no email on file: the 429 and its Retry-After reach the app.
+    $limited                        = fleetopsApiCustomerController();
+    $limited->activeUser->email     = null;
+    $limited->smsVerificationThrows = SmsBlockedException::limited('company_per_hour', 45);
+    $login                          = $limited->loginWithPhone(Request::create('/v1/customers/login/phone', 'POST', [
+        'phone' => '15551234567',
+    ]));
+
+    // Over budget with an email on file: the code still goes by email.
+    $fallback                        = fleetopsApiCustomerController();
+    $fallback->smsVerificationThrows = SmsBlockedException::limited('company_per_hour', 45);
+    $fallback->activeUser->email     = 'jane@example.test';
+    $byEmail                         = $fallback->loginWithPhone(Request::create('/v1/customers/login/phone', 'POST', [
+        'phone' => '15551234567',
+    ]));
+
+    // A number that can never be texted: the reset request answers 422.
+    $invalid                        = fleetopsApiCustomerController();
+    $invalid->smsVerificationThrows = SmsBlockedException::invalidDestination(PhoneValidator::REASON_TYPE_NOT_ALLOWED);
+    $forgot                         = $invalid->forgotPassword(Request::create('/v1/customers/forgot-password', 'POST', [
+        'identity' => '15551234567',
+    ]));
+
+    expect($creation->getStatusCode())->toBe(423)
+        ->and($creation->headers->get('Retry-After'))->toBe('120')
+        ->and(fleetopsApiCustomerJson($creation))->toBe(['error' => 'Text messages are temporarily unavailable. Try again later.'])
+        ->and($login->getStatusCode())->toBe(429)
+        ->and($login->headers->get('Retry-After'))->toBe('45')
+        ->and(fleetopsApiCustomerJson($login))->toBe(['error' => 'Unable to send a verification code right now. Try again in a minute.'])
+        ->and(fleetopsApiCustomerJson($byEmail))->toBe(['status' => 'ok', 'method' => 'email'])
+        ->and($fallback->emailVerifications[0][1])->toBe('fleetops_customer_login')
+        ->and($forgot->getStatusCode())->toBe(422)
+        ->and(fleetopsApiCustomerJson($forgot))->toBe(['error' => 'The phone number provided cannot receive text messages.']);
 });
 
 /**

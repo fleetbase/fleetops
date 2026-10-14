@@ -11,7 +11,9 @@ use Fleetbase\Models\Company;
 use Fleetbase\Models\CompanyUser;
 use Fleetbase\Models\User;
 use Fleetbase\Services\SmsService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -174,7 +176,15 @@ class ProfileAccountManager
         $user->save();
         $user->setType($type);
 
-        static::attachToCompany($user, $companyUuid, $type);
+        try {
+            static::attachToCompany($user, $companyUuid, $type);
+        } catch (\Throwable $e) {
+            // Leave no account behind for a profile that was never created
+            static::removeSandboxCopy($user);
+            $user->forceDelete();
+
+            throw $e;
+        }
 
         return $user;
     }
@@ -355,6 +365,8 @@ class ProfileAccountManager
             return null;
         }
 
+        static::copyAccountToSandbox($user, $companyUuid);
+
         $role        = static::ROLES[$type] ?? static::ROLES['contact'];
         $companyUser = CompanyUser::where(['company_uuid' => $companyUuid, 'user_uuid' => $user->uuid])->first();
         if (!$companyUser) {
@@ -370,6 +382,47 @@ class ProfileAccountManager
         $user->setRelation('companyUser', $companyUser);
 
         return $companyUser;
+    }
+
+    /**
+     * Copy the account and its organization into the sandbox database for a
+     * test-key request. Users and companies always live in the live database,
+     * but memberships follow the request into the sandbox, whose foreign keys
+     * need both rows there too.
+     */
+    public static function copyAccountToSandbox(User $user, ?string $companyUuid = null): void
+    {
+        if (!session('is_sandbox')) {
+            return;
+        }
+
+        $live    = DB::connection($user->getConnectionName());
+        $sandbox = DB::connection('sandbox');
+        $account = (array) $live->table($user->getTable())->where('uuid', $user->uuid)->first();
+        $company = $companyUuid ? (array) $live->table('companies')->where('uuid', $companyUuid)->first() : [];
+
+        Schema::connection('sandbox')->disableForeignKeyConstraints();
+
+        try {
+            if ($company) {
+                $sandbox->table('companies')->updateOrInsert(['uuid' => $company['uuid']], array_diff_key($company, ['id' => true]));
+            }
+
+            $account['company_uuid'] = ($account['company_uuid'] ?? null) ?: $companyUuid;
+            $sandbox->table($user->getTable())->updateOrInsert(['uuid' => $user->uuid], array_diff_key($account, ['id' => true]));
+        } finally {
+            Schema::connection('sandbox')->enableForeignKeyConstraints();
+        }
+    }
+
+    /**
+     * Remove the sandbox copy of an account that is being discarded.
+     */
+    public static function removeSandboxCopy(User $user): void
+    {
+        if (session('is_sandbox')) {
+            DB::connection('sandbox')->table($user->getTable())->where('uuid', $user->uuid)->delete();
+        }
     }
 
     public static function normalizeEmail(?string $email): ?string

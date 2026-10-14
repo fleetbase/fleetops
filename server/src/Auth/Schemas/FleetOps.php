@@ -230,6 +230,11 @@ class FleetOps
             'remove_actions' => ['delete', 'export', 'create'],
         ],
         [
+            'name'           => 'tracking-page-settings', // the customer tracking page: branding, access and what verified visitors see
+            'actions'        => [],
+            'remove_actions' => ['delete', 'export', 'create'],
+        ],
+        [
             'name'           => 'telematics-settings', // organization device event and position history preferences
             'action'         => [],
             'remove_actions' => ['export', 'create'],

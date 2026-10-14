@@ -222,3 +222,23 @@ test('process allocation job commits assignments and skips missing or already as
             '[ProcessAllocationJob] Committed 4 assignments, 1 unassigned for company company-assign.',
         ]);
 });
+
+test('process allocation job logs when the selected engine was replaced by the fallback', function () {
+    $fallback = new class(['assignments' => [], 'unassigned' => ['order_one'], 'summary' => []]) extends FleetOpsProcessAllocationEngineFake {
+        public function getIdentifier(): string
+        {
+            return 'greedy';
+        }
+    };
+
+    $job           = new FleetOpsProcessAllocationJobProbe('company-fallback');
+    $job->engine   = 'vroom';
+    $job->orders   = collect([fleetOpsProcessAllocationOrder('order_one')]);
+    $job->vehicles = collect([(object) ['public_id' => 'vehicle_one']]);
+
+    $job->handle(fleetOpsProcessAllocationRegistry($fallback));
+
+    expect($fallback->calls)->toHaveCount(1)
+        ->and($job->messages[0])->toBe('[ProcessAllocationJob] Used the greedy engine instead of vroom for company company-fallback: No orchestration engine registered with identifier \'vroom\'. Available engines: greedy')
+        ->and($job->messages[1])->toContain('Committed 0 assignments, 1 unassigned');
+});

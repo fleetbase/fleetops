@@ -194,8 +194,10 @@ class MaintenanceController extends FleetOpsController
 
     protected function findMaintenanceForLineItem(string $id): Maintenance
     {
-        return Maintenance::where('uuid', $id)
-            ->orWhere('public_id', $id)
+        return Maintenance::where('company_uuid', session('company'))
+            ->where(function ($query) use ($id) {
+                $query->where('uuid', $id)->orWhere('public_id', $id);
+            })
             ->firstOrFail();
     }
 

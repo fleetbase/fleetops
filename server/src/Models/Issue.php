@@ -152,10 +152,7 @@ class Issue extends Model
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * @return BelongsTo
-     */
-    public function reporter()
+    public function reporter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reported_by_uuid');
     }
@@ -168,26 +165,17 @@ class Issue extends Model
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * @return BelongsTo
-     */
-    public function assignee()
+    public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to_uuid');
     }
 
-    /**
-     * @return BelongsTo
-     */
-    public function vehicle()
+    public function vehicle(): BelongsTo
     {
         return $this->belongsTo(Vehicle::class);
     }
 
-    /**
-     * @return BelongsTo
-     */
-    public function driver()
+    public function driver(): BelongsTo
     {
         return $this->belongsTo(Driver::class);
     }

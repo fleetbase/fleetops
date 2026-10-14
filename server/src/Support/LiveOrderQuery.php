@@ -2,8 +2,10 @@
 
 namespace Fleetbase\FleetOps\Support;
 
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Customer as CustomerIndexResource;
 use Fleetbase\FleetOps\Models\Order;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class LiveOrderQuery
 {
@@ -65,7 +67,7 @@ class LiveOrderQuery
                 'vehicleAssigned' => function ($query) {
                     $query->without(['fleets', 'vendor']);
                 },
-                'customer',
+                'customer' => static fn (MorphTo $relation) => CustomerIndexResource::withPhoto($relation),
                 'facilitator',
             ]);
         }

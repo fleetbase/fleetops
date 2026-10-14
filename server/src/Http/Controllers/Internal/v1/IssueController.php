@@ -38,6 +38,7 @@ class IssueController extends FleetOpsController
             if ($assignee && $assignee->type === 'customer') {
                 $issue->assigned_to_uuid = null;
                 $issue->saveQuietly();
+                $issue->invalidateApiCache();
             }
         }
 
@@ -58,6 +59,7 @@ class IssueController extends FleetOpsController
             if ($order) {
                 $issue->order_uuid = $order->uuid;
                 $issue->saveQuietly();
+                $issue->invalidateApiCache();
             }
         }
     }

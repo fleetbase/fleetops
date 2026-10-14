@@ -8,8 +8,11 @@ use Fleetbase\FleetOps\Events\OrderCanceled;
 use Fleetbase\FleetOps\Events\OrderCompleted;
 use Fleetbase\FleetOps\Events\OrderDispatched;
 use Fleetbase\FleetOps\Events\OrderDriverAssigned;
+use Fleetbase\FleetOps\Events\OrderDriverUnassigned;
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\FleetOps\Notifications\OrderUnassigned;
 use Fleetbase\FleetOps\Support\LabelPdf;
+use Fleetbase\FleetOps\Support\OrderEditPolicy;
 use Fleetbase\FleetOps\Support\OrderTracker;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
@@ -35,6 +38,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -197,6 +201,38 @@ class Order extends Model
     protected $with = [];
 
     /**
+     * Relation paths and tables the cached order lists embed, so a write to any
+     * of them invalidates those lists (fleetbase/core-api#301).
+     *
+     * They mirror OrderFilter::queryForInternal()'s eager loads and whereHas
+     * membership, the payload relation's own `with`, Payload's `$with` and the
+     * public query's loads. customer and facilitator are morphTo relations, so
+     * their tables (contacts, vendors, integrated_vendors) are named instead;
+     * a vendor loads its place, which payload.pickup already covers. files
+     * (customer photo, vendor logo) is left out: every upload writes it, and a
+     * new photo is set by writing the contact's or vendor's own row.
+     *
+     * @var string[]
+     */
+    protected $apiCacheDependencies = [
+        'payload',
+        'payload.pickup',
+        'payload.dropoff',
+        'payload.return',
+        'payload.entities',
+        'payload.waypoints',
+        'payload.firstWaypointMarker.place',
+        'payload.lastWaypointMarker.place',
+        'trackingNumber',
+        'trackingStatuses',
+        'driverAssigned',
+        'vehicleAssigned',
+        'contacts',
+        'vendors',
+        'integrated_vendors',
+    ];
+
+    /**
      * The attributes that should be cast to native types.
      *
      * @var array
@@ -245,6 +281,16 @@ class Order extends Model
     ];
 
     /**
+     * Set for one save: the driver assignment being saved sends no assignment notification.
+     */
+    public bool $silentDriverAssignment = false;
+
+    /**
+     * Set for one save: the driver taken off the order is not sent an unassigned push (they declined it themselves).
+     */
+    public bool $quietDriverUnassignment = false;
+
+    /**
      * Enforce a morph map.
      */
     public static function boot(): void
@@ -261,6 +307,31 @@ class Order extends Model
                 '\\Fleetbase\\Models\\Vendor'  => Vendor::class,
             ]
         );
+    }
+
+    /**
+     * Bulk removal deletes the matched orders one at a time instead of with a single
+     * query, so the "deleted" event fires for each and OrderObserver cascades the soft
+     * delete to the order's payload, entities and tracking data. Matching, the tenant
+     * constraint (GHSA-3wj9-hh56-7fw7) and the returned count follow core-api's version.
+     */
+    public function bulkRemove($ids = [])
+    {
+        $orders = static::where(function ($query) use ($ids) {
+            $query->whereIn($this->getQualifiedKeyName(), $ids)->orWhereIn($this->getQualifiedPublicId(), $ids);
+        });
+
+        // Tenant constraint: never delete another company's orders.
+        $companyUuid = session('company');
+        if ($companyUuid) {
+            $orders->where($this->qualifyColumn('company_uuid'), $companyUuid);
+        }
+
+        $orders = $orders->get();
+        $orders->each->delete();
+        $this->invalidateApiCacheOnChange();
+
+        return $orders->count();
     }
 
     /**
@@ -1034,6 +1105,7 @@ class Order extends Model
         $route->save();
 
         $this->updateQuietly(['route_uuid' => $route->uuid]);
+        $this->invalidateApiCache();
 
         return $this;
     }
@@ -1169,6 +1241,7 @@ class Order extends Model
         ]);
 
         if ($attached) {
+            $this->invalidateApiCache();
             $this->setRelation('purchaseRate', $purchaseRate);
 
             if ($purchaseRate->transaction_uuid) {
@@ -1231,6 +1304,7 @@ class Order extends Model
             ]);
 
             $this->updateQuietly(['transaction_uuid' => $transaction->uuid]);
+            $this->invalidateApiCache();
         } catch (\Throwable $e) {
         }
 
@@ -1270,6 +1344,7 @@ class Order extends Model
         if ($save) {
             $this->saveQuietly();
             $this->flushAttributesCache();
+            $this->invalidateApiCache();
         }
 
         dispatch(fn () => event(new OrderDispatched($this)))->afterCommit();
@@ -1306,6 +1381,29 @@ class Order extends Model
         $this->insertDispatchActivity();
 
         return $this;
+    }
+
+    /**
+     * Determine whether the order is still waiting to be dispatched.
+     *
+     * A deferred dispatch, such as the queued finalize job for orders created with
+     * `dispatch: true`, can run after the order was already dispatched or started
+     * through another path. Dispatching it then would move the status back to
+     * "dispatched", so only an order that still sits at its initial status with no
+     * dispatch or start recorded qualifies.
+     */
+    public function isAwaitingDispatch(): bool
+    {
+        if ($this->dispatched || $this->dispatched_at || $this->started || $this->started_at) {
+            return false;
+        }
+
+        $status = $this->status ?? 'created';
+        if ($status !== 'created' && $status !== $this->config()?->getInitialStatusCode()) {
+            return false;
+        }
+
+        return !$this->hasDispatchedStatus();
     }
 
     /**
@@ -1346,10 +1444,32 @@ class Order extends Model
      */
     public function cancel()
     {
+        return $this->cancelWithReason(null);
+    }
+
+    /**
+     * Cancels the order, recording why.
+     *
+     * The reason becomes the details of the canceled tracking status and is carried on
+     * the OrderCanceled event's activity, which the canceled notifications read.
+     *
+     * @return mixed the result of the OrderCanceled event
+     */
+    public function cancelWithReason(?string $reason = null)
+    {
         // The canceled activity comes from the order config, which may define its own code.
         $this->loadMissing('orderConfig');
         $orderConfig      = $this->orderConfig ?? $this->config();
         $canceledActivity = $orderConfig->getCanceledActivity();
+
+        // A reason given for the cancellation becomes the canceled status details, which
+        // the canceled notifications read. The config's activity itself is left untouched.
+        $reason         = is_string($reason) ? trim($reason) : null;
+        $reasonActivity = null;
+        if ($reason !== null && $reason !== '' && $canceledActivity instanceof Activity) {
+            $canceledActivity = $reasonActivity = (clone $canceledActivity)->set('details', $reason);
+        }
+
         $this->status     = $canceledActivity->code ?? 'canceled';
         $this->updateActivity($canceledActivity);
 
@@ -1361,7 +1481,13 @@ class Order extends Model
             }
         }
 
-        return dispatch(fn () => event(new OrderCanceled($this)))->afterCommit();
+        // The event carries the activity when a reason was given, so the canceled
+        // notifications (which read the activity details) include it.
+        return dispatch(function () use ($reasonActivity) {
+            $event           = new OrderCanceled($this);
+            $event->activity = $reasonActivity;
+            event($event);
+        })->afterCommit();
     }
 
     /**
@@ -1375,6 +1501,52 @@ class Order extends Model
         if ($this->driver_assigned_uuid) {
             return event(new OrderDriverAssigned($this));
         }
+    }
+
+    /**
+     * Tell a driver the order was taken off them: broadcasts `order.driver_unassigned`
+     * on their channels and pushes `{ type: "order_unassigned", id }` to their devices.
+     * The order is cleared as the driver's current job.
+     *
+     * @param Driver|string|null $driver the driver (or driver uuid) removed from the order
+     */
+    public function notifyDriverUnassigned($driver): bool
+    {
+        if (is_string($driver)) {
+            $driver = Driver::where('uuid', $driver)->withoutGlobalScopes()->first();
+        }
+
+        if (!$driver instanceof Driver) {
+            return false;
+        }
+
+        if ($driver->current_job_uuid && $driver->current_job_uuid === $this->uuid) {
+            $driver->forceFill(['current_job_uuid' => null])->saveQuietly();
+        }
+
+        try {
+            event(new OrderDriverUnassigned($this, $driver));
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to broadcast order.driver_unassigned', ['order' => $this->public_id, 'error' => $exception->getMessage()]);
+        }
+
+        if (!$this->quietDriverUnassignment) {
+            try {
+                $driver->notify(new OrderUnassigned($this));
+            } catch (\Throwable $exception) {
+                Log::warning('Unable to notify driver of unassignment', ['order' => $this->public_id, 'error' => $exception->getMessage()]);
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * The edit policy for the order at its current status.
+     */
+    public function editPolicy(): OrderEditPolicy
+    {
+        return OrderEditPolicy::for($this);
     }
 
     /**
@@ -1634,7 +1806,7 @@ class Order extends Model
                         return $this;
                     }
 
-                    return $this->assignDriver($driver);
+                    return $this->assignDriver($driver, $silent);
                 }
 
                 throw new \Exception('Invalid driver provided for assignment!');
@@ -1647,11 +1819,15 @@ class Order extends Model
             $this->setRelation('driverAssigned', $driver);
         }
 
-        if (!$silent) {
-            $this->notifyDriverAssigned();
+        // The order observer sends OrderDriverAssigned once the assignment is saved
+        // (and tells a replaced driver they were unassigned), so it is not fired here
+        // as well. A silent assignment is flagged for that one save.
+        $this->silentDriverAssignment = (bool) $silent;
+        try {
+            $this->save();
+        } finally {
+            $this->silentDriverAssignment = false;
         }
-
-        $this->save();
 
         return $this;
     }
@@ -1672,7 +1848,10 @@ class Order extends Model
                 $driverAssigned = Driver::where('uuid', $this->driver_assigned_uuid)->first();
             }
 
-            if ($driverAssigned instanceof Driver) {
+            // A driver that has never reported a position still carries the
+            // POINT(0 0) placeholder it was created with. Measuring from there
+            // puts the origin at null island, so fall back to the pickup.
+            if ($driverAssigned instanceof Driver && static::isKnownPosition($driverAssigned->location)) {
                 return $driverAssigned->location;
             }
         }
@@ -1704,6 +1883,16 @@ class Order extends Model
     }
 
     /**
+     * Determines whether a position is a real, resolved location rather than
+     * missing or the POINT(0 0) placeholder stored for drivers that have not
+     * reported a position yet and for places that failed to geocode.
+     */
+    public static function isKnownPosition($position): bool
+    {
+        return $position instanceof Point && ($position->getLat() != 0.0 || $position->getLng() != 0.0);
+    }
+
+    /**
      * Sets the preliminary distance and time for the order.
      * Uses a utility method to calculate the distance and time between the current origin and destination positions.
      *
@@ -1714,13 +1903,14 @@ class Order extends Model
         $origin      = $this->getCurrentOriginPosition();
         $destination = $this->getDestinationPosition();
 
-        if ($origin === null || $destination === null) {
+        if (!static::isKnownPosition($origin) || !static::isKnownPosition($destination)) {
             return $this;
         }
 
         $matrix = Utils::getPreliminaryDistanceMatrix($origin, $destination);
 
         $this->updateQuietly(['distance' => $matrix->distance, 'time' => $matrix->time]);
+        $this->invalidateApiCache();
 
         return $this;
     }
@@ -1736,7 +1926,7 @@ class Order extends Model
         $origin      = $this->getCurrentOriginPosition();
         $destination = $this->getDestinationPosition();
 
-        if (!$origin || !$destination) {
+        if (!static::isKnownPosition($origin) || !static::isKnownPosition($destination)) {
             return $this;
         }
 
@@ -1758,6 +1948,7 @@ class Order extends Model
                 'distance' => $matrix->distance,
                 'time'     => $matrix->time,
             ]);
+            $this->invalidateApiCache();
         }
 
         return $this;

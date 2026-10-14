@@ -70,6 +70,15 @@ function fleetopsUtilsAdditionalPolygon(): Polygon
     ]);
 }
 
+test('stored file url signing passes through values that are not absolute urls', function () {
+    // Absolute URLs into the media bucket are re-signed by core-api File::signStoredUrl (covered there);
+    // everything else, including avatar option keys and empty values, must come back untouched.
+    expect(Utils::signStoredFileUrl(null))->toBeNull()
+        ->and(Utils::signStoredFileUrl(''))->toBe('')
+        ->and(Utils::signStoredFileUrl('mini_bus'))->toBe('mini_bus')
+        ->and(Utils::signStoredFileUrl('custom-avatars/vehicles/c/van.png'))->toBe('custom-avatars/vehicles/c/van.png');
+});
+
 test('company transaction currency prefers organization currency and falls back to usd', function () {
     $company = new Company();
     $company->setRawAttributes([

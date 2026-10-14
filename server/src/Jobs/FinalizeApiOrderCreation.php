@@ -38,7 +38,9 @@ class FinalizeApiOrderCreation implements ShouldQueue
         $order->setPreliminaryDistanceAndTime();
         $order->purchaseServiceQuote($serviceQuote);
 
-        if ($this->shouldDispatch) {
+        // The order may have been dispatched or started while this job waited in the
+        // queue; dispatching it again would move its status backwards.
+        if ($this->shouldDispatch && $order->isAwaitingDispatch()) {
             $order->dispatchWithActivity();
         }
 

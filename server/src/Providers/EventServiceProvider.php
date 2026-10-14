@@ -24,6 +24,17 @@ class EventServiceProvider extends ServiceProvider
         \Fleetbase\FleetOps\Events\OrderReady::class          => [\Fleetbase\FleetOps\Listeners\HandleOrderReady::class],
 
         /*
+         * Stop Events
+         *
+         * Public tracking channels follow waypoint and entity activity. Order status, assignment
+         * and ETA changes are published from the order observer; positions from the tracking endpoints.
+         */
+        \Fleetbase\FleetOps\Events\WaypointActivityChanged::class => [\Fleetbase\FleetOps\Listeners\PublishTrackingUpdates::class],
+        \Fleetbase\FleetOps\Events\WaypointCompleted::class       => [\Fleetbase\FleetOps\Listeners\PublishTrackingUpdates::class],
+        \Fleetbase\FleetOps\Events\EntityActivityChanged::class   => [\Fleetbase\FleetOps\Listeners\PublishTrackingUpdates::class],
+        \Fleetbase\FleetOps\Events\EntityCompleted::class         => [\Fleetbase\FleetOps\Listeners\PublishTrackingUpdates::class],
+
+        /*
          * Geofence Events
          *
          * Each event is handled by a domain listener (business logic, event log)

@@ -79,7 +79,12 @@ class DriverObserver
 
     protected function unassignOrders(Driver $driver): int
     {
-        return Order::where(['driver_assigned_uuid' => $driver->uuid])->update(['driver_assigned_uuid' => null]);
+        $unassigned = Order::where(['driver_assigned_uuid' => $driver->uuid])->update(['driver_assigned_uuid' => null]);
+        if ($unassigned > 0) {
+            Order::invalidateApiCacheManually($driver->company_uuid);
+        }
+
+        return $unassigned;
     }
 
     protected function findDriverUser(Driver $driver): ?User

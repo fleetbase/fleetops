@@ -1,6 +1,5 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { action } from '@ember/object';
 
 export default class OperationsOrdersIndexNewRoute extends Route {
     @service notifications;
@@ -9,9 +8,11 @@ export default class OperationsOrdersIndexNewRoute extends Route {
     @service intl;
     @service sidebar;
 
-    @action willTransition() {
-        if (this.controller) {
-            this.controller.reset();
+    // Reset the draft only when leaving the route. A refresh of this route (e.g. after saving
+    // a place or customer from a modal) also transitions, and must keep what was entered.
+    resetController(controller, isExiting) {
+        if (isExiting) {
+            controller.reset();
         }
     }
 

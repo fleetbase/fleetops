@@ -641,3 +641,144 @@ test('driver credentials mail names the organization and the sign-in identity', 
         ->toContain('{{ $plaintextPassword }}')
         ->toContain('{{ $companyName }}');
 });
+
+/**
+ * Point the request at a separate sandbox database the way a test API key
+ * does: users and companies stay on `mysql`, memberships follow
+ * `fleetbase.connection.db`. The sandbox enforces its foreign keys so a
+ * membership for a user missing there fails like it does on MySQL.
+ */
+function fleetopsProfileAccountSandbox(SQLiteConnection $live): SQLiteConnection
+{
+    $sandbox = new SQLiteConnection(new PDO('sqlite::memory:'));
+    $schema  = $sandbox->getSchemaBuilder();
+    $schema->create('companies', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'name', 'owner_uuid', 'timezone'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->unique('uuid');
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    $schema->create('users', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'name', 'email', 'phone', 'password', 'status', 'type', 'username', 'avatar_uuid', 'slug', 'timezone', 'country', 'ip_address', 'meta', 'last_login', '_key'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->unique('uuid');
+        $blueprint->foreign('company_uuid')->references('uuid')->on('companies');
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    $schema->create('company_users', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'user_uuid', 'status', '_key'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->foreign('user_uuid')->references('uuid')->on('users');
+        $blueprint->foreign('company_uuid')->references('uuid')->on('companies');
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    $schema->create('model_has_roles', function ($blueprint) {
+        foreach (['role_id', 'model_type', 'model_uuid'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+    });
+    $schema->enableForeignKeyConstraints();
+
+    $resolver = new ConnectionResolver(['default' => $live, 'mysql' => $live, 'sandbox' => $sandbox]);
+    $resolver->setDefaultConnection('mysql');
+    EloquentModel::setConnectionResolver($resolver);
+    app()->instance('db', new class($live, $sandbox) {
+        public function __construct(public SQLiteConnection $live, public SQLiteConnection $sandbox)
+        {
+        }
+
+        public function connection($name = null): SQLiteConnection
+        {
+            return $name === 'sandbox' ? $this->sandbox : $this->live;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this->live->{$method}(...$arguments);
+        }
+    });
+    Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+    config()->set('fleetbase.connection.db', 'sandbox');
+    session(['is_sandbox' => true]);
+
+    return $sandbox;
+}
+
+function fleetopsProfileAccountLeaveSandbox(): void
+{
+    config()->set('fleetbase.connection.db', 'mysql');
+    session(['is_sandbox' => false]);
+}
+
+test('test key requests copy new and linked managed accounts into the sandbox before adding them', function () {
+    $live    = fleetopsProfileAccountBoot();
+    $sandbox = fleetopsProfileAccountSandbox($live);
+
+    try {
+        $driver = ProfileAccountManager::resolveForProfile('company-1', 'driver', 'Sandy Driver', 'sandy@example.com', null, ['password' => 'secret']);
+        $copy   = $sandbox->table('users')->where('uuid', $driver->uuid)->first();
+
+        expect($live->table('users')->where('uuid', $driver->uuid)->value('type'))->toBe('driver')
+            ->and($copy->type)->toBe('driver')
+            ->and($copy->email)->toBe('sandy@example.com')
+            ->and($copy->password)->toBe('hashed:secret')
+            ->and($copy->company_uuid)->toBe('company-1')
+            ->and($sandbox->table('companies')->where('uuid', 'company-1')->value('name'))->toBe('Acme')
+            ->and($sandbox->table('company_users')->where('user_uuid', $driver->uuid)->value('company_uuid'))->toBe('company-1')
+            ->and($live->table('company_users')->count())->toBe(0);
+
+        // A live managed account without an organization is linked; its copy
+        // carries the organization and repeat links stay a single row
+        $existing = fleetopsProfileAccountUser(['uuid' => 'existing-1', 'type' => 'contact', 'email' => 'existing@example.com']);
+        ProfileAccountManager::attachToCompany($existing, 'company-2', 'contact');
+        ProfileAccountManager::attachToCompany($existing, 'company-2', 'contact');
+
+        expect($sandbox->table('users')->where('uuid', 'existing-1')->count())->toBe(1)
+            ->and($sandbox->table('users')->where('uuid', 'existing-1')->value('company_uuid'))->toBe('company-2')
+            ->and($sandbox->table('company_users')->where('user_uuid', 'existing-1')->count())->toBe(1)
+            ->and($live->table('users')->where('uuid', 'existing-1')->value('company_uuid'))->toBe('company-2');
+
+        // Copying without an organization only copies the account
+        $loner = fleetopsProfileAccountUser(['uuid' => 'loner-1', 'type' => 'customer']);
+        ProfileAccountManager::copyAccountToSandbox($loner);
+
+        expect($sandbox->table('users')->where('uuid', 'loner-1')->value('company_uuid'))->toBeNull()
+            ->and($sandbox->table('companies')->count())->toBe(2);
+    } finally {
+        fleetopsProfileAccountLeaveSandbox();
+    }
+});
+
+test('a managed account whose membership fails is removed from both databases', function () {
+    $live    = fleetopsProfileAccountBoot();
+    $sandbox = fleetopsProfileAccountSandbox($live);
+    $sandbox->getSchemaBuilder()->drop('company_users');
+
+    try {
+        expect(fn () => ProfileAccountManager::createManagedAccount('company-1', 'driver', 'Failing Driver', 'failing@example.com', null))
+            ->toThrow(Illuminate\Database\QueryException::class);
+
+        expect($live->table('users')->where('email', 'failing@example.com')->count())->toBe(0)
+            ->and($sandbox->table('users')->where('email', 'failing@example.com')->count())->toBe(0);
+    } finally {
+        fleetopsProfileAccountLeaveSandbox();
+    }
+
+    // Outside the sandbox the live account is removed the same way
+    $live = fleetopsProfileAccountBoot();
+    $live->getSchemaBuilder()->drop('company_users');
+
+    expect(fn () => ProfileAccountManager::createManagedAccount('company-1', 'contact', 'Failing Contact', 'contact@example.com', null))
+        ->toThrow(Illuminate\Database\QueryException::class);
+
+    expect($live->table('users')->where('email', 'contact@example.com')->count())->toBe(0);
+});

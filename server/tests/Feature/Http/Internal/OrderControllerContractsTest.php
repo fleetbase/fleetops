@@ -1,9 +1,11 @@
 <?php
 
+use Fleetbase\FleetOps\Exceptions\OrderEditLockedException;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrderController;
 use Fleetbase\FleetOps\Http\Requests\BulkDispatchRequest;
 use Fleetbase\FleetOps\Http\Requests\CancelOrderRequest;
+use Fleetbase\FleetOps\Http\Resources\v1\PublicOrderTracking;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Order;
@@ -13,6 +15,8 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Support\OrderEdit;
+use Fleetbase\FleetOps\Support\OrderEditPolicy;
 use Fleetbase\FleetOps\Support\OrderTracker;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Models\Type;
@@ -35,6 +39,43 @@ if (!function_exists('Fleetbase\FleetOps\Http\Controllers\Internal\v1\event')) {
 
 if (!class_exists('Fleetbase\Http\Requests\ExportRequest', false)) {
     eval('namespace Fleetbase\Http\Requests; class ExportRequest extends \Illuminate\Http\Request {}');
+}
+
+/**
+ * Records the route edit guard and commit instead of reading and announcing through the database.
+ */
+class FleetOpsInternalOrderEditFake extends OrderEdit
+{
+    public array $guarded  = [];
+    public array $lockWith = [];
+    public int $commits    = 0;
+
+    public function __construct(public Order $order)
+    {
+        $this->policy = OrderEditPolicy::for($order);
+    }
+
+    public function requestedChanges(array $input, string $entitiesMode = self::ENTITIES_APPEND): array
+    {
+        return $input;
+    }
+
+    public function guard(array $changes): static
+    {
+        $this->guarded[] = $changes;
+        if ($this->lockWith) {
+            throw new OrderEditLockedException($this->lockWith);
+        }
+
+        return $this;
+    }
+
+    public function commit(array $extra = [], bool $notifyDriver = true): array
+    {
+        $this->commits++;
+
+        return [];
+    }
 }
 
 class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
@@ -68,6 +109,7 @@ class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
     public Collection $proofResults;
     public array $exportDownloads                                    = [];
     public ?FleetOpsInternalOrderLifecycleOrderFake $trackingOrder   = null;
+    public array $trackingLookups                                   = [];
     public ?FleetOpsInternalOrderLifecycleOrderFake $scheduleOrder   = null;
     public ?FleetOpsInternalOrderLifecycleDriverFake $scheduleDriver = null;
 
@@ -218,6 +260,7 @@ class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
 
     protected function findOrderByTrackingNumber(string $trackingNumber): ?Order
     {
+        $this->trackingLookups[] = $trackingNumber;
         $this->trackingOrder?->setAttribute('tracking_lookup', $trackingNumber);
 
         return $this->trackingOrder;
@@ -252,6 +295,18 @@ class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
         $this->order?->setAttribute('route_lookup_uuid', $uuid);
 
         return $this->order;
+    }
+
+    public ?FleetOpsInternalOrderEditFake $edit = null;
+
+    public array $editLockedWith = [];
+
+    protected function beginOrderEdit(Order $order): OrderEdit
+    {
+        $this->edit ??= new FleetOpsInternalOrderEditFake($order);
+        $this->edit->lockWith = $this->editLockedWith;
+
+        return $this->edit;
     }
 
     protected function orderResponse(Order $order): array
@@ -411,6 +466,15 @@ class FleetOpsInternalOrderLifecycleOrderFake extends Order
         $this->forceFill(['status' => 'canceled']);
 
         return $this;
+    }
+
+    public ?string $cancelReasonForTest = null;
+
+    public function cancelWithReason(?string $reason = null)
+    {
+        $this->cancelReasonForTest = $reason;
+
+        return $this->cancel();
     }
 
     public function dispatch(bool $save = true): Order
@@ -908,8 +972,27 @@ test('internal order controller edits order routes and refreshes current destina
         ->and($payload->calls)->toContain(['setDropoff', ['name' => 'Dropoff'], ['save' => true]])
         ->and($payload->calls)->toContain(['setReturn', ['name' => 'Return'], ['save' => true]])
         ->and($payload->calls)->toContain(['updateWaypoints', [['name' => 'Waypoint']]])
-        ->and($payload->calls)->toContain(['setCurrentWaypoint', $startingDestination, true])
+        // the current waypoint is reconciled by the committed edit, not reset to the first stop here
+        ->and(collect($payload->calls)->where(0, 'setCurrentWaypoint')->all())->toBe([])
+        ->and($controller->edit->guarded)->toBe([['pickup' => true, 'dropoff' => true, 'return' => true, 'waypoints' => true]])
+        ->and($controller->edit->commits)->toBe(1)
         ->and($order->loadedRelations)->toBe([['payload.pickup', 'payload.dropoff', 'payload.return', 'payload.waypoints']]);
+});
+
+test('internal order controller refuses route edits on finished orders with a 422', function () {
+    $payload = fleetopsInternalOrderLifecyclePayload(fleetopsInternalOrderLifecyclePlace('starting-place'));
+    $order   = fleetopsInternalOrderLifecycleOrder('order-route', 'completed');
+    $order->setRelation('payload', $payload);
+    $controller                 = fleetopsInternalOrderLifecycleController([$order]);
+    $controller->editLockedWith = ['dropoff' => 'The order is completed and can no longer be changed.'];
+
+    $response = $controller->editOrderRoute('order-route', new Request(['dropoff' => ['name' => 'Dropoff']]));
+
+    // the harness response factory keeps only the message; the app's error macro adds `locked`
+    expect($response->getStatusCode())->toBe(422)
+        ->and($response->getData(true)['error'])->toBe('The order is completed and can no longer be changed.')
+        ->and($payload->calls)->toBe([])
+        ->and($controller->edit->commits)->toBe(0);
 });
 
 test('internal order controller clears route endpoints and falls back to dropoff destination', function () {
@@ -930,7 +1013,7 @@ test('internal order controller clears route endpoints and falls back to dropoff
         ->and($payload->calls)->toContain(['removePlace', 'dropoff', ['save' => true]])
         ->and($payload->calls)->toContain(['removePlace', 'return', ['save' => true]])
         ->and($payload->calls)->toContain(['removeWaypoints'])
-        ->and($payload->calls)->toContain(['setCurrentWaypoint', $fallbackDestination, true]);
+        ->and($controller->edit->commits)->toBe(1);
 });
 
 test('internal order controller reports missing order route edits', function () {
@@ -1054,7 +1137,15 @@ test('internal order controller cancels and dispatches individual orders', funct
         'order'   => 'order-uuid',
     ])
         ->and($order->lookup_uuid)->toBe('order-uuid')
-        ->and($order->canceledForTest)->toBeTrue();
+        ->and($order->canceledForTest)->toBeTrue()
+        ->and($order->cancelReasonForTest)->toBeNull();
+
+    $order      = fleetopsInternalOrderLifecycleOrder('order-uuid', 'created');
+    $controller = fleetopsInternalOrderLifecycleController([$order]);
+    $controller->cancel(fleetopsCancelOrderRequest(['order' => 'order-uuid', 'reason' => 'Customer asked to cancel']));
+
+    expect($order->canceledForTest)->toBeTrue()
+        ->and($order->cancelReasonForTest)->toBe('Customer asked to cancel');
 
     $order      = fleetopsInternalOrderLifecycleOrder('order-dispatch', 'created');
     $controller = fleetopsInternalOrderLifecycleController([$order]);
@@ -1549,24 +1640,29 @@ test('internal order controller export lookup and schedule endpoints use resolve
         ->and($export['selections'])->toBe(['order-one', 'order-two'])
         ->and($controller->exportDownloads[0][0])->toBe(['order-one', 'order-two']);
 
-    expect($controller->lookup(new Request())->getData(true))->toBe([
-        'error' => 'No tracking number provided for lookup.',
-    ])
-        ->and($controller->lookup(new Request(['tracking' => 'TN-404']))->getData(true))->toBe([
-            'error' => 'No order found using tracking number provided.',
-        ]);
+    // Missing, malformed and unknown tracking numbers all get the one answer,
+    // and malformed input never reaches the query.
+    $notFound = ['error' => OrderController::TRACKING_LOOKUP_ERROR];
+    foreach ([[], ['tracking' => ''], ['tracking' => '   '], ['tracking' => ['TN-1']], ['tracking' => '../etc/passwd'], ['tracking' => "TN-1' OR 1=1"], ['tracking' => str_repeat('A', 101)], ['tracking' => '-TN']] as $input) {
+        expect($controller->lookup(new Request($input))->getData(true))->toBe($notFound);
+    }
+    expect($controller->trackingLookups)->toBe([]);
+
+    expect($controller->lookup(new Request(['tracking' => 'TN-404']))->getData(true))->toBe($notFound)
+        ->and($controller->trackingLookups)->toBe(['TN-404']);
 
     $trackedOrder                 = fleetopsInternalOrderLifecycleOrder('tracked-order');
     $trackedOrder->trackerForTest = new FleetOpsInternalOrderLifecycleTrackerFake($trackedOrder);
     $controller->trackingOrder    = $trackedOrder;
 
-    $lookup = $controller->lookup(new Request(['tracking' => 'TN-100']));
+    $lookup = $controller->lookup(new Request(['tracking' => '  TN-100.a_b  ']));
 
-    expect($lookup->resource)->toBe($trackedOrder)
-        ->and($trackedOrder->tracking_lookup)->toBe('TN-100')
-        ->and($trackedOrder->loadedMissing)->toBe([['trackingNumber', 'payload', 'trackingStatuses']])
+    expect($lookup)->toBeInstanceOf(PublicOrderTracking::class)
+        ->and($lookup->resource)->toBe($trackedOrder)
+        ->and($trackedOrder->tracking_lookup)->toBe('TN-100.a_b')
+        ->and($trackedOrder->loadedMissing)->toBe([['trackingNumber', 'trackingStatuses', 'payload.pickup', 'payload.dropoff', 'payload.waypoints', 'payload.entities']])
         ->and($trackedOrder->tracker_data)->toBe(['tracker' => 'info', 'options' => []])
-        ->and($trackedOrder->eta)->toBe(['eta' => [['stop' => 'dropoff']], 'options' => []]);
+        ->and($trackedOrder->trackerForTest->etaOptions)->toBe([]);
 
     expect($controller->scheduleOrder(new Request(['order' => 'missing-order']))->getData(true))->toBe([
         'error' => 'No order found to schedule.',

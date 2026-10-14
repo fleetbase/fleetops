@@ -20,6 +20,23 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
         // limiter has its own prefix so the two do not share one counter.
         // Every answer is JSON, so a refused submission reaches the page with
         // its reasons instead of as a redirect back to it.
+        // The public customer tracking page. A tracking number alone gives a coarse status;
+        // a one-time code to the customer's own contact details unlocks their stops. Lookups
+        // are rate limited inside the controller, so a throttled lookup answers exactly like
+        // an unknown number; code sends and checks have limits of their own there too.
+        $router->prefix('public/track')->namespace('Public')->middleware([Fleetbase\FleetOps\Http\Middleware\ForceJsonResponse::class])->group(function ($router) {
+            $router->get('config', 'TrackingController@config');
+            $router->get('account/orders', 'TrackingController@accountOrders');
+            $router->delete('session', 'TrackingController@signOut');
+            $router->get('{number}', 'TrackingController@show');
+            $router->post('{number}/codes', 'TrackingController@sendCode');
+            $router->post('{number}/codes/verify', 'TrackingController@verifyCode');
+            $router->put('{number}/instructions', 'TrackingController@updateInstructions');
+            $router->get('{number}/proofs/{id}', 'TrackingController@proof');
+            $router->post('{number}/report', 'TrackingController@report');
+            $router->get('{number}/socket-token', 'TrackingController@socketToken');
+        });
+
         $router->prefix('public')->namespace('Public')->middleware([Fleetbase\FleetOps\Http\Middleware\ForceJsonResponse::class, 'throttle:60,1,inspection-public'])->group(function ($router) {
             $router->get('inspections/forms/{id}', 'PublicInspectionController@show');
             $router->post('inspections/forms/{id}/submit', 'PublicInspectionController@submit');
@@ -37,14 +54,16 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
             // drivers routes
             $router->group(['prefix' => 'drivers', 'middleware' => []], function () use ($router) {
                 $router->post('register-device', 'DriverController@registerDevice');
-                $router->post('login-with-sms', 'DriverController@loginWithPhone');
+                // Routes that send a text message carry a small per-address bucket on top
+                // of the API credential throttle; the SMS guard in core bounds the spend.
+                $router->post('login-with-sms', 'DriverController@loginWithPhone')->middleware('throttle:5,1,fleetops-sms');
                 $router->post('verify-code', 'DriverController@verifyCode');
                 $router->post('login', 'DriverController@login');
                 // Password management. Deliberately separate from the driver
                 // update: changing a password requires proving the old one, and
                 // resetting it requires a code, neither of which a general PUT
                 // can express.
-                $router->post('forgot-password', 'DriverController@forgotPassword');
+                $router->post('forgot-password', 'DriverController@forgotPassword')->middleware('throttle:5,1,fleetops-sms');
                 $router->post('reset-password', 'DriverController@resetPassword');
                 $router->post('{id}/change-password', 'DriverController@changePassword');
                 $router->post('{id}/simulate', 'DriverController@simulate');
@@ -80,12 +99,12 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
             //  - Authenticated endpoints: API key + `Customer-Token` header (Sanctum)
             $router->group(['prefix' => 'customers', 'middleware' => []], function () use ($router) {
                 // Public auth flows
-                $router->post('request-creation-code', 'CustomerController@requestCreationCode');
+                $router->post('request-creation-code', 'CustomerController@requestCreationCode')->middleware('throttle:5,1,fleetops-sms');
                 $router->post('/', 'CustomerController@create');
                 $router->post('login', 'CustomerController@login');
-                $router->post('login-with-sms', 'CustomerController@loginWithPhone');
+                $router->post('login-with-sms', 'CustomerController@loginWithPhone')->middleware('throttle:5,1,fleetops-sms');
                 $router->post('verify-code', 'CustomerController@verifyCode');
-                $router->post('forgot-password', 'CustomerController@forgotPassword');
+                $router->post('forgot-password', 'CustomerController@forgotPassword')->middleware('throttle:5,1,fleetops-sms');
                 $router->post('reset-password', 'CustomerController@resetPassword');
 
                 // Authenticated (require Customer-Token)
@@ -398,7 +417,10 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->group(
                     ['prefix' => 'v1/fleet-ops', 'namespace' => 'v1'],
                     function ($router) {
-                        $router->get('lookup', 'OrderController@lookup');
+                        // The public Track Order page: no session, the tracking number is
+                        // the credential. Rate limited per address so numbers cannot be
+                        // enumerated, on a limiter of its own.
+                        $router->get('lookup', 'OrderController@lookup')->middleware('throttle:30,1,tracking-lookup');
                     }
                 );
 
@@ -562,7 +584,12 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->post('import', $controller('import'));
                             }
                         );
-                        $router->fleetbaseRoutes('proofs');
+                        $router->fleetbaseRoutes(
+                            'proofs',
+                            function ($router, $controller) {
+                                $router->get('recent', $controller('recent'));
+                            }
+                        );
                         $router->fleetbaseRoutes('purchase-rates');
                         $router->fleetbaseRoutes('routes');
                         $router->fleetbaseRoutes('positions', function ($router, $controller) {
@@ -806,6 +833,11 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                         $router->post('tracking-settings', 'SettingController@saveTrackingSettings');
                                         $router->get('admin-tracking-settings', 'SettingController@getAdminTrackingSettings');
                                         $router->post('admin-tracking-settings', 'SettingController@saveAdminTrackingSettings');
+                                        $router->get('tracking-page-settings', 'SettingController@getTrackingPageSettings');
+                                        $router->post('tracking-page-settings', 'SettingController@saveTrackingPageSettings');
+                                        $router->post('tracking-page-settings/validate-slug', 'SettingController@validateTrackingPageSlug');
+                                        $router->get('admin-tracking-page-settings', 'SettingController@getAdminTrackingPageSettings');
+                                        $router->post('admin-tracking-page-settings', 'SettingController@saveAdminTrackingPageSettings');
                                         $router->get('map', 'SettingController@getMapSettings');
                                         $router->post('map', 'SettingController@saveMapSettings');
                                         $router->get('admin-map', 'SettingController@getAdminMapSettings');

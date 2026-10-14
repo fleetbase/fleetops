@@ -111,8 +111,7 @@ class InspectionSubmissionController extends FleetOpsController
 
     public function submit(string $id): JsonResponse
     {
-        $submission = InspectionSubmission::where('uuid', $id)
-            ->orWhere('public_id', $id)
+        $submission = $this->submissionQuery($id)
             ->with(['itemResults', 'vehicle', 'driver', 'form'])
             ->firstOrFail();
 
@@ -127,8 +126,7 @@ class InspectionSubmissionController extends FleetOpsController
 
     public function createIssue(string $id): JsonResponse
     {
-        $submission = InspectionSubmission::where('uuid', $id)
-            ->orWhere('public_id', $id)
+        $submission = $this->submissionQuery($id)
             ->with(['itemResults', 'vehicle', 'driver', 'form'])
             ->firstOrFail();
 
@@ -145,8 +143,7 @@ class InspectionSubmissionController extends FleetOpsController
 
     public function createWorkOrder(string $id): JsonResponse
     {
-        $submission = InspectionSubmission::where('uuid', $id)
-            ->orWhere('public_id', $id)
+        $submission = $this->submissionQuery($id)
             ->with(['itemResults', 'vehicle', 'driver', 'form'])
             ->firstOrFail();
 
@@ -164,8 +161,7 @@ class InspectionSubmissionController extends FleetOpsController
 
     public function resolve(string $id): JsonResponse
     {
-        $submission = InspectionSubmission::where('uuid', $id)
-            ->orWhere('public_id', $id)
+        $submission = $this->submissionQuery($id)
             ->firstOrFail();
 
         $submission->update([
@@ -178,6 +174,15 @@ class InspectionSubmissionController extends FleetOpsController
             'message' => 'Inspection resolved.',
             'data'    => $submission->fresh(['itemResults', 'issue', 'workOrder']),
         ]);
+    }
+
+    /** A submission by uuid or public id, only ever within the session's company. */
+    protected function submissionQuery(string $id)
+    {
+        return InspectionSubmission::where('company_uuid', session('company'))
+            ->where(function ($query) use ($id) {
+                $query->where('uuid', $id)->orWhere('public_id', $id);
+            });
     }
 
     protected function syncItemResultsFromRequest(Request $request, InspectionSubmission $submission): void

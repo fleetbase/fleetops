@@ -175,7 +175,7 @@
             </div>
             <InputGroup @name="Opened At">
                 <DatePicker
-                    @value={{or (format-date-fns @resource.opened_at "dd-MM-yyyy") null}}
+                    @value={{or (format-date-fns @resource.opened_at "yyyy-MM-dd") null}}
                     @onChange={{fn (mut @resource.opened_at)}}
                     @placeholder="DD-MM-YYYY"
                     class="filter-date-input w-full flex-1"
@@ -183,7 +183,7 @@
             </InputGroup>
             <InputGroup @name="Due At">
                 <DatePicker
-                    @value={{or (format-date-fns @resource.due_at "dd-MM-yyyy") null}}
+                    @value={{or (format-date-fns @resource.due_at "yyyy-MM-dd") null}}
                     @onChange={{fn (mut @resource.due_at)}}
                     @placeholder="DD-MM-YYYY"
                     class="filter-date-input w-full flex-1"
@@ -191,7 +191,7 @@
             </InputGroup>
             <InputGroup @name="Closed At">
                 <DatePicker
-                    @value={{or (format-date-fns @resource.closed_at "dd-MM-yyyy") null}}
+                    @value={{or (format-date-fns @resource.closed_at "yyyy-MM-dd") null}}
                     @onChange={{fn (mut @resource.closed_at)}}
                     @placeholder="DD-MM-YYYY"
                     class="filter-date-input w-full flex-1"

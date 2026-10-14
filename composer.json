@@ -1,6 +1,6 @@
 {
     "name": "fleetbase/fleetops-api",
-    "version": "0.6.71",
+    "version": "0.6.72",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "keywords": [
         "fleetbase-extension",
@@ -25,7 +25,7 @@
         "barryvdh/laravel-dompdf": "^3.1",
         "brick/geo": "0.7.2",
         "cknow/laravel-money": "^7.1",
-        "fleetbase/core-api": ">=1.6.65",
+        "fleetbase/core-api": "^1.6.69",
         "geocoder-php/google-maps-places-provider": "^1.4",
         "giggsey/libphonenumber-for-php": "^8.13",
         "league/geotools": "^1.1.0",

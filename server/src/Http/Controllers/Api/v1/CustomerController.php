@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
+use Fleetbase\Exceptions\SmsBlockedException;
 use Fleetbase\FleetOps\Exceptions\UserAlreadyExistsException;
 use Fleetbase\FleetOps\Http\Requests\CreateCustomerOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\CreateCustomerRequest;
@@ -28,6 +29,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Customer-facing Fleet-Ops API.
@@ -45,6 +47,11 @@ class CustomerController extends Controller
     use \Fleetbase\FleetOps\Http\Controllers\Concerns\ResolvesReviewAccountBypass;
 
     public const DEACTIVATED_LOGIN_MESSAGE = 'This customer login has been deactivated.';
+
+    /**
+     * Wrong guesses a single code tolerates before it locks itself (core's check()).
+     */
+    public const CODE_CHECK_ATTEMPTS = 5;
 
     /* ============================================================
      | Public auth flows (API credential only, no Customer-Token)
@@ -80,23 +87,21 @@ class CustomerController extends Controller
         $providedName  = trim((string) $request->input('name', ''));
         $providedPhone = $request->filled('phone') ? static::phone($request->input('phone')) : null;
 
-        // The verification code needs a persisted subject so the mail renderer
-        // can resolve the polymorphic `subject` relation (the verification blade
-        // template references `$user->name`). Look up — or create — the User
-        // before sending. `create()` later backfills password + remaining fields
-        // on this same row when the customer confirms the code.
+        // The code's subject is the person signing up: an existing user (a prior
+        // incomplete signup, or an account in another organization) as it stands, else
+        // an unsaved User carrying the name and contact details the message needs.
+        // Nothing is persisted until create() verifies the code — a users row per
+        // unverified identity was a way to fill the table from a leaked credential.
         $subject = $this->findActiveUserByIdentity($identity, $isEmail ? 'email' : 'phone');
 
         if (!$subject) {
-            // `password` and `type` are guarded on User; assign type after create
-            // via setUserType (saves the row).
-            $subject = $this->createUser([
+            $subject = new User();
+            $subject->forceFill([
                 'company_uuid' => $sessionCompany,
                 'name'         => $providedName !== '' ? $providedName : $identity,
                 'email'        => $isEmail ? $identity : null,
                 'phone'        => $isEmail ? $providedPhone : $identity,
             ]);
-            $subject->setUserType('customer');
         } elseif ($providedName !== '' && (!$subject->name || $subject->name === $subject->email)) {
             // Existing stub user from a prior incomplete signup — refresh the
             // greeting name if the client supplied one.
@@ -118,10 +123,13 @@ class CustomerController extends Controller
                 ]);
             } else {
                 $this->generateSmsVerification($subject, 'fleetops_create_customer', [
+                    'hashed'          => true,
                     'messageCallback' => fn ($verification) => 'Your ' . config('app.name') . ' verification code is ' . $verification->code,
                     'meta'            => $meta,
                 ]);
             }
+        } catch (SmsBlockedException $e) {
+            return static::smsBlockedResponse($e);
         } catch (\Twilio\Exceptions\RestException $e) {
             return response()->apiError($e->getMessage());
         } catch (\Exception $e) {
@@ -391,13 +399,21 @@ class CustomerController extends Controller
             return response()->apiError(static::DEACTIVATED_LOGIN_MESSAGE, 403);
         }
 
+        // A guard refusal (paused, over budget, unusable number) falls back to email like
+        // a provider failure does; with no email to fall back to, the refusal itself is the
+        // answer, with its status, not the generic error.
+        $smsFailure = null;
+
         try {
             $this->generateSmsVerification($user, 'fleetops_customer_login', [
+                'hashed'          => true,
                 'messageCallback' => fn ($verification) => 'Your ' . config('app.name') . ' verification code is ' . $verification->code,
             ]);
 
             return response()->json(['status' => 'ok', 'method' => 'sms']);
         } catch (\Throwable $e) {
+            $smsFailure = $e;
+
             if ($user->email) {
                 try {
                     $this->generateEmailVerification($user, 'fleetops_customer_login', [
@@ -407,12 +423,12 @@ class CustomerController extends Controller
 
                     return response()->json(['status' => 'ok', 'method' => 'email']);
                 } catch (\Throwable $inner) {
-                    return response()->apiError('Unable to send verification code.');
+                    return static::sendFailureResponse($smsFailure, 'Unable to send verification code.');
                 }
             }
         }
 
-        return response()->apiError('Unable to send verification code.');
+        return static::sendFailureResponse($smsFailure, 'Unable to send verification code.');
     }
 
     /**
@@ -494,10 +510,13 @@ class CustomerController extends Controller
                 ]);
             } else {
                 $this->generateSmsVerification($user, 'fleetops_customer_password_reset', [
+                    'hashed'          => true,
                     'messageCallback' => fn ($v) => 'Your ' . config('app.name') . ' password reset code is ' . $v->code,
                     'meta'            => $meta,
                 ]);
             }
+        } catch (SmsBlockedException $e) {
+            return static::smsBlockedResponse($e);
         } catch (\Throwable $e) {
             return response()->apiError(app()->hasDebugModeEnabled() ? $e->getMessage() : 'Unable to send reset code.');
         }
@@ -542,12 +561,9 @@ class CustomerController extends Controller
         // setPasswordAttribute mutator hashes plaintext; don't pre-hash here.
         $user->password = $password;
         $user->save();
-        // Invalidate all existing sessions for this user after a password reset.
+        // Invalidate all existing sessions for this user after a password reset. The
+        // code itself was used up when it verified (findVerificationCode).
         $this->deleteUserTokens($user);
-        // Null on the testing-bypass path — there is no row to consume.
-        if ($verificationCode) {
-            $verificationCode->delete();
-        }
 
         return response()->json(['status' => 'ok']);
     }
@@ -949,6 +965,36 @@ class CustomerController extends Controller
     }
 
     /**
+     * Answer a refusal from the SMS guard with the status it carries: 422 for a number that
+     * can never be texted, 429 with Retry-After for a cooldown or budget, 423 while texting
+     * is paused. The sends here sit inside catch-alls so a provider outage becomes an email
+     * fallback or a generic error; a refusal must not be flattened into that generic error,
+     * or an app can neither explain it to the person nor back off.
+     */
+    protected static function smsBlockedResponse(SmsBlockedException $e)
+    {
+        $response = response()->apiError($e->getMessage(), $e->status());
+        if ($response instanceof Response) {
+            $response->headers->add($e->headers());
+        }
+
+        return $response;
+    }
+
+    /**
+     * The response when a code could not be sent: the guard's refusal when that is why,
+     * otherwise the flow's own generic message.
+     */
+    protected static function sendFailureResponse(?\Throwable $failure, string $message)
+    {
+        if ($failure instanceof SmsBlockedException) {
+            return static::smsBlockedResponse($failure);
+        }
+
+        return response()->apiError($message);
+    }
+
+    /**
      * Whether the supplied code matches the configured testing bypass code.
      *
      * Three conditions, all required, mirroring the console equivalent in
@@ -978,14 +1024,58 @@ class CustomerController extends Controller
         );
     }
 
+    /**
+     * Whether the submitted code verifies against a live code for the purpose and
+     * subject or identity in `$attributes`, using the code up when it does.
+     */
     protected function verificationCodeExists(array $attributes): bool
     {
-        return VerificationCode::where($attributes)->exists();
+        return $this->findVerificationCode($attributes) !== null;
     }
 
+    /**
+     * The live code the submitted code verified against, used up so it cannot verify
+     * again, or null. `$attributes` carries `code`, `for` and either `subject_uuid` or
+     * `meta->identity`. Live codes are checked newest first; a wrong guess counts against
+     * each until it locks (core's check()). Plaintext rows written before codes were hashed
+     * verify the same way.
+     */
     protected function findVerificationCode(array $attributes): mixed
     {
-        return VerificationCode::where($attributes)->first();
+        $code = (string) ($attributes['code'] ?? '');
+
+        foreach ($this->liveVerificationCodes($attributes) as $verificationCode) {
+            if ($verificationCode->check($code, static::CODE_CHECK_ATTEMPTS) === VerificationCode::CHECK_VALID) {
+                $verificationCode->consume();
+
+                return $verificationCode;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Unexpired, unused, unlocked codes for the purpose and subject or identity in
+     * `$attributes`, newest first.
+     *
+     * @return \Illuminate\Support\Collection<int, VerificationCode>
+     */
+    protected function liveVerificationCodes(array $attributes)
+    {
+        $query = VerificationCode::query()
+            ->where('for', (string) ($attributes['for'] ?? ''))
+            ->where(function ($query) {
+                $query->whereNull('status')->orWhereNotIn('status', [VerificationCode::STATUS_USED, VerificationCode::STATUS_LOCKED]);
+            });
+
+        foreach (['subject_uuid', 'meta->identity'] as $column) {
+            if (array_key_exists($column, $attributes)) {
+                $query->where($column, $attributes[$column]);
+            }
+        }
+
+        return $query->orderByDesc('created_at')->get();
     }
 
     protected function findFileByPublicId(string $publicId): mixed

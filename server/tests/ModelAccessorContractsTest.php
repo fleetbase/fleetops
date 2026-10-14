@@ -85,7 +85,8 @@ function fleetopsModelAccessorsUseInMemoryRelationConnection(): void
     EloquentModel::setConnectionResolver($resolver);
 }
 
-class FleetOpsCountingRelationFake
+// Extends the relation the model method now declares, so the override stays compatible; the parent constructor is skipped on purpose.
+class FleetOpsCountingRelationFake extends HasManyThrough
 {
     public function __construct(private int $total, private int $online)
     {
@@ -251,12 +252,12 @@ class FleetOpsDriverOrderAccessorFake extends Order
 
 class FleetOpsFleetAccessorFake extends Fleet
 {
-    public function drivers()
+    public function drivers(): HasManyThrough
     {
         return new FleetOpsCountingRelationFake(5, 2);
     }
 
-    public function vehicles()
+    public function vehicles(): HasManyThrough
     {
         return new FleetOpsCountingRelationFake(7, 3);
     }

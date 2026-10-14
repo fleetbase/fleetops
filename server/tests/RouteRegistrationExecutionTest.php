@@ -223,6 +223,32 @@ test('fleetops route file registers public internal analytics metrics and hub ro
     // Uploads through a link have a tighter limit of their own, on top of the group's.
     $upload = collect($recorder->routes)->firstWhere('uri', 'public/inspections/forms/{id}/files');
     expect($upload['middleware'] ?? [])->toBe(['throttle:20,1,inspection-upload']);
+
+    // The public tracking lookup has no session either, so it is rate limited
+    // per address, on a limiter of its own.
+    $lookup = collect($recorder->routes)->first(fn (array $route) => $route['action'] === 'OrderController@lookup');
+    expect($lookup)->not->toBeNull()
+        ->and($lookup['middleware'] ?? [])->toBe(['throttle:30,1,tracking-lookup']);
+
+    // The customer tracking page's public API answers in JSON and throttles inside the
+    // controller, so a throttled lookup looks exactly like an unknown number.
+    $tracking = collect($recorder->routes)->filter(fn (array $route) => str_starts_with($route['uri'], 'public/track/'));
+    expect($tracking->pluck('action', 'uri')->all())->toMatchArray([
+        'public/track/config'                    => 'TrackingController@config',
+        'public/track/account/orders'            => 'TrackingController@accountOrders',
+        'public/track/session'                   => 'TrackingController@signOut',
+        'public/track/{number}'                  => 'TrackingController@show',
+        'public/track/{number}/codes'            => 'TrackingController@sendCode',
+        'public/track/{number}/codes/verify'     => 'TrackingController@verifyCode',
+        'public/track/{number}/instructions'     => 'TrackingController@updateInstructions',
+        'public/track/{number}/proofs/{id}'      => 'TrackingController@proof',
+        'public/track/{number}/report'           => 'TrackingController@report',
+        'public/track/{number}/socket-token'     => 'TrackingController@socketToken',
+    ]);
+    foreach ($tracking as $route) {
+        expect($inGroup($route))->toBeTrue()
+            ->and($route['middleware'] ?? [])->toBe([]);
+    }
 });
 
 test('fleetops route file wires route groups with expected middleware and namespaces', function () {

@@ -6,6 +6,7 @@ use Fleetbase\Events\ResourceLifecycleEvent;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Support\TrackingCode;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Support\PushNotification;
 use Illuminate\Broadcasting\Channel;
@@ -170,7 +171,7 @@ class OrderDispatched extends Notification implements ShouldQueue
         return (new MailMessage())
             ->subject($this->title)
             ->line($this->message)
-            ->action('Track Order', Utils::consoleUrl('track-order', ['order' => $this->getTrackingNumber()]));
+            ->action('Track Order', TrackingCode::pageUrl($this->getTrackingNumber(), data_get($this, 'order.company_uuid')));
     }
 
     /**

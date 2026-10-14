@@ -10,6 +10,7 @@ use Fleetbase\FleetOps\Events\OrderDispatchFailed;
 use Fleetbase\FleetOps\Events\OrderStarted;
 use Fleetbase\FleetOps\Events\WaypointActivityChanged;
 use Fleetbase\FleetOps\Events\WaypointCompleted;
+use Fleetbase\FleetOps\Exceptions\OrderEditLockedException;
 use Fleetbase\FleetOps\Exports\OrderExport;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
@@ -19,6 +20,7 @@ use Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Order as OrderIndexResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Proof as ProofResource;
+use Fleetbase\FleetOps\Http\Resources\v1\PublicOrderTracking;
 use Fleetbase\FleetOps\Imports\OrdersImport;
 use Fleetbase\FleetOps\Jobs\FinalizeInternalOrderCreation;
 use Fleetbase\FleetOps\Jobs\NotifyBulkAssignedDriver;
@@ -33,6 +35,7 @@ use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Notifications\OrderPing;
+use Fleetbase\FleetOps\Support\OrderEdit;
 use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
@@ -54,6 +57,12 @@ use Maatwebsite\Excel\Facades\Excel;
 class OrderController extends FleetOpsController
 {
     use ResolvesOrderServiceStops;
+
+    /**
+     * The one answer the public tracking lookup gives for any number it cannot resolve.
+     */
+    public const TRACKING_LOOKUP_ERROR = 'No order found using tracking number provided.';
+
     /**
      * Permissions for methods AuthorizationGuard cannot map to a schema action (see FleetOpsController).
      *
@@ -313,6 +322,19 @@ class OrderController extends FleetOpsController
             return $this->errorResponse('Unable to find order to update route for.');
         }
 
+        // Refuse a route edit the order's status locks (completed, canceled, expired)
+        $edit = $this->beginOrderEdit($order);
+        try {
+            $edit->guard($edit->requestedChanges(array_filter([
+                'pickup'    => $hasPickupInput ? true : null,
+                'dropoff'   => $hasDropoffInput ? true : null,
+                'return'    => $hasReturnInput ? true : null,
+                'waypoints' => ($hasWaypointsInput || $hasPickupInput || $hasDropoffInput || $hasReturnInput) ? true : null,
+            ])));
+        } catch (OrderEditLockedException $exception) {
+            return $this->errorResponse($exception->getMessage(), 422, $exception->toResponseData());
+        }
+
         if ($hasPickupInput) {
             if ($pickup) {
                 $order->payload->setPickup($pickup, ['save' => true]);
@@ -347,14 +369,9 @@ class OrderController extends FleetOpsController
             $order->payload->removeWaypoints();
         }
 
-        $startingDestination = $order->payload->getPickupOrFirstWaypoint();
-        if (!$startingDestination) {
-            $startingDestination = $order->payload->getDropoffOrLastWaypoint();
-        }
-
-        if ($startingDestination instanceof Place || $startingDestination instanceof Waypoint) {
-            $order->payload->setCurrentWaypoint($startingDestination);
-        }
+        // Only a changed route moves the current waypoint, and an order under way keeps
+        // the driver's stop; distance, time, tracking and `order.changed` follow the change
+        $this->commitOrderEdit($edit);
 
         $order->load(['payload.pickup', 'payload.dropoff', 'payload.return', 'payload.waypoints']);
 
@@ -595,7 +612,12 @@ class OrderController extends FleetOpsController
             return $this->errorResponse('No order found to cancel.');
         }
 
-        $order->cancel();
+        $reason = $request->input('reason');
+        if (is_string($reason) && trim($reason) !== '') {
+            $order->cancelWithReason($reason);
+        } else {
+            $order->cancel();
+        }
 
         return $this->jsonResponse(
             [
@@ -765,10 +787,21 @@ class OrderController extends FleetOpsController
 
     protected function assignDriverToOrders($orderUuids, Driver $driver): void
     {
+        // Drivers being replaced are told once the assignment is written
+        $replaced = $this->scopedToCompany(Order::whereIn('uuid', $orderUuids))
+            ->whereNotNull('driver_assigned_uuid')
+            ->where('driver_assigned_uuid', '!=', $driver->uuid)
+            ->get();
+
         $this->scopedToCompany(Order::whereIn('uuid', $orderUuids))->update([
             'driver_assigned_uuid' => $driver->uuid,
             'updated_at'           => now(),
         ]);
+        Order::invalidateApiCacheManually(session('company'));
+
+        foreach ($replaced as $order) {
+            $order->notifyDriverUnassigned($order->driver_assigned_uuid);
+        }
     }
 
     protected function dispatchBulkAssignedDriverNotification(array $orderUuids, Driver $driver): void
@@ -786,9 +819,19 @@ class OrderController extends FleetOpsController
         return response()->json($payload);
     }
 
-    protected function errorResponse(string $message, int $status = 400)
+    protected function errorResponse(string $message, int $status = 400, array $data = [])
     {
-        return response()->error($message, $status);
+        return response()->error($message, $status, $data);
+    }
+
+    protected function beginOrderEdit(Order $order): OrderEdit
+    {
+        return OrderEdit::begin($order);
+    }
+
+    protected function commitOrderEdit(OrderEdit $edit): array
+    {
+        return $edit->commit();
     }
 
     /**
@@ -1905,27 +1948,43 @@ class OrderController extends FleetOpsController
         return response()->json(OrderConfig::default());
     }
 
+    /**
+     * Look up an order for the public Track Order page.
+     *
+     * Answers with `PublicOrderTracking`, never the full order resource: the
+     * tracking number is the only credential here. A missing, malformed or
+     * unknown tracking number all get the same error, so a caller cannot tell
+     * which one they hit.
+     */
     public function lookup(Request $request)
     {
-        $trackingNumber = $request->input('tracking');
-        if (!$trackingNumber) {
-            return response()->error('No tracking number provided for lookup.');
-        }
-
-        $order = $this->findOrderByTrackingNumber($trackingNumber);
+        $trackingNumber = $this->normalizeTrackingLookup($request->input('tracking'));
+        $order          = $trackingNumber ? $this->findOrderByTrackingNumber($trackingNumber) : null;
 
         if (!$order) {
-            return response()->error('No order found using tracking number provided.');
+            return response()->error(static::TRACKING_LOOKUP_ERROR);
         }
 
-        // load required relations
-        $order->loadMissing(['trackingNumber', 'payload', 'trackingStatuses']);
-
-        // load tracker data
+        $order->loadMissing(['trackingNumber', 'trackingStatuses', 'payload.pickup', 'payload.dropoff', 'payload.waypoints', 'payload.entities']);
         $order->tracker_data = $order->tracker()->toArray();
-        $order->eta          = $order->tracker()->eta();
 
-        return new OrderResource($order);
+        return new PublicOrderTracking($order);
+    }
+
+    /**
+     * The tracking number to look up, or null when the input cannot be one:
+     * not a string, blank, too long, or outside the characters tracking
+     * numbers use.
+     */
+    protected function normalizeTrackingLookup($input): ?string
+    {
+        if (!is_string($input)) {
+            return null;
+        }
+
+        $input = trim($input);
+
+        return preg_match('/^[A-Za-z0-9][A-Za-z0-9._\-]{0,99}$/', $input) === 1 ? $input : null;
     }
 
     /**
@@ -1982,6 +2041,7 @@ class OrderController extends FleetOpsController
         }
 
         $order->saveQuietly();
+        $order->invalidateApiCache();
 
         return response()->json([
             'status'       => 'OK',

@@ -53,6 +53,10 @@ if (class_exists('Illuminate\Container\Container') && class_exists('Illuminate\S
             'fleetops'   => [],
             'services'   => [],
             'telematics' => [],
+            // The core SMS guard is off unless a test turns it on: its counters live in the
+            // shared cache, so one file's sends would otherwise rate-limit the next's, and
+            // a second text to the same number inside a test trips its cooldown.
+            'sms'        => ['guard' => ['enabled' => false]],
         ]));
     }
 

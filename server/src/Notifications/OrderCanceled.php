@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Notifications;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Support\TrackingCode;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Support\PushNotification;
 use Illuminate\Broadcasting\Channel;
@@ -81,6 +82,11 @@ class OrderCanceled extends Notification implements ShouldQueue
         $this->title       = 'Order ' . $this->getTrackingNumber() . ' was canceled';
         $this->message     = 'Order ' . $this->getTrackingNumber() . ' has been canceled.';
         $this->data        = ['id' => $this->order->public_id, 'type' => 'order_canceled'];
+
+        // apps show why the order was canceled when a reason was given
+        if ($reason !== '') {
+            $this->data['reason'] = $reason;
+        }
     }
 
     /**
@@ -138,7 +144,7 @@ class OrderCanceled extends Notification implements ShouldQueue
             ->line($this->message)
             ->line($this->reason)
             ->line('No further action is necessary.')
-            ->action('Track Order', Utils::consoleUrl('track-order', ['order' => $this->getTrackingNumber()]));
+            ->action('Track Order', TrackingCode::pageUrl($this->getTrackingNumber(), data_get($this, 'order.company_uuid')));
     }
 
     /**

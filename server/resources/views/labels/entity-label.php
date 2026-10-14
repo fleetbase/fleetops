@@ -45,7 +45,7 @@ use Fleetbase\Support\Utils;
     <div style="width: 420px; border: 2px #414141 solid; margin: auto;">
         <div class="group" style="border-bottom: 1px #414141 solid; overflow: hidden;">
             <div style="float: left; width: 130px; height: 120px; border-right: 1px #414141 solid; text-align: center; padding: 10px; box-sizing: border-box;">
-                <img src="data:image/png;base64,<?= Utils::notEmpty($trackingNumber) ? $trackingNumber->qr_code : $entity->qr_code ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                <img src="data:image/png;base64,<?= Utils::notEmpty($trackingNumber) ? $trackingNumber->qr_code : $entity->qr_code ?>" style="width: 100px; height: 100px;">
             </div>
             <div style="margin-top: 10px;">
                 <span style="padding-left: 10px; font-size: 18px; font-weight: bold;"><?= strtoupper($company->name) ?></span>
@@ -114,7 +114,7 @@ use Fleetbase\Support\Utils;
         <?php } ?>
         <div class="group">
             <div style="text-align: center; padding: 15px 0px; border-top: 1px #414141 solid;">
-                <img src="data:image/png;base64,<?= isset($trackingNumber) ? $trackingNumber->barcode : $entity->barcode ?>" style="height: 90px; margin-top: 10px;">
+                <img src="data:image/png;base64,<?= isset($trackingNumber) ? $trackingNumber->barcode : $entity->barcode ?>" style="max-width: 360px; max-height: 90px; margin-top: 10px;">
                 <div><?= strtoupper(isset($trackingNumber) ? $trackingNumber->tracking_number : $entity->public_id) ?></div>
             </div>
         </div>

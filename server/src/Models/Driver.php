@@ -172,6 +172,17 @@ class Driver extends Model
     protected $with = [];
 
     /**
+     * Relation paths the cached driver lists depend on (fleetbase/core-api#301).
+     *
+     * Lists eager load nothing, but which drivers they hold depends on the
+     * user (existence, name, email and phone search), the vehicle (vehicle
+     * search) and the fleets (fleet filter, through fleet_drivers).
+     *
+     * @var string[]
+     */
+    protected $apiCacheDependencies = ['user', 'vehicle', 'fleets'];
+
+    /**
      * Dynamic attributes that are appended to object.
      *
      * @var array
@@ -272,10 +283,7 @@ class Driver extends Model
         return $this->belongsTo(\Fleetbase\Models\Company::class);
     }
 
-    /**
-     * @return BelongsTo
-     */
-    public function vehicle()
+    public function vehicle(): BelongsTo
     {
         return $this->belongsTo(Vehicle::class)->select([
             'uuid',
@@ -431,7 +439,8 @@ class Driver extends Model
             return static::getAvatar($value);
         }
 
-        return $value;
+        // legacy rows hold an absolute URL; re-sign it if it points into the private media bucket
+        return Utils::signStoredFileUrl($value);
     }
 
     /**
@@ -669,8 +678,12 @@ class Driver extends Model
      */
     public function assignVehicle(Vehicle $vehicle): self
     {
-        // Unassign vehicle from other drivers
-        static::where('vehicle_uuid', $vehicle->uuid)->update(['vehicle_uuid' => null]);
+        // Unassign vehicle from other drivers. This driver is skipped: when it already holds the
+        // vehicle the save below isn't dirty, so it would not write the vehicle back
+        static::where('vehicle_uuid', $vehicle->uuid)
+            ->when($this->uuid, fn ($query) => $query->where('uuid', '!=', $this->uuid))
+            ->update(['vehicle_uuid' => null]);
+        static::invalidateApiCacheManually($vehicle->company_uuid ?? $this->company_uuid);
 
         // Set this vehicle to the driver instance
         $this->setVehicle($vehicle);

@@ -73,20 +73,21 @@ function fleetopsOrderQueryFiltersBoot(): SQLiteConnection
 
     $schema = $connection->getSchemaBuilder();
     $tables = [
-        'orders'            => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'driver_assigned_uuid', 'vehicle_assigned_uuid', 'customer_uuid', 'customer_type', 'facilitator_uuid', 'facilitator_type', 'tracking_number_uuid', 'status', 'pod_required', 'dispatched', 'scheduled_at', 'type'],
-        'payloads'          => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'return_uuid', 'current_waypoint_uuid', 'type'],
-        'places'            => ['uuid', 'public_id', 'company_uuid', 'name', 'location'],
-        'waypoints'         => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'location'],
-        'entities'          => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'tracking_number_uuid', 'name'],
-        'tracking_numbers'  => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'owner_uuid', 'status_uuid'],
-        'tracking_statuses' => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'code', 'status'],
-        'drivers'           => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'location'],
-        'users'             => ['uuid', 'public_id', 'company_uuid'],
-        'vehicles'          => ['uuid', 'public_id', 'company_uuid'],
-        'contacts'          => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'name'],
-        'vendors'           => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'name'],
-        'companies'         => ['uuid', 'public_id', 'name', 'options'],
-        'directives'        => ['uuid', 'company_uuid', 'permission_uuid', 'subject_type', 'subject_uuid', 'key', 'rules'],
+        'orders'             => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'driver_assigned_uuid', 'vehicle_assigned_uuid', 'customer_uuid', 'customer_type', 'facilitator_uuid', 'facilitator_type', 'tracking_number_uuid', 'status', 'pod_required', 'dispatched', 'scheduled_at', 'type'],
+        'payloads'           => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'return_uuid', 'current_waypoint_uuid', 'type'],
+        'places'             => ['uuid', 'public_id', 'company_uuid', 'name', 'location'],
+        'waypoints'          => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'location'],
+        'entities'           => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'tracking_number_uuid', 'name'],
+        'tracking_numbers'   => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'owner_uuid', 'status_uuid'],
+        'tracking_statuses'  => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'code', 'status'],
+        'drivers'            => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'location'],
+        'users'              => ['uuid', 'public_id', 'company_uuid'],
+        'vehicles'           => ['uuid', 'public_id', 'company_uuid'],
+        'contacts'           => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'name'],
+        'vendors'            => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'name'],
+        'integrated_vendors' => ['uuid', 'public_id', 'company_uuid', 'provider'],
+        'companies'          => ['uuid', 'public_id', 'name', 'options'],
+        'directives'         => ['uuid', 'company_uuid', 'permission_uuid', 'subject_type', 'subject_uuid', 'key', 'rules'],
     ];
     foreach ($tables as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
@@ -181,4 +182,30 @@ test('query supports entity status arrays', function () {
     ]));
 
     expect($result->count())->toBe(0);
+});
+
+test('query finds orders by facilitator and customer public ids', function () {
+    $connection = fleetopsOrderQueryFiltersBoot();
+    $connection->table('payloads')->insert(['uuid' => 'payload-1', 'public_id' => 'payload_test', 'company_uuid' => 'company-1']);
+    $connection->table('vendors')->insert(['uuid' => 'vendor-1', 'public_id' => 'vendor_facil', 'internal_id' => 'VND-1', 'company_uuid' => 'company-1']);
+    $connection->table('integrated_vendors')->insert(['uuid' => 'integrated-vendor-1', 'public_id' => 'integrated_vendor_facil', 'company_uuid' => 'company-1']);
+    $connection->table('contacts')->insert(['uuid' => 'contact-1', 'public_id' => 'contact_cust', 'company_uuid' => 'company-1']);
+    // The stored type is the class name, which is not the morph class the
+    // morph map gives these models — the mismatch that emptied every result.
+    $connection->table('orders')->insert([
+        ['uuid' => 'order-1', 'public_id' => 'order_a', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-1', 'facilitator_uuid' => 'vendor-1', 'facilitator_type' => 'Fleetbase\FleetOps\Models\Vendor', 'customer_uuid' => 'contact-1', 'customer_type' => 'Fleetbase\FleetOps\Models\Contact'],
+        ['uuid' => 'order-2', 'public_id' => 'order_b', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-1', 'facilitator_uuid' => 'integrated-vendor-1', 'facilitator_type' => 'Fleetbase\FleetOps\Models\IntegratedVendor', 'customer_uuid' => 'vendor-1', 'customer_type' => 'Fleetbase\FleetOps\Models\Vendor'],
+        ['uuid' => 'order-3', 'public_id' => 'order_c', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-1', 'facilitator_uuid' => null, 'facilitator_type' => null, 'customer_uuid' => null, 'customer_type' => null],
+    ]);
+
+    $publicIds = fn (array $input) => (new OrderController())->query(fleetopsOrderQueryFiltersRequest($input))->pluck('public_id')->sort()->values()->all();
+
+    expect($publicIds(['facilitator' => 'vendor_facil']))->toBe(['order_a'])
+        ->and($publicIds(['facilitator' => 'VND-1']))->toBe(['order_a'])
+        ->and($publicIds(['facilitator' => 'integrated_vendor_facil']))->toBe(['order_b'])
+        ->and($publicIds(['customer' => 'contact_cust']))->toBe(['order_a'])
+        ->and($publicIds(['customer' => 'vendor_facil']))->toBe(['order_b'])
+        // An unknown id matches nothing, never every order.
+        ->and($publicIds(['facilitator' => 'vendor_missing']))->toBe([])
+        ->and($publicIds(['customer' => 'contact_missing']))->toBe([]);
 });

@@ -417,6 +417,7 @@ class Contact extends Model
                 ]);
                 $user->forceFill(['type' => 'customer'])->saveQuietly();
                 $this->forceFill(['user_uuid' => $user->uuid])->saveQuietly();
+                $this->invalidateApiCache();
             } else {
                 $user = $this->createUser();
             }
@@ -644,6 +645,8 @@ class Contact extends Model
         if (!$contact->company) {
             return null;
         }
+
+        ProfileAccountManager::copyAccountToSandbox($user, $contact->company->uuid);
 
         $role        = $contact->isCustomer() ? 'Fleet-Ops Customer' : 'Fleet-Ops Contact';
         $companyUser = $contact->company->addUser($user, $role);

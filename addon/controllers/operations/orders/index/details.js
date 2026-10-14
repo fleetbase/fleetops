@@ -1,4 +1,5 @@
 import Controller, { inject as controller } from '@ember/controller';
+import { getOwner } from '@ember/application';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
@@ -78,6 +79,9 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
         return [
             {
                 route: 'operations.orders.index.details.index',
+                // Pass the order explicitly: without it the link's href is generated from whatever
+                // transition is in flight, and leaving for a shallower route throws in the router.
+                model: this.model?.public_id,
                 label: 'Overview',
                 icon: 'folder-open',
             },
@@ -219,10 +223,22 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
     }
 
     @task *refresh() {
+        yield this.refreshDetails();
+    }
+
+    /**
+     * Reload only the order details route. A bare `hostRouter.refresh()` re-runs every route
+     * from the application down (console, the engine's application `beforeModel`, the orders
+     * list), so a socket event during navigation leaves a slow refresh in flight.
+     */
+    async refreshDetails() {
         try {
-            yield this.hostRouter.refresh();
+            await getOwner(this).lookup('route:operations.orders.index.details').refresh();
         } catch (error) {
-            return error;
+            // A refresh superseded by a newer transition is expected, not an error.
+            if (error?.name !== 'TransitionAborted') {
+                throw error;
+            }
         }
     }
 
@@ -246,7 +262,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
             this.model,
             async (_msg, { reloadable }) => {
                 if (reloadable) {
-                    await this.hostRouter.refresh();
+                    await this.refreshDetails();
                 }
             },
             { debounceMs: 250 }

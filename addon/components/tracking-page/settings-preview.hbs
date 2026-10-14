@@ -1,0 +1,21 @@
+<div class="tp-preview" style={{this.style}} aria-hidden="true">
+    <div class="tp-preview-header">
+        <span class="tp-preview-monogram">{{this.monogram}}</span>
+        <span class="tp-preview-name">{{@displayName}}</span>
+    </div>
+    <div class="tp-preview-body">
+        <span class="tp-preview-chip">{{t "tracking-page.settings.preview-chip"}}</span>
+        <div class="tp-preview-headline">{{t "tracking-page.settings.preview-headline"}}</div>
+        <div class="tp-preview-sub">{{t "tracking-page.settings.preview-sub"}}</div>
+        <div class="tp-preview-steps">
+            <span class="tp-preview-step tp-preview-step-done"></span>
+            <span class="tp-preview-step tp-preview-step-done"></span>
+            <span class="tp-preview-step tp-preview-step-done"></span>
+            <span class="tp-preview-step"></span>
+        </div>
+        <span class="tp-preview-button">{{t "tracking-page.settings.preview-button"}}</span>
+    </div>
+    {{#if @poweredBy}}
+        <div class="tp-preview-footer">{{t "tracking-page.settings.preview-powered-by"}}</div>
+    {{/if}}
+</div>

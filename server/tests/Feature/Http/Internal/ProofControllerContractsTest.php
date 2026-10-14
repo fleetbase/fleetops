@@ -43,9 +43,9 @@ class FleetOpsProofControllerProbe extends ProofController
         return $proof;
     }
 
-    protected function storeSignature(string $path, string|false $contents, string $visibility): void
+    protected function storeSignature(string $path, string|false $contents): void
     {
-        $this->storedSignatures[] = [$path, $contents, $visibility];
+        $this->storedSignatures[] = [$path, $contents];
     }
 
     protected function createSignatureFile(string $path, string $signature, Proof $proof): Fleetbase\Models\File
@@ -206,7 +206,7 @@ test('internal proof controller captures signatures and assigns uploaded file', 
             'raw_data'     => $signature,
         ])
         ->and($controller->storedSignatures)->toBe([
-            ['uploads/company-uuid/signatures/proof-public-1.png', 'signature-bytes', 'public'],
+            ['uploads/company-uuid/signatures/proof-public-1.png', 'signature-bytes'],
         ])
         ->and($controller->createdFiles)->toBe([
             ['uploads/company-uuid/signatures/proof-public-1.png', $signature, 'proof-public-1'],

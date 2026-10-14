@@ -66,7 +66,7 @@ class VehicleObserver
     public function deleted(Vehicle $vehicle)
     {
         // Unassign the deleted vehicle from matching driver/(s)
-        $this->deleteDriversAssignedTo($vehicle);
+        $this->unassignDriversFrom($vehicle);
 
         $this->invalidateLiveCache();
     }
@@ -81,9 +81,14 @@ class VehicleObserver
         return Driver::where('uuid', $identifier)->whereNull('deleted_at')->withoutGlobalScopes()->first();
     }
 
-    protected function deleteDriversAssignedTo(Vehicle $vehicle): mixed
+    protected function unassignDriversFrom(Vehicle $vehicle): int
     {
-        return Driver::where(['vehicle_uuid' => $vehicle->uuid])->delete();
+        $unassigned = Driver::where(['vehicle_uuid' => $vehicle->uuid])->update(['vehicle_uuid' => null]);
+        if ($unassigned) {
+            Driver::invalidateApiCacheManually($vehicle->company_uuid);
+        }
+
+        return $unassigned;
     }
 
     protected function invalidateLiveCache(): void

@@ -59,7 +59,7 @@ export default class MapGoogleLiveMapComponent extends Component {
             const marker = this.mapManager.getMarker(driver.id);
             if (!marker) {
                 const createdMarker = await this.mapManager.addMarker(driver.id, coords.lat, coords.lng, {
-                    iconUrl: driver.vehicle_avatar ?? '/engines-dist/images/driver-marker.png',
+                    iconUrl: driver.vehicle_avatar ?? '/engines-dist/images/map-marker.png',
                     iconSize: [20, 20],
                     title: driver.name,
                     tooltip: buildDriverLiveMapContent(driver),
@@ -89,7 +89,7 @@ export default class MapGoogleLiveMapComponent extends Component {
             const marker = this.mapManager.getMarker(vehicle.id);
             if (!marker) {
                 const createdMarker = await this.mapManager.addMarker(vehicle.id, coords.lat, coords.lng, {
-                    iconUrl: vehicle.avatar_url ?? '/engines-dist/images/vehicle-marker.png',
+                    iconUrl: vehicle.avatar_url ?? '/engines-dist/images/map-marker.png',
                     iconSize: [20, 20],
                     title: vehicle.displayName,
                     tooltip: buildVehicleLiveMapContent(vehicle),

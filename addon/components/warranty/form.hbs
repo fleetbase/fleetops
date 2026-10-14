@@ -29,7 +29,7 @@
 
             <InputGroup @name="Start Date">
                 <DatePicker
-                    @value={{@resource.start_date}}
+                    @value={{format-date-fns @resource.start_date "yyyy-MM-dd"}}
                     @onChange={{fn (mut @resource.start_date)}}
                     @placeholder="Select Start Date"
                     @disabled={{cannot-write @resource}}
@@ -39,7 +39,7 @@
 
             <InputGroup @name="End Date">
                 <DatePicker
-                    @value={{@resource.end_date}}
+                    @value={{format-date-fns @resource.end_date "yyyy-MM-dd"}}
                     @onChange={{fn (mut @resource.end_date)}}
                     @placeholder="Select End Date"
                     @disabled={{cannot-write @resource}}

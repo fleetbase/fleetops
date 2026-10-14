@@ -186,6 +186,7 @@ class VehicleController extends FleetOpsController
                 'updated_at'            => now(),
             ]);
         });
+        Order::invalidateApiCacheManually(session('company'));
 
         return response()->json([
             'status'  => 'ok',

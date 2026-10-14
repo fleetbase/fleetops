@@ -187,7 +187,8 @@ class Place extends Model
             return static::getAvatar($value);
         }
 
-        return $value;
+        // legacy rows hold an absolute URL; re-sign it if it points into the private media bucket
+        return Utils::signStoredFileUrl($value);
     }
 
     /**
@@ -871,6 +872,11 @@ class Place extends Model
         }
 
         $result = static::insert($values);
+
+        // Inserted without model events
+        if ($result) {
+            static::invalidateApiCacheManually($values['company_uuid']);
+        }
 
         return $result ? $uuid : false;
     }

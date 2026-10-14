@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\Models\Model;
+use Fleetbase\Traits\HasApiModelCache;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,6 +15,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class AssetConnection extends Model
 {
     use HasUuid;
+    // Writes bump the asset_connections API cache version, which cached vehicle lists filter on.
+    use HasApiModelCache;
     use HasPublicId;
     use SoftDeletes;
 

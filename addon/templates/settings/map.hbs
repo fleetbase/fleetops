@@ -81,6 +81,52 @@
                 {{/if}}
             </ContentPanel>
 
+            {{! ─── Default Map View Panel ──────────────────────────────────────── }}
+            <ContentPanel @title={{t "settings.map.default-view"}} @open={{true}} @wrapperClass="bordered-classic">
+                {{#if this.settingsLoaded}}
+                    <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">{{t "settings.map.default-view-help-text"}}</p>
+
+                    <InputGroup @name={{t "settings.map.default-center"}} @helpText={{t "settings.map.default-center-help-text"}}>
+                        {{#each (array this.defaultCenterInputKey) as |inputKey|}}
+                            <CoordinatesInput
+                                data-input-key={{inputKey}}
+                                @value={{this.defaultMapCenterPoint}}
+                                @onChange={{this.setDefaultMapCenter}}
+                                @onUpdatedFromMap={{this.setDefaultMapCenter}}
+                                @disabled={{cannot "fleet-ops update map-settings"}}
+                            />
+                        {{/each}}
+                        {{#if this.hasDefaultMapCenter}}
+                            <Button
+                                @type="link"
+                                @size="xs"
+                                @icon="times"
+                                @text={{t "settings.map.clear-default-center"}}
+                                @onClick={{this.clearDefaultMapCenter}}
+                                @permission="fleet-ops update map-settings"
+                            />
+                        {{/if}}
+                    </InputGroup>
+
+                    <InputGroup @name={{t "settings.map.default-zoom"}} @helpText={{t "settings.map.default-zoom-help-text"}}>
+                        <Input @type="number" @value={{this.defaultMapZoom}} min="1" max="20" step="1" placeholder="12" class="w-full form-input" />
+                    </InputGroup>
+
+                    <InputGroup>
+                        <Toggle
+                            @label={{t "settings.map.fit-to-vehicles"}}
+                            @isToggled={{this.fitMapToVehicles}}
+                            @onToggle={{fn (mut this.fitMapToVehicles)}}
+                            @helpText={{t "settings.map.fit-to-vehicles-help-text"}}
+                        />
+                    </InputGroup>
+                {{else}}
+                    <div class="flex items-center justify-center py-8">
+                        <Spinner />
+                    </div>
+                {{/if}}
+            </ContentPanel>
+
             {{! Extension point for third-party panels }}
             <RegistryYield @registry="fleet-ops:template:settings:map" as |RegistryComponent|>
                 <RegistryComponent @controller={{this}} />

@@ -61,6 +61,12 @@ function fleetopsPruneBoot(): SQLiteConnection
         (require $migration)->up();
     }
 
+    // Each run remembers how far compaction got per scope; a watermark left by an earlier
+    // test would hide the rows this one inserts below it.
+    foreach (['company-1', 'company-2', 'orphans'] as $scope) {
+        Illuminate\Support\Facades\Cache::forget(PruneTelematicsData::WATERMARK_PREFIX . $scope);
+    }
+
     Carbon::setTestNow('2026-09-23 12:00:00 UTC');
     DB::table('companies')->insert([
         ['id' => 1, 'uuid' => 'company-1', 'public_id' => 'company_one'],
@@ -317,6 +323,51 @@ test('prune takes a bounded lock and yields to a run already in progress', funct
         $command->messages = [];
         expect($command->handle())->toBe(0)
             ->and($command->messages)->toBe([['warn', 'Another telematics prune run appears to be in progress.']]);
+    } finally {
+        Illuminate\Support\Facades\Cache::swap($originalCache);
+    }
+});
+
+test('compaction resumes from the last complete sweep and survives a cache outage', function () {
+    fleetopsPruneBoot();
+    DB::table('device_events')->insert([fleetopsPruneEvent('e-aged', 'company-1', 10)]);
+
+    $command                     = new PruneTelematicsDataProbe();
+    $command->options['company'] = 'company_one';
+    $command->options['table']   = ['device_events'];
+    $command->policies           = ['company-1' => ['event_retention_days' => 30, 'event_compact_after_days' => 7]];
+
+    // A complete sweep records how far it got.
+    expect($command->handle())->toBe(0)
+        ->and(DB::table('device_events')->whereNull('payload')->count())->toBe(1)
+        ->and(Illuminate\Support\Facades\Cache::get(PruneTelematicsData::WATERMARK_PREFIX . 'company-1'))->toBe('2026-09-16 12:00:00');
+
+    // Rows below the watermark were compacted by that sweep, so the next run does not revisit them.
+    DB::table('device_events')->insert([fleetopsPruneEvent('e-below-watermark', 'company-1', 20)]);
+    $command->messages = [];
+    expect($command->handle())->toBe(0)
+        ->and(DB::table('device_events')->where('uuid', 'e-below-watermark')->value('payload'))->not->toBeNull()
+        ->and($command->messages)->toBe([['info', 'Telematics prune complete: deleted=0 compacted=0 batches=0']]);
+
+    // Without a cache the sweep still runs, over the whole window.
+    $originalCache = Illuminate\Support\Facades\Cache::getFacadeRoot();
+    try {
+        Illuminate\Support\Facades\Cache::swap(new class(new Illuminate\Cache\ArrayStore()) extends Illuminate\Cache\Repository {
+            public function get($key, $default = null): mixed
+            {
+                throw new RuntimeException('cache down');
+            }
+
+            public function forever($key, $value)
+            {
+                throw new RuntimeException('cache down');
+            }
+        });
+
+        $command->messages = [];
+        expect($command->handle())->toBe(0)
+            ->and(DB::table('device_events')->whereNull('payload')->count())->toBe(2)
+            ->and($command->messages)->toContain(['info', 'company_one device_events: deleted=0 compacted=1 batches=1']);
     } finally {
         Illuminate\Support\Facades\Cache::swap($originalCache);
     }
