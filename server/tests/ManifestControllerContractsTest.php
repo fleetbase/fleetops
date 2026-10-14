@@ -241,7 +241,13 @@ test('manifest controller shows cancels destroys and updates stops through statu
         ->and($controller->stopQuery->record->freshes[0])->toBe(['place', 'order.trackingNumber']);
 });
 
-test('manifest real query helpers and stop endpoints hit the database', function () {
+/**
+ * An in-memory database for the controller's real queries. Rows for a second
+ * company are seeded alongside the caller's so every lookup is also asserted
+ * not to cross between them.
+ */
+function fleetopsManifestDatabase(): Illuminate\Database\SQLiteConnection
+{
     $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
     $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
     $resolver->setDefaultConnection('mysql');
@@ -252,7 +258,7 @@ test('manifest real query helpers and stop endpoints hit the database', function
     $schema = $connection->getSchemaBuilder();
     $tables = [
         'manifests'        => ['uuid', 'public_id', 'company_uuid', 'driver_uuid', 'vehicle_uuid', 'status', 'name', 'date', 'meta', '_key'],
-        'manifest_stops'   => ['uuid', 'public_id', 'company_uuid', 'manifest_uuid', 'place_uuid', 'order_uuid', 'waypoint_uuid', 'status', 'sequence', 'notes', 'actual_arrival', 'meta', '_key'],
+        'manifest_stops'   => ['uuid', 'public_id', 'manifest_uuid', 'place_uuid', 'order_uuid', 'waypoint_uuid', 'status', 'sequence', 'notes', 'actual_arrival', 'meta', '_key'],
         'places'           => ['uuid', 'public_id', 'company_uuid', 'name', 'location', '_key'],
         'orders'           => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'tracking_number_uuid', 'status', 'meta', '_key'],
         'payloads'         => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'meta', '_key'],
@@ -273,7 +279,6 @@ test('manifest real query helpers and stop endpoints hit the database', function
         });
     }
 
-    session(['company' => 'company-mfr-1']);
     app()->instance('responsecache', new class {
         public function __call($method, $arguments)
         {
@@ -284,8 +289,18 @@ test('manifest real query helpers and stop endpoints hit the database', function
     config()->set('activitylog.default_auth_driver', 'web');
     app()->bind(Illuminate\Contracts\Config\Repository::class, fn () => config());
     $connection->table('manifests')->insert(['uuid' => 'manifest-real-1', 'public_id' => 'manifest_realone', 'company_uuid' => 'company-mfr-1', 'status' => 'active']);
-    $connection->table('manifest_stops')->insert(['uuid' => 'stop-real-1', 'public_id' => 'manifest_stop_realone', 'company_uuid' => 'company-mfr-1', 'manifest_uuid' => 'manifest-real-1', 'place_uuid' => 'place-mfr-1', 'status' => 'pending', 'sequence' => '1', 'meta' => json_encode([])]);
+    $connection->table('manifest_stops')->insert(['uuid' => 'stop-real-1', 'public_id' => 'manifest_stop_realone', 'manifest_uuid' => 'manifest-real-1', 'place_uuid' => 'place-mfr-1', 'status' => 'pending', 'sequence' => '1', 'meta' => json_encode([])]);
     $connection->table('places')->insert(['uuid' => 'place-mfr-1', 'company_uuid' => 'company-mfr-1', 'name' => 'Manifest Stop Place']);
+
+    $connection->table('manifests')->insert(['uuid' => 'manifest-foreign-1', 'public_id' => 'manifest_foreign', 'company_uuid' => 'company-mfr-2', 'status' => 'active']);
+    $connection->table('manifest_stops')->insert(['uuid' => 'stop-foreign-1', 'public_id' => 'manifest_stop_foreign', 'manifest_uuid' => 'manifest-foreign-1', 'status' => 'pending', 'sequence' => '1']);
+
+    return $connection;
+}
+
+test('manifest real query helpers and stop endpoints hit the database', function () {
+    $connection = fleetopsManifestDatabase();
+    session(['company' => 'company-mfr-1']);
 
     $controller = new ManifestController();
     $helper     = function (string $method, ...$arguments) use ($controller) {
@@ -306,5 +321,51 @@ test('manifest real query helpers and stop endpoints hit the database', function
 
     // Sequence-only updates persist without status transitions
     $updated = $controller->updateStop(new Request(['sequence' => 7]), 'manifest_stop_realone')->getData(true);
-    expect((string) $connection->table('manifest_stops')->value('sequence'))->toBe('7');
+    expect((string) $connection->table('manifest_stops')->where('uuid', 'stop-real-1')->value('sequence'))->toBe('7');
+});
+
+test('manifest endpoints never resolve another organization\'s manifest or stop', function () {
+    /*
+     * GHSA-q479-qp9q-mg27: the single-record handlers matched on public_id
+     * alone, so any organization could read, cancel, delete and rewrite
+     * another's manifests. Stops have no company of their own and are owned
+     * through their manifest.
+     */
+    $connection = fleetopsManifestDatabase();
+    session(['company' => 'company-mfr-1']);
+
+    $controller = new ManifestController();
+    $refused    = function (callable $call): bool {
+        try {
+            $call();
+        } catch (Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return true;
+        }
+
+        return false;
+    };
+
+    expect($refused(fn () => $controller->show('manifest_foreign')))->toBeTrue()
+        ->and($refused(fn () => $controller->cancel('manifest_foreign')))->toBeTrue()
+        ->and($refused(fn () => $controller->destroy('manifest_foreign')))->toBeTrue()
+        ->and($refused(fn () => $controller->showStop('manifest_stop_foreign')))->toBeTrue()
+        ->and($refused(fn () => $controller->updateStop(new Request(['status' => 'completed', 'sequence' => 9]), 'manifest_stop_foreign')))->toBeTrue()
+        ->and($connection->table('manifests')->where('uuid', 'manifest-foreign-1')->first())->toMatchArray(['status' => 'active', 'deleted_at' => null])
+        ->and($connection->table('manifest_stops')->where('uuid', 'stop-foreign-1')->first())->toMatchArray(['status' => 'pending', 'sequence' => '1']);
+});
+
+test('manifest lookups resolve nothing without a company session', function () {
+    fleetopsManifestDatabase();
+    session(['company' => null]);
+
+    $controller = new ManifestController();
+    $helper     = function (string $method, ...$arguments) use ($controller) {
+        $reflection = new ReflectionMethod(ManifestController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($controller, ...$arguments);
+    };
+
+    expect($helper('manifestQueryByPublicId', 'manifest_realone')->count())->toBe(0)
+        ->and($helper('manifestStopQueryByPublicId', 'manifest_stop_realone')->count())->toBe(0);
 });
