@@ -452,14 +452,16 @@ test('identity checks session context and user lookups resolve', function () {
 test('verification codes files contacts and customer auth resolve', function () {
     $connection = fleetopsCustomerHelperBoot();
     $connection->table('verification_codes')->insert(['uuid' => 'vc-1', 'subject_uuid' => 'user-1', 'subject_type' => 'user', 'code' => '123456', 'for' => 'customer_verification']);
+    // A code is used up by the lookup that accepts it, so each check gets its own row.
+    $connection->table('verification_codes')->insert(['uuid' => 'vc-2', 'subject_uuid' => 'user-1', 'subject_type' => 'user', 'code' => '654321', 'for' => 'customer_verification']);
     $connection->table('files')->insert(['uuid' => 'file-1', 'public_id' => 'file_custhelp1', 'company_uuid' => 'company-1', 'name' => 'photo.png']);
     $connection->table('contacts')->insert(['uuid' => 'contact-1', 'public_id' => 'contact_custhelp1', 'company_uuid' => 'company-1', 'name' => 'Casey', 'type' => 'customer']);
 
     $probe = new FleetOpsCustomerControllerProbe();
 
-    expect($probe->callHelper('verificationCodeExists', ['code' => '123456', 'for' => 'customer_verification']))->toBeTrue()
-        ->and($probe->callHelper('findVerificationCode', ['code' => '123456'])?->uuid)->toBe('vc-1')
-        ->and($probe->callHelper('findVerificationCode', ['code' => '999999']))->toBeNull()
+    expect($probe->callHelper('verificationCodeExists', ['code' => '654321', 'for' => 'customer_verification']))->toBeTrue()
+        ->and($probe->callHelper('findVerificationCode', ['code' => '123456', 'for' => 'customer_verification'])?->uuid)->toBe('vc-1')
+        ->and($probe->callHelper('findVerificationCode', ['code' => '999999', 'for' => 'customer_verification']))->toBeNull()
         ->and($probe->callHelper('findFileByPublicId', 'file_custhelp1')?->uuid)->toBe('file-1');
 
     expect($probe->callHelper('findCustomerContact', ['uuid' => 'contact-1'])?->name)->toBe('Casey')
