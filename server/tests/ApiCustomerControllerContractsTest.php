@@ -996,6 +996,7 @@ test('api customer controller answers an sms guard refusal with its status, not 
 
     // Over budget with no email on file: the 429 and its Retry-After reach the app.
     $limited                        = fleetopsApiCustomerController();
+    $limited->activeUser->email     = null;
     $limited->smsVerificationThrows = SmsBlockedException::limited('company_per_hour', 45);
     $login                          = $limited->loginWithPhone(Request::create('/v1/customers/login/phone', 'POST', [
         'phone' => '15551234567',
