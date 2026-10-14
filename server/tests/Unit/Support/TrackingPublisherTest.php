@@ -267,12 +267,16 @@ test('order changes queue an update with the most significant reason', function 
     $unsaved         = trackingPublisherOrder(['uuid' => null]);
     $unsaved->status = 'started';
     $unsaved->syncChanges();
-    expect($publisher->orderChanged($unsaved))->toBeFalse();
+    expect($publisher->orderChanged($unsaved))->toBeFalse()
+        // an edited route queues its own update; an unsaved order has nothing to publish
+        ->and($publisher->routeChanged($order))->toBeTrue()
+        ->and($publisher->routeChanged($unsaved))->toBeFalse();
 
     expect(array_map(fn ($dispatch) => [$dispatch['job'], ...$dispatch['arguments']], DispatchRecorder::$dispatched))->toBe([
         [PublishTrackingUpdate::class, 'order-started', 'eta', 'mysql'],
         [PublishTrackingUpdate::class, 'order-started', 'assignment', 'mysql'],
         [PublishTrackingUpdate::class, 'order-started', 'status', 'mysql'],
+        [PublishTrackingUpdate::class, 'order-started', 'route', 'mysql'],
     ]);
 });
 

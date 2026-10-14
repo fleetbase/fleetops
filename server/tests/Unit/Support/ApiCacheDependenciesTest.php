@@ -296,6 +296,16 @@ test('attaching or detaching a device invalidates the attached model lists, and 
     app()->forgetInstance(Spatie\Activitylog\ActivityLogStatus::class);
 });
 
+test('throttled invalidation does nothing while api caching is off', function () {
+    config(['api.cache.enabled' => false]);
+
+    ApiCacheThrottle::invalidate(new Vehicle(), 'co-1');
+
+    config(['api.cache.enabled' => true]);
+
+    expect(apiCacheQueryVersion('vehicles', 'co-1'))->toBe(0);
+});
+
 test('a cache outage never fails a throttled location invalidation', function () {
     Cache::swap(new Repository(new class extends ArrayStore {
         public function add($key, $value, $seconds)

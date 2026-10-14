@@ -157,18 +157,20 @@ test('bulk assign driver validation enforces uuid contracts', function () {
     expect($valid['driver'])->toBe('22222222-2222-4222-8222-222222222222');
 });
 
-test('assign driver to orders updates the assignment column', function () {
+test('assign driver to orders updates the assignment column and tells the drivers it replaces', function () {
     $connection = fleetopsInternalOrderHelpersBoot();
     $connection->table('orders')->insert([
-        ['uuid' => 'order-1', 'company_uuid' => 'company-1'],
-        ['uuid' => 'order-2', 'company_uuid' => 'company-1'],
+        ['uuid' => 'order-1', 'company_uuid' => 'company-1', 'driver_assigned_uuid' => null],
+        ['uuid' => 'order-2', 'company_uuid' => 'company-1', 'driver_assigned_uuid' => null],
+        // already with another driver, who no longer exists: nothing to tell, nothing to fail
+        ['uuid' => 'order-3', 'company_uuid' => 'company-1', 'driver_assigned_uuid' => 'driver-gone'],
     ]);
     $driver = new Driver();
     $driver->setRawAttributes(['uuid' => 'driver-1'], true);
 
-    (new FleetOpsInternalOrderHelpersProbe())->callProtected('assignDriverToOrders', ['order-1', 'order-2'], $driver);
+    (new FleetOpsInternalOrderHelpersProbe())->callProtected('assignDriverToOrders', ['order-1', 'order-2', 'order-3'], $driver);
 
-    expect($connection->table('orders')->where('driver_assigned_uuid', 'driver-1')->count())->toBe(2);
+    expect($connection->table('orders')->where('driver_assigned_uuid', 'driver-1')->count())->toBe(3);
 });
 
 test('dispatch domain event helper emits and returns the event', function () {

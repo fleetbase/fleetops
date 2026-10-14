@@ -39,9 +39,13 @@ class ApiCacheThrottle
      */
     public static function telemetryWrite(Model $model, \Closure $write, int $seconds = self::LOCATION_WINDOW): mixed
     {
+        // @codeCoverageIgnoreStart
+        // fleetbase/core-api ^1.6.69, which this package requires, always has it; the
+        // branch only serves an install that pinned an older core by hand.
         if (!method_exists(ApiModelCache::class, 'withoutInvalidating')) {
             return $write();
         }
+        // @codeCoverageIgnoreEnd
 
         $result = ApiModelCache::withoutInvalidating($write);
         static::invalidate($model, $model->company_uuid, $seconds);

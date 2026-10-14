@@ -126,3 +126,31 @@ test('asserting a locked edit throws with every refused field and the policy ser
         ->and((array) $serialized['restrictions'])->toBe(['items' => 'removal_only', 'schedule' => 'earlier_only'])
         ->and(fleetopsEditPolicyOrder('ready')->editPolicy())->toBeInstanceOf(OrderEditPolicy::class);
 });
+
+class FleetOpsEditPolicyBrokenConfig extends OrderConfig
+{
+    public function isTerminalActivityCode(?string $code): bool
+    {
+        throw new RuntimeException('activities unavailable');
+    }
+}
+
+class FleetOpsEditPolicyOrderWithoutDatabase extends Order
+{
+    public function orderConfig(): Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        throw new RuntimeException('no database');
+    }
+}
+
+test('a config that cannot answer, a config that cannot load and times that do not parse all fail safe', function () {
+    $brokenConfig = OrderEditPolicy::for(fleetopsEditPolicyOrder('custom_status', [], new FleetOpsEditPolicyBrokenConfig()));
+
+    $withoutDatabase = new FleetOpsEditPolicyOrderWithoutDatabase();
+    $withoutDatabase->setRawAttributes(['uuid' => 'order-uuid', 'public_id' => 'order_policy', 'status' => 'custom_status'], true);
+
+    expect($brokenConfig->isTerminal())->toBeFalse()
+        ->and(OrderEditPolicy::for($withoutDatabase)->isTerminal())->toBeFalse()
+        // "earlier only" cannot be judged from times that do not parse, so the move is refused
+        ->and(OrderEditPolicy::for(fleetopsEditPolicyOrder('ready'))->check('schedule', ['from' => 'soon', 'to' => 'later']))->toBeString();
+});
