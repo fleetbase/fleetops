@@ -5,9 +5,16 @@ name: API Contract (Postman)
 # fleetbase/fleetbase. Requires org secrets POSTMAN_API_KEY + _GITHUB_AUTH_TOKEN
 # (inherited); no-ops until POSTMAN_API_KEY is set.
 #
-# Pin the workflow and host checkout together so branch installation resolves the
-# required published Core release before migrating and exercising this module.
-# The workflow records the API image digest and resolved dependencies for traceability.
+# Deliberately unpinned, like storefront's. The reusable workflow defaults to booting
+# fleetbase/fleetbase@main against fleetbase/fleetbase-api:latest, so every release and
+# every fix to the run order (scripts/ci/order-collection-requests.py) is picked up
+# automatically, with no ref here to remember to bump. Each run records the image digest
+# it actually resolved in its job summary, so a result stays traceable. To reproduce an
+# older run:
+#
+#   with:
+#     fleetbase-ref: v0.7.53
+#     api-image: fleetbase/fleetbase-api:v0.7.53
 
 on:
   push:
@@ -20,9 +27,8 @@ permissions:
 
 jobs:
   contract:
-    uses: fleetbase/fleetbase/.github/workflows/api-contract.yml@880c7392c67c93e3a65f01916d7a04036c098935
+    uses: fleetbase/fleetbase/.github/workflows/api-contract.yml@main
     with:
-      fleetbase-ref: 880c7392c67c93e3a65f01916d7a04036c098935
       collections: "Fleetbase API"
       build-from-source: false
       # Without this the run tests the version of fleetbase/fleetops-api baked into the
