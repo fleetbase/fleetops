@@ -40,6 +40,10 @@ test('order changed pushes the changes to the driver with fcm safe data', functi
         ->and($notification->toArray())->toMatchArray(['event' => 'order.changed_notification', 'data' => $notification->data])
         ->and(array_map(fn ($channel) => $channel->name, $notification->broadcastOn()))->toContain('driver.driver-uuid')
         ->and((new OrderChanged(fleetopsOrderChangeNotificationOrder()))->message)->toBe('This order was changed, tap for details.');
+
+    // The push builders reach for the FCM and APN clients, which the harness does not configure
+    expect(fn () => $notification->toFcm(null))->toThrow(Exception::class)
+        ->and(fn () => $notification->toApn(null))->toThrow(Error::class);
 });
 
 test('order unassigned tells the driver the order is no longer theirs', function () {
@@ -49,4 +53,7 @@ test('order unassigned tells the driver the order is no longer theirs', function
         ->and($notification->data)->toBe(['type' => 'order_unassigned', 'id' => 'order_change'])
         ->and($notification->via(null))->toBe([FcmChannel::class, ApnChannel::class])
         ->and($notification->toArray()['event'])->toBe('order.unassigned_notification');
+
+    expect(fn () => $notification->toFcm(null))->toThrow(Exception::class)
+        ->and(fn () => $notification->toApn(null))->toThrow(Error::class);
 });

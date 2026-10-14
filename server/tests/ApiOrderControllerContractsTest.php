@@ -59,6 +59,13 @@ class FleetOpsApiOrderCrudControllerProbe extends OrderController
         return $this->order;
     }
 
+    public ?FleetOpsApiOrderPayloadFake $switchedPayload = null;
+
+    protected function findPayloadByUuid(?string $uuid): ?Payload
+    {
+        return $this->switchedPayload;
+    }
+
     protected function beginOrderEdit(Order $order): OrderEdit
     {
         $this->edit ??= new FleetOpsApiOrderEditFake($order);
@@ -823,6 +830,25 @@ test('api order controller updates by payload id and clears route waypoints', fu
         ->and($order->updates[0])->toMatchArray(['payload_uuid' => 'payloads-uuid'])
         ->and($cleared)->toBe(['resource' => 'order', 'order' => $order])
         ->and($payload->removedWaypoints)->toBeTrue();
+});
+
+test('api order controller moves the cash to collect onto the payload it switches to by id', function () {
+    $order          = new FleetOpsApiOrderCrudFake();
+    $order->payload = new FleetOpsApiOrderPayloadFake();
+    $switched       = new FleetOpsApiOrderPayloadFake();
+
+    $controller                  = new FleetOpsApiOrderCrudControllerProbe();
+    $controller->order           = $order;
+    $controller->switchedPayload = $switched;
+
+    $controller->update('order-public', new FleetOpsApiOrderUpdateRequestFake([
+        'payload'    => 'payload_public',
+        'cod_amount' => '1800',
+    ]));
+
+    expect($order->updates[0])->toMatchArray(['payload_uuid' => 'payloads-uuid'])
+        ->and($switched->getAttributes()['cod_amount'])->toBe(1800)
+        ->and($switched->savedForTest)->toBeTrue();
 });
 
 test('api order controller finds deletes and updates distance matrices without database records', function () {

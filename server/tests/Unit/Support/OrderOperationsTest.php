@@ -16,6 +16,8 @@ if (!function_exists('event')) {
 }
 
 use Fleetbase\FleetOps\Events\OrderChanged;
+use Fleetbase\FleetOps\Exceptions\OrderEditLockedException;
+use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Order;
@@ -73,6 +75,30 @@ class FleetOpsOrderOpsModelDispatcher extends Illuminate\Events\Dispatcher
     }
 }
 
+class FleetOpsOrderOpsPayloadControllerProbe extends Fleetbase\FleetOps\Http\Controllers\Api\v1\PayloadController
+{
+    public function edit(Order $order): OrderEdit
+    {
+        return $this->beginOrderEdit($order);
+    }
+}
+
+class FleetOpsOrderOpsEntityControllerProbe extends Fleetbase\FleetOps\Http\Controllers\Api\v1\EntityController
+{
+    public function editFor(?string $payloadUuid): ?OrderEdit
+    {
+        return $this->orderEditForPayload($payloadUuid);
+    }
+}
+
+class FleetOpsOrderOpsApiOrderControllerProbe extends Fleetbase\FleetOps\Http\Controllers\Api\v1\OrderController
+{
+    public function locked(OrderEditLockedException $exception): mixed
+    {
+        return $this->lockedEditResponse($exception);
+    }
+}
+
 class FleetOpsOrderOpsDriver extends Driver
 {
     public array $notified = [];
@@ -111,7 +137,7 @@ function fleetopsOrderOpsBoot(): SQLiteConnection
         }
     });
     Illuminate\Support\Facades\DB::clearResolvedInstance('db');
-    class_exists(Fleetbase\FleetOps\Models\Contact::class);
+    class_exists(Contact::class);
 
     foreach (['DNS2D', 'DNS1D'] as $barcode) {
         app()->instance($barcode, new class {
@@ -222,7 +248,11 @@ test('sync entities updates named entities creates new ones and deletes the rest
         ->and($result['updated'])->toBe([$latte->uuid])
         ->and($result['deleted'])->toBe([$muffin->uuid])
         ->and($result['created'])->toHaveCount(1)
-        ->and($payload->syncEntities([['uuid' => $latte->uuid, 'name' => 'Latte', 'price' => '500']])['updated'])->toBe([]);
+        ->and($payload->syncEntities([['uuid' => $latte->uuid, 'name' => 'Latte', 'price' => '500']])['updated'])->toBe([])
+        // entries that are not arrays are skipped, and a list that is not an array changes nothing
+        ->and($payload->syncEntities([['uuid' => $latte->uuid, 'name' => 'Latte', 'price' => '500'], 'junk'])['deleted'])->toBe([])
+        ->and($payload->syncEntities('junk'))->toBe(['created' => [], 'updated' => [], 'deleted' => []])
+        ->and(Entity::where('payload_uuid', 'payload-1')->count())->toBe(1);
 });
 
 test('route signatures report changed parts and a not started order restarts at the first stop', function () {
@@ -369,7 +399,7 @@ test('requested changes name the policy fields an edit touches', function () {
     $edit->guard($edit->requestedChanges(['entities' => [['id' => $latte->public_id]], 'scheduled_at' => '2026-10-13 11:00:00'], OrderEdit::ENTITIES_REPLACE));
 
     expect(fn () => $edit->guard($edit->requestedChanges(['entities' => [['name' => 'Cake']]])))
-        ->toThrow(Fleetbase\FleetOps\Exceptions\OrderEditLockedException::class, 'Once the order is ready, items can only be removed.')
+        ->toThrow(OrderEditLockedException::class, 'Once the order is ready, items can only be removed.')
         ->and(OrderEdit::entitiesMode('replace'))->toBe('replace')
         ->and(OrderEdit::entitiesMode('sync'))->toBe('replace')
         ->and(OrderEdit::entitiesMode(null))->toBe('append');
@@ -387,5 +417,98 @@ test('a driver taken off an order is told and loses it as their current job', fu
     expect($events)->toHaveCount(1)
         ->and($events[0]->broadcastAs())->toBe('order.driver_unassigned')
         ->and($events[0]->channelNames)->toBe(['driver.driver_one', 'driver.driver-1', 'company.company-1'])
+        ->and(array_map(fn ($channel) => $channel->name, $events[0]->broadcastOn()))->toBe($events[0]->channelNames)
         ->and($events[0]->broadcastWith()['data'])->toBe(['id' => 'order_one', 'driver' => 'driver_one']);
+});
+
+test('an edit exposes its policy and detects schedule cash contact and item changes, flagging the kitchen while preparing', function () {
+    $connection = fleetopsOrderOpsBoot();
+    $connection->table('contacts')->insert(['uuid' => 'contact-1', 'public_id' => 'contact_one', 'company_uuid' => 'company-1', 'name' => 'Ada', 'type' => 'customer']);
+    $order = fleetopsOrderOpsOrder($connection, [
+        'status'        => 'preparing',
+        'scheduled_at'  => '2026-10-13 12:00:00',
+        'notes'         => 'Same',
+        'customer_uuid' => 'contact-1',
+        'customer_type' => Contact::class,
+    ], ['cod_amount' => '0']);
+    $edit = OrderEdit::begin($order);
+
+    expect($edit->policy())->toBeInstanceOf(Fleetbase\FleetOps\Support\OrderEditPolicy::class)
+        ->and($edit->requestedChanges([
+            // a time that does not parse is kept as given, and still counts as a change
+            'scheduled_at' => 'not a date',
+            'notes'        => 'Ring twice',
+            'cod_amount'   => '12.50',
+            'customer'     => 'contact_two',
+        ]))->toBe([
+            'schedule'   => ['from' => '2026-10-13T12:00:00Z', 'to' => 'not a date'],
+            'notes'      => true,
+            'cod_amount' => true,
+            'contact'    => true,
+        ])
+        // the customer already on the order, by public id, is not a change; anything but a public id is
+        ->and($edit->requestedChanges(['customer' => 'contact_one']))->toBe([])
+        ->and($edit->requestedChanges(['customer' => 'contact-1']))->toBe([])
+        ->and($edit->requestedChanges(['customer' => ['id' => 'contact_one']]))->toBe(['contact' => true]);
+
+    $edit = OrderEdit::begin($order);
+    $edit->markChanged('total', 'total');
+    $connection->table('payloads')->where('uuid', 'payload-1')->update(['cod_amount' => '900']);
+    $order->payload->setEntities([['name' => 'Latte']]);
+    $order->scheduled_at  = '2026-10-14 09:30:00';
+    $order->customer_uuid = 'contact-2';
+    $order->save();
+
+    expect($edit->commit())->toBe(['items', 'cod_amount', 'schedule', 'contact', 'total'])
+        ->and(fleetopsOrderOpsEvents()->of(OrderChanged::class)[0]->data['summary'])->toContain('Rescheduled to 14 Oct 09:30')
+        ->and(OrderEdit::summarize(['pickup', 'schedule'], null, null))->toBe('Pickup changed · Schedule cleared')
+        ->and(OrderEdit::summarize(['service_type']))->toBe('Service type changed');
+});
+
+test('an order with no payload, or an unsaved one, commits without touching the database', function () {
+    $connection = fleetopsOrderOpsBoot();
+    $connection->table('orders')->insert(['uuid' => 'order-2', 'public_id' => 'order_two', 'company_uuid' => 'company-1', 'status' => 'created']);
+
+    $bare = Order::where('uuid', 'order-2')->first();
+    expect(OrderEdit::begin($bare)->commit())->toBe([]);
+
+    $unsaved = Order::where('uuid', 'order-2')->first();
+    $unsaved->setRelation('payload', new Payload());
+    expect(OrderEdit::begin($unsaved)->commit())->toBe([])
+        ->and(fleetopsOrderOpsEvents()->of(OrderChanged::class))->toBe([]);
+});
+
+test('order changed names the customer channel, reads the editor from the session and copes with a driver that is gone', function () {
+    $connection = fleetopsOrderOpsBoot();
+    $connection->table('contacts')->insert(['uuid' => 'contact-1', 'public_id' => 'contact_one', 'company_uuid' => 'company-1', 'name' => 'Ada', 'type' => 'customer']);
+    $order = fleetopsOrderOpsOrder($connection, ['driver_assigned_uuid' => 'ghost-driver', 'customer_uuid' => 'contact-1', 'customer_type' => Contact::class]);
+    // No users table here: the editor's name lookup fails quietly
+    session(['user' => 'user-1']);
+
+    $event = OrderChanged::dispatchFor($order, ['dropoff'], 'Drop-off changed');
+    session(['user' => null]);
+
+    $noDriver = new Order();
+    $noDriver->setRawAttributes(['uuid' => 'order-9', 'public_id' => 'order_nine'], true);
+
+    expect($event->channelNames)->toBe(['order.order_one', 'order.order-1', 'driver.ghost-driver', 'customer.contact_one', 'company.company-1'])
+        ->and(array_map(fn ($channel) => $channel->name, $event->broadcastOn()))->toBe($event->channelNames)
+        ->and($event->data['changed_by'])->toBeNull()
+        ->and(OrderChanged::notifyDriver($order, $event))->toBeFalse()
+        ->and(OrderChanged::assignedDriver($noDriver))->toBeNull()
+        ->and(OrderChanged::placeData(null))->toBeNull();
+});
+
+test('the api controllers begin an order edit for a payload and answer a locked edit with 422', function () {
+    $connection = fleetopsOrderOpsBoot();
+    $order      = fleetopsOrderOpsOrder($connection);
+
+    $response = (new FleetOpsOrderOpsApiOrderControllerProbe())->locked(new OrderEditLockedException(['items' => 'Items cannot be changed once a driver has the order.']));
+
+    expect((new FleetOpsOrderOpsPayloadControllerProbe())->edit($order))->toBeInstanceOf(OrderEdit::class)
+        ->and((new FleetOpsOrderOpsEntityControllerProbe())->editFor('payload-1'))->toBeInstanceOf(OrderEdit::class)
+        ->and((new FleetOpsOrderOpsEntityControllerProbe())->editFor('payload-missing'))->toBeNull()
+        ->and((new FleetOpsOrderOpsEntityControllerProbe())->editFor(null))->toBeNull()
+        ->and($response->getStatusCode())->toBe(422)
+        ->and($response->getData(true)['locked'])->toBe(['items' => 'Items cannot be changed once a driver has the order.']);
 });
