@@ -388,7 +388,9 @@ class ProfileAccountManager
      * Copy the account and its organization into the sandbox database for a
      * test-key request. Users and companies always live in the live database,
      * but memberships follow the request into the sandbox, whose foreign keys
-     * need both rows there too.
+     * need both rows there too. Only the columns the sandbox table has are
+     * copied: extensions that skip sandbox migrations (e.g. billing's
+     * `companies.resource_units`) add columns that exist in live only.
      */
     public static function copyAccountToSandbox(User $user, ?string $companyUuid = null): void
     {
@@ -405,14 +407,28 @@ class ProfileAccountManager
 
         try {
             if ($company) {
-                $sandbox->table('companies')->updateOrInsert(['uuid' => $company['uuid']], array_diff_key($company, ['id' => true]));
+                $sandbox->table('companies')->updateOrInsert(['uuid' => $company['uuid']], static::sandboxColumns('companies', $company));
             }
 
             $account['company_uuid'] = ($account['company_uuid'] ?? null) ?: $companyUuid;
-            $sandbox->table($user->getTable())->updateOrInsert(['uuid' => $user->uuid], array_diff_key($account, ['id' => true]));
+            $sandbox->table($user->getTable())->updateOrInsert(['uuid' => $user->uuid], static::sandboxColumns($user->getTable(), $account));
         } finally {
             Schema::connection('sandbox')->enableForeignKeyConstraints();
         }
+    }
+
+    /**
+     * Reduce a live row to the columns its sandbox table has, without the id.
+     *
+     * @param array<string, mixed> $row
+     *
+     * @return array<string, mixed>
+     */
+    protected static function sandboxColumns(string $table, array $row): array
+    {
+        $columns = array_flip(Schema::connection('sandbox')->getColumnListing($table));
+
+        return array_diff_key(array_intersect_key($row, $columns), ['id' => true]);
     }
 
     /**
