@@ -53,7 +53,7 @@ export default class WidgetProofOfDeliveryComponent extends Component {
     @task({ restartable: true }) *load() {
         this.error = null;
         try {
-            const response = yield this.fetch.get('fleet-ops/proofs/recent', { limit: WidgetProofOfDeliveryComponent.limit });
+            const response = yield this.fetch.get('proofs/recent', { limit: WidgetProofOfDeliveryComponent.limit });
             this.proofs = response?.proofs ?? [];
         } catch (err) {
             this.error = err?.message ?? 'Failed to load';
