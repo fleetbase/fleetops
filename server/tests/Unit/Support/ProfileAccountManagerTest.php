@@ -758,6 +758,29 @@ test('test key requests copy new and linked managed accounts into the sandbox be
     }
 });
 
+test('test key requests copy only the columns the sandbox tables have', function () {
+    $live = fleetopsProfileAccountBoot();
+    // Extensions that skip sandbox migrations (billing) add live-only columns
+    $live->getSchemaBuilder()->table('companies', fn ($blueprint) => $blueprint->integer('resource_units')->nullable());
+    $live->getSchemaBuilder()->table('users', fn ($blueprint) => $blueprint->string('live_only_flag')->nullable());
+    $live->table('companies')->where('uuid', 'company-1')->update(['resource_units' => 25]);
+    $sandbox = fleetopsProfileAccountSandbox($live);
+
+    try {
+        $existing = fleetopsProfileAccountUser(['uuid' => 'billed-1', 'type' => 'driver', 'email' => 'billed@example.com']);
+        $live->table('users')->where('uuid', 'billed-1')->update(['live_only_flag' => 'yes']);
+
+        ProfileAccountManager::attachToCompany($existing, 'company-1', 'driver');
+
+        expect($sandbox->table('companies')->where('uuid', 'company-1')->value('name'))->toBe('Acme')
+            ->and($sandbox->table('users')->where('uuid', 'billed-1')->value('email'))->toBe('billed@example.com')
+            ->and($sandbox->table('company_users')->where('user_uuid', 'billed-1')->value('company_uuid'))->toBe('company-1')
+            ->and($sandbox->getSchemaBuilder()->hasColumn('companies', 'resource_units'))->toBeFalse();
+    } finally {
+        fleetopsProfileAccountLeaveSandbox();
+    }
+});
+
 test('a managed account whose membership fails is removed from both databases', function () {
     $live    = fleetopsProfileAccountBoot();
     $sandbox = fleetopsProfileAccountSandbox($live);
