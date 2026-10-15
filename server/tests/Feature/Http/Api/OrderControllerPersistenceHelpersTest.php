@@ -163,9 +163,12 @@ test('finalize dispatch and driving distance helpers execute their seams', funct
     $probe->callHelper('dispatchFinalizeApiOrderCreation', 'order-1', 'sq-1', true);
     expect(DispatchRecorder::$dispatched)->toHaveCount(1);
 
-    // The routing engine resolves configuration through phpdotenv, which is
-    // unavailable in the harness — the delegation body still executes.
-    expect(fn () => $probe->callHelper('drivingDistanceAndTime', [1.30, 103.80], [1.35, 103.85]))->toThrow(Error::class);
+    // Without a configured road provider the delegation returns the straight-line estimate
+    config(['fleetops.distance_matrix.provider' => null, 'fleetops.osrm.host' => null]);
+    $matrix = $probe->callHelper('drivingDistanceAndTime', [1.30, 103.80], [1.35, 103.85]);
+    expect($matrix)->toBeInstanceOf(Fleetbase\FleetOps\Support\DistanceMatrix::class)
+        ->and($matrix->distance)->toBeGreaterThan(7000)->toBeLessThan(8000)
+        ->and($matrix->time)->toBe(round($matrix->distance / 100) * Fleetbase\FleetOps\Support\Utils::DRIVING_TIME_MULTIPLIER);
 });
 
 test('proof file storage and settings helpers persist and resolve', function () {

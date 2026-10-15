@@ -63,10 +63,16 @@ return [
     |--------------------------------------------------------------------------
     | Distance Matrix Calculator
     | Options: "calculate", "google", "osrm"
+    |
+    | Leave DISTANCE_MATRIX_PROVIDER unset to measure order distance and time
+    | with each company's routing engine (Fleet-Ops Settings -> Routing) when
+    | the server can call it: OSRM needs a self-hosted OSRM_HOST, Google needs
+    | GOOGLE_MAPS_API_KEY. Otherwise the straight-line "calculate" estimate is
+    | used. Setting it applies one provider to every company.
     |--------------------------------------------------------------------------
     */
     'distance_matrix' => [
-        'provider' => env('DISTANCE_MATRIX_PROVIDER', 'calculate'),
+        'provider' => env('DISTANCE_MATRIX_PROVIDER'),
     ],
 
     /*
