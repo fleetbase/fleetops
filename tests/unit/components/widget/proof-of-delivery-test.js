@@ -5,12 +5,16 @@ import { settled } from '@ember/test-helpers';
 import { setupTest } from 'dummy/tests/helpers';
 import WidgetProofOfDeliveryComponent from 'dummy/components/widget/proof-of-delivery';
 
+// Records the URL the fetch service would request: the namespace option (the console's
+// default is `int/v1`) joined to the path, plus the query string. Recording the bare
+// path hid that `fleet-ops/proofs/recent` resolves to a URL the API does not route.
 class FetchStub extends Service {
     requests = [];
     response = Promise.resolve({ proofs: [] });
 
-    get(path, query) {
-        this.requests.push([path, query]);
+    get(path, query = {}, options = {}) {
+        const params = new URLSearchParams(query).toString();
+        this.requests.push(`GET ${options.namespace ?? 'int/v1'}/${path}${params ? `?${params}` : ''}`);
 
         return this.response;
     }
@@ -44,7 +48,9 @@ module('Unit | Component | widget/proof-of-delivery', function (hooks) {
 
         const component = await this.makeWidget();
 
-        assert.deepEqual(this.fetch.requests, [['fleet-ops/proofs/recent', { limit: 12 }]]);
+        // `GET int/v1/proofs/recent` is the `proofs` resource route in server/src/routes.php;
+        // it is not under the `fleet-ops` prefix group.
+        assert.deepEqual(this.fetch.requests, ['GET int/v1/proofs/recent?limit=12']);
         assert.deepEqual(component.proofs, proofs);
         assert.strictEqual(component.error, null);
     });

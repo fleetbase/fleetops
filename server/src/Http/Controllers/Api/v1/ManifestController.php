@@ -9,6 +9,7 @@ use Fleetbase\FleetOps\Models\Manifest;
 use Fleetbase\FleetOps\Models\ManifestStop;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 /**
@@ -189,24 +190,70 @@ class ManifestController extends Controller
     /** The driver's manifests, newest first. Separated so it can be stubbed. */
     protected static function manifestsFor(Driver $driver)
     {
-        return Manifest::where('driver_uuid', $driver->uuid)
+        return static::scopedToCompany(Manifest::where('driver_uuid', $driver->uuid))
             ->with(['driver', 'vehicle'])
             ->orderBy('scheduled_date', 'desc');
     }
 
     protected static function findDriverRecord(string $id): ?Driver
     {
-        return Driver::where('public_id', $id)->orWhere('uuid', $id)->first();
+        /** @var Driver|null $driver */
+        $driver = static::scopedToCompany(static::matchingIdentifier(Driver::query(), $id))->first();
+
+        return $driver;
     }
 
     protected static function findManifest(string $id): ?Manifest
     {
-        return Manifest::where('public_id', $id)->orWhere('uuid', $id)->first();
+        /** @var Manifest|null $manifest */
+        $manifest = static::scopedToCompany(static::matchingIdentifier(Manifest::query(), $id))->first();
+
+        return $manifest;
     }
 
+    /**
+     * A stop carries no company of its own, so it belongs to the caller only
+     * through its manifest.
+     */
     protected static function findStop(string $id): ?ManifestStop
     {
-        return ManifestStop::where('public_id', $id)->orWhere('uuid', $id)->first();
+        /** @var ManifestStop|null $stop */
+        $stop = static::matchingIdentifier(ManifestStop::query(), $id)
+            ->whereHas('manifest', fn (Builder $query) => static::scopedToCompany($query))
+            ->first();
+
+        return $stop;
+    }
+
+    /**
+     * Match a public_id or uuid, grouped so a constraint added afterwards
+     * applies to both arms — ungrouped it would read as `public_id = ? OR
+     * (uuid = ? AND company_uuid = ?)` and still resolve another
+     * organization's records.
+     */
+    protected static function matchingIdentifier(Builder $query, string $id): Builder
+    {
+        return $query->where(fn (Builder $query) => $query->where('public_id', $id)->orWhere('uuid', $id));
+    }
+
+    /**
+     * Constrain a query to the caller's company.
+     *
+     * Nothing upstream does this: there is no global company scope, and the API
+     * middleware authenticates the caller without narrowing which records an
+     * identifier may resolve to. A missing company session fails closed instead
+     * of letting the query run across every tenant.
+     */
+    protected static function scopedToCompany(Builder $query): Builder
+    {
+        $companyUuid = session('company');
+        if (!$companyUuid) {
+            $query->whereRaw('1 = 0');
+
+            return $query;
+        }
+
+        return $query->where($query->getModel()->qualifyColumn('company_uuid'), $companyUuid);
     }
 
     /**
