@@ -218,6 +218,57 @@ test('place search swallows geocoder failures and returns empty defaults', funct
         }
     });
     expect(PlaceSearch::geocode('anywhere'))->toHaveCount(0);
+
+    // lookupAddress() already absorbs geocoder failures, so the outer guard
+    // is what catches a result that cannot be turned into a place
+    app()->instance('fleetops.geocoder', new class {
+        public function geocodeQuery($query)
+        {
+            return $this;
+        }
+
+        public function all()
+        {
+            return [new stdClass()];
+        }
+    });
+    expect(PlaceSearch::geocode('anywhere'))->toHaveCount(0);
+});
+
+test('merged queries rethrow geocoder failures and imports fall back to the raw address', function () {
+    fleetopsGeocodingInjectedBoot();
+    app()->instance('fleetops.geocoder', new class {
+        public function geocodeQuery($query)
+        {
+            throw new RuntimeException('geocode backend down');
+        }
+
+        public function reverseQuery($query)
+        {
+            throw new RuntimeException('reverse backend down');
+        }
+    });
+
+    expect(fn () => Geocoding::query('88 Injected Way', 1.34, 103.84))->toThrow(RuntimeException::class, 'reverse backend down');
+
+    // A single-column import still produces a place from the raw address
+    $imported = Place::createFromImport(['address' => '88 Injected Way'], false);
+    expect($imported)->toBeInstanceOf(Place::class)
+        ->and($imported->street1)->toBe('88 Injected Way');
+});
+
+test('without an injected geocoder google maps is built from settings', function () {
+    app()->forgetInstance('fleetops.geocoder');
+    config()->set('services.google_maps.api_key', 'settings-key');
+
+    try {
+        $geocoder = Geocoding::geocoder();
+    } finally {
+        config()->set('services.google_maps.api_key', null);
+    }
+
+    // Constructing it makes no request, so no live client is exercised here
+    expect($geocoder)->toBeInstanceOf(Geocoder\StatefulGeocoder::class);
 });
 
 test('address lookups return raw results and log failures as empty results', function () {
