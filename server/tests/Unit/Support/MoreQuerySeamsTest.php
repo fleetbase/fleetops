@@ -305,23 +305,17 @@ test('payload accessors expose the payload lookup query', function () {
 
 test('geocoder controller seams call the geocoder and build places', function () {
     fleetopsMoreSeamBoot();
-    app()->instance('geocoder', new class {
-        public function geocode($address)
+    app()->instance('fleetops.geocoder', new class {
+        public function geocodeQuery($query)
         {
-            return $this;
+            return new Geocoder\Model\AddressCollection([]);
         }
 
-        public function reverse($latitude, $longitude)
+        public function reverseQuery($query)
         {
-            return $this;
-        }
-
-        public function get()
-        {
-            return collect();
+            return new Geocoder\Model\AddressCollection([]);
         }
     });
-    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstances();
 
     $class      = Fleetbase\FleetOps\Http\Controllers\Internal\v1\GeocoderController::class;
     $controller = (new ReflectionClass($class))->newInstanceWithoutConstructor();
@@ -329,6 +323,7 @@ test('geocoder controller seams call the geocoder and build places', function ()
     // Both directions delegate to the configured geocoder
     expect(fleetopsMoreSeamInvoke($controller, $class, 'reverseGeocode', [1.30, 103.80]))->toHaveCount(0)
         ->and(fleetopsMoreSeamInvoke($controller, $class, 'forwardGeocode', ['1 Marina Bay']))->toHaveCount(0);
+    app()->forgetInstance('fleetops.geocoder');
 
     // And a resolved address is turned into an unsaved place
     $address = Geocoder\Provider\GoogleMaps\Model\GoogleAddress::createFromArray([
