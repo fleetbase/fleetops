@@ -76,25 +76,24 @@ function fleetopsServiceQuoteQueryRecordBoot(): SQLiteConnection
     });
     Illuminate\Support\Facades\Redis::clearResolvedInstance('redis');
 
-    app()->instance('geocoder', new class {
+    app()->instance('fleetops.geocoder', new class {
         public $results;
 
-        public function geocode($address)
+        public function geocodeQuery($query)
         {
             return $this;
         }
 
-        public function reverse($latitude, $longitude)
+        public function reverseQuery($query)
         {
             return $this;
         }
 
-        public function get()
+        public function all()
         {
-            return collect();
+            return [];
         }
     });
-    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstances();
 
     $schema = $connection->getSchemaBuilder();
     $tables = [

@@ -184,21 +184,20 @@ function fleetopsPlaceCreationBoot(): SQLiteConnection
     });
     Illuminate\Support\Facades\Storage::clearResolvedInstance('filesystem');
 
-    app()->forgetInstance('fleetops.geocoder');
-    app()->instance('geocoder', new class {
-        public function geocode($query)
+    app()->instance('fleetops.geocoder', new class {
+        public function geocodeQuery($query)
         {
             return $this;
         }
 
-        public function reverse($lat, $lng)
+        public function reverseQuery($query)
         {
             return $this;
         }
 
-        public function get()
+        public function all()
         {
-            return collect();
+            return [];
         }
 
         public function __call($method, $arguments)
@@ -373,9 +372,17 @@ test('single column imports reverse lookups and coordinate arrays create places'
     $imported = Place::createFromImport(['address' => '88 Single Column'], true);
     expect($imported)->toBeInstanceOf(Place::class);
 
-    // Reverse lookups surface the keyless geocoder rejection pre-network
+    // Reverse lookups surface geocoder failures rather than swallowing them
+    $geocoder = app('fleetops.geocoder');
+    app()->instance('fleetops.geocoder', new class {
+        public function reverseQuery($query)
+        {
+            throw new Exception('reverse geocoder rejected the request');
+        }
+    });
     expect(fn () => Place::createFromReverseGeocodingLookup(new Point(1.36, 103.86), true))
-        ->toThrow(Exception::class);
+        ->toThrow(Exception::class, 'reverse geocoder rejected the request');
+    app()->instance('fleetops.geocoder', $geocoder);
 
     // Array coordinates resolve through the mixed point branch, then report
     // failure because the geocoder returns no address to build the place from

@@ -10,6 +10,7 @@ use Geocoder\Query\ReverseQuery;
 use Geocoder\StatefulGeocoder;
 use GuzzleHttp\Client;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Class Geocoding.
@@ -241,6 +242,37 @@ class Geocoding
     public static function geocoder(): object
     {
         return static::makeGeocoder();
+    }
+
+    /**
+     * Raw address results for a free-text address from the configured
+     * geocoder. A failed lookup resolves to an empty collection, as it did
+     * through the geocoder-laravel facade, but is logged rather than hidden.
+     */
+    public static function lookupAddress(string $address): Collection
+    {
+        try {
+            return collect(static::geocoder()->geocodeQuery(GeocodeQuery::create($address))->all());
+        } catch (\Throwable $e) {
+            Log::warning('Geocoding lookup failed: ' . $e->getMessage(), ['address' => $address]);
+
+            return collect();
+        }
+    }
+
+    /**
+     * Raw address results for a coordinate pair from the configured geocoder,
+     * resolving a failed lookup to an empty collection like lookupAddress().
+     */
+    public static function lookupCoordinates(float $latitude, float $longitude): Collection
+    {
+        try {
+            return collect(static::geocoder()->reverseQuery(ReverseQuery::fromCoordinates($latitude, $longitude))->all());
+        } catch (\Throwable $e) {
+            Log::warning('Reverse geocoding lookup failed: ' . $e->getMessage(), ['latitude' => $latitude, 'longitude' => $longitude]);
+
+            return collect();
+        }
     }
 
     protected static function makeGeocoder(): object

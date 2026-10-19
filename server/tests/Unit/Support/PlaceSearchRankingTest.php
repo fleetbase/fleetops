@@ -80,12 +80,12 @@ function fleetopsPlaceSearchWkb(float $lat, float $lng): string
 
 function fleetopsPlaceSearchGeocoderFake(bool $throws = false): void
 {
-    app()->instance('geocoder', new class($throws) {
+    app()->instance('fleetops.geocoder', new class($throws) {
         public function __construct(public bool $throws)
         {
         }
 
-        public function geocode($query)
+        public function geocodeQuery($query)
         {
             if ($this->throws) {
                 throw new RuntimeException('geocoder down');
@@ -94,9 +94,9 @@ function fleetopsPlaceSearchGeocoderFake(bool $throws = false): void
             return $this;
         }
 
-        public function get()
+        public function all()
         {
-            return collect();
+            return [];
         }
 
         public function __call($method, $arguments)

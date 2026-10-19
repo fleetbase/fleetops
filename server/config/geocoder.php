@@ -6,7 +6,6 @@ use Http\Client\Curl\Client;
 
 return [
     'cache' => [
-
         /*
         |-----------------------------------------------------------------------
         | Cache Store
@@ -17,9 +16,12 @@ return [
         |
         | Default: null
         |
+        | FleetOps geocodes through Fleetbase\FleetOps\Support\Geocoding, so
+        | this only applies to code that still uses the geocoder-laravel facade.
+        |
         */
 
-        'store' => 'geocode',
+        'store' => null,
 
         /*
         |-----------------------------------------------------------------------
@@ -56,10 +58,14 @@ return [
     */
     'providers' => [
         Chain::class => [
+            // GoogleMaps takes (client, region, apiKey). The settings-backed
+            // API key is not loaded yet when this file is read, so only the
+            // environment is consulted here; use Geocoding::geocoder() for a
+            // geocoder that honours the settings.
             GoogleMaps::class => [
-                config('services.google_maps.locale', env('GOOGLE_MAPS_LOCALE', 'en')),
-                config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')),
-            ]
+                env('GOOGLE_MAPS_REGION'),
+                env('GOOGLE_MAPS_API_KEY'),
+            ],
         ],
     ],
 
@@ -104,5 +110,4 @@ return [
     |
     */
     'reader' => null,
-
 ];

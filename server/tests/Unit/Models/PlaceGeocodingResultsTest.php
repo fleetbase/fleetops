@@ -61,16 +61,6 @@ function fleetopsPlaceGeocodeBoot(array $results): SQLiteConnection
         {
         }
 
-        public function geocode($address)
-        {
-            return $this;
-        }
-
-        public function reverse($latitude, $longitude)
-        {
-            return $this;
-        }
-
         public function geocodeQuery($query)
         {
             return new AddressCollection($this->results);
@@ -79,11 +69,6 @@ function fleetopsPlaceGeocodeBoot(array $results): SQLiteConnection
         public function reverseQuery($query)
         {
             return new AddressCollection($this->results);
-        }
-
-        public function get()
-        {
-            return collect($this->results);
         }
     };
 
@@ -99,9 +84,7 @@ function fleetopsPlaceGeocodeBoot(array $results): SQLiteConnection
         }
     });
 
-    app()->instance('geocoder', $geocoder);
     app()->instance('fleetops.geocoder', $geocoder);
-    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstances();
 
     session(['company' => 'company-geo-1']);
 

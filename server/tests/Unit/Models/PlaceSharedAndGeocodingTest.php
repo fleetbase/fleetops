@@ -20,19 +20,19 @@ class FleetOpsPlaceGeocoderFake
         $this->results = collect();
     }
 
-    public function geocode($address)
+    public function geocodeQuery($query)
     {
         return $this;
     }
 
-    public function reverse($latitude, $longitude)
+    public function reverseQuery($query)
     {
         return $this;
     }
 
-    public function get()
+    public function all()
     {
-        return $this->results;
+        return $this->results->all();
     }
 }
 
@@ -70,8 +70,7 @@ function fleetopsPlaceSharedBoot(): SQLiteConnection
         }
     });
     $geocoder = new FleetOpsPlaceGeocoderFake();
-    app()->instance('geocoder', $geocoder);
-    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstances();
+    app()->instance('fleetops.geocoder', $geocoder);
     Illuminate\Support\Facades\DB::clearResolvedInstance('db');
 
     $schema = $connection->getSchemaBuilder();

@@ -60,20 +60,20 @@ function fleetopsEntityUnitUseConnection(): void
             return null;
         }
     });
-    app()->instance('geocoder', new class {
-        public function geocode($query)
+    app()->instance('fleetops.geocoder', new class {
+        public function geocodeQuery($query)
         {
             return $this;
         }
 
-        public function reverse($lat, $lng)
+        public function reverseQuery($query)
         {
             return $this;
         }
 
-        public function get()
+        public function all()
         {
-            return collect();
+            return [];
         }
 
         public function __call($method, $arguments)
