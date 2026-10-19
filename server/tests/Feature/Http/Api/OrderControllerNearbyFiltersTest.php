@@ -116,15 +116,15 @@ function fleetopsOrderNearbyBoot(): SQLiteConnection
     app()->instance('db.schema', $connection->getSchemaBuilder());
     Illuminate\Support\Facades\DB::clearResolvedInstance('db');
 
-    app()->instance('geocoder', new class {
-        public function geocode($query)
+    app()->instance('fleetops.geocoder', new class {
+        public function geocodeQuery($query)
         {
             return $this;
         }
 
-        public function get()
+        public function all()
         {
-            return collect();
+            return [];
         }
 
         public function __call($method, $arguments)

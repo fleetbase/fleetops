@@ -101,33 +101,6 @@ function fleetopsGeocodingInjectedBoot(): SQLiteConnection
         'country'      => 'Singapore',
     ]);
 
-    app()->instance('geocoder', new class($address) {
-        public function __construct(public GoogleAddress $address)
-        {
-        }
-
-        public function geocode($query)
-        {
-            return $this;
-        }
-
-        public function reverse($lat, $lng)
-        {
-            return $this;
-        }
-
-        public function get()
-        {
-            return collect([$this->address]);
-        }
-
-        public function __call($method, $arguments)
-        {
-            return $this;
-        }
-    });
-    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstance('geocoder');
-
     app()->instance('fleetops.geocoder', new class($address) {
         public array $queries = [];
 
@@ -232,11 +205,11 @@ test('place search swallows geocoder failures and returns empty defaults', funct
     config()->set('services.google_maps.api_key', null);
     expect(PlaceSearch::geocode(null))->toHaveCount(0);
 
-    // Failures in the fallback geocoder facade collapse to empty results
-    app()->instance('geocoder', new class {
-        public function geocode($query)
+    // Failures in the plain address lookup collapse to empty results
+    app()->instance('fleetops.geocoder', new class {
+        public function geocodeQuery($query)
         {
-            throw new RuntimeException('facade geocoder down');
+            throw new RuntimeException('address geocoder down');
         }
 
         public function __call($method, $arguments)
@@ -244,8 +217,61 @@ test('place search swallows geocoder failures and returns empty defaults', funct
             return $this;
         }
     });
-    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstance('geocoder');
     expect(PlaceSearch::geocode('anywhere'))->toHaveCount(0);
+});
+
+test('address lookups return raw results and log failures as empty results', function () {
+    fleetopsGeocodingInjectedBoot();
+
+    // Successful lookups hand back the raw addresses rather than places
+    expect(Geocoding::lookupAddress('88 Injected Way')->first())->toBeInstanceOf(GoogleAddress::class)
+        ->and(Geocoding::lookupCoordinates(1.34, 103.84)->first())->toBeInstanceOf(GoogleAddress::class);
+
+    $log = new class {
+        public array $warnings = [];
+
+        public function warning($message, array $context = []): void
+        {
+            $this->warnings[] = [$message, $context];
+        }
+
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    };
+    app()->instance('log', $log);
+    Illuminate\Support\Facades\Log::clearResolvedInstance('log');
+
+    // A rejected lookup collapses to no results, but is logged rather than hidden
+    app()->instance('fleetops.geocoder', new class {
+        public function geocodeQuery($query)
+        {
+            throw new RuntimeException('REQUEST_DENIED');
+        }
+
+        public function reverseQuery($query)
+        {
+            throw new RuntimeException('REQUEST_DENIED');
+        }
+    });
+
+    try {
+        expect(Geocoding::lookupAddress('88 Injected Way'))->toHaveCount(0)
+            ->and(Geocoding::lookupCoordinates(1.34, 103.84))->toHaveCount(0)
+            ->and($log->warnings)->toBe([
+                ['Geocoding lookup failed: REQUEST_DENIED', ['address' => '88 Injected Way']],
+                ['Reverse geocoding lookup failed: REQUEST_DENIED', ['latitude' => 1.34, 'longitude' => 103.84]],
+            ]);
+
+        // Place creation keeps its raw-address fallback when the lookup fails
+        $place = Place::createFromGeocodingLookup('88 Injected Way');
+        expect($place->street1)->toBe('88 Injected Way')
+            ->and($place->location->getLat())->toBe(0.0);
+    } finally {
+        app()->forgetInstance('log');
+        Illuminate\Support\Facades\Log::clearResolvedInstance('log');
+    }
 });
 
 test('locale and region resolve independently from configuration', function () {

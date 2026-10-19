@@ -308,12 +308,17 @@ test('geocoder controller seams call the geocoder and build places', function ()
     app()->instance('fleetops.geocoder', new class {
         public function geocodeQuery($query)
         {
-            return new Geocoder\Model\AddressCollection([]);
+            return $this;
         }
 
         public function reverseQuery($query)
         {
-            return new Geocoder\Model\AddressCollection([]);
+            return $this;
+        }
+
+        public function all()
+        {
+            return [];
         }
     });
 
@@ -323,7 +328,6 @@ test('geocoder controller seams call the geocoder and build places', function ()
     // Both directions delegate to the configured geocoder
     expect(fleetopsMoreSeamInvoke($controller, $class, 'reverseGeocode', [1.30, 103.80]))->toHaveCount(0)
         ->and(fleetopsMoreSeamInvoke($controller, $class, 'forwardGeocode', ['1 Marina Bay']))->toHaveCount(0);
-    app()->forgetInstance('fleetops.geocoder');
 
     // And a resolved address is turned into an unsaved place
     $address = Geocoder\Provider\GoogleMaps\Model\GoogleAddress::createFromArray([

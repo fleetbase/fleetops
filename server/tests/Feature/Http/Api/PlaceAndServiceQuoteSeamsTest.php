@@ -120,20 +120,20 @@ function fleetopsPlaceSeamsBoot(): SQLiteConnection
         }
     });
 
-    app()->instance('geocoder', new class {
-        public function geocode($query)
+    app()->instance('fleetops.geocoder', new class {
+        public function geocodeQuery($query)
         {
             return $this;
         }
 
-        public function reverse($latitude, $longitude)
+        public function reverseQuery($query)
         {
             return $this;
         }
 
-        public function get()
+        public function all()
         {
-            return collect();
+            return [];
         }
 
         public function __call($method, $arguments)
@@ -319,9 +319,17 @@ test('place point and resource seams wrap coordinates and responses', function (
     $withLocation = $probe->callHelper('withLocationFromRequest', [], fleetopsPlaceSeamsRequest('v1/places', ['location' => ['lat' => 1.33, 'lng' => 103.83]]));
     expect($withLocation)->toHaveKey('location');
 
-    // Reverse lookups surface the keyless geocoder rejection pre-network
+    // Reverse lookups surface geocoder failures rather than swallowing them
+    $geocoder = app('fleetops.geocoder');
+    app()->instance('fleetops.geocoder', new class {
+        public function reverseQuery($query)
+        {
+            throw new Exception('reverse geocoder rejected the request');
+        }
+    });
     expect(fn () => $probe->callHelper('createPlaceFromReverseGeocodingLookup', new Fleetbase\LaravelMysqlSpatial\Types\Point(1.3, 103.8)))
-        ->toThrow(Exception::class);
+        ->toThrow(Exception::class, 'reverse geocoder rejected the request');
+    app()->instance('fleetops.geocoder', $geocoder);
 
     $place = Place::where('uuid', '11111111-1111-4111-8111-111111111111')->first();
     expect($probe->callHelper('placeResource', $place))->not->toBeNull()
@@ -413,24 +421,12 @@ test('address-only creation fills the place from the geocoded result', function 
         {
         }
 
-        public function geocode($query): self
-        {
-            return $this;
-        }
-
         public function geocodeQuery($query)
         {
             return new Geocoder\Model\AddressCollection([$this->address]);
         }
-
-        public function get()
-        {
-            return collect([$this->address]);
-        }
     };
-    app()->instance('geocoder', $geocoder);
     app()->instance('fleetops.geocoder', $geocoder);
-    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstances();
 
     // No coordinates were submitted, so the address string is geocoded forward and
     // the resolved address is filled onto the place rather than the (0, 0) default
