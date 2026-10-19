@@ -233,6 +233,16 @@ class Geocoding
         return config('services.google_maps.region') ?: env('GOOGLE_MAPS_REGION', 'us');
     }
 
+    /**
+     * The configured geocoder — Google Maps with the settings-backed API key,
+     * region and locale — for callers that need raw address results rather
+     * than places.
+     */
+    public static function geocoder(): object
+    {
+        return static::makeGeocoder();
+    }
+
     protected static function makeGeocoder(): object
     {
         // Allow an alternative geocoder (or test double) to be injected
