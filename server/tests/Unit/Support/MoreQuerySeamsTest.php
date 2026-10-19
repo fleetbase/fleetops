@@ -305,23 +305,22 @@ test('payload accessors expose the payload lookup query', function () {
 
 test('geocoder controller seams call the geocoder and build places', function () {
     fleetopsMoreSeamBoot();
-    app()->instance('geocoder', new class {
-        public function geocode($address)
+    app()->instance('fleetops.geocoder', new class {
+        public function geocodeQuery($query)
         {
             return $this;
         }
 
-        public function reverse($latitude, $longitude)
+        public function reverseQuery($query)
         {
             return $this;
         }
 
-        public function get()
+        public function all()
         {
-            return collect();
+            return [];
         }
     });
-    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstances();
 
     $class      = Fleetbase\FleetOps\Http\Controllers\Internal\v1\GeocoderController::class;
     $controller = (new ReflectionClass($class))->newInstanceWithoutConstructor();

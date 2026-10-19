@@ -99,23 +99,22 @@ function fleetopsImportSeamBoot(): SQLiteConnection
         });
     }
 
-    app()->instance('geocoder', new class {
-        public function geocode($address)
+    app()->instance('fleetops.geocoder', new class {
+        public function geocodeQuery($query)
         {
             return $this;
         }
 
-        public function reverse($latitude, $longitude)
+        public function reverseQuery($query)
         {
             return $this;
         }
 
-        public function get()
+        public function all()
         {
-            return collect();
+            return [];
         }
     });
-    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstances();
 
     session(['company' => 'company-import-1']);
     $connection->table('companies')->insert(['uuid' => 'company-import-1', 'name' => 'Import Co']);

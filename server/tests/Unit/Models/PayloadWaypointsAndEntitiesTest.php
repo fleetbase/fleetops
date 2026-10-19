@@ -181,15 +181,15 @@ test('update waypoints resolve places by uuid public id and mixed input', functi
         '33333333-3333-4333-8333-333333333333',
     ]);
 
-    app()->instance('geocoder', new class {
-        public function geocode($query)
+    app()->instance('fleetops.geocoder', new class {
+        public function geocodeQuery($query)
         {
             return $this;
         }
 
-        public function get()
+        public function all()
         {
-            return collect();
+            return [];
         }
 
         public function __call($method, $arguments)
@@ -197,7 +197,6 @@ test('update waypoints resolve places by uuid public id and mixed input', functi
             return $this;
         }
     });
-    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstances();
 
     // A console place search hands back a uuid that no place carries yet. The
     // waypoint is created from the rest of the attributes and keeps the search

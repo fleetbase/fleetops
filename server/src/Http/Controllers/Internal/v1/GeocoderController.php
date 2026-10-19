@@ -3,9 +3,11 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
-use Geocoder\Laravel\Facades\Geocoder;
+use Geocoder\Query\GeocodeQuery;
+use Geocoder\Query\ReverseQuery;
 use Illuminate\Http\Request;
 
 class GeocoderController extends Controller
@@ -97,14 +99,18 @@ class GeocoderController extends Controller
         return response()->json([]);
     }
 
+    // Both lookups go through the same geocoder places/lookup uses. The
+    // geocoder-laravel facade built its provider from config/geocoder.php at
+    // boot, before the settings-backed API key was loaded, and its chain
+    // provider swallowed the resulting failure into an empty result.
     protected function reverseGeocode(float $latitude, float $longitude)
     {
-        return Geocoder::reverse($latitude, $longitude)->get();
+        return collect(Geocoding::geocoder()->reverseQuery(ReverseQuery::fromCoordinates($latitude, $longitude))->all());
     }
 
     protected function forwardGeocode(string $query)
     {
-        return Geocoder::geocode($query)->get();
+        return collect(Geocoding::geocoder()->geocodeQuery(GeocodeQuery::create($query))->all());
     }
 
     protected function placeFromGoogleAddress($googleAddress)

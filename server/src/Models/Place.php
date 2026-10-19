@@ -367,7 +367,7 @@ class Place extends Model
      */
     public static function createFromGeocodingLookup(string $address, $saveInstance = false): ?Place
     {
-        $results = \Geocoder\Laravel\Facades\Geocoder::geocode($address)->get();
+        $results = Geocoding::lookupAddress($address);
 
         if ($results->isEmpty() || !$results->first()) {
             $place = (new static())->newInstance(['street1' => $address, 'location' => new SpatialPoint(0, 0)]);
@@ -386,7 +386,7 @@ class Place extends Model
      */
     public static function getValuesFromGeocodingLookup(string $address): array
     {
-        $results = \Geocoder\Laravel\Facades\Geocoder::geocode($address)->get();
+        $results = Geocoding::lookupAddress($address);
 
         if ($results->isEmpty() || !$results->first()) {
             return ['street1' => $address, 'location' => new SpatialPoint(0, 0)];
@@ -617,7 +617,7 @@ class Place extends Model
         $instance->setAttribute('location', new SpatialPoint($latitude, $longitude));
         $instance->fill($attributes);
 
-        $results = \Geocoder\Laravel\Facades\Geocoder::reverse($latitude, $longitude)->get();
+        $results = Geocoding::lookupCoordinates($latitude, $longitude);
 
         if (!$results->isEmpty()) {
             $instance->fillWithGoogleAddress($results->first());
@@ -653,7 +653,7 @@ class Place extends Model
             $longitude              = $point->getLng();
         }
 
-        $results = \Geocoder\Laravel\Facades\Geocoder::reverse($latitude, $longitude)->get();
+        $results = Geocoding::lookupCoordinates($latitude, $longitude);
 
         if ($results->count() === 0) {
             return false;

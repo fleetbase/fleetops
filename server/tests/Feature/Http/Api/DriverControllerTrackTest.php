@@ -267,15 +267,15 @@ test('stale drivers geocode their locality and geofence failures stay silent', f
     $driver->setRelation('vehicle', null);
 
     // Reverse geocoding resolves the locality onto the driver record
-    app()->instance('geocoder', new class {
-        public function reverse($lat, $lng)
+    app()->instance('fleetops.geocoder', new class {
+        public function reverseQuery($query)
         {
             return $this;
         }
 
-        public function get()
+        public function all()
         {
-            return collect([new class {
+            return [new class {
                 public function getLocality()
                 {
                     return 'Singapore';
@@ -290,7 +290,7 @@ test('stale drivers geocode their locality and geofence failures stay silent', f
                         }
                     };
                 }
-            }]);
+            }];
         }
 
         public function __call($method, $arguments)
@@ -298,7 +298,6 @@ test('stale drivers geocode their locality and geofence failures stay silent', f
             return $this;
         }
     });
-    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstance('geocoder');
 
     // Geofence detection failures never block the tracking response
     $throwingService = new class extends GeofenceIntersectionService {
@@ -348,8 +347,8 @@ test('geocode and geofence failures report to sentry when bound', function () {
     };
     app()->instance('sentry', $sentry);
 
-    app()->instance('geocoder', new class {
-        public function reverse($lat, $lng)
+    app()->instance('fleetops.geocoder', new class {
+        public function reverseQuery($query)
         {
             throw new RuntimeException('geocoder offline');
         }
@@ -359,7 +358,6 @@ test('geocode and geofence failures report to sentry when bound', function () {
             return $this;
         }
     });
-    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstance('geocoder');
 
     $throwingService = new class extends GeofenceIntersectionService {
         public function detectDriverCrossings($driver, $location): array

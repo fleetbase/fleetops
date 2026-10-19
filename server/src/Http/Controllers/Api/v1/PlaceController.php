@@ -7,11 +7,11 @@ use Fleetbase\FleetOps\Http\Requests\UpdatePlaceRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\FleetOps\Support\PlaceSearch;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
-use Geocoder\Laravel\Facades\Geocoder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -375,7 +375,7 @@ class PlaceController extends Controller
 
     protected function geocodeAddress(string $address): mixed
     {
-        return Geocoder::geocode($address)->get()->first();
+        return Geocoding::lookupAddress($address)->first();
     }
 
     protected function findPlaceOrFail(string $id): Place

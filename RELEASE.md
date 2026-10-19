@@ -1,11 +1,11 @@
-> v0.6.73 ~ "Test-mode driver creation and manifest tenant isolation"
+> v0.6.74 ~ "Settings-backed geocoding everywhere"
 
 ---
 ## Highlights
 
-- **Fix: creating a driver or contact with a test API key returned 500.** Copying the account into the sandbox database copied live-only columns (such as billing's `companies.resource_units`) and failed with `Unknown column`. Only the columns the sandbox tables have are copied now. (#404)
-- **Fix: the proof-of-delivery dashboard widget loads.** It requested `int/v1/fleet-ops/proofs/recent`, which does not exist, so it always showed "There is nothing to see here". It now requests `int/v1/proofs/recent`, where the route from #388 lives. (#407)
-- **Fix: manifest lookups are scoped to the caller's organization.** Manifests, manifest stops and drivers resolved by identifier on the public API and in the console are now constrained to the current company; a missing company session resolves nothing. (#403)
+- **Fix: the console geocoder endpoints return results.** `int/v1/geocoder/query` and `int/v1/geocoder/reverse` returned `[]` for valid addresses whenever the Google Maps API key was set in the console instead of in the environment. This broke address lookup in the coordinates and autocomplete inputs, for example when editing a place. Both endpoints now use the same geocoder as `places/lookup`. (#408, fleetbase/fleetbase#723)
+- **Fix: every other geocoding path uses the settings-backed key.** Place creation from an address or coordinates, place search, address-only place creation on the public API, and driver tracking locality all go through the same geocoder. Failed lookups are now logged instead of hidden. (#409)
+- **Fix: `config/geocoder.php` passes the region rather than the locale to Google Maps, and uses the default cache store.** (#409)
 
 ---
 ## Upgrading

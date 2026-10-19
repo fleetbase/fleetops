@@ -23,6 +23,7 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Support\ApiCacheThrottle;
+use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
 use Fleetbase\FleetOps\Support\OSRM;
 use Fleetbase\FleetOps\Support\ProfileAccountManager;
@@ -38,7 +39,7 @@ use Fleetbase\Models\User;
 use Fleetbase\Models\UserDevice;
 use Fleetbase\Models\VerificationCode;
 use Fleetbase\Support\Auth;
-use Geocoder\Laravel\Facades\Geocoder;
+use Geocoder\Query\ReverseQuery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -368,7 +369,7 @@ class DriverController extends Controller
 
         if ($isGeocodable) {
             try {
-                $geocoded = Geocoder::reverse($latitude, $longitude)->get()->first();
+                $geocoded = collect(Geocoding::geocoder()->reverseQuery(ReverseQuery::fromCoordinates($latitude, $longitude))->all())->first();
                 if ($geocoded) {
                     $driver->updateQuietly([
                         'city'    => $geocoded->getLocality(),
