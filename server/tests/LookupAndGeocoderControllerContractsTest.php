@@ -73,6 +73,20 @@ class FleetOpsGeocoderControllerProbe extends GeocoderController
     }
 }
 
+// Keeps the real forward/reverse lookups so they run against whatever
+// geocoder Geocoding resolves, mapping each address to its display string
+class FleetOpsGeocoderControllerLookupProbe extends GeocoderController
+{
+    public function __construct()
+    {
+    }
+
+    protected function placeFromGoogleAddress($googleAddress)
+    {
+        return ['street' => $googleAddress->getStreetName()];
+    }
+}
+
 class FleetOpsLookupControllerProbe extends FleetOpsLookupController
 {
     public Collection $contacts;
@@ -260,6 +274,59 @@ test('geocoder controller handles forward geocode array delegation and result sh
         ->and($delegated->getData(true))->toBe(['address' => 'Reverse One', 'source' => 'reverse-a'])
         ->and($empty->getData(true))->toBe([])
         ->and($controller->forwardCalls)->toBe(['depot', 'depot']);
+});
+
+test('geocoder controller resolves lookups through the fleet ops geocoder rather than the facade', function () {
+    $geocoder = new class {
+        public array $queries = [];
+
+        public function geocodeQuery($query)
+        {
+            $this->queries[] = $query;
+
+            return new Geocoder\Model\AddressCollection([
+                Geocoder\Model\Address::createFromArray(['providedBy' => 'google', 'streetName' => 'улица Зенкова', 'latitude' => 43.2551875, 'longitude' => 76.9567153]),
+            ]);
+        }
+
+        public function reverseQuery($query)
+        {
+            $this->queries[] = $query;
+
+            return new Geocoder\Model\AddressCollection([
+                Geocoder\Model\Address::createFromArray(['providedBy' => 'google', 'streetName' => 'Reverse Way', 'latitude' => 1.3, 'longitude' => 103.8]),
+            ]);
+        }
+    };
+    app()->instance('fleetops.geocoder', $geocoder);
+
+    // A facade-bound geocoder must not be consulted: it is the one built
+    // before the settings-backed API key is available
+    app()->instance('geocoder', new class {
+        public function __call($method, $arguments)
+        {
+            throw new RuntimeException('geocoder facade should not be used');
+        }
+    });
+    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstance('geocoder');
+
+    try {
+        $controller = new FleetOpsGeocoderControllerLookupProbe();
+        $forward    = $controller->geocode(new Request(['query' => 'зенкова 21 алматы', 'single' => true]));
+        $reverse    = $controller->reverse(new Request(['coordinates' => '1.3,103.8']));
+    } finally {
+        app()->forgetInstance('fleetops.geocoder');
+        app()->forgetInstance('geocoder');
+        Geocoder\Laravel\Facades\Geocoder::clearResolvedInstance('geocoder');
+    }
+
+    expect($forward->getData(true))->toBe(['street' => 'улица Зенкова'])
+        ->and($reverse->getData(true))->toBe([['street' => 'Reverse Way']])
+        ->and($geocoder->queries[0])->toBeInstanceOf(Geocoder\Query\GeocodeQuery::class)
+        ->and($geocoder->queries[0]->getText())->toBe('зенкова 21 алматы')
+        ->and($geocoder->queries[1])->toBeInstanceOf(Geocoder\Query\ReverseQuery::class)
+        ->and($geocoder->queries[1]->getCoordinates()->getLatitude())->toBe(1.3)
+        ->and($geocoder->queries[1]->getCoordinates()->getLongitude())->toBe(103.8);
 });
 
 test('fleet ops lookup controller merges polymorphic contacts vendors and integrated facilitators', function () {
