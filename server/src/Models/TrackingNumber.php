@@ -184,15 +184,25 @@ class TrackingNumber extends Model
      */
     public static function generateTrackingNumber($region = 'SG', $length = 10): string
     {
-        $company     = \Fleetbase\Models\Company::where('uuid', session('company'))->withoutGlobalScopes()->first();
-        $companyName = $company ? strtoupper(substr($company->name, 0, 3)) : null;
-        $number      = $companyName ?? 'FLB';
+        $company = \Fleetbase\Models\Company::where('uuid', session('company'))->withoutGlobalScopes()->first();
+        $number  = static::trackingNumberPrefix($company ? $company->name : null);
 
         for ($i = 0; $i < $length; $i++) {
             $number .= mt_rand(0, 9);
         }
 
         return $number . strtoupper($region);
+    }
+
+    /**
+     * The tracking number prefix for a company: the letters and digits among the
+     * first three characters of its name, upper-cased, or FLB when none are left.
+     */
+    public static function trackingNumberPrefix(?string $companyName): string
+    {
+        $prefix = (string) preg_replace('/[^A-Z0-9]/', '', strtoupper(substr((string) $companyName, 0, 3)));
+
+        return $prefix !== '' ? $prefix : 'FLB';
     }
 
     /**

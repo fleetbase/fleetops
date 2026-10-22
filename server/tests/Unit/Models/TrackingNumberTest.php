@@ -258,3 +258,13 @@ test('tracking number code images render a medium-correction QR and a Code 128 b
         }
     }
 });
+
+test('tracking number prefixes keep only letters and digits from the company name', function () {
+    expect(TrackingNumber::trackingNumberPrefix('Nordic Freight'))->toBe('NOR')
+        ->and(TrackingNumber::trackingNumberPrefix('Al Noor Transport'))->toBe('AL')
+        ->and(TrackingNumber::trackingNumberPrefix('A&B Logistics'))->toBe('AB')
+        ->and(TrackingNumber::trackingNumberPrefix('3PL Hub'))->toBe('3PL')
+        ->and(TrackingNumber::trackingNumberPrefix('النور'))->toBe('FLB')
+        ->and(TrackingNumber::trackingNumberPrefix('  '))->toBe('FLB')
+        ->and(TrackingNumber::trackingNumberPrefix(null))->toBe('FLB');
+});
