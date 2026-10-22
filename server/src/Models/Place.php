@@ -406,6 +406,63 @@ class Place extends Model
     }
 
     /**
+     * Whether a place array carries address fields, as opposed to being only coordinates.
+     */
+    public static function hasStructuredAddress(mixed $place): bool
+    {
+        if (!is_array($place)) {
+            return false;
+        }
+
+        foreach (['street1', 'address', 'city', 'postal_code'] as $field) {
+            if (static::normalizePlaceValue(data_get($place, $field)) !== null) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Turn `latitude`/`longitude` (or `lat`/`lng`) on a structured place array into its
+     * `location`, unless a location was given explicitly. The loose keys are removed so they are
+     * not mass assigned.
+     *
+     * @param array<string, mixed> $place
+     *
+     * @return array<string, mixed>
+     */
+    public static function withProvidedLocation(array $place): array
+    {
+        $coordinates = array_intersect_key($place, array_flip(['latitude', 'longitude', 'lat', 'lng', 'lon']));
+
+        if (empty($place['location']) && count($coordinates) >= 2) {
+            $point = Utils::getPointFromCoordinatesStrict($coordinates);
+            if ($point && !($point->getLat() == 0.0 && $point->getLng() == 0.0)) {
+                $place['location'] = new SpatialPoint($point->getLat(), $point->getLng());
+            }
+        }
+
+        return array_diff_key($place, array_flip(['latitude', 'longitude', 'lat', 'lng', 'lon']));
+    }
+
+    /**
+     * Whether a structured place already has both a street and a usable location.
+     *
+     * @param array<string, mixed> $place
+     */
+    public static function hasProvidedLocationAndStreet(array $place): bool
+    {
+        if (static::normalizePlaceValue(data_get($place, 'street1')) === null || empty($place['location'])) {
+            return false;
+        }
+
+        $point = Utils::getPointFromMixed($place['location']);
+
+        return $point instanceof SpatialPoint && !($point->getLat() == 0.0 && $point->getLng() == 0.0);
+    }
+
+    /**
      * Compose a fuller geocoding query from structured place attributes.
      */
     public static function composeGeocodingQuery(array $place): ?string
@@ -708,8 +765,9 @@ class Place extends Model
             // Return a new Place object created from a geocoding lookup
             return static::createFromGeocodingLookup($place, $saveInstance);
         }
-        // If $place is an array of coordinates
-        elseif (Utils::isCoordinatesStrict($place)) {
+        // If $place is only coordinates. An array that also carries address fields is a
+        // structured place: its address is kept and the coordinates become its location.
+        elseif (Utils::isCoordinatesStrict($place) && !static::hasStructuredAddress($place)) {
             return static::createFromCoordinates($place, $attributes, $saveInstance);
         }
         // If $place is an array
@@ -730,12 +788,17 @@ class Place extends Model
                 return $existingPlace;
             }
 
+            // Coordinates sent alongside the address are the caller's location for it.
+            $place = static::withProvidedLocation($place);
+
             $query = static::composeGeocodingQuery($place)
                 ?? static::normalizePlaceValue(data_get($place, 'address'))
                 ?? static::normalizePlaceValue(data_get($place, 'street1'));
 
+            // A street address that arrives with its own coordinates needs no lookup: geocoding
+            // would only add latency and could move the pin to a different nearby address.
             $geocoded = [];
-            if ($query) {
+            if ($query && !static::hasProvidedLocationAndStreet($place)) {
                 $geocoded = static::getValuesFromGeocodingLookup($query);
             }
 
