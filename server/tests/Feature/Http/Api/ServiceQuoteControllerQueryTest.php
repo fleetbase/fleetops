@@ -403,3 +403,87 @@ test('find service quote helper loads records and reports missing ones', functio
     expect(fn () => $controller->callProtected('findServiceQuote', ['missing']))
         ->toThrow(Illuminate\Database\Eloquent\ModelNotFoundException::class);
 });
+
+test('stored quotes expire with the purge window and preview quotes are never stored', function () {
+    $connection = fleetopsApiServiceQuoteQueryBoot();
+    $controller = new class extends ServiceQuoteController {
+        public function callProtected(string $method, array $arguments = []): mixed
+        {
+            $reflection = new ReflectionMethod(ServiceQuoteController::class, $method);
+            $reflection->setAccessible(true);
+
+            return $reflection->invoke($this, ...$arguments);
+        }
+
+        public function preview(bool $on): void
+        {
+            $this->previewOnly = $on;
+        }
+    };
+
+    Illuminate\Support\Carbon::setTestNow('2026-10-22 12:00:00');
+    config()->set('fleetops.service_quotes.ttl_minutes', 30);
+    $attributes = ['request_id' => 'request_x', 'company_uuid' => 'company-1', 'service_rate_uuid' => 'rate-uuid', 'amount' => 100, 'currency' => 'USD'];
+
+    $stored = $controller->callProtected('createServiceQuote', [$attributes]);
+    expect($stored->exists)->toBeTrue()
+        ->and($stored->expired_at->toDateTimeString())->toBe('2026-10-22 12:30:00')
+        ->and($connection->table('service_quotes')->count())->toBe(1);
+
+    // An explicit expiry is kept; the default follows the 48 hour purge window
+    config()->set('fleetops.service_quotes.ttl_minutes', null);
+    expect($controller->callProtected('quoteTtlMinutes'))->toBe(2880)
+        ->and($controller->callProtected('createServiceQuote', [$attributes + ['expired_at' => '2026-10-23 00:00:00']])->expired_at->toDateTimeString())
+        ->toBe('2026-10-23 00:00:00');
+
+    $controller->preview(true);
+    $preview = $controller->callProtected('createServiceQuote', [$attributes]);
+    $item    = $controller->callProtected('createServiceQuoteItem', [['service_quote_uuid' => $preview->uuid, 'amount' => 100, 'currency' => 'USD', 'details' => 'Base', 'code' => 'BASE']]);
+    expect($preview->exists)->toBeFalse()
+        ->and($preview->uuid)->toBeString()
+        ->and($item->exists)->toBeFalse()
+        ->and($connection->table('service_quotes')->count())->toBe(2)
+        ->and($connection->table('service_quote_items')->count())->toBe(0);
+
+    Illuminate\Support\Carbon::setTestNow();
+});
+
+test('the requested currency is read as a code, never as a boolean', function () {
+    $controller = new class extends ServiceQuoteController {
+        public function currency(array $input): ?string
+        {
+            $reflection = new ReflectionMethod(ServiceQuoteController::class, 'currencyFromRequest');
+            $reflection->setAccessible(true);
+
+            return $reflection->invoke($this, new Illuminate\Http\Request($input));
+        }
+
+        public function preliminary(array $input): array
+        {
+            $reflection = new ReflectionMethod(ServiceQuoteController::class, 'preliminaryDataFromRequest');
+            $reflection->setAccessible(true);
+
+            return $reflection->invoke($this, new Illuminate\Http\Request($input));
+        }
+    };
+
+    expect($controller->currency(['currency' => ' usd ']))->toBe('USD')
+        ->and($controller->currency(['currency' => '']))->toBeNull()
+        ->and($controller->currency(['currency' => ['USD']]))->toBeNull()
+        ->and($controller->currency([]))->toBeNull()
+        ->and($controller->preliminary(['currency' => 'sgd'])['currency'])->toBe('SGD');
+});
+
+test('query switches to preview mode when asked', function () {
+    fleetopsApiServiceQuoteQueryBoot();
+    $probe = new FleetOpsApiServiceQuoteQueryProbe();
+
+    $probe->query(fleetopsApiServiceQuoteQueryRequest(['preview' => true]));
+    $previewOnly = new ReflectionProperty(ServiceQuoteController::class, 'previewOnly');
+    $previewOnly->setAccessible(true);
+    expect($previewOnly->getValue($probe))->toBeTrue();
+
+    $probe->query(fleetopsApiServiceQuoteQueryRequest([]));
+    expect($previewOnly->getValue($probe))->toBeFalse()
+        ->and($probe->preliminaryCalls)->toHaveCount(2);
+});

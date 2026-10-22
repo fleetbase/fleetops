@@ -769,6 +769,35 @@ class Order extends Model
     }
 
     /**
+     * Store scheduled_at in the application timezone.
+     *
+     * @see toStorageDateTime()
+     */
+    public function setScheduledAtAttribute($value): void
+    {
+        $this->attributes['scheduled_at'] = static::toStorageDateTime($value);
+    }
+
+    /**
+     * Format a datetime for storage in the application timezone.
+     *
+     * The `datetime` cast formats a parsed value as Y-m-d H:i:s and drops its UTC offset, so
+     * "2026-10-21T11:00:00-07:00" was stored as 11:00 UTC instead of 18:00 UTC. Converting to the
+     * application timezone first keeps the instant. Values without an offset parse in the
+     * application timezone and are stored unchanged.
+     *
+     * @param mixed $value Anything Carbon::parse() accepts, or null
+     */
+    public static function toStorageDateTime($value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return Carbon::parse($value)->setTimezone(config('app.timezone', 'UTC'))->toDateTimeString();
+    }
+
+    /**
      * Normalise the date portion of time_window_start on write.
      *
      * If the incoming value has a Unix-epoch date (1970-01-01) — which happens
@@ -823,7 +852,7 @@ class Order extends Model
             $parsed->setDate($ref->year, $ref->month, $ref->day);
         }
 
-        return $parsed->toDateTimeString();
+        return $parsed->setTimezone(config('app.timezone', 'UTC'))->toDateTimeString();
     }
 
     /**
