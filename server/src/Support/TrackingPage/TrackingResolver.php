@@ -22,7 +22,7 @@ use Fleetbase\Models\Setting;
  */
 class TrackingResolver
 {
-    public const NUMBER_PATTERN = '/^[A-Za-z0-9][A-Za-z0-9._\-]{0,99}$/';
+    public const NUMBER_PATTERN = '/^[A-Za-z0-9](?:[A-Za-z0-9._\-]| (?=[A-Za-z0-9._\-])){0,99}$/';
 
     /**
      * The tracking number as typed, trimmed, or null when it can't be one.
