@@ -41,13 +41,6 @@ class FleetOpsApiDriverControllerProbe extends DriverController
     public array $resolvedFiles             = [];
     public string $sessionCompanyUuid       = 'company-uuid';
 
-    protected function companyFromRequest(Request $request): ?Company
-    {
-        $this->companyCalls[] = ['request', $request->input('company')];
-
-        return $this->missingCompany ? null : $this->company();
-    }
-
     protected function currentCompany(): ?Company
     {
         $this->companyCalls[] = ['current'];
@@ -401,7 +394,7 @@ test('api driver controller creates drivers with user company assignment and rel
     ]));
 
     expect($response)->toBe(['resource' => 'driver', 'driver' => $controller->driver])
-        ->and($controller->companyCalls)->toBe([['request', 'company_public']])
+        ->and($controller->companyCalls)->toBe([['current']])
         // The login account is resolved by ProfileAccountManager in the driver's company
         ->and($controller->resolvedAccounts)->toBe(['company-uuid'])
         ->and($controller->createdUsers[0])->toMatchArray([
@@ -443,6 +436,28 @@ test('api driver controller reports missing company before creating drivers', fu
     ])
         ->and($controller->createdUsers)->toBe([]);
 });
+
+test('api driver controller only creates drivers in the credential organization', function (string $company) {
+    // Naming the credential's own organization, by uuid or public id, is fine
+    $controller = new FleetOpsApiDriverControllerProbe();
+    $controller->create(new CreateDriverRequest(['company' => $company, 'name' => 'Driver One']));
+
+    expect($controller->resolvedAccounts)->toBe(['company-uuid'])
+        ->and($controller->createdDrivers[0]['company_uuid'])->toBe('company-uuid');
+})->with(['company-uuid', 'company_public']);
+
+test('api driver controller refuses to create drivers in another organization', function (mixed $company) {
+    // Any other organization is refused exactly like one that does not exist,
+    // so the endpoint can't be used to probe or write into another tenant
+    $controller = new FleetOpsApiDriverControllerProbe();
+
+    expect($controller->create(new CreateDriverRequest(['company' => $company, 'name' => 'Driver One'])))->toBe([
+        'apiError' => 'Company not found.',
+        'status'   => 400,
+    ])
+        ->and($controller->resolvedAccounts)->toBe([])
+        ->and($controller->createdDrivers)->toBe([]);
+})->with(['other-company-uuid', 'company_other', '', null]);
 
 test('api driver controller updates drivers user details assignments location and photo', function () {
     fleetopsApiDriverContractsUsersTable();

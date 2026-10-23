@@ -24,6 +24,11 @@ use Illuminate\Support\Str;
  * staff account (type `user` or `admin`) of the same organization. A staff
  * account is managed in IAM, so a profile never changes its email or phone,
  * resets its password, deactivates it or deletes it.
+ *
+ * Emails and phone numbers identify one account across the whole instance,
+ * but an organization only ever reuses an account that already belongs to it.
+ * An account of another organization is never linked, and the refusal does
+ * not say whose it is.
  */
 class ProfileAccountManager
 {
@@ -31,6 +36,12 @@ class ProfileAccountManager
      * User types owned by a profile.
      */
     public const MANAGED_TYPES = ['driver', 'contact', 'customer'];
+
+    /**
+     * Why an organization can't change the password or status of a login that
+     * another organization's profile also holds.
+     */
+    public const SHARED_LOGIN_MESSAGE = 'This login is also used with another organization, so it can only be managed by its holder.';
 
     /**
      * The organization role given to each managed account type.
@@ -126,8 +137,8 @@ class ProfileAccountManager
 
     /**
      * Resolve the account for a new profile. A staff member of the organization
-     * or a managed account of the same type with the email/phone is linked;
-     * otherwise a managed account is created.
+     * or a managed account of the same type in the organization with the
+     * email/phone is linked; otherwise a managed account is created.
      *
      * @param array $attributes extra user attributes: password, status, timezone, avatar_uuid, country, ip_address, meta
      *
@@ -191,18 +202,21 @@ class ProfileAccountManager
 
     /**
      * Push the profile's proxy fields to its account. A staff account only
-     * takes the name: its email and phone are its console identity.
+     * takes the name: its email and phone are its console identity. So does a
+     * managed account that another organization's profile also holds, since
+     * its sign-in details are not this organization's to change.
      *
      * @throws ProfileIdentityConflictException
      */
-    public static function syncProxyFields(?User $user, array $attributes): bool
+    public static function syncProxyFields(?User $user, array $attributes, ?string $companyUuid = null): bool
     {
         if (!$user) {
             return false;
         }
 
-        $fields = static::isStaffAccount($user) ? ['name'] : ['name', 'email', 'phone', 'timezone', 'avatar_uuid', 'password'];
-        $input  = array_intersect_key($attributes, array_flip($fields));
+        $nameOnly = static::isStaffAccount($user) || ($companyUuid && static::isSharedWithAnotherCompany($user, $companyUuid));
+        $fields   = $nameOnly ? ['name'] : ['name', 'email', 'phone', 'timezone', 'avatar_uuid', 'password'];
+        $input    = array_intersect_key($attributes, array_flip($fields));
 
         if (array_key_exists('email', $input)) {
             $input['email'] = static::normalizeEmail($input['email']);
@@ -312,11 +326,13 @@ class ProfileAccountManager
      */
     public static function assertAccountCanHoldProfile(User $account, string $companyUuid, string $type, string $field = 'email'): void
     {
-        if (static::isStaffAccount($account)) {
-            if (!static::isCompanyMember($account, $companyUuid)) {
-                throw new ProfileIdentityConflictException(static::takenMessage($field), $field);
-            }
-        } elseif ($account->type !== $type) {
+        // An account of another organization is never linked, and nothing
+        // about it (its name, type or which organization holds it) is told
+        if (!static::isCompanyMember($account, $companyUuid) && !(static::isManagedAccount($account) && static::isUnowned($account))) {
+            throw new ProfileIdentityConflictException(static::takenMessage($field), $field);
+        }
+
+        if (static::isManagedAccount($account) && $account->type !== $type) {
             throw new ProfileIdentityConflictException('This ' . static::fieldLabel($field) . ' is already used by a ' . $account->type . '.', $field);
         }
 
@@ -343,6 +359,26 @@ class ProfileAccountManager
         $contacts = Contact::withoutGlobalScopes()->where('user_uuid', $user->uuid)->whereNull('deleted_at')->pluck('company_uuid');
 
         return $drivers->merge($contacts)->filter()->unique()->values();
+    }
+
+    /**
+     * Whether another organization holds the account through a membership or a
+     * profile. The account's own `company_uuid` is left out: it is only where
+     * the account was first created, and stays after that organization lets go.
+     */
+    public static function isSharedWithAnotherCompany(User $user, string $companyUuid): bool
+    {
+        $memberships = CompanyUser::where('user_uuid', $user->uuid)->pluck('company_uuid');
+
+        return $memberships->merge(static::profileCompanies($user))->filter()->contains(fn ($uuid) => $uuid !== $companyUuid);
+    }
+
+    /**
+     * Whether the account belongs to no organization at all.
+     */
+    public static function isUnowned(User $user): bool
+    {
+        return !$user->company_uuid && !CompanyUser::where('user_uuid', $user->uuid)->exists();
     }
 
     public static function isCompanyMember(User $user, ?string $companyUuid): bool
