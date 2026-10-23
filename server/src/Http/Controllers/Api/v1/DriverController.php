@@ -91,11 +91,12 @@ class DriverController extends Controller
         // get user details for driver
         $userDetails                 = $request->only(['name', 'password', 'email', 'phone', 'timezone']);
 
-        // Get current company session
-        $company = $request->has('company') ? $this->companyFromRequest($request) : $this->currentCompany();
-
-        // Debugging: Ensure company is retrieved correctly
-        if (!$company) {
+        // Drivers are created in the credential's own organization. A request
+        // may still name it, but naming any other organization is refused the
+        // same way as one that does not exist.
+        $company          = $this->currentCompany();
+        $requestedCompany = $request->input('company');
+        if (!$company || ($request->has('company') && !in_array($requestedCompany, [$company->uuid, $company->public_id], true))) {
             return $this->apiError('Company not found.');
         }
 
@@ -206,7 +207,7 @@ class DriverController extends Controller
 
         // update the driver's login account through its proxy fields
         try {
-            ProfileAccountManager::syncProxyFields($driver->getUser(), $userDetails);
+            ProfileAccountManager::syncProxyFields($driver->getUser(), $userDetails, $driver->company_uuid);
         } catch (ProfileIdentityConflictException $exception) {
             return $this->jsonResponse(['error' => $exception->getMessage()], 422);
         }
@@ -994,11 +995,6 @@ class DriverController extends Controller
         ], $request, $companyUuid);
 
         return $input;
-    }
-
-    protected function companyFromRequest(Request $request): ?Company
-    {
-        return Auth::getCompanyFromRequest($request);
     }
 
     protected function currentCompany(): ?Company
