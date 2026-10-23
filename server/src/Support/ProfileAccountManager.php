@@ -374,11 +374,14 @@ class ProfileAccountManager
     }
 
     /**
-     * Whether the account belongs to no organization at all.
+     * Whether the account belongs to no organization at all: no organization of
+     * its own, no membership and no live profile anywhere.
      */
     public static function isUnowned(User $user): bool
     {
-        return !$user->company_uuid && !CompanyUser::where('user_uuid', $user->uuid)->exists();
+        return !$user->company_uuid
+            && !CompanyUser::where('user_uuid', $user->uuid)->exists()
+            && static::profileCompanies($user)->isEmpty();
     }
 
     public static function isCompanyMember(User $user, ?string $companyUuid): bool

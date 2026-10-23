@@ -491,8 +491,11 @@ test('accounts held by another organization are told apart from unowned ones', f
     $member     = fleetopsProfileAccountUser(['uuid' => 'member-1', 'company_uuid' => 'company-1', 'type' => 'driver']);
     $profile    = fleetopsProfileAccountUser(['uuid' => 'profile-1', 'company_uuid' => 'company-1', 'type' => 'contact']);
     $orphan     = fleetopsProfileAccountUser(['uuid' => 'orphan-1', 'company_uuid' => null, 'type' => 'driver']);
+    // No organization of its own and no membership, but a live profile elsewhere (a self-signup customer)
+    $signup     = fleetopsProfileAccountUser(['uuid' => 'signup-1', 'company_uuid' => null, 'email' => 'signup@example.com', 'type' => 'customer']);
     $connection->table('company_users')->insert(['uuid' => 'cu-1', 'company_uuid' => 'company-2', 'user_uuid' => 'member-1', 'status' => 'active']);
     $connection->table('contacts')->insert(['uuid' => 'c-1', 'company_uuid' => 'company-2', 'user_uuid' => 'profile-1', 'type' => 'contact']);
+    $connection->table('contacts')->insert(['uuid' => 'c-2', 'company_uuid' => 'company-2', 'user_uuid' => 'signup-1', 'type' => 'customer']);
 
     expect(ProfileAccountManager::isSharedWithAnotherCompany($own, 'company-1'))->toBeFalse()
         // Being created by another organization that no longer holds it is not sharing
@@ -502,7 +505,18 @@ test('accounts held by another organization are told apart from unowned ones', f
         ->and(ProfileAccountManager::isSharedWithAnotherCompany($orphan, 'company-1'))->toBeFalse()
         ->and(ProfileAccountManager::isUnowned($orphan))->toBeTrue()
         ->and(ProfileAccountManager::isUnowned($own))->toBeFalse()
-        ->and(ProfileAccountManager::isUnowned($member))->toBeFalse();
+        ->and(ProfileAccountManager::isUnowned($member))->toBeFalse()
+        ->and(ProfileAccountManager::isUnowned($signup))->toBeFalse();
+
+    // So another organization can't adopt it by its email
+    $conflict = null;
+    try {
+        ProfileAccountManager::resolveForProfile('company-1', 'customer', 'X', $signup->email, null);
+    } catch (ProfileIdentityConflictException $exception) {
+        $conflict = $exception;
+    }
+    expect($conflict?->getMessage())->toBe('This email is already in use by another account.')
+        ->and($connection->table('company_users')->where('user_uuid', 'signup-1')->count())->toBe(0);
 });
 
 test('sync proxy fields only pushes the name to a managed account another organization also holds', function () {
