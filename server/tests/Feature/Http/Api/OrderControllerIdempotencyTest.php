@@ -155,3 +155,29 @@ test('a concurrent duplicate is refused and failed creations are not remembered'
     $controller->create(fleetopsIdempotencyRequest('busy'));
     expect(Cache::get($cacheKey))->toBe('order_idem2');
 });
+
+test('an order stored by a duplicate that finished first is replayed once the lock is taken', function () {
+    $connection = fleetopsIdempotencyBoot();
+    $controller = new class extends FleetOpsOrderIdempotencyProbe {
+        public int $lookups = 0;
+
+        protected function replayIdempotentOrder(string $cacheKey, Illuminate\Http\Request $request)
+        {
+            // The first lookup misses; the duplicate finishes before this request takes the lock
+            if ($this->lookups++ === 0) {
+                Cache::put($cacheKey, 'order_raced', 60);
+
+                return null;
+            }
+
+            return parent::replayIdempotentOrder($cacheKey, $request);
+        }
+    };
+    $connection->table('orders')->insert(['uuid' => 'order-uuid-raced', 'public_id' => 'order_raced', 'company_uuid' => 'company-1']);
+
+    $replay = $controller->create(fleetopsIdempotencyRequest('raced'));
+
+    expect($controller->created)->toBe(0)
+        ->and($controller->lookups)->toBe(2)
+        ->and($replay->headers->get('Idempotent-Replayed'))->toBe('true');
+});

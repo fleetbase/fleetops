@@ -23,6 +23,13 @@ test('scheduled_at with an offset is stored as the same instant in the app timez
     $order->scheduled_at = new DateTimeImmutable('2026-10-21 11:00:00', new DateTimeZone('America/Los_Angeles'));
     expect($order->getAttributes()['scheduled_at'])->toBe('2026-10-21 18:00:00');
 
+    // Unix timestamps, as an integer or a numeric string from a form body, are the same instant
+    $order->scheduled_at = 1792605600;
+    expect($order->getAttributes()['scheduled_at'])->toBe('2026-10-21 18:00:00');
+
+    $order->scheduled_at = '1792605600';
+    expect($order->getAttributes()['scheduled_at'])->toBe('2026-10-21 18:00:00');
+
     $order->scheduled_at = '';
     expect($order->getAttributes()['scheduled_at'])->toBeNull()
         ->and(Order::toStorageDateTime(null))->toBeNull();
