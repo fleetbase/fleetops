@@ -26,15 +26,16 @@ class ServiceQuoteController extends Controller
      */
     public function query(QueryServiceQuotesRequest $request)
     {
-        $payload          = $request->input('payload');
-        $currency         = $request->input('currency');
-        $facilitator      = $request->input('facilitator');
-        $scheduledAt      = $request->input('scheduled_at');
-        $service          = $request->input('service', 'all'); // the specific service rate to query - defaults to `all`
-        $serviceType      = $request->input('service_type'); // the specific type of service rate to query
-        $single           = $request->boolean('single');
-        $isRouteOptimized = $request->boolean('is_route_optimized', true);
-        $requestId        = $this->generateServiceQuoteRequestId();
+        $this->previewOnly = $request->boolean('preview');
+        $payload           = $request->input('payload');
+        $currency          = $this->currencyFromRequest($request);
+        $facilitator       = $request->input('facilitator');
+        $scheduledAt       = $request->input('scheduled_at');
+        $service           = $request->input('service', 'all'); // the specific service rate to query - defaults to `all`
+        $serviceType       = $request->input('service_type'); // the specific type of service rate to query
+        $single            = $request->boolean('single');
+        $isRouteOptimized  = $request->boolean('is_route_optimized', true);
+        $requestId         = $this->generateServiceQuoteRequestId();
 
         if (Utils::isPublicId($payload)) {
             $payload = Payload::with(['pickup', 'dropoff', 'waypoints', 'entities'])
@@ -172,7 +173,7 @@ class ServiceQuoteController extends Controller
         $service          = $request->input('service', 'all'); // the specific service rate to query - defaults to `all`
         $serviceType      = $request->input('service_type'); // the specific type of service rate to query
         $isCashOnDelivery = $request->has('cod');
-        $currency         = $request->has('currency');
+        $currency         = $this->currencyFromRequest($request);
         $totalDistance    = $request->input('distance');
         $totalTime        = $request->input('time');
         $preliminaryData  = $this->preliminaryDataFromRequest($request);
@@ -377,14 +378,57 @@ class ServiceQuoteController extends Controller
         return ServiceRate::getServicableForPlaces($waypoints, $serviceType, $currency, $callback);
     }
 
+    /**
+     * Whether this request only previews prices. Preview quotes are calculated the same way but
+     * never stored, so display-only callers (a storefront checkout pricing every address a
+     * customer types) do not leave a quote row behind per request. They carry no id and cannot
+     * be attached to an order; request a stored quote for that.
+     */
+    protected bool $previewOnly = false;
+
     protected function createServiceQuote(array $attributes): ServiceQuote
     {
+        $attributes['expired_at'] ??= now()->addMinutes($this->quoteTtlMinutes());
+
+        if ($this->previewOnly) {
+            $quote       = new ServiceQuote($attributes);
+            $quote->uuid = (string) Str::uuid();
+
+            return $quote;
+        }
+
         return ServiceQuote::create($attributes);
     }
 
     protected function createServiceQuoteItem(array $attributes): ServiceQuoteItem
     {
+        if ($this->previewOnly) {
+            return new ServiceQuoteItem($attributes);
+        }
+
         return ServiceQuoteItem::create($attributes);
+    }
+
+    /**
+     * How long a stored quote stays valid. Unpurchased quotes are purged after 48 hours
+     * (fleetops:purge-service-quotes), so the default matches that window.
+     */
+    protected function quoteTtlMinutes(): int
+    {
+        $minutes = config('fleetops.service_quotes.ttl_minutes');
+
+        return is_numeric($minutes) && (int) $minutes > 0 ? (int) $minutes : 2880;
+    }
+
+    /**
+     * The requested currency as a code, or null. `currency` used to be read with `has()`, which
+     * turned it into a boolean and filtered every rate out.
+     */
+    protected function currencyFromRequest(Request $request): ?string
+    {
+        $currency = $request->input('currency');
+
+        return is_string($currency) && trim($currency) !== '' ? strtoupper(trim($currency)) : null;
     }
 
     protected function serviceQuoteResource(ServiceQuote $serviceQuote)
@@ -406,7 +450,7 @@ class ServiceQuoteController extends Controller
             'waypoints' => $this->requestFirst($request, ['payload.waypoints', 'waypoints'], []),
             'entities'  => $this->requestFirst($request, ['payload.entities', 'entities']),
             'cod'       => $request->has('cod'),
-            'currency'  => $request->has('currency'),
+            'currency'  => $this->currencyFromRequest($request),
         ];
     }
 
