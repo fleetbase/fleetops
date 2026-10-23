@@ -18,11 +18,11 @@
                 @emptyStateComponent={{component
                     "table/empty-state"
                     icon="receipt"
-                    title=(if this.hasFilters "No transactions match your filters" "No fuel transactions")
-                    description="Imported fuel card bills and provider purchase records appear here after provider syncs complete."
-                    filteredTitle="No transactions match your filters"
-                    filteredDescription="Adjust the search or filters to review other imported transactions."
-                    primaryText="Refresh"
+                    title=(if this.hasFilters (t "management.empty-states.fuel-transactions.filtered-title") (t "management.empty-states.fuel-transactions.title"))
+                    description=(t "management.empty-states.fuel-transactions.description")
+                    filteredTitle=(t "management.empty-states.fuel-transactions.filtered-title")
+                    filteredDescription=(t "management.empty-states.fuel-transactions.filtered-description")
+                    primaryText=(t "management.empty-states.fuel-transactions.refresh")
                     primaryIcon="refresh"
                     primaryAction=this.refresh
                     docsSlug="fleet-ops/resources/fuel-reports/overview"

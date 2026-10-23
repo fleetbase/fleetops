@@ -268,6 +268,7 @@ management:
       docs-text: Guía de proveedores integrados
 
 common:
+  import: Importar
   last-modified: Última modificación
   change-layout: Cambiar disposición
   online: En línea
@@ -816,10 +817,24 @@ device:
     notes-placeholder: Notas
 
   actions:
+    schedule-maintenance: Programar mantenimiento
+    create-work-order: Crear orden de trabajo
+    log-maintenance: Registrar mantenimiento
+    attach-device: Vincular dispositivo
     attach-to-vehicle: Attach to Vehicle
     detach-from-vehicle: Detach from Vehicle
     attach-to-asset: Conectar a activo
   prompts:
+    select-device-to-attach-title: Seleccione un dispositivo para vincular
+    confirm-attach-device: "¿Vincular {deviceName} a {vehicleName}?"
+    attach-device-success: Dispositivo vinculado correctamente.
+    detach-from-resource-title: "¿Desvincular {deviceName} del recurso?"
+    detach-from-resource-body: Esto detendrá las actualizaciones telemáticas hasta volver a vincular el dispositivo.
+    detach-from-resource-success: Dispositivo desvinculado del recurso.
+    detach-telematic-device-title: "¿Desvincular {deviceName}?"
+    detach-telematic-device-body: Esto detendrá las actualizaciones telemáticas hasta volver a vincular el dispositivo.
+    no-devices-attached-title: No hay dispositivos vinculados
+    no-devices-attached-body: Vincule un dispositivo para recibir posiciones y eventos telemáticos.
     manager-description: "Dispositivos telemáticos instalados en este {resourceType}. Vincule un dispositivo para empezar a recibir posiciones y eventos."
     attach-to-vehicle-title: Attach device to vehicle
     attach-device-to-vehicle-title: "Attach {deviceName} to vehicle"
@@ -1478,16 +1493,16 @@ vehicle:
     detach-equipment: Desconectar equipamiento
 
   prompts:
-    attach-device-title: Attach device to {vehicleName}
-    select-device-warning: Select a device to attach.
-    attach-device-success: Device attached to {vehicleName}.
-    no-assigned-orders-warning: No assigned orders found for {vehicleName}.
-    select-orders-warning: Select at least one order to unassign.
-    unassign-orders-title: Unassign orders from {vehicleName}
-    confirm-unassign-orders-title: Unassign {count} order(s) from {vehicleName}?
-    confirm-unassign-orders-body: "This will remove {vehicleName} from these orders: {orders}."
-    unassign-orders-success: Unassigned {vehicleName} from {count} order(s).
-    issue-title: Issue reported for {vehicleName}
+    attach-device-title: Vincular dispositivo a {vehicleName}
+    select-device-warning: Seleccione un dispositivo para vincular.
+    attach-device-success: Dispositivo vinculado a {vehicleName}.
+    no-assigned-orders-warning: No se encontraron pedidos asignados a {vehicleName}.
+    select-orders-warning: Seleccione al menos un pedido para desasignar.
+    unassign-orders-title: Desasignar pedidos de {vehicleName}
+    confirm-unassign-orders-title: ¿Desasignar {count} pedido(s) de {vehicleName}?
+    confirm-unassign-orders-body: "Esto quitará a {vehicleName} de estos pedidos: {orders}."
+    unassign-orders-success: Se desasignó {vehicleName} de {count} pedido(s).
+    issue-title: Incidencia reportada para {vehicleName}
     attach-trailer-title: "Enganchar un remolque a {vehicleName}"
     select-trailer-warning: Seleccione un remolque para enganchar a este vehículo.
     attach-trailer-success: "{trailerName} enganchado a {vehicleName}."

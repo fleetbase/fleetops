@@ -16,19 +16,19 @@
         @emptyStateComponent={{component
             "table/empty-state"
             icon="building"
-            title="Add your first vendor"
-            description="Vendors let your team manage external carriers, service providers, and operational partners."
-            filteredTitle="No vendors match your filters"
-            filteredDescription="Adjust the search or filters to find another vendor."
-            primaryText="New vendor"
+            title=(t "management.empty-states.vendors.title")
+            description=(t "management.empty-states.vendors.description")
+            filteredTitle=(t "management.empty-states.vendors.filtered-title")
+            filteredDescription=(t "management.empty-states.vendors.filtered-description")
+            primaryText=(t "management.empty-states.vendors.primary-text")
             primaryIcon="plus"
             primaryAction=this.vendorActions.transition.create
-            secondaryText="Import"
+            secondaryText=(t "common.import")
             secondaryIcon="upload"
             secondaryAction=this.vendorActions.import
             docsSlug="fleet-ops/resources/vendors/overview"
-            docsTitle="Vendors guide"
-            docsText="Vendor guide"
+            docsTitle=(t "management.empty-states.vendors.docs-title")
+            docsText=(t "management.empty-states.vendors.docs-text")
             docsSource="fleet-ops-empty-vendors"
         }}
     />
