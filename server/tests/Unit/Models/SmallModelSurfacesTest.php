@@ -212,6 +212,14 @@ test('contact observer deletion releases the managed account and leaves team mem
 
 test('contact observer rejects saves whose email or phone belongs to another account', function () {
     $connection = fleetopsSmallModelBoot();
+    // The sync checks whether another organization holds the account
+    $connection->getSchemaBuilder()->create('drivers', function ($blueprint) {
+        $blueprint->increments('id');
+        $blueprint->string('uuid')->nullable();
+        $blueprint->string('company_uuid')->nullable();
+        $blueprint->string('user_uuid')->nullable();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
     $connection->table('users')->insert([
         ['uuid' => '11111111-1111-4111-8111-111111111111', 'company_uuid' => 'company-1', 'type' => 'contact', 'email' => 'free@example.test', 'phone' => '+6599999999'],
         ['uuid' => '22222222-2222-4222-8222-222222222222', 'company_uuid' => 'company-1', 'type' => 'user', 'email' => 'taken@example.test', 'phone' => '+6512345678'],

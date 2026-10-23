@@ -80,6 +80,26 @@ test('tracking numbers are normalized and anything else is refused', function ()
         ->and((new TrackingResolver())->resolve('../etc'))->toBeNull();
 });
 
+test('tracking numbers may hold single inner spaces, as generated prefixes can', function () {
+    // generateTrackingNumber() takes the first three letters of the company name,
+    // so a company called "Al Noor" issues numbers like "AL 7796486490AE".
+    $matches = fn (string $input) => preg_match(TrackingResolver::NUMBER_PATTERN, $input) === 1;
+
+    expect(TrackingResolver::normalize('AL 7796486490AE'))->toBe('AL 7796486490AE')
+        ->and(TrackingResolver::normalize('ABC1234567890AE'))->toBe('ABC1234567890AE')
+        ->and(TrackingResolver::normalize('  AL 7796486490AE '))->toBe('AL 7796486490AE')
+        ->and($matches(' AL1'))->toBeFalse()
+        ->and($matches('AL1 '))->toBeFalse()
+        ->and(TrackingResolver::normalize('AL  1'))->toBeNull()
+        ->and(TrackingResolver::normalize("AL'1"))->toBeNull()
+        ->and(TrackingResolver::normalize('AL&1'))->toBeNull()
+        ->and(TrackingResolver::normalize("AL\t1"))->toBeNull()
+        ->and(TrackingResolver::normalize("AL\n1"))->toBeNull()
+        ->and(TrackingResolver::normalize('AL 1 2'))->toBe('AL 1 2')
+        ->and(TrackingResolver::normalize(str_repeat('A B', 33) . 'A'))->toBe(str_repeat('A B', 33) . 'A')
+        ->and(TrackingResolver::normalize(str_repeat('A B', 33) . 'AB'))->toBeNull();
+});
+
 test('each kind of tracking number opens its order for the right customer', function () {
     trackingResolverFixture();
     $resolver = new TrackingResolver();

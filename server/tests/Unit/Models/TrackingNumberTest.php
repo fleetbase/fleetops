@@ -258,3 +258,36 @@ test('tracking number code images render a medium-correction QR and a Code 128 b
         }
     }
 });
+
+test('tracking number prefixes keep only letters and digits from the company name', function () {
+    expect(TrackingNumber::trackingNumberPrefix('Nordic Freight'))->toBe('NOR')
+        ->and(TrackingNumber::trackingNumberPrefix('Al Noor Transport'))->toBe('ALN')
+        ->and(TrackingNumber::trackingNumberPrefix('A&B Logistics'))->toBe('ABL')
+        ->and(TrackingNumber::trackingNumberPrefix("O'Brien Couriers"))->toBe('OBR')
+        ->and(TrackingNumber::trackingNumberPrefix('3PL Hub'))->toBe('3PL')
+        ->and(TrackingNumber::trackingNumberPrefix('Ab'))->toBe('AB')
+        ->and(TrackingNumber::trackingNumberPrefix('Café Express'))->toBe('CAF')
+        ->and(TrackingNumber::trackingNumberPrefix('النور'))->toBe('FLB')
+        ->and(TrackingNumber::trackingNumberPrefix('  '))->toBe('FLB')
+        ->and(TrackingNumber::trackingNumberPrefix(null))->toBe('FLB');
+});
+
+test('tracking number suffixes keep only letters and digits from the region', function () {
+    expect(TrackingNumber::trackingNumberSuffix('sg'))->toBe('SG')
+        ->and(TrackingNumber::trackingNumberSuffix('New York'))->toBe('NEWYORK')
+        ->and(TrackingNumber::trackingNumberSuffix(' AE '))->toBe('AE')
+        ->and(TrackingNumber::trackingNumberSuffix('Île-de-France'))->toBe('LEDEFRANCE')
+        ->and(TrackingNumber::trackingNumberSuffix('القاهرة'))->toBe('SG')
+        ->and(TrackingNumber::trackingNumberSuffix(''))->toBe('SG')
+        ->and(TrackingNumber::trackingNumberSuffix(null))->toBe('SG');
+});
+
+test('generated tracking numbers hold only letters and digits whatever the company name and region', function () {
+    session(['company' => null]);
+
+    foreach (['New York', 'Abu Dhabi', 'ae', "Côte d'Ivoire", ''] as $region) {
+        expect(TrackingNumber::generateTrackingNumber($region, 10))->toMatch('/^[A-Z0-9]+$/');
+    }
+
+    expect(TrackingNumber::generateTrackingNumber('New York', 4))->toMatch('/^FLB\d{4}NEWYORK$/');
+});

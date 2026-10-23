@@ -408,13 +408,14 @@ test('a staff member of the organization is linked without changing their accoun
         ->and($connection->table('drivers')->value('company_uuid'))->toBe('company-1');
 });
 
-test('a managed driver account of another organization is linked and joins the company', function () {
+test('a managed driver account of the organization is linked', function () {
+    // e.g. a driver whose profile was deleted while the account stayed a member
     $connection = fleetopsDriverAdoptionBoot([]);
-    $connection->table('users')->insert(['uuid' => '11111111-1111-4111-8111-111111111112', 'company_uuid' => 'company-2', 'name' => 'Shared Driver', 'phone' => '+6591234568', 'slug' => 'shared', 'type' => 'driver']);
-    $connection->table('drivers')->insert(['uuid' => 'driver-elsewhere', 'company_uuid' => 'company-2', 'user_uuid' => '11111111-1111-4111-8111-111111111112']);
+    $connection->table('users')->insert(['uuid' => '11111111-1111-4111-8111-111111111112', 'company_uuid' => 'company-2', 'name' => 'Returning Driver', 'phone' => '+6591234568', 'slug' => 'returning', 'type' => 'driver']);
+    $connection->table('company_users')->insert(['uuid' => 'cu-returning', 'company_uuid' => 'company-1', 'user_uuid' => '11111111-1111-4111-8111-111111111112', 'status' => 'active']);
 
     $result = (new DriverController())->createRecord(fleetopsDriverAdoptionRequest([
-        'name'  => 'Shared Driver',
+        'name'  => 'Returning Driver',
         'phone' => '+6591234568',
     ]));
 
@@ -422,7 +423,7 @@ test('a managed driver account of another organization is linked and joins the c
         ->and($result['driver']->resource->user_uuid)->toBe('11111111-1111-4111-8111-111111111112')
         ->and($connection->table('drivers')->where('company_uuid', 'company-1')->count())->toBe(1)
         ->and($connection->table('company_users')->where(['company_uuid' => 'company-1', 'user_uuid' => '11111111-1111-4111-8111-111111111112'])->count())->toBe(1)
-        ->and(fleetopsDriverAdoptionRoles($connection, '11111111-1111-4111-8111-111111111112'))->toBe(['Driver'])
+        ->and($connection->table('users')->count())->toBe(1)
         ->and($connection->table('invites')->count())->toBe(0);
 });
 
@@ -438,7 +439,11 @@ test('an email or phone that cannot be linked is rejected with a 422', function 
     expect($result)->toBeInstanceOf(Illuminate\Http\JsonResponse::class)
         ->and($result->getStatusCode())->toBe(422)
         ->and($result->getData(true)['error'])->toBe($message)
+        // Nothing about the existing account is echoed back
+        ->and($result->getContent())->not->toContain('Existing')
+        ->and($result->getContent())->not->toContain('11111111-1111-4111-8111-111111111111')
         ->and($connection->table('drivers')->where('company_uuid', 'company-1')->where('user_uuid', '!=', '11111111-1111-4111-8111-111111111111')->count())->toBe(0)
+        ->and($connection->table('company_users')->where('company_uuid', 'company-1')->count())->toBe(0)
         ->and($connection->table('users')->count())->toBe(1);
 })->with([
     'staff of another organization' => [
@@ -446,6 +451,24 @@ test('an email or phone that cannot be linked is rejected with a 422', function 
         null,
         ['email' => 'outsider@example.com'],
         'This email is already in use by another account.',
+    ],
+    'a driver of another organization, by email' => [
+        ['company_uuid' => 'company-2', 'email' => 'erin@example.com', 'type' => 'driver'],
+        ['uuid'  => 'driver-elsewhere', 'company_uuid' => 'company-2', 'user_uuid' => '11111111-1111-4111-8111-111111111111'],
+        ['email' => 'Erin@Example.com', 'phone' => '+6599990000'],
+        'This email is already in use by another account.',
+    ],
+    'a driver of another organization, by phone' => [
+        ['company_uuid' => 'company-2', 'email' => 'erin@example.com', 'phone' => '+6591234568', 'type' => 'driver'],
+        ['uuid'  => 'driver-elsewhere', 'company_uuid' => 'company-2', 'user_uuid' => '11111111-1111-4111-8111-111111111111'],
+        ['email' => 'olive@example.com', 'phone' => '+65 9123 4568'],
+        'This phone number is already in use by another account.',
+    ],
+    'a customer of another organization does not reveal its type' => [
+        ['company_uuid' => 'company-2', 'phone' => '+6591112222', 'type' => 'customer'],
+        null,
+        ['phone' => '+6591112222'],
+        'This phone number is already in use by another account.',
     ],
     'a customer account' => [
         ['company_uuid' => 'company-1', 'phone' => '+6591112222', 'type' => 'customer'],
