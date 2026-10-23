@@ -191,18 +191,40 @@ class TrackingNumber extends Model
             $number .= mt_rand(0, 9);
         }
 
-        return $number . strtoupper($region);
+        return $number . static::trackingNumberSuffix($region);
     }
 
     /**
-     * The tracking number prefix for a company: the letters and digits among the
-     * first three characters of its name, upper-cased, or FLB when none are left.
+     * The tracking number prefix for a company: the first three letters or
+     * digits of its name, upper-cased, or FLB when it has none. Spaces and
+     * punctuation are skipped, so "Al Noor Transport" gives ALN.
      */
     public static function trackingNumberPrefix(?string $companyName): string
     {
-        $prefix = (string) preg_replace('/[^A-Z0-9]/', '', strtoupper(substr((string) $companyName, 0, 3)));
+        $prefix = substr(static::trackingNumberCharacters($companyName), 0, 3);
 
         return $prefix !== '' ? $prefix : 'FLB';
+    }
+
+    /**
+     * The tracking number suffix for a region: its letters and digits,
+     * upper-cased, or SG when it has none. A region can be a province or
+     * district name when the pickup has no country ("New York" gives NEWYORK).
+     */
+    public static function trackingNumberSuffix(?string $region): string
+    {
+        $suffix = static::trackingNumberCharacters($region);
+
+        return $suffix !== '' ? $suffix : 'SG';
+    }
+
+    /**
+     * The ASCII letters and digits of a value, upper-cased. A tracking number
+     * holds nothing else, so it can always be typed, scanned and looked up.
+     */
+    protected static function trackingNumberCharacters(?string $value): string
+    {
+        return (string) preg_replace('/[^A-Z0-9]/', '', strtoupper((string) $value));
     }
 
     /**
