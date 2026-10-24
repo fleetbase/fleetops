@@ -474,6 +474,32 @@ test('login management endpoints report missing drivers accounts and staff-linke
         ->and(Illuminate\Support\Facades\Mail::getFacadeRoot()->sent)->toBe([]);
 });
 
+test('login management endpoints refuse a login another organization also holds', function () {
+    $connection = fleetopsDriverLoginFixture();
+    // The managed driver account also drives for another organization
+    $connection->table('drivers')->insert(['uuid' => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa9', 'public_id' => 'driver_elsewhere', 'company_uuid' => 'company-2', 'user_uuid' => '11111111-1111-4111-8111-111111111111']);
+    $before     = fleetopsDriverLoginUser($connection);
+    $controller = new DriverController();
+    $reset      = fn (string $id) => $controller->resetCredentials(Request::create('/x', 'POST', ['password' => 'taken-over', 'password_confirmation' => 'taken-over']), $id);
+
+    foreach ([
+        fn (string $id) => $controller->sendCredentials($id),
+        $reset,
+        fn (string $id) => $controller->deactivateLogin($id),
+        fn (string $id) => $controller->reactivateLogin($id),
+    ] as $endpoint) {
+        $shared = $endpoint('driver_managed');
+
+        expect($shared->getStatusCode())->toBe(422)
+            ->and($shared->getData(true))->toBe(['error' => 'This login is also used with another organization, so it can only be managed by its holder.']);
+    }
+
+    $after = fleetopsDriverLoginUser($connection);
+    expect($after->password)->toBe($before->password)
+        ->and($after->status)->toBe($before->status)
+        ->and(Illuminate\Support\Facades\Mail::getFacadeRoot()->sent)->toBe([]);
+});
+
 test('reset credentials validates the password and optionally sends it', function () {
     $connection = fleetopsDriverLoginFixture();
     $controller = new DriverController();

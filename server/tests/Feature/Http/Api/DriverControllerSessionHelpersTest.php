@@ -174,12 +174,8 @@ test('company and session helpers resolve through auth fallbacks', function () {
 
     expect($probe->callHelper('sessionCompany'))->toBe('22222222-2222-4222-8222-222222222222')
         ->and($probe->callHelper('currentCompany')?->public_id)->toBe('company_one')
-        ->and(true)->toBeTrue();
-
-    // With no identifying inputs the core auth resolver finds nothing and
-    // violates its own non-nullable declaration — the helper body still
-    // executes, which is the covered contract here.
-    expect(fn () => $probe->callHelper('companyFromRequest', Request::create('/x', 'GET')))->toThrow(TypeError::class);
+        // A create request can no longer pick its organization from the input
+        ->and(method_exists($probe, 'companyFromRequest'))->toBeFalse();
 });
 
 test('user and driver persistence helpers write records', function () {

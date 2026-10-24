@@ -4,7 +4,6 @@ namespace Fleetbase\FleetOps\Support;
 
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
-use Geocoder\Laravel\Facades\Geocoder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -69,8 +68,7 @@ class PlaceSearch
                 return collect();
             }
 
-            $results = Geocoder::geocode($searchQuery)
-                ->get()
+            $results = Geocoding::lookupAddress($searchQuery)
                 ->map(fn ($googleAddress) => Place::createFromGoogleAddress($googleAddress))
                 ->values();
 

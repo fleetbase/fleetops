@@ -6,6 +6,7 @@ use Fleetbase\FleetOps\Models\Manifest;
 use Fleetbase\FleetOps\Models\ManifestStop;
 use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -158,12 +159,38 @@ class ManifestController extends Controller
 
     protected function manifestQueryByPublicId(string $id)
     {
-        return Manifest::where('public_id', $id);
+        return $this->scopedToCompany(Manifest::where('public_id', $id));
     }
 
+    /**
+     * A stop carries no company of its own, so it belongs to the caller only
+     * through its manifest.
+     */
     protected function manifestStopQueryByPublicId(string $id)
     {
-        return ManifestStop::where('public_id', $id);
+        return ManifestStop::where('public_id', $id)
+            ->whereHas('manifest', fn (Builder $query) => $this->scopedToCompany($query));
+    }
+
+    /**
+     * Constrain a query to the caller's company.
+     *
+     * The record arrives as a route identifier, and nothing upstream narrows
+     * which tenant it may resolve to: there is no global company scope, and
+     * `fleetbase.protected` only checks that the caller holds the named
+     * capability. A missing company session fails closed instead of letting
+     * the query run across every tenant.
+     */
+    protected function scopedToCompany(Builder $query): Builder
+    {
+        $companyUuid = session('company');
+        if (!$companyUuid) {
+            $query->whereRaw('1 = 0');
+
+            return $query;
+        }
+
+        return $query->where($query->getModel()->qualifyColumn('company_uuid'), $companyUuid);
     }
 
     protected function manifestShowRelations(): array

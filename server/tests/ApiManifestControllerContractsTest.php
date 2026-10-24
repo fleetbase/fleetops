@@ -570,30 +570,99 @@ class FleetOpsManifestRealLookupProbe extends ManifestController
     }
 }
 
-test('manifest controller lookups go to the database', function () {
+/**
+ * An in-memory database holding two companies' manifests, stops and drivers,
+ * so the lookups are asserted against real queries rather than a stub.
+ */
+function fleetopsManifestTenantDatabase(): Illuminate\Database\SQLiteConnection
+{
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'), ':memory:', '', ['driver' => 'sqlite']);
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+
+    $schema = $connection->getSchemaBuilder();
+    $tables = [
+        'manifests'      => ['uuid', 'public_id', 'company_uuid', 'driver_uuid', 'vehicle_uuid', 'status', 'scheduled_date'],
+        'manifest_stops' => ['uuid', 'public_id', 'manifest_uuid', 'status', 'sequence'],
+        'drivers'        => ['uuid', 'public_id', 'company_uuid', 'user_uuid'],
+        'users'          => ['uuid', 'public_id', 'company_uuid', 'name'],
+    ];
+    foreach ($tables as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+
+    foreach (['a', 'b'] as $tenant) {
+        $connection->table('users')->insert(['uuid' => "user-{$tenant}", 'company_uuid' => "company-{$tenant}", 'name' => "Driver {$tenant}"]);
+        $connection->table('drivers')->insert(['uuid' => "driver-{$tenant}-uuid", 'public_id' => "driver_{$tenant}", 'company_uuid' => "company-{$tenant}", 'user_uuid' => "user-{$tenant}"]);
+        $connection->table('manifests')->insert(['uuid' => "manifest-{$tenant}-uuid", 'public_id' => "manifest_{$tenant}", 'company_uuid' => "company-{$tenant}", 'driver_uuid' => "driver-{$tenant}-uuid", 'status' => 'pending']);
+        $connection->table('manifest_stops')->insert(['uuid' => "stop-{$tenant}-uuid", 'public_id' => "stop_{$tenant}", 'manifest_uuid' => "manifest-{$tenant}-uuid", 'status' => 'pending', 'sequence' => '1']);
+    }
+
+    return $connection;
+}
+
+test('manifest controller lookups resolve the caller\'s own records by public id or uuid', function () {
+    fleetopsManifestTenantDatabase();
+    session(['company' => 'company-a']);
+
+    $driver = FleetOpsManifestRealLookupProbe::callFindDriverRecord('driver_a');
+
+    expect(FleetOpsManifestRealLookupProbe::callFindManifest('manifest_a')?->uuid)->toBe('manifest-a-uuid')
+        ->and(FleetOpsManifestRealLookupProbe::callFindManifest('manifest-a-uuid')?->public_id)->toBe('manifest_a')
+        ->and(FleetOpsManifestRealLookupProbe::callFindStop('stop_a')?->uuid)->toBe('stop-a-uuid')
+        ->and(FleetOpsManifestRealLookupProbe::callFindStop('stop-a-uuid')?->public_id)->toBe('stop_a')
+        ->and($driver?->uuid)->toBe('driver-a-uuid')
+        ->and(FleetOpsManifestRealLookupProbe::callFindDriverRecord('driver-a-uuid')?->public_id)->toBe('driver_a')
+        ->and(FleetOpsManifestRealLookupProbe::callManifestsFor($driver)->pluck('uuid')->all())->toBe(['manifest-a-uuid']);
+});
+
+test('manifest controller lookups never resolve another organization\'s records', function () {
     /*
-     * Exercises the real lookups, which the probe above replaces. Whether the
-     * environment has a database or not, the call must reach it: a lookup that
-     * quietly returned null on a connection failure would make a broken
-     * database indistinguishable from a missing record, and both would answer
-     * 404. Either outcome is accepted here — what is asserted is that the
-     * lookup is a query and not a stub.
+     * GHSA-m8m5-5qhf-94rv: every lookup used to be a bare `public_id OR uuid`
+     * match, so company A could read company B's manifests and write to its
+     * stops. Both identifier forms are tried, because an ungrouped OR would
+     * let one of them slip past the company constraint.
      */
-    $driver = new Driver();
-    $driver->setRawAttributes(['uuid' => 'driver-uuid', 'public_id' => 'driver_a'], true);
+    fleetopsManifestTenantDatabase();
+    session(['company' => 'company-a']);
 
-    $reached = function (callable $lookup): bool {
-        try {
-            $lookup();
-        } catch (Throwable $e) {
-            return true;
-        }
+    $foreignDriver = new Driver();
+    $foreignDriver->setRawAttributes(['uuid' => 'driver-b-uuid', 'public_id' => 'driver_b'], true);
 
-        return true;
-    };
+    expect(FleetOpsManifestRealLookupProbe::callFindManifest('manifest_b'))->toBeNull()
+        ->and(FleetOpsManifestRealLookupProbe::callFindManifest('manifest-b-uuid'))->toBeNull()
+        ->and(FleetOpsManifestRealLookupProbe::callFindStop('stop_b'))->toBeNull()
+        ->and(FleetOpsManifestRealLookupProbe::callFindStop('stop-b-uuid'))->toBeNull()
+        ->and(FleetOpsManifestRealLookupProbe::callFindDriverRecord('driver_b'))->toBeNull()
+        ->and(FleetOpsManifestRealLookupProbe::callFindDriverRecord('driver-b-uuid'))->toBeNull()
+        ->and(FleetOpsManifestRealLookupProbe::callManifestsFor($foreignDriver)->get())->toBeEmpty();
+});
 
-    expect($reached(fn () => FleetOpsManifestRealLookupProbe::callFindManifest('manifest_a')))->toBeTrue()
-        ->and($reached(fn () => FleetOpsManifestRealLookupProbe::callFindStop('stop_a')))->toBeTrue()
-        ->and($reached(fn () => FleetOpsManifestRealLookupProbe::callFindDriverRecord('driver_a')))->toBeTrue()
-        ->and($reached(fn () => FleetOpsManifestRealLookupProbe::callManifestsFor($driver)))->toBeTrue();
+test('manifest controller refuses another organization\'s manifest and stop at the endpoints', function () {
+    fleetopsManifestTenantDatabase();
+    session(['company' => 'company-a']);
+
+    $controller = new ManifestController();
+
+    expect($controller->show('manifest_b')->getStatusCode())->toBe(404)
+        ->and($controller->optimize(new Request(), 'manifest_b')->getStatusCode())->toBe(404)
+        ->and($controller->forDriver(new Request(), 'driver_b')->getStatusCode())->toBe(404)
+        ->and($controller->updateStop(new Request(['status' => 'completed', 'meta' => ['tampered' => true]]), 'stop_b')->getStatusCode())->toBe(404);
+});
+
+test('manifest controller lookups resolve nothing without a company session', function () {
+    fleetopsManifestTenantDatabase();
+    session(['company' => null]);
+
+    expect(FleetOpsManifestRealLookupProbe::callFindManifest('manifest_a'))->toBeNull()
+        ->and(FleetOpsManifestRealLookupProbe::callFindStop('stop_a'))->toBeNull()
+        ->and(FleetOpsManifestRealLookupProbe::callFindDriverRecord('driver_a'))->toBeNull();
 });

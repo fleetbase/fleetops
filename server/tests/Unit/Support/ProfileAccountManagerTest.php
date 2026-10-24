@@ -312,11 +312,10 @@ test('lookup reports the staff member to link or why the identity is unavailable
         ->and($staff['conflict'])->toBeNull()
         ->and($outsider['staff'])->toBeNull()
         ->and($outsider['conflict'])->toBe('This email is already in use by another account.')
-        ->and($customer['conflict'])->toBe('This phone number is already used by a driver.')
-        // A driver account of another organization is linked, not reported as staff
-        ->and($sameType['account']?->uuid)->toBe('driver-1')
+        ->and($customer['conflict'])->toBe('This phone number is already in use by another account.')
+        // A driver account of another organization is never linked, whatever its type
         ->and($sameType['staff'])->toBeNull()
-        ->and($sameType['conflict'])->toBeNull()
+        ->and($sameType['conflict'])->toBe('This phone number is already in use by another account.')
         // An existing profile can't swap its account for another one
         ->and($taken['conflict'])->toBe('This email is already in use by another account.')
         ->and($taken['staff'])->toBeNull()
@@ -369,15 +368,16 @@ test('resolve for profile creates a managed account with the profile role and no
         ->and($connection->table('company_users')->where('user_uuid', $contact->uuid)->count())->toBe(0);
 });
 
-test('resolve for profile links staff members and managed accounts of the same type', function () {
+test('resolve for profile links staff members and managed accounts of the organization', function () {
     $connection = fleetopsProfileAccountBoot();
     fleetopsProfileAccountRows($connection, 'users', [
         ['uuid' => 'staff-1', 'company_uuid' => 'company-2', 'name' => 'Staff', 'email' => 'staff@example.com', 'type' => 'user'],
         ['uuid' => 'driver-1', 'company_uuid' => 'company-2', 'phone' => '+6590001111', 'type' => 'driver'],
         ['uuid' => 'driver-2', 'company_uuid' => null, 'phone' => '+6590003333', 'type' => 'driver'],
     ]);
-    // The staff member belongs to company-1 through a membership row
+    // The staff member and the driver account belong to company-1 through membership rows
     $connection->table('company_users')->insert(['uuid' => 'cu-staff', 'company_uuid' => 'company-1', 'user_uuid' => 'staff-1', 'status' => 'active']);
+    $connection->table('company_users')->insert(['uuid' => 'cu-driver', 'company_uuid' => 'company-1', 'user_uuid' => 'driver-1', 'status' => 'active']);
 
     $staff  = ProfileAccountManager::resolveForProfile('company-1', 'driver', 'Other Name', 'STAFF@example.com', null);
     $driver = ProfileAccountManager::resolveForProfile('company-1', 'driver', 'Driver', null, '+6590001111');
@@ -432,6 +432,109 @@ test('resolve for profile rejects accounts that cannot hold the profile', functi
         ->and(ProfileAccountManager::hasProfileInCompany(User::where('uuid', 'driver-1')->first(), 'company-2', 'driver'))->toBeFalse()
         ->and(ProfileAccountManager::isCompanyMember(User::where('uuid', 'driver-1')->first(), null))->toBeFalse()
         ->and(new ProfileIdentityConflictException('Taken'))->getField()->toBe('email');
+});
+
+test('resolve for profile never links an account of another organization nor tells whose it is', function () {
+    $connection = fleetopsProfileAccountBoot();
+    fleetopsProfileAccountRows($connection, 'users', [
+        ['uuid' => 'erin-1', 'company_uuid' => 'company-2', 'name' => 'Erin Driver', 'email' => 'erin@example.com', 'phone' => '+6590001111', 'type' => 'driver'],
+        ['uuid' => 'cust-1', 'company_uuid' => 'company-2', 'name' => 'Carla Customer', 'email' => 'carla@example.com', 'type' => 'customer'],
+        ['uuid' => 'member-1', 'company_uuid' => null, 'name' => 'Member Elsewhere', 'phone' => '+6590002222', 'type' => 'driver'],
+    ]);
+    $connection->table('drivers')->insert(['uuid' => 'd-erin', 'company_uuid' => 'company-2', 'user_uuid' => 'erin-1']);
+    // An account without its own organization but a membership elsewhere is held too
+    $connection->table('company_users')->insert(['uuid' => 'cu-member', 'company_uuid' => 'company-2', 'user_uuid' => 'member-1', 'status' => 'active']);
+
+    $conflict = function (callable $callback): ?ProfileIdentityConflictException {
+        try {
+            $callback();
+        } catch (ProfileIdentityConflictException $exception) {
+            return $exception;
+        }
+
+        return null;
+    };
+
+    $byPhone    = $conflict(fn () => ProfileAccountManager::resolveForProfile('company-1', 'driver', 'Olive Odoo', 'olive@example.com', '+65 9000 1111'));
+    $byEmail    = $conflict(fn () => ProfileAccountManager::resolveForProfile('company-1', 'driver', 'Olive Odoo', 'ERIN@example.com', '+6599999999'));
+    $customer   = $conflict(fn () => ProfileAccountManager::resolveForProfile('company-1', 'customer', 'Carla', 'carla@example.com', null));
+    $wrongType  = $conflict(fn () => ProfileAccountManager::resolveForProfile('company-1', 'contact', 'Carla', 'carla@example.com', null));
+    $membership = $conflict(fn () => ProfileAccountManager::resolveForProfile('company-1', 'driver', 'M', null, '+6590002222'));
+
+    expect($byPhone?->getMessage())->toBe('This phone number is already in use by another account.')
+        ->and($byPhone?->getField())->toBe('phone')
+        ->and($byEmail?->getMessage())->toBe('This email is already in use by another account.')
+        ->and($byEmail?->getField())->toBe('email')
+        ->and($customer?->getMessage())->toBe('This email is already in use by another account.')
+        // Not "already used by a customer": the type of another organization's account is not told
+        ->and($wrongType?->getMessage())->toBe('This email is already in use by another account.')
+        ->and($membership?->getMessage())->toBe('This phone number is already in use by another account.');
+
+    foreach ([$byPhone, $byEmail, $customer, $wrongType, $membership] as $exception) {
+        expect(json_encode([$exception->getMessage(), $exception->getErrors()]))
+            ->not->toContain('Erin')
+            ->not->toContain('erin@')
+            ->not->toContain('Carla')
+            ->not->toContain('company-2');
+    }
+
+    // Nothing was linked, created or added to company-1
+    expect($connection->table('users')->count())->toBe(3)
+        ->and($connection->table('company_users')->where('company_uuid', 'company-1')->count())->toBe(0)
+        ->and($connection->table('users')->where('uuid', 'member-1')->value('company_uuid'))->toBeNull();
+});
+
+test('accounts held by another organization are told apart from unowned ones', function () {
+    $connection = fleetopsProfileAccountBoot();
+    $own        = fleetopsProfileAccountUser(['uuid' => 'own-1', 'company_uuid' => 'company-1', 'type' => 'driver']);
+    $created    = fleetopsProfileAccountUser(['uuid' => 'created-1', 'company_uuid' => 'company-2', 'type' => 'driver']);
+    $member     = fleetopsProfileAccountUser(['uuid' => 'member-1', 'company_uuid' => 'company-1', 'type' => 'driver']);
+    $profile    = fleetopsProfileAccountUser(['uuid' => 'profile-1', 'company_uuid' => 'company-1', 'type' => 'contact']);
+    $orphan     = fleetopsProfileAccountUser(['uuid' => 'orphan-1', 'company_uuid' => null, 'type' => 'driver']);
+    // No organization of its own and no membership, but a live profile elsewhere (a self-signup customer)
+    $signup     = fleetopsProfileAccountUser(['uuid' => 'signup-1', 'company_uuid' => null, 'email' => 'signup@example.com', 'type' => 'customer']);
+    $connection->table('company_users')->insert(['uuid' => 'cu-1', 'company_uuid' => 'company-2', 'user_uuid' => 'member-1', 'status' => 'active']);
+    $connection->table('contacts')->insert(['uuid' => 'c-1', 'company_uuid' => 'company-2', 'user_uuid' => 'profile-1', 'type' => 'contact']);
+    $connection->table('contacts')->insert(['uuid' => 'c-2', 'company_uuid' => 'company-2', 'user_uuid' => 'signup-1', 'type' => 'customer']);
+
+    expect(ProfileAccountManager::isSharedWithAnotherCompany($own, 'company-1'))->toBeFalse()
+        // Being created by another organization that no longer holds it is not sharing
+        ->and(ProfileAccountManager::isSharedWithAnotherCompany($created, 'company-1'))->toBeFalse()
+        ->and(ProfileAccountManager::isSharedWithAnotherCompany($member, 'company-1'))->toBeTrue()
+        ->and(ProfileAccountManager::isSharedWithAnotherCompany($profile, 'company-1'))->toBeTrue()
+        ->and(ProfileAccountManager::isSharedWithAnotherCompany($orphan, 'company-1'))->toBeFalse()
+        ->and(ProfileAccountManager::isUnowned($orphan))->toBeTrue()
+        ->and(ProfileAccountManager::isUnowned($own))->toBeFalse()
+        ->and(ProfileAccountManager::isUnowned($member))->toBeFalse()
+        ->and(ProfileAccountManager::isUnowned($signup))->toBeFalse();
+
+    // So another organization can't adopt it by its email
+    $conflict = null;
+    try {
+        ProfileAccountManager::resolveForProfile('company-1', 'customer', 'X', $signup->email, null);
+    } catch (ProfileIdentityConflictException $exception) {
+        $conflict = $exception;
+    }
+    expect($conflict?->getMessage())->toBe('This email is already in use by another account.')
+        ->and($connection->table('company_users')->where('user_uuid', 'signup-1')->count())->toBe(0);
+});
+
+test('sync proxy fields only pushes the name to a managed account another organization also holds', function () {
+    $connection = fleetopsProfileAccountBoot();
+    $shared     = fleetopsProfileAccountUser(['uuid' => 'shared-1', 'company_uuid' => 'company-2', 'name' => 'Shared', 'email' => 'shared@example.com', 'phone' => '+6590000000', 'type' => 'driver']);
+    $connection->table('company_users')->insert([
+        ['uuid' => 'cu-1', 'company_uuid' => 'company-1', 'user_uuid' => 'shared-1', 'status' => 'active'],
+        ['uuid' => 'cu-2', 'company_uuid' => 'company-2', 'user_uuid' => 'shared-1', 'status' => 'active'],
+    ]);
+
+    expect(ProfileAccountManager::syncProxyFields($shared, ['name' => 'Renamed', 'email' => 'mine@example.com', 'phone' => '+6591111111', 'password' => 'taken-over'], 'company-1'))->toBeTrue()
+        ->and($connection->table('users')->where('uuid', 'shared-1')->first())
+        ->name->toBe('Renamed')
+        ->email->toBe('shared@example.com')
+        ->phone->toBe('+6590000000')
+        ->password->not->toBe('hashed:taken-over')
+        // Nor can its own organization while another one also holds it
+        ->and(ProfileAccountManager::syncProxyFields($shared, ['email' => 'new@example.com'], 'company-2'))->toBeFalse();
 });
 
 test('sync proxy fields pushes normalized changes to managed accounts and only the name to staff', function () {
@@ -753,6 +856,29 @@ test('test key requests copy new and linked managed accounts into the sandbox be
 
         expect($sandbox->table('users')->where('uuid', 'loner-1')->value('company_uuid'))->toBeNull()
             ->and($sandbox->table('companies')->count())->toBe(2);
+    } finally {
+        fleetopsProfileAccountLeaveSandbox();
+    }
+});
+
+test('test key requests copy only the columns the sandbox tables have', function () {
+    $live = fleetopsProfileAccountBoot();
+    // Extensions that skip sandbox migrations (billing) add live-only columns
+    $live->getSchemaBuilder()->table('companies', fn ($blueprint) => $blueprint->integer('resource_units')->nullable());
+    $live->getSchemaBuilder()->table('users', fn ($blueprint) => $blueprint->string('live_only_flag')->nullable());
+    $live->table('companies')->where('uuid', 'company-1')->update(['resource_units' => 25]);
+    $sandbox = fleetopsProfileAccountSandbox($live);
+
+    try {
+        $existing = fleetopsProfileAccountUser(['uuid' => 'billed-1', 'type' => 'driver', 'email' => 'billed@example.com']);
+        $live->table('users')->where('uuid', 'billed-1')->update(['live_only_flag' => 'yes']);
+
+        ProfileAccountManager::attachToCompany($existing, 'company-1', 'driver');
+
+        expect($sandbox->table('companies')->where('uuid', 'company-1')->value('name'))->toBe('Acme')
+            ->and($sandbox->table('users')->where('uuid', 'billed-1')->value('email'))->toBe('billed@example.com')
+            ->and($sandbox->table('company_users')->where('user_uuid', 'billed-1')->value('company_uuid'))->toBe('company-1')
+            ->and($sandbox->getSchemaBuilder()->hasColumn('companies', 'resource_units'))->toBeFalse();
     } finally {
         fleetopsProfileAccountLeaveSandbox();
     }

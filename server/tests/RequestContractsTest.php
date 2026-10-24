@@ -154,6 +154,7 @@ namespace {
     use Fleetbase\FleetOps\Http\Requests\UpdateDeviceRequest;
     use Fleetbase\FleetOps\Http\Requests\UpdateFuelReportRequest;
     use Fleetbase\FleetOps\Http\Requests\UpdateIssueRequest;
+    use Fleetbase\FleetOps\Http\Requests\UpdateOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\UpdateWorkOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\VerifyCreateCustomerRequest;
     use Fleetbase\FleetOps\Rules\ComputableAlgo;
@@ -195,6 +196,19 @@ namespace {
         });
 
         return $strings;
+    }
+
+    class FleetOpsPublicUpdateOrderRequestProbe extends UpdateOrderRequest
+    {
+        public function isArray(string $key): bool
+        {
+            return is_array($this->input($key));
+        }
+
+        public function isString(string $key): bool
+        {
+            return is_string($this->input($key));
+        }
     }
 
     class FleetOpsPublicCreateOrderRequestProbe extends CreateOrderRequest
@@ -606,6 +620,40 @@ namespace {
                 'pod_required' => 'proof of delivery required',
                 'pod_method'   => 'proof of delivery method',
             ]);
+    });
+
+    test('public update order request accepts partial payload edits', function () {
+        app('config')->set('fleetops.pod_methods', ['scan', 'signature']);
+
+        // Entities alone: an edit to an existing order need not resend its route
+        $entitiesOnly = FleetOpsPublicUpdateOrderRequestProbe::create('/fleetops-test', 'PUT', [
+            'payload' => ['entities' => [['name' => 'Loaf']]],
+        ])->rules();
+
+        expect($entitiesOnly['payload'])->toBe('array')
+            ->and($entitiesOnly['payload.entities'])->toBe('array')
+            ->and($entitiesOnly['payload.pickup'])->toBe('nullable')
+            ->and($entitiesOnly['payload.dropoff'])->toBe('nullable')
+            ->and($entitiesOnly['payload.waypoints'])->toBe('array')
+            ->and($entitiesOnly['payload.return'])->toBe('nullable');
+
+        // A new dropoff alone, and an empty waypoints list that clears intermediate stops
+        $dropoffOnly = FleetOpsPublicUpdateOrderRequestProbe::create('/fleetops-test', 'PUT', [
+            'payload' => ['dropoff' => ['street1' => '500 Pine St'], 'waypoints' => []],
+        ])->rules();
+
+        expect($dropoffOnly['payload.pickup'])->toBe('nullable')
+            ->and($dropoffOnly['payload.waypoints'])->toBe('array');
+
+        // A payload id and top-level fields keep the create contract
+        $payloadId = FleetOpsPublicUpdateOrderRequestProbe::create('/fleetops-test', 'PUT', [
+            'payload' => 'payload_abc1234',
+        ])->rules();
+        $noPayload = FleetOpsPublicUpdateOrderRequestProbe::create('/fleetops-test', 'PUT', ['notes' => 'x'])->rules();
+
+        expect($payloadId['payload'])->toBe('required|exists:payloads,public_id')
+            ->and($noPayload)->not->toHaveKeys(['payload', 'pickup', 'dropoff', 'waypoints'])
+            ->and($noPayload['customer'][1])->toBeInstanceOf(CustomerIdOrDetails::class);
     });
 
     test('internal create order request validates uuid payload contracts and messages', function () {

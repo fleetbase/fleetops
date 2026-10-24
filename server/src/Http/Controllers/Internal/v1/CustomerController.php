@@ -36,7 +36,7 @@ class CustomerController extends Controller
             return response()->error('Unable to create customer portal login.');
         }
 
-        if ($error = $this->staffLinkedError($user)) {
+        if ($error = $this->staffLinkedError($user, $customer)) {
             return $error;
         }
 
@@ -58,7 +58,7 @@ class CustomerController extends Controller
             return response()->error('Unable to send customer portal credentials.');
         }
 
-        if ($error = $this->staffLinkedError($user)) {
+        if ($error = $this->staffLinkedError($user, $customer)) {
             return $error;
         }
 
@@ -80,7 +80,7 @@ class CustomerController extends Controller
             return response()->error('Customer portal login not found.');
         }
 
-        if ($error = $this->staffLinkedError($user)) {
+        if ($error = $this->staffLinkedError($user, $customer)) {
             return $error;
         }
 
@@ -100,7 +100,7 @@ class CustomerController extends Controller
             return response()->error('Customer portal login not found.');
         }
 
-        if ($error = $this->staffLinkedError($user)) {
+        if ($error = $this->staffLinkedError($user, $customer)) {
             return $error;
         }
 
@@ -180,7 +180,7 @@ class CustomerController extends Controller
             return response()->error('Unable to reset customer credentials');
         }
 
-        if ($error = $this->staffLinkedError($user)) {
+        if ($error = $this->staffLinkedError($user, $customer)) {
             return $error;
         }
 
@@ -200,12 +200,17 @@ class CustomerController extends Controller
 
     /**
      * A customer linked to a team member's account signs in with that account,
-     * which is managed in IAM.
+     * which is managed in IAM. A login another organization also uses is not
+     * this organization's to change either.
      */
-    protected function staffLinkedError(User $user): ?\Illuminate\Http\JsonResponse
+    protected function staffLinkedError(User $user, Contact $customer): ?\Illuminate\Http\JsonResponse
     {
         if (ProfileAccountManager::isStaffAccount($user)) {
             return response()->error('This customer signs in with a team member account. Manage this login in IAM.', 422);
+        }
+
+        if ($customer->company_uuid && ProfileAccountManager::isSharedWithAnotherCompany($user, $customer->company_uuid)) {
+            return response()->error(ProfileAccountManager::SHARED_LOGIN_MESSAGE, 422);
         }
 
         return null;

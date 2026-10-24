@@ -127,6 +127,8 @@ function fleetopsCustomerCredentialsBoot(): SQLiteConnection
         'companies' => ['uuid', 'public_id', 'name', 'country'],
         // session_status reads the user's membership of the session company
         'company_users' => ['uuid', 'company_uuid', 'user_uuid', 'status'],
+        // a login held by another organization's driver profile is shared
+        'drivers'       => ['uuid', 'company_uuid', 'user_uuid'],
         'files'         => ['uuid', 'public_id', 'company_uuid', 'subject_uuid', 'subject_type', 'name', 'path', 'disk', 'type', '_key'],
     ];
     foreach ($tables as $table => $columns) {
@@ -178,6 +180,25 @@ test('reset credentials changes the password and optionally mails credentials', 
     ]));
     expect($mailed->getData(true)['status'] ?? '')->toBe('ok')
         ->and($GLOBALS['fleetopsCustomerMailFake']->sent)->not->toBeEmpty();
+});
+
+test('credential actions refuse a login another organization also holds', function () {
+    $connection = fleetopsCustomerCredentialsBoot();
+    $connection->table('company_users')->insert(['uuid' => 'cu-elsewhere', 'company_uuid' => 'company-2', 'user_uuid' => 'user-1', 'status' => 'active']);
+    $connection->table('users')->where('uuid', 'user-1')->update(['password' => 'hashed:original']);
+    $controller = new CustomerController();
+    $request    = Request::create('/x', 'POST', ['customer' => 'contact_custcred1', 'password' => 'takeover', 'password_confirmation' => 'takeover']);
+
+    foreach (['resetCredentials', 'sendCredentials', 'createPortalLogin', 'deactivatePortalLogin', 'reactivatePortalLogin'] as $action) {
+        $response = $controller->{$action}($request);
+
+        expect($response->getStatusCode())->toBe(422)
+            ->and($response->getData(true))->toBe(['error' => 'This login is also used with another organization, so it can only be managed by its holder.']);
+    }
+
+    expect($connection->table('users')->value('password'))->toBe('hashed:original')
+        ->and($connection->table('users')->value('status'))->toBe('active')
+        ->and($GLOBALS['fleetopsCustomerMailFake']->sent)->toBeEmpty();
 });
 
 test('customer resolution and payload helpers expose user details', function () {

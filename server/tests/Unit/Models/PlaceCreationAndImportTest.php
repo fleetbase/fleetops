@@ -184,21 +184,20 @@ function fleetopsPlaceCreationBoot(): SQLiteConnection
     });
     Illuminate\Support\Facades\Storage::clearResolvedInstance('filesystem');
 
-    app()->forgetInstance('fleetops.geocoder');
-    app()->instance('geocoder', new class {
-        public function geocode($query)
+    app()->instance('fleetops.geocoder', new class {
+        public function geocodeQuery($query)
         {
             return $this;
         }
 
-        public function reverse($lat, $lng)
+        public function reverseQuery($query)
         {
             return $this;
         }
 
-        public function get()
+        public function all()
         {
-            return collect();
+            return [];
         }
 
         public function __call($method, $arguments)
@@ -373,12 +372,126 @@ test('single column imports reverse lookups and coordinate arrays create places'
     $imported = Place::createFromImport(['address' => '88 Single Column'], true);
     expect($imported)->toBeInstanceOf(Place::class);
 
-    // Reverse lookups surface the keyless geocoder rejection pre-network
+    // Reverse lookups surface geocoder failures rather than swallowing them
+    $geocoder = app('fleetops.geocoder');
+    app()->instance('fleetops.geocoder', new class {
+        public function reverseQuery($query)
+        {
+            throw new Exception('reverse geocoder rejected the request');
+        }
+    });
     expect(fn () => Place::createFromReverseGeocodingLookup(new Point(1.36, 103.86), true))
-        ->toThrow(Exception::class);
+        ->toThrow(Exception::class, 'reverse geocoder rejected the request');
+    app()->instance('fleetops.geocoder', $geocoder);
 
     // Array coordinates resolve through the mixed point branch, then report
     // failure because the geocoder returns no address to build the place from
     expect(Place::insertFromCoordinates([1.42, 103.92], ['name' => 'Array Inserted Stop']))->toBeFalse()
         ->and($connection->table('places')->where('name', 'Array Inserted Stop')->count())->toBe(0);
+});
+
+/**
+ * Geocoder fake that records whether it was asked anything and answers reverse lookups with a
+ * different, nearby address, which is what used to replace the street a caller sent.
+ */
+function fleetopsPlaceRecordingGeocoder(): object
+{
+    $geocoder = new class {
+        public array $calls = [];
+
+        public function geocodeQuery($query)
+        {
+            $this->calls[] = 'geocode';
+
+            return $this;
+        }
+
+        public function reverseQuery($query)
+        {
+            $this->calls[] = 'reverse';
+
+            return $this;
+        }
+
+        public function all()
+        {
+            return [];
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this;
+        }
+    };
+    app()->instance('fleetops.geocoder', $geocoder);
+
+    return $geocoder;
+}
+
+test('a structured address sent with coordinates keeps its street and location without a lookup', function () {
+    $connection = fleetopsPlaceCreationBoot();
+    $geocoder   = fleetopsPlaceRecordingGeocoder();
+
+    $place = Place::createFromMixed([
+        'street1'     => '500 Pine St',
+        'city'        => 'Seattle',
+        'province'    => 'WA',
+        'postal_code' => '98101',
+        'country'     => 'US',
+        'latitude'    => 47.6114,
+        'longitude'   => -122.3373,
+    ]);
+
+    $location = Fleetbase\FleetOps\Support\Utils::getPointFromMixed($place->location);
+
+    expect($place)->toBeInstanceOf(Place::class)
+        ->and($place->street1)->toBe('500 Pine St')
+        ->and($place->city)->toBe('Seattle')
+        ->and($location->getLat())->toBe(47.6114)
+        ->and($location->getLng())->toBe(-122.3373)
+        ->and($geocoder->calls)->toBe([])
+        ->and($connection->table('places')->where('street1', '500 Pine St')->count())->toBe(1);
+});
+
+test('bare coordinates still resolve through a reverse lookup', function () {
+    fleetopsPlaceCreationBoot();
+    $geocoder = fleetopsPlaceRecordingGeocoder();
+
+    $place = Place::createFromMixed(['latitude' => 47.6114, 'longitude' => -122.3373], [], true);
+
+    expect($place)->toBeInstanceOf(Place::class)
+        ->and($geocoder->calls)->toBe(['reverse']);
+});
+
+test('an address without coordinates is still geocoded', function () {
+    fleetopsPlaceCreationBoot();
+    $geocoder = fleetopsPlaceRecordingGeocoder();
+
+    $place = Place::createFromMixed(['street1' => '1100 4th Ave', 'city' => 'Seattle', 'country' => 'US']);
+
+    expect($place->street1)->toBe('1100 4th Ave')
+        ->and($geocoder->calls)->toBe(['geocode']);
+});
+
+test('structured address helpers detect addresses and provided locations', function () {
+    expect(Place::hasStructuredAddress(['latitude' => 1.3, 'longitude' => 103.8]))->toBeFalse()
+        ->and(Place::hasStructuredAddress(['latitude' => 1.3, 'longitude' => 103.8, 'street1' => ' ']))->toBeFalse()
+        ->and(Place::hasStructuredAddress(['postal_code' => '98101', 'lat' => 1.3, 'lng' => 103.8]))->toBeTrue()
+        ->and(Place::hasStructuredAddress('1100 4th Ave'))->toBeFalse();
+
+    $converted = Place::withProvidedLocation(['street1' => 'A', 'lat' => 1.3, 'lng' => 103.8]);
+    expect($converted)->not->toHaveKeys(['lat', 'lng'])
+        ->and($converted['location'])->toBeInstanceOf(Point::class)
+        ->and($converted['location']->getLat())->toBe(1.3);
+
+    // An explicit location wins, a 0,0 pair is a geocoder miss and is dropped, a lone key is ignored
+    $explicit = Place::withProvidedLocation(['street1' => 'A', 'location' => 'keep', 'latitude' => 9, 'longitude' => 9]);
+    expect($explicit['location'])->toBe('keep')
+        ->and(Place::withProvidedLocation(['street1' => 'A', 'latitude' => 0, 'longitude' => 0]))->not->toHaveKey('location')
+        ->and(Place::withProvidedLocation(['street1' => 'A', 'latitude' => 1.3]))->toBe(['street1' => 'A']);
+
+    expect(Place::hasProvidedLocationAndStreet(['street1' => 'A', 'location' => new Point(1.3, 103.8)]))->toBeTrue()
+        ->and(Place::hasProvidedLocationAndStreet(['street1' => 'A', 'location' => new Point(0, 0)]))->toBeFalse()
+        ->and(Place::hasProvidedLocationAndStreet(['street1' => 'A']))->toBeFalse()
+        ->and(Place::hasProvidedLocationAndStreet(['location' => new Point(1.3, 103.8)]))->toBeFalse();
 });
