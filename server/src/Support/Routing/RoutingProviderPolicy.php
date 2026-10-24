@@ -11,11 +11,15 @@ use Illuminate\Support\Facades\Cache;
  * Managed from Admin → Fleet-Ops → Routing and stored as one system setting:
  *   - `providers`: whether each provider is available to every organization.
  *     Google is billed per request and is off unless switched on.
- *   - `defaults`: the route display and optimization engines organizations get
- *     until they choose their own.
+ *   - `defaults`: the routing engine and optimization engine organizations get
+ *     until they choose their own. The routing engine answers every route,
+ *     distance and time question: map lines, order distance and live ETAs.
+ *   - `server_routing`: `road` to measure orders and ETAs with the routing engine,
+ *     or `straight_line` to stop every server-side routing call at once.
  *   - `exceptions`: providers switched on for named organizations only.
  *
- * It is enforced on the server for order distance, tracking intelligence and
+ * Environment variables only provide the starting values; once saved here the
+ * admin panel wins. It is enforced on the server for order distance, tracking intelligence and
  * organization settings, and handed to the console so disabled engines are
  * neither offered nor used for map routing. The straight-line `calculate` and
  * `calculated` providers are always allowed so every caller has a fallback.
@@ -45,6 +49,8 @@ class RoutingProviderPolicy
     public const ALIASES = ['google_routes' => 'google'];
 
     public const ALWAYS_ALLOWED = ['calculate', 'calculated'];
+
+    public const SERVER_ROUTING_MODES = ['road', 'straight_line'];
 
     public static function settings(): array
     {
@@ -85,13 +91,18 @@ class RoutingProviderPolicy
             ->values()
             ->all();
 
+        $displayEngine = (string) (data_get($settings, 'defaults.display_engine') ?: config('fleetops.routing.display_engine') ?: 'osrm');
+        $serverRouting = (string) data_get($settings, 'server_routing', config('fleetops.routing.server_routing', 'road'));
+
         return [
             'providers' => $providers,
             'defaults'  => [
-                'display_engine'      => (string) data_get($settings, 'defaults.display_engine', config('fleetops.routing.display_engine', 'osrm')),
-                'optimization_engine' => (string) data_get($settings, 'defaults.optimization_engine', config('fleetops.routing.optimization_engine', 'osrm')),
+                'display_engine'      => $displayEngine,
+                // Optimization follows the routing engine unless set on its own
+                'optimization_engine' => (string) (data_get($settings, 'defaults.optimization_engine') ?: config('fleetops.routing.optimization_engine') ?: $displayEngine),
             ],
-            'exceptions' => $exceptions,
+            'server_routing' => in_array($serverRouting, static::SERVER_ROUTING_MODES, true) ? $serverRouting : 'road',
+            'exceptions'     => $exceptions,
         ];
     }
 
@@ -134,6 +145,15 @@ class RoutingProviderPolicy
     public static function allowedProviders(?string $companyUuid = null): array
     {
         return array_values(array_filter(array_keys(static::PROVIDERS), fn ($provider) => static::allows($provider, $companyUuid)));
+    }
+
+    /**
+     * Whether the administrator switched server-side routing off, so order distance
+     * and ETAs use the straight-line estimate without calling any routing engine.
+     */
+    public static function usesStraightLine(): bool
+    {
+        return static::settings()['server_routing'] === 'straight_line';
     }
 
     public static function defaultDisplayEngine(): string

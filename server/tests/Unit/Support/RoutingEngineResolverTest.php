@@ -1,6 +1,6 @@
 <?php
 
-use Fleetbase\FleetOps\Support\Routing\DistanceMatrixProviderResolver;
+use Fleetbase\FleetOps\Support\Routing\RoutingEngineResolver;
 use Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy;
 use Fleetbase\FleetOps\Support\Routing\ValhallaClient;
 use Fleetbase\FleetOps\Support\Utils;
@@ -51,12 +51,15 @@ function fleetopsDistanceProviderBoot(): SQLiteConnection
     });
 
     config([
-        'fleetops.distance_matrix.provider' => null,
-        'fleetops.osrm.host'                => 'https://osrm.fleetbase.test',
-        'fleetops.valhalla.host'            => null,
-        'fleetops.valhalla.api_key'         => null,
-        'fleetops.routing.google_enabled'   => false,
-        'services.google_maps.api_key'      => null,
+        'fleetops.distance_matrix.provider'    => null,
+        'fleetops.osrm.host'                   => 'https://osrm.fleetbase.test',
+        'fleetops.valhalla.host'               => null,
+        'fleetops.valhalla.api_key'            => null,
+        'fleetops.routing.google_enabled'      => false,
+        'fleetops.routing.display_engine'      => 'osrm',
+        'fleetops.routing.optimization_engine' => null,
+        'fleetops.routing.server_routing'      => 'road',
+        'services.google_maps.api_key'         => null,
     ]);
     Cache::swap(new Illuminate\Cache\Repository(new Illuminate\Cache\ArrayStore()));
 
@@ -117,12 +120,15 @@ function fleetopsDistanceProviderPolicy(array $policy): void
 
 afterEach(function () {
     config([
-        'fleetops.distance_matrix.provider' => null,
-        'fleetops.osrm.host'                => null,
-        'fleetops.valhalla.host'            => null,
-        'fleetops.valhalla.api_key'         => null,
-        'fleetops.routing.google_enabled'   => false,
-        'services.google_maps.api_key'      => null,
+        'fleetops.distance_matrix.provider'    => null,
+        'fleetops.osrm.host'                   => null,
+        'fleetops.valhalla.host'               => null,
+        'fleetops.valhalla.api_key'            => null,
+        'fleetops.routing.google_enabled'      => false,
+        'fleetops.routing.display_engine'      => 'osrm',
+        'fleetops.routing.optimization_engine' => null,
+        'fleetops.routing.server_routing'      => 'road',
+        'services.google_maps.api_key'         => null,
     ]);
     Cache::flush();
     app()->forgetInstance('log');
@@ -132,22 +138,53 @@ afterEach(function () {
     session(['company' => null]);
 });
 
-test('an explicit DISTANCE_MATRIX_PROVIDER wins over the company routing engine', function () {
+test('environment values only seed the admin policy, which wins once saved', function () {
+    $connection = fleetopsDistanceProviderBoot();
+    config([
+        'fleetops.routing.display_engine'      => 'valhalla',
+        'fleetops.routing.optimization_engine' => null,
+        'fleetops.routing.server_routing'      => 'straight_line',
+    ]);
+    Cache::flush();
+
+    // Unsaved: the environment provides the defaults, and optimization follows the routing engine
+    expect(RoutingProviderPolicy::settings()['defaults'])->toBe(['display_engine' => 'valhalla', 'optimization_engine' => 'valhalla'])
+        ->and(RoutingProviderPolicy::usesStraightLine())->toBeTrue()
+        ->and(RoutingEngineResolver::resolve('company-1'))->toBe('calculate');
+
+    // Saved: the admin choice wins over the environment
+    fleetopsDistanceProviderPolicy(['server_routing' => 'road', 'defaults' => ['display_engine' => 'osrm']]);
+    expect(RoutingProviderPolicy::usesStraightLine())->toBeFalse()
+        ->and(RoutingEngineResolver::resolve('company-1'))->toBe('osrm');
+
+    // The old DISTANCE_MATRIX_PROVIDER no longer overrides anything for orders
+    config(['fleetops.distance_matrix.provider' => 'google']);
+    expect(RoutingEngineResolver::resolve('company-1'))->toBe('osrm');
+
+    // An unknown mode is treated as road routing
+    expect(RoutingProviderPolicy::normalize(['server_routing' => 'teleport'])['server_routing'])->toBe('road');
+});
+
+test('the administrator can switch server-side routing to straight-line in one place', function () {
     $connection = fleetopsDistanceProviderBoot();
     fleetopsDistanceProviderRouting($connection, 'company-1', ['display_engine' => 'osrm']);
+    $requests = 0;
+    Http::fake(function () use (&$requests) {
+        $requests++;
 
-    config(['fleetops.distance_matrix.provider' => 'osrm']);
-    expect(DistanceMatrixProviderResolver::resolve('company-1'))->toBe('osrm');
+        return Http::response(['code' => 'Ok', 'routes' => [['distance' => 31520.0, 'duration' => 1610.0]]]);
+    });
 
-    // Even an explicit choice is subject to the admin routing policy
-    config(['fleetops.distance_matrix.provider' => 'google']);
-    expect(DistanceMatrixProviderResolver::resolve('company-1'))->toBe('calculate');
-    fleetopsDistanceProviderPolicy(['providers' => ['google' => true]]);
-    expect(DistanceMatrixProviderResolver::resolve('company-1'))->toBe('google');
+    expect(RoutingEngineResolver::resolve('company-1'))->toBe('osrm')
+        ->and(RoutingEngineResolver::trackingProvider('company-1'))->toBe('osrm');
 
-    // `calculate` is the operator's kill switch back to straight-line estimates
-    config(['fleetops.distance_matrix.provider' => 'calculate']);
-    expect(DistanceMatrixProviderResolver::resolve('company-1'))->toBe('calculate');
+    fleetopsDistanceProviderPolicy(['server_routing' => 'straight_line']);
+    $estimate = Utils::calculateDrivingDistanceAndTime([-37.78, 144.83], [-37.68, 144.58]);
+
+    expect(RoutingEngineResolver::resolve('company-1'))->toBe('calculate')
+        ->and(RoutingEngineResolver::trackingProvider('company-1'))->toBe('calculated')
+        ->and(Utils::getDrivingDistanceAndTime([-37.78, 144.83], [-37.68, 144.58], ['company_uuid' => 'company-1'])->distance)->toBe($estimate->distance)
+        ->and($requests)->toBe(0);
 });
 
 test('the company routing engine is used when the server is configured for it', function () {
@@ -158,20 +195,22 @@ test('the company routing engine is used when the server is configured for it', 
     fleetopsDistanceProviderRouting($connection, 'company-vroom', ['display_engine' => 'vroom']);
 
     // A company that never saved routing settings uses OSRM, as the map does
-    expect(DistanceMatrixProviderResolver::resolve('company-osrm'))->toBe('osrm')
-        ->and(DistanceMatrixProviderResolver::resolve('company-unsaved'))->toBe('osrm')
-        ->and(DistanceMatrixProviderResolver::resolve(null))->toBe('osrm');
+    expect(RoutingEngineResolver::resolve('company-osrm'))->toBe('osrm')
+        ->and(RoutingEngineResolver::resolve('company-unsaved'))->toBe('osrm')
+        ->and(RoutingEngineResolver::resolve(null))->toBe('osrm');
 
     // Valhalla needs a configured server; until then the company falls through to private OSRM
-    expect(DistanceMatrixProviderResolver::resolve('company-valhalla'))->toBe('osrm');
+    expect(RoutingEngineResolver::resolve('company-valhalla'))->toBe('osrm');
     config(['fleetops.valhalla.host' => 'https://valhalla.routing.fleetbase.test']);
-    expect(DistanceMatrixProviderResolver::resolve('company-valhalla'))->toBe('valhalla')
-        ->and(DistanceMatrixProviderResolver::resolve('company-legacy'))->toBe('valhalla')
-        ->and(DistanceMatrixProviderResolver::resolve('company-osrm'))->toBe('osrm');
+    expect(RoutingEngineResolver::resolve('company-valhalla'))->toBe('valhalla')
+        ->and(RoutingEngineResolver::resolve('company-legacy'))->toBe('valhalla')
+        ->and(RoutingEngineResolver::resolve('company-osrm'))->toBe('osrm');
 
-    // Engines the server cannot call map to nothing
-    expect(DistanceMatrixProviderResolver::fromRoutingSettings('company-vroom'))->toBeNull()
-        ->and(DistanceMatrixProviderResolver::isAvailable('vroom'))->toBeFalse();
+    // Engines the server cannot call are skipped for the platform default
+    expect(RoutingEngineResolver::companyEngine('company-vroom'))->toBe('vroom')
+        ->and(RoutingEngineResolver::isAvailable('vroom'))->toBeFalse()
+        ->and(RoutingEngineResolver::resolve('company-vroom'))->toBe('osrm')
+        ->and(RoutingEngineResolver::companyEngine('company-unsaved'))->toBeNull();
 });
 
 test('google needs the administrator to allow it, globally or for the organization', function () {
@@ -180,23 +219,23 @@ test('google needs the administrator to allow it, globally or for the organizati
     fleetopsDistanceProviderRouting($connection, 'company-other', ['display_engine' => 'google']);
     config(['services.google_maps.api_key' => 'test-maps-key', 'fleetops.osrm.host' => 'https://router.project-osrm.org']);
 
-    expect(DistanceMatrixProviderResolver::fromRoutingSettings('company-google'))->toBe('google')
-        ->and(DistanceMatrixProviderResolver::isAvailable('google', 'company-google'))->toBeFalse()
-        ->and(DistanceMatrixProviderResolver::resolve('company-google'))->toBe('calculate')
-        ->and(DistanceMatrixProviderResolver::googleMapsApiKey())->toBe('test-maps-key');
+    expect(RoutingEngineResolver::companyEngine('company-google'))->toBe('google')
+        ->and(RoutingEngineResolver::isAvailable('google', 'company-google'))->toBeFalse()
+        ->and(RoutingEngineResolver::resolve('company-google'))->toBe('calculate')
+        ->and(RoutingEngineResolver::googleMapsApiKey())->toBe('test-maps-key');
 
     // With the platform's own Valhalla configured, the organization gets road distance from it instead
     config(['fleetops.valhalla.host' => 'https://valhalla.routing.fleetbase.test']);
-    expect(DistanceMatrixProviderResolver::resolve('company-google'))->toBe('valhalla');
+    expect(RoutingEngineResolver::resolve('company-google'))->toBe('valhalla');
 
     // An exception lets one organization use Google while the others stay on Valhalla
     fleetopsDistanceProviderPolicy(['exceptions' => [['company_uuid' => 'company-google', 'company_name' => 'Acme', 'providers' => ['google']]]]);
-    expect(DistanceMatrixProviderResolver::resolve('company-google'))->toBe('google')
-        ->and(DistanceMatrixProviderResolver::resolve('company-other'))->toBe('valhalla');
+    expect(RoutingEngineResolver::resolve('company-google'))->toBe('google')
+        ->and(RoutingEngineResolver::resolve('company-other'))->toBe('valhalla');
 
     // Without a Maps key Google cannot be used even when allowed
     config(['services.google_maps.api_key' => null]);
-    expect(DistanceMatrixProviderResolver::resolve('company-google'))->toBe('valhalla');
+    expect(RoutingEngineResolver::resolve('company-google'))->toBe('valhalla');
 });
 
 test('the platform valhalla server serves companies whose engine is not available', function () {
@@ -204,18 +243,18 @@ test('the platform valhalla server serves companies whose engine is not availabl
     fleetopsDistanceProviderRouting($connection, 'company-osrm', ['display_engine' => 'osrm']);
     config(['fleetops.osrm.host' => 'https://router.project-osrm.org']);
 
-    expect(DistanceMatrixProviderResolver::resolve('company-osrm'))->toBe('calculate');
+    expect(RoutingEngineResolver::resolve('company-osrm'))->toBe('calculate');
 
     // Community servers do not count as configured
     config(['fleetops.valhalla.host' => 'https://VALHALLA1.openstreetmap.de']);
     expect(ValhallaClient::isConfigured())->toBeFalse()
-        ->and(DistanceMatrixProviderResolver::resolve('company-osrm'))->toBe('calculate');
+        ->and(RoutingEngineResolver::resolve('company-osrm'))->toBe('calculate');
 
     config(['fleetops.valhalla.host' => 'https://valhalla.routing.fleetbase.test/']);
     expect(ValhallaClient::isConfigured())->toBeTrue()
         ->and(ValhallaClient::connection())->toBe(['host' => 'https://valhalla.routing.fleetbase.test', 'api_key' => null])
-        ->and(DistanceMatrixProviderResolver::resolve('company-osrm'))->toBe('valhalla')
-        ->and(DistanceMatrixProviderResolver::resolve(null))->toBe('valhalla');
+        ->and(RoutingEngineResolver::resolve('company-osrm'))->toBe('valhalla')
+        ->and(RoutingEngineResolver::resolve(null))->toBe('valhalla');
 });
 
 test('order distance from valhalla converts kilometres, sends the key and caches the result', function () {
@@ -300,9 +339,8 @@ test('an unsupported provider name falls back to the straight-line estimate', fu
     $log = $GLOBALS['fleetopsDistanceProviderLog'];
     Http::fake(['*' => Http::response([], 500)]);
 
-    config(['fleetops.distance_matrix.provider' => 'valhala']);
     $estimate = Utils::calculateDrivingDistanceAndTime([-37.78, 144.83], [-37.68, 144.58]);
-    $matrix   = Utils::getDrivingDistanceAndTime([-37.78, 144.83], [-37.68, 144.58]);
+    $matrix   = Utils::getDrivingDistanceAndTime([-37.78, 144.83], [-37.68, 144.58], ['provider' => 'valhala']);
 
     expect($matrix->distance)->toBe($estimate->distance)
         ->and($log->warnings[0][1]['error'])->toBe('Unsupported distance matrix provider: valhala');
@@ -314,21 +352,20 @@ test('company OSRM selection never sends server traffic to the public demo serve
 
     foreach (['https://router.project-osrm.org', 'https://ROUTER.project-osrm.org/', null, 'not a url'] as $host) {
         config(['fleetops.osrm.host' => $host]);
-        expect(DistanceMatrixProviderResolver::hasPrivateOsrmHost())->toBeFalse()
-            ->and(DistanceMatrixProviderResolver::resolve('company-1'))->toBe('calculate');
+        expect(RoutingEngineResolver::hasPrivateOsrmHost())->toBeFalse()
+            ->and(RoutingEngineResolver::resolve('company-1'))->toBe('calculate');
     }
 
-    // The operator can still opt into the demo server explicitly
-    config(['fleetops.distance_matrix.provider' => 'osrm']);
-    expect(DistanceMatrixProviderResolver::resolve('company-1'))->toBe('osrm');
+    // Only an explicit per-call provider (the estimations command's --provider) can reach the demo server
+    expect(RoutingEngineResolver::trackingProvider('company-1'))->toBe('calculated');
 });
 
 test('an unreadable settings store falls back to the default routing engine', function () {
     $connection = fleetopsDistanceProviderBoot();
     $connection->getSchemaBuilder()->drop('settings');
 
-    expect(DistanceMatrixProviderResolver::fromRoutingSettings('company-1'))->toBe('osrm')
-        ->and(DistanceMatrixProviderResolver::resolve('company-1'))->toBe('osrm');
+    expect(RoutingEngineResolver::companyEngine('company-1'))->toBeNull()
+        ->and(RoutingEngineResolver::resolve('company-1'))->toBe('osrm');
 });
 
 test('order distance follows the company routing engine and caches the road result', function () {
@@ -435,9 +472,10 @@ test('the routing provider policy normalizes, saves and enforces provider access
 
     // Defaults: everything self-hosted is available, Google is not
     expect(RoutingProviderPolicy::settings())->toBe([
-        'providers'  => ['google' => false, 'valhalla' => true, 'osrm' => true, 'vroom' => true],
-        'defaults'   => ['display_engine' => 'osrm', 'optimization_engine' => 'osrm'],
-        'exceptions' => [],
+        'providers'      => ['google' => false, 'valhalla' => true, 'osrm' => true, 'vroom' => true],
+        'defaults'       => ['display_engine' => 'osrm', 'optimization_engine' => 'osrm'],
+        'server_routing' => 'road',
+        'exceptions'     => [],
     ])
         ->and(RoutingProviderPolicy::allowedProviders('company-1'))->toBe(['valhalla', 'osrm', 'vroom'])
         // Feature keys map to their provider, straight-line and third-party providers are always allowed
@@ -461,9 +499,10 @@ test('the routing provider policy normalizes, saves and enforces provider access
     ]);
 
     expect($saved)->toBe([
-        'providers'  => ['google' => false, 'valhalla' => false, 'osrm' => true, 'vroom' => true],
-        'defaults'   => ['display_engine' => 'valhalla', 'optimization_engine' => 'vroom'],
-        'exceptions' => [['company_uuid' => 'company-1', 'company_name' => 'Acme', 'providers' => ['google', 'valhalla']]],
+        'providers'      => ['google' => false, 'valhalla' => false, 'osrm' => true, 'vroom' => true],
+        'defaults'       => ['display_engine' => 'valhalla', 'optimization_engine' => 'vroom'],
+        'server_routing' => 'road',
+        'exceptions'     => [['company_uuid' => 'company-1', 'company_name' => 'Acme', 'providers' => ['google', 'valhalla']]],
     ])
         ->and(json_decode($connection->table('settings')->where('key', RoutingProviderPolicy::SETTING_KEY)->value('value'), true))->toBe($saved)
         // Saving clears the cache, so the change applies at once
@@ -501,7 +540,7 @@ test('a provider switched off by the administrator is never called for order dis
     fleetopsDistanceProviderPolicy(['providers' => ['valhalla' => false, 'osrm' => false]]);
     $estimate = Utils::calculateDrivingDistanceAndTime([-37.78, 144.83], [-37.68, 144.58]);
 
-    expect(DistanceMatrixProviderResolver::resolve('company-1'))->toBe('calculate')
+    expect(RoutingEngineResolver::resolve('company-1'))->toBe('calculate')
         ->and(Utils::getDrivingDistanceAndTime([-37.78, 144.83], [-37.68, 144.58], ['company_uuid' => 'company-1'])->distance)->toBe($estimate->distance);
 
     // An explicit request (the estimations command's --provider) is refused too

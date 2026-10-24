@@ -25,7 +25,10 @@
     </ContentPanel>
 
     <ContentPanel @title="Routing Defaults" @open={{true}} @wrapperClass="bordered-classic">
-        <InputGroup @name="Default Routing Engine" @helpText="Draws routes on the map and measures order distance for organizations that have not chosen their own.">
+        <InputGroup
+            @name="Default Routing Engine"
+            @helpText="Used for everything route, distance and time for organizations that have not chosen their own: map routes, each order's distance and time, and live ETAs while it is in progress."
+        >
             <Select
                 class="w-full"
                 @value={{this.defaultDisplayEngine}}
@@ -36,7 +39,7 @@
                 @onSelect={{fn (mut this.defaultDisplayEngine)}}
             />
         </InputGroup>
-        <InputGroup @name="Default Route Optimization Engine" @helpText="Optimizes stop order for organizations that have not chosen their own.">
+        <InputGroup @name="Default Route Optimization Engine" @helpText="Decides the order stops are visited in, for organizations that have not chosen their own.">
             <Select
                 class="w-full"
                 @value={{this.defaultOptimizationEngine}}
@@ -45,6 +48,20 @@
                 @optionValue="key"
                 @placeholder="Select default route optimization engine"
                 @onSelect={{fn (mut this.defaultOptimizationEngine)}}
+            />
+        </InputGroup>
+        <InputGroup
+            @name="Server-side Routing"
+            @helpText="Straight-line stops every routing call for order distance, time and live ETAs at once, for every organization. Map routes are not affected."
+        >
+            <Select
+                class="w-full"
+                @value={{this.serverRouting}}
+                @options={{this.serverRoutingOptions}}
+                @optionLabel="label"
+                @optionValue="value"
+                @onSelect={{fn (mut this.serverRouting)}}
+                data-test-server-routing
             />
         </InputGroup>
     </ContentPanel>
@@ -91,34 +108,10 @@
         </InputGroup>
     </ContentPanel>
 
-    <ContentPanel @title="Tracking Defaults" @open={{true}} @wrapperClass="bordered-classic">
-        <InputGroup @name="Default Tracking Provider" @helpText="Default provider for organization-level tracking intelligence unless an organization overrides it.">
-            <Select
-                class="w-full"
-                @value={{this.trackingProvider}}
-                @options={{this.trackingProviderOptions}}
-                @optionLabel="label"
-                @optionValue="value"
-                @placeholder="Select default tracking provider"
-                @onSelect={{fn (mut this.trackingProvider)}}
-            />
-        </InputGroup>
-        <InputGroup @name="Default Fallback Providers" @helpText="Providers used when the selected tracking provider is unavailable.">
-            <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                <PowerSelectMultiple
-                    @searchEnabled={{true}}
-                    @searchField="label"
-                    @options={{this.trackingProviderOptions}}
-                    @selected={{this.selectedTrackingFallbackOptions}}
-                    @onChange={{this.setTrackingFallbacks}}
-                    @placeholder="Select default fallback providers"
-                    @triggerClass="form-select form-input form-input-sm flex-1"
-                    as |provider|
-                >
-                    {{provider.label}}
-                </PowerSelectMultiple>
-            </div>
-        </InputGroup>
+    <ContentPanel @title="Tracking Behaviour" @open={{true}} @wrapperClass="bordered-classic">
+        <p class="mb-2 text-sm text-gray-600 dark:text-gray-400">
+            Live ETAs, remaining distance and route lines come from each organization's routing engine. These settings only tune their behaviour.
+        </p>
         <div class="flex justify-end">
             <Button
                 @type="default"

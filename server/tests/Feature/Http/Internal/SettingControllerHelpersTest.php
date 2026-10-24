@@ -116,7 +116,7 @@ test('setting helpers configure and look up global and company settings', functi
     expect($helper('googleMapsApiKey'))->toBe('maps-key-1');
 });
 
-test('setting helpers read notification and tracking registries', function () {
+test('setting helpers read the notification registries', function () {
     fleetopsSettingHelpersBoot();
 
     $controller = new SettingController();
@@ -128,8 +128,7 @@ test('setting helpers read notification and tracking registries', function () {
     };
 
     expect($helper('notificationNotifiables'))->toBeArray()
-        ->and($helper('notificationsByPackage', 'fleet-ops'))->toBeArray()
-        ->and($helper('trackingProviders'))->toBeArray();
+        ->and($helper('notificationsByPackage', 'fleet-ops'))->toBeArray();
 });
 
 test('history policy reconciliation clamps every organization and preserves inherited and internal settings', function () {

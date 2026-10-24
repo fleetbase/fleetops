@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Tracking;
 
+use Fleetbase\FleetOps\Support\Routing\RoutingEngineResolver;
 use Fleetbase\Models\Setting;
 use Illuminate\Support\Arr;
 
@@ -27,21 +28,24 @@ class TrackingOptions
             $systemSettings = [];
         }
 
+        $companyUuid     = $companyUuid ?? session('company');
         $config          = array_merge(config('fleetops.tracking', []), is_array($systemSettings) ? $systemSettings : []);
         $companySettings = [];
         try {
-            $companySettings = Setting::lookupForCompany($companyUuid ?? session('company'), 'tracking', []);
+            $companySettings = Setting::lookupForCompany($companyUuid, 'tracking', []);
         } catch (\Throwable) {
             $companySettings = [];
         }
 
-        $fallbacks = Arr::get($options, 'fallbacks', Arr::get($companySettings, 'fallbacks', Arr::get($config, 'fallbacks', [])));
+        // An explicitly requested provider (API callers) is still subject to the routing policy
+        $fallbacks = Arr::get($options, 'fallbacks', []);
         if (is_string($fallbacks)) {
             $fallbacks = array_values(array_filter(array_map('trim', explode(',', $fallbacks))));
         }
 
         return new self(
-            provider: Arr::get($options, 'provider', Arr::get($companySettings, 'provider', Arr::get($config, 'provider'))),
+            // Tracking uses the organization's routing engine, the same one that measured the order
+            provider: Arr::get($options, 'provider') ?: RoutingEngineResolver::trackingProvider($companyUuid),
             fallbacks: Arr::wrap($fallbacks),
             trafficEnabled: (bool) Arr::get($options, 'traffic_enabled', Arr::get($companySettings, 'traffic_enabled', Arr::get($config, 'traffic_enabled', true))),
             cacheTtlSeconds: (int) Arr::get($options, 'cache_ttl_seconds', Arr::get($companySettings, 'cache_ttl_seconds', Arr::get($config, 'cache_ttl_seconds', 60))),

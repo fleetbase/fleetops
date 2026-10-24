@@ -4,7 +4,6 @@ namespace Fleetbase\FleetOps\Tracking;
 
 use Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy;
 use Fleetbase\FleetOps\Tracking\Contracts\TrackingProviderInterface;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -63,10 +62,8 @@ class TrackingProviderManager
 
     protected function providerOrder(TrackingOptions $options): array
     {
-        $provider  = $options->provider ?: Arr::get(config('fleetops.tracking', []), 'provider', 'google_routes');
-        $fallbacks = $options->fallbacks ?: Arr::get(config('fleetops.tracking', []), 'fallbacks', ['osrm', 'calculated']);
-
-        return collect([$provider, ...$fallbacks])
+        // The straight-line estimate always closes the chain so every order gets an answer
+        return collect([$options->provider, ...$options->fallbacks, 'calculated'])
             ->filter()
             ->map(fn ($key) => TrackingProviderRegistry::normalizeKey($key))
             ->unique()

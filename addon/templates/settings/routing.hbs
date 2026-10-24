@@ -49,33 +49,10 @@
                 </InputGroup>
             </ContentPanel>
             <ContentPanel @title="Tracking Intelligence" @open={{true}} @wrapperClass="bordered-classic">
-                <InputGroup @name="Tracking Provider" @helpText="Choose the provider used for live tracking intelligence and ETA calculations.">
-                    <Select
-                        @value={{this.trackingProvider}}
-                        @options={{this.trackingProviderOptions}}
-                        @optionLabel="label"
-                        @optionValue="value"
-                        @onSelect={{fn (mut this.trackingProvider)}}
-                        @placeholder="Select tracking provider"
-                        class="w-full"
-                    />
-                </InputGroup>
-                <InputGroup @name="Fallback Providers" @helpText="Providers used when the selected tracking provider is unavailable.">
-                    <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                        <PowerSelectMultiple
-                            @searchEnabled={{true}}
-                            @searchField="label"
-                            @options={{this.trackingProviderOptions}}
-                            @selected={{this.selectedTrackingFallbackOptions}}
-                            @onChange={{this.setTrackingFallbacks}}
-                            @placeholder="Select fallback providers"
-                            @triggerClass="form-select form-input flex-1"
-                            as |provider|
-                        >
-                            {{provider.label}}
-                        </PowerSelectMultiple>
-                    </div>
-                </InputGroup>
+                <p class="mb-2 text-sm text-gray-600 dark:text-gray-400">
+                    Live ETAs, remaining distance and route lines use the routing service selected above, the same one that measures each order's distance and time. These settings only tune
+                    tracking behaviour.
+                </p>
                 <div class="flex justify-end">
                     <Button
                         @type="default"

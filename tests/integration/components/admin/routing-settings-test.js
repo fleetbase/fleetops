@@ -12,6 +12,7 @@ class FetchStubService extends Service {
             return Promise.resolve({
                 providers: { google: false, valhalla: true, osrm: true, vroom: true },
                 defaults: { display_engine: 'valhalla', optimization_engine: 'vroom' },
+                server_routing: 'road',
                 exceptions: [{ company_uuid: 'company-1', company_name: 'Acme Logistics', providers: ['google'] }],
                 available_providers: [
                     { key: 'google', label: 'Google' },
@@ -22,7 +23,7 @@ class FetchStubService extends Service {
             });
         }
 
-        return Promise.resolve({ provider: 'valhalla', fallbacks: ['calculated'], providers: [{ key: 'valhalla', label: 'Valhalla' }] });
+        return Promise.resolve({ traffic_enabled: false, cache_ttl_seconds: 45 });
     }
 
     post(url, body) {
@@ -83,11 +84,15 @@ module('Integration | Component | admin/routing-settings', function (hooks) {
             {
                 providers: { google: true, valhalla: true, osrm: true, vroom: true },
                 defaults: { display_engine: 'valhalla', optimization_engine: 'vroom' },
+                server_routing: 'road',
                 exceptions: [],
             },
         ]);
+        // Tracking only saves behaviour; its provider is the routing engine
         assert.strictEqual(fetch.posts[1][0], 'fleet-ops/settings/admin-tracking-settings');
-        assert.strictEqual(fetch.posts[1][1].provider, 'valhalla');
+        assert.false('provider' in fetch.posts[1][1]);
+        assert.false(fetch.posts[1][1].traffic_enabled);
+        assert.strictEqual(fetch.posts[1][1].cache_ttl_seconds, 45);
         assert.deepEqual(this.owner.lookup('service:notifications').successes, ['Routing settings saved.']);
     });
 });

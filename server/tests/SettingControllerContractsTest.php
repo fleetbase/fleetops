@@ -17,7 +17,6 @@ class FleetOpsSettingControllerProbe extends SettingController
     public mixed $company                      = null;
     public array $notifiables                  = [];
     public array $notifications                = [];
-    public array $providers                    = [];
     public string $googleMapsApiKey            = '';
     public array $reconciledTelematicsDefaults = [];
     public ?string $policyCompany              = 'company-uuid';
@@ -102,11 +101,6 @@ class FleetOpsSettingControllerProbe extends SettingController
         return $this->notifications[$package] ?? [];
     }
 
-    protected function trackingProviders(): array
-    {
-        return $this->providers;
-    }
-
     protected function googleMapsApiKey(): string
     {
         return $this->googleMapsApiKey;
@@ -149,27 +143,6 @@ class FleetOpsSettingControllerProbe extends SettingController
     protected function dispatchTelematicsPrune(): void
     {
         $this->pruned[] = 'system';
-    }
-}
-
-class FleetOpsTrackingProviderOptionFake
-{
-    public function __construct(private array $capabilities)
-    {
-    }
-
-    public function capabilities(): object
-    {
-        return new class($this->capabilities) {
-            public function __construct(private array $capabilities)
-            {
-            }
-
-            public function toArray(): array
-            {
-                return $this->capabilities;
-            }
-        };
     }
 }
 
@@ -443,6 +416,7 @@ test('setting controller reads and saves the admin routing provider policy', fun
     $policy = fleetopsJsonPayload($controller->getAdminRoutingProviders());
     expect($policy['providers'])->toBe(['google' => false, 'valhalla' => true, 'osrm' => true, 'vroom' => true])
         ->and($policy['defaults'])->toBe(['display_engine' => 'osrm', 'optimization_engine' => 'osrm'])
+        ->and($policy['server_routing'])->toBe('road')
         ->and($policy['exceptions'])->toBe([])
         ->and($policy['available_providers'])->toBe([
             ['key' => 'google', 'label' => 'Google'],
@@ -452,34 +426,34 @@ test('setting controller reads and saves the admin routing provider policy', fun
         ]);
 
     $controller->saveAdminRoutingProviders(new Request([
-        'providers'  => ['google' => true],
-        'defaults'   => ['display_engine' => 'valhalla'],
-        'exceptions' => [['company_uuid' => 'company-1', 'providers' => ['google']]],
-        'ignored'    => 'value',
+        'providers'      => ['google' => true],
+        'defaults'       => ['display_engine' => 'valhalla'],
+        'server_routing' => 'straight_line',
+        'exceptions'     => [['company_uuid' => 'company-1', 'providers' => ['google']]],
+        'ignored'        => 'value',
     ]));
 
     expect($controller->savedRoutingPolicies)->toBe([[
-        'providers'  => ['google' => true],
-        'defaults'   => ['display_engine' => 'valhalla'],
-        'exceptions' => [['company_uuid' => 'company-1', 'providers' => ['google']]],
+        'providers'      => ['google' => true],
+        'defaults'       => ['display_engine' => 'valhalla'],
+        'server_routing' => 'straight_line',
+        'exceptions'     => [['company_uuid' => 'company-1', 'providers' => ['google']]],
     ]]);
 });
 
-test('setting controller normalizes tracking settings and provider options', function () {
+test('setting controller saves tracking behaviour while the provider follows the routing engine', function () {
     config()->set('fleetops.tracking', [
-        'provider'                  => 'osrm',
-        'fallbacks'                 => ['calculated'],
         'traffic_enabled'           => false,
         'cache_ttl_seconds'         => 30,
         'route_cache_ttl_seconds'   => 120,
         'default_vehicle_speed_kph' => 25,
     ]);
+    config()->set('fleetops.osrm.host', null);
+    config()->set('fleetops.valhalla.host', null);
+    Cache::forget(RoutingProviderPolicy::CACHE_KEY);
 
-    $controller            = new FleetOpsSettingControllerProbe();
-    $controller->providers = [
-        'osrm'          => new FleetOpsTrackingProviderOptionFake(['routes']),
-        'google_routes' => new FleetOpsTrackingProviderOptionFake(['traffic', 'eta']),
-    ];
+    $controller = new FleetOpsSettingControllerProbe();
+    // Saved before tracking followed the routing engine
     $controller->settings['fleet-ops.tracking-settings'] = [
         'provider'                         => 'google_routes',
         'fallbacks'                        => 'osrm, calculated',
@@ -491,8 +465,8 @@ test('setting controller normalizes tracking settings and provider options', fun
     ];
 
     $saved = fleetopsJsonPayload($controller->saveTrackingSettings(new Request([
-        'provider'                         => 'osrm',
-        'fallbacks'                        => 'google_routes, calculated',
+        'provider'                         => 'google_routes',
+        'fallbacks'                        => 'osrm, calculated',
         'traffic_enabled'                  => '1',
         'cache_ttl_seconds'                => '75',
         'route_cache_ttl_seconds'          => '900',
@@ -503,11 +477,10 @@ test('setting controller normalizes tracking settings and provider options', fun
         ],
     ])));
 
+    // A provider in the request is ignored rather than refused
     expect($saved)->toMatchArray(['status' => 'ok'])
+        ->and($controller->configuredCompany['tracking'])->not->toHaveKeys(['provider', 'fallbacks'])
         ->and($controller->configuredCompany['tracking'])->toMatchArray([
-            'provider'                         => 'osrm',
-            // Google Routes is switched off, so it is dropped from the fallbacks
-            'fallbacks'                        => ['calculated'],
             'traffic_enabled'                  => true,
             'cache_ttl_seconds'                => 75,
             'route_cache_ttl_seconds'          => 900,
@@ -532,36 +505,22 @@ test('setting controller normalizes tracking settings and provider options', fun
         ],
     ];
 
+    // The response names the routing engine tracking will use; no routing server is configured here
     $tracking = fleetopsJsonPayload($controller->getTrackingSettings());
-    expect($tracking['provider'])->toBe('google_routes')
-        ->and($tracking['alerts']['prolonged_stoppages']['duration_threshold_minutes'])->toBe(55)
-        // Organizations are only offered the providers they may use
-        ->and($tracking['providers'])->toBe([
-            [
-                'key'          => 'osrm',
-                'name'         => 'OSRM',
-                'value'        => 'osrm',
-                'label'        => 'OSRM',
-                'capabilities' => ['routes'],
-            ],
-        ]);
-
-    $refused = $controller->saveTrackingSettings(new Request(['provider' => 'google_routes']));
-    expect($refused->getStatusCode())->toBe(422);
-
-    // Without an organization every registered provider is listed
-    $controller->policyCompany = null;
-    expect(fleetopsJsonPayload($controller->getTrackingSettings())['providers'])->toHaveCount(2);
+    expect($tracking)->not->toHaveKeys(['provider', 'fallbacks', 'providers'])
+        ->and($tracking['routing_engine'])->toBe('calculate')
+        ->and($tracking['alerts']['prolonged_stoppages']['duration_threshold_minutes'])->toBe(55);
 
     $adminSaved = fleetopsJsonPayload($controller->saveAdminTrackingSettings(new Request([
-        'provider'  => 'calculated',
-        'fallbacks' => 'osrm',
+        'provider'          => 'calculated',
+        'fallbacks'         => 'osrm',
+        'cache_ttl_seconds' => '20',
     ])));
 
-    expect($controller->configured['fleet-ops.tracking-settings']['provider'])->toBe('calculated')
-        ->and($controller->configured['fleet-ops.tracking-settings']['fallbacks'])->toBe(['osrm'])
-        ->and($adminSaved['providers'])->toHaveCount(2)
-        ->and(fleetopsJsonPayload($controller->getAdminTrackingSettings())['providers'])->toHaveCount(2);
+    expect($controller->configured['fleet-ops.tracking-settings'])->not->toHaveKeys(['provider', 'fallbacks'])
+        ->and($controller->configured['fleet-ops.tracking-settings']['cache_ttl_seconds'])->toBe(20)
+        ->and($adminSaved)->not->toHaveKeys(['provider', 'fallbacks', 'providers'])
+        ->and($adminSaved['cache_ttl_seconds'])->toBe(20);
 });
 
 test('setting controller handles map scheduling orchestrator and card field settings', function () {

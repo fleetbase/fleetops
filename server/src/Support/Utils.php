@@ -3,7 +3,7 @@
 namespace Fleetbase\FleetOps\Support;
 
 use Fleetbase\FleetOps\Flow\Activity;
-use Fleetbase\FleetOps\Support\Routing\DistanceMatrixProviderResolver;
+use Fleetbase\FleetOps\Support\Routing\RoutingEngineResolver;
 use Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy;
 use Fleetbase\FleetOps\Support\Routing\ValhallaClient;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
@@ -801,7 +801,7 @@ class Utils extends FleetbaseUtils
      * This function attempts to find the driving distance and time from the origin to the destination
      * using various map APIs. It first attempts to resolve the origin and destination from various input types
      * into geographical coordinates. The provider is `$options['provider']` when given, otherwise the one
-     * DistanceMatrixProviderResolver picks for `$options['company_uuid']` (or the session company). When a road
+     * RoutingEngineResolver picks for `$options['company_uuid']` (or the session company). When a road
      * provider fails or returns no route the straight-line estimate is returned instead, so the result is never
      * zero for distinct points. The result is a DistanceMatrix with the distance in meters and the time in seconds.
      *
@@ -820,7 +820,7 @@ class Utils extends FleetbaseUtils
         $destinations = $destination->getLat() . ',' . $destination->getLng();
 
         $companyUuid = data_get($options, 'company_uuid', session('company'));
-        $provider    = data_get($options, 'provider') ?: DistanceMatrixProviderResolver::resolve($companyUuid);
+        $provider    = data_get($options, 'provider') ?: RoutingEngineResolver::resolve($companyUuid);
         $estimate    = static::calculateDrivingDistanceAndTime($origins, $destinations);
 
         // Nothing to route between identical points, and `calculate` is the estimate itself
@@ -974,7 +974,7 @@ class Utils extends FleetbaseUtils
                 'origins'      => $origins,
                 'destinations' => $destinations,
                 'mode'         => data_get($options, 'mode', 'driving'),
-                'key'          => DistanceMatrixProviderResolver::googleMapsApiKey(),
+                'key'          => RoutingEngineResolver::googleMapsApiKey(),
             ]
         )->json();
 
