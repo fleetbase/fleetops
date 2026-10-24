@@ -3,6 +3,9 @@
 namespace Fleetbase\FleetOps\Support;
 
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\FleetOps\Support\Routing\RoutingEngineResolver;
+use Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy;
+use Fleetbase\FleetOps\Support\Routing\ValhallaClient;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\Setting;
@@ -10,6 +13,7 @@ use Fleetbase\Support\Utils as FleetbaseUtils;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
 
@@ -21,6 +25,11 @@ class Utils extends FleetbaseUtils
      * @var float
      */
     public const DRIVING_TIME_MULTIPLIER = 7.2;
+
+    /**
+     * Seconds a road distance stays cached for one origin and destination pair.
+     */
+    public const DISTANCE_MATRIX_CACHE_TTL = 86400;
 
     /**
      * Resolve the preferred transaction currency for a company.
@@ -791,16 +800,17 @@ class Utils extends FleetbaseUtils
      *
      * This function attempts to find the driving distance and time from the origin to the destination
      * using various map APIs. It first attempts to resolve the origin and destination from various input types
-     * into geographical coordinates. Then, based on the provider specified in the options or defaulting to configured provider,
-     * it queries the respective service for the driving distance and time. The result is returned as a DistanceMatrix
-     * object with the distance in meters and the time in seconds.
+     * into geographical coordinates. The provider is `$options['provider']` when given, otherwise the one
+     * RoutingEngineResolver picks for `$options['company_uuid']` (or the session company). When a road
+     * provider fails or returns no route the straight-line estimate is returned instead, so the result is never
+     * zero for distinct points. The result is a DistanceMatrix with the distance in meters and the time in seconds.
      *
      * @param mixed $origin      The origin of the journey. Can be a Place model, a string, or an array with latitude and longitude.
      * @param mixed $destination The destination of the journey. Similar to the origin, it accepts multiple input types.
      *
      * @return DistanceMatrix an object containing the distance and time of the journey
      *
-     * @throws \Throwable throws any exception encountered during the resolution of points or API calls
+     * @throws \Throwable throws any exception encountered during the resolution of points
      */
     public static function getDrivingDistanceAndTime($origin, $destination, $options = []): DistanceMatrix
     {
@@ -809,25 +819,50 @@ class Utils extends FleetbaseUtils
         $origins      = $origin->getLat() . ',' . $origin->getLng();
         $destinations = $destination->getLat() . ',' . $destination->getLng();
 
-        // Create empty distance matric
-        $distanceMatrix = new DistanceMatrix(0, 0);
-        $provider       = data_get($options, 'provider', config('fleetops.distance_matrix.provider'));
-        switch ($provider) {
-            case 'calculate':
-                $distanceMatrix = static::calculateDrivingDistanceAndTime($origins, $destinations);
-                break;
+        $companyUuid = data_get($options, 'company_uuid', session('company'));
+        $provider    = data_get($options, 'provider') ?: RoutingEngineResolver::resolve($companyUuid);
+        $estimate    = static::calculateDrivingDistanceAndTime($origins, $destinations);
 
-            case 'osrm':
-                $distanceMatrix = static::getDistanceMatrixFromOSRM($origins, $destinations);
-                break;
-
-            case 'google':
-            default:
-                $distanceMatrix = static::getDistanceMatrixFromGoogle($origins, $destinations);
-                break;
+        // Nothing to route between identical points, and `calculate` is the estimate itself
+        if ($provider === 'calculate' || $estimate->distance <= 0) {
+            return $estimate;
         }
 
-        return $distanceMatrix;
+        try {
+            // An explicitly requested provider is still subject to the admin routing policy
+            if (!RoutingProviderPolicy::allows($provider, $companyUuid)) {
+                throw new \RuntimeException('The ' . $provider . ' provider is switched off for this organization.');
+            }
+
+            // The public OSRM demo server's usage policy does not allow production traffic
+            if ($provider === 'osrm' && !RoutingEngineResolver::hasPrivateOsrmHost()) {
+                throw new \RuntimeException('No private OSRM host is configured.');
+            }
+
+            $distanceMatrix = match ($provider) {
+                'valhalla' => static::getDistanceMatrixFromValhalla($origins, $destinations, $companyUuid),
+                'osrm'     => static::getDistanceMatrixFromOSRM($origins, $destinations),
+                'google'   => static::getDistanceMatrixFromGoogle($origins, $destinations),
+                default    => throw new \InvalidArgumentException('Unsupported distance matrix provider: ' . $provider),
+            };
+        } catch (\Throwable $e) {
+            $distanceMatrix = null;
+            $error          = $e->getMessage();
+        }
+
+        if ($distanceMatrix && $distanceMatrix->distance > 0 && $distanceMatrix->time > 0) {
+            return $distanceMatrix;
+        }
+
+        // A timeout, exhausted quota or missing route must not leave the order at zero
+        Log::warning('Road distance unavailable, using the straight-line estimate instead.', [
+            'provider'    => $provider,
+            'origin'      => $origins,
+            'destination' => $destinations,
+            'error'       => $error ?? 'no route returned',
+        ]);
+
+        return $estimate;
     }
 
     /**
@@ -859,7 +894,7 @@ class Utils extends FleetbaseUtils
 
         // Create empty distance matric
         $distanceMatrix = new DistanceMatrix(0, 0);
-        $provider       = data_get($options, 'provider', config('fleetops.distance_matrix.provider'));
+        $provider       = data_get($options, 'provider') ?: config('fleetops.distance_matrix.provider') ?: 'calculate';
         switch ($provider) {
             case 'calculate':
                 $distanceMatrix = static::calculateDrivingDistanceAndTime($origins, $destinations);
@@ -944,7 +979,7 @@ class Utils extends FleetbaseUtils
                 'origins'      => $origins,
                 'destinations' => $destinations,
                 'mode'         => data_get($options, 'mode', 'driving'),
-                'key'          => env('GOOGLE_MAPS_API_KEY'),
+                'key'          => RoutingEngineResolver::googleMapsApiKey(),
             ]
         )->json();
 
@@ -954,8 +989,10 @@ class Utils extends FleetbaseUtils
         // Create distance matrix
         $distanceMatrix = new DistanceMatrix($distance, $time);
 
-        // Cache distance matrix
-        Redis::set($cacheKey, json_encode($distanceMatrix));
+        // Cache distance matrix, but never an empty result so a failed lookup is retried
+        if ($distance > 0 && $time > 0) {
+            Redis::set($cacheKey, json_encode($distanceMatrix), 'EX', self::DISTANCE_MATRIX_CACHE_TTL);
+        }
 
         return $distanceMatrix;
     }
@@ -1010,8 +1047,55 @@ class Utils extends FleetbaseUtils
         // Create distance matrix
         $distanceMatrix = new DistanceMatrix($distance, $time);
 
-        // Cache distance matrix
-        Redis::set($cacheKey, json_encode($distanceMatrix));
+        // Cache distance matrix, but never an empty result so a failed lookup is retried
+        if ($distance > 0 && $time > 0) {
+            Redis::set($cacheKey, json_encode($distanceMatrix), 'EX', self::DISTANCE_MATRIX_CACHE_TTL);
+        }
+
+        return $distanceMatrix;
+    }
+
+    /**
+     * Retrieves the driving distance and time from the configured Valhalla server.
+     *
+     * Origins and destinations use the same `lat,lng` strings (separated by `|`) as the
+     * other providers and are routed in order. Results are cached per coordinate pair;
+     * a failed request or missing route throws so the caller can fall back.
+     *
+     * @param string      $origins      a string of origins in 'latitude,longitude' format, separated by `|`
+     * @param string      $destinations a string of destinations in a similar format to origins
+     * @param string|null $companyUuid  the organization whose Valhalla settings apply
+     *
+     * @return DistanceMatrix the distance in metres and time in seconds
+     */
+    public static function getDistanceMatrixFromValhalla(string $origins, string $destinations, ?string $companyUuid = null): DistanceMatrix
+    {
+        $cacheKey     = 'valhalla:' . md5($origins . '_' . $destinations);
+        $cachedResult = Redis::get($cacheKey);
+        if ($cachedResult) {
+            $json = json_decode($cachedResult);
+
+            if (!empty($json->distance) && !empty($json->time)) {
+                return new DistanceMatrix($json->distance, $json->time);
+            }
+        }
+
+        $points = array_map(function ($coordinate) {
+            [$latitude, $longitude] = array_map('floatval', explode(',', $coordinate));
+
+            return new Point($latitude, $longitude);
+        }, explode('|', $origins . '|' . $destinations));
+
+        $trip     = ValhallaClient::route($points, [], $companyUuid);
+        $distance = (float) data_get($trip, 'summary.length', 0) * 1000;
+        $time     = (float) data_get($trip, 'summary.time', 0);
+
+        $distanceMatrix = new DistanceMatrix($distance, $time);
+
+        // Cache distance matrix, but never an empty result so a failed lookup is retried
+        if ($distance > 0 && $time > 0) {
+            Redis::set($cacheKey, json_encode($distanceMatrix), 'EX', self::DISTANCE_MATRIX_CACHE_TTL);
+        }
 
         return $distanceMatrix;
     }

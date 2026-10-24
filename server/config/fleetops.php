@@ -42,6 +42,51 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Routing
+    |--------------------------------------------------------------------------
+    |
+    | Starting values for Admin -> Fleet-Ops -> Routing. Once an administrator
+    | saves that page these are no longer read.
+    |
+    | The routing engine answers every route, distance and time question: map
+    | route lines, an order's stored distance and time, and live ETAs while it
+    | is in progress. Google is billed per request, so organizations cannot use
+    | it unless it is switched on (globally or for named organizations).
+    | ROUTING_SERVER_ROUTING=straight_line measures orders and ETAs with the
+    | straight-line estimate instead of calling any engine.
+    |
+    | DISTANCE_MATRIX_PROVIDER is still honoured as a starting value for
+    | installs that set it before these existed.
+    |
+    */
+    'routing' => [
+        'google_enabled'      => env('ROUTING_GOOGLE_ENABLED', env('DISTANCE_MATRIX_PROVIDER') === 'google'),
+        'display_engine'      => env('ROUTING_DISPLAY_ENGINE', in_array(env('DISTANCE_MATRIX_PROVIDER'), ['osrm', 'valhalla', 'google'], true) ? env('DISTANCE_MATRIX_PROVIDER') : 'valhalla'),
+        'optimization_engine' => env('ROUTING_OPTIMIZATION_ENGINE'),
+        'server_routing'      => env('ROUTING_SERVER_ROUTING', env('DISTANCE_MATRIX_PROVIDER') === 'calculate' ? 'straight_line' : 'road'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Valhalla
+    |--------------------------------------------------------------------------
+    |
+    | A self-hosted Valhalla server used for order distance, time and tracking
+    | ETAs. The host and key set in the Valhalla extension's admin settings (or
+    | an organization's own) take precedence over these variables, which are
+    | shared with that extension. The key is sent as the X-Api-Key header. The
+    | public community servers are never used by the server.
+    |
+    */
+    'valhalla' => [
+        'host'    => env('VALHALLA_HOST', env('VALHALLA_BASE_URI')),
+        'api_key' => env('VALHALLA_API_KEY'),
+        'costing' => env('VALHALLA_COSTING', 'auto'),
+        'timeout' => env('VALHALLA_TIMEOUT', 5),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | VROOM Route Optimisation Engine
     |--------------------------------------------------------------------------
     |
@@ -61,12 +106,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Distance Matrix Calculator
-    | Options: "calculate", "google", "osrm"
+    | Service Quote Distance
     |--------------------------------------------------------------------------
+    |
+    | Provider for the multi-stop distance used when pricing service quotes:
+    | "calculate" (default), "osrm" or "google". Order distance and time do
+    | not use this; they follow the routing engine (see Routing above).
+    |
     */
     'distance_matrix' => [
-        'provider' => env('DISTANCE_MATRIX_PROVIDER', 'calculate'),
+        'provider' => env('DISTANCE_MATRIX_PROVIDER'),
     ],
 
     /*
@@ -74,15 +123,12 @@ return [
     | Order Tracking Intelligence
     |--------------------------------------------------------------------------
     |
-    | Provider-neutral tracking data for active orders. The provider registry
-    | can be extended by third-party packages without editing FleetOps core.
-    |
-    | Built-in providers: "google_routes", "osrm", "calculated"
+    | Live ETAs, remaining distance and route lines for active orders. They
+    | come from the organization's routing engine (see Routing above) and fall
+    | back to the straight-line estimate; these values only tune behaviour.
     |--------------------------------------------------------------------------
     */
     'tracking' => [
-        'provider'                         => env('TRACKING_PROVIDER', 'google_routes'),
-        'fallbacks'                        => array_filter(explode(',', env('TRACKING_PROVIDER_FALLBACKS', 'osrm,calculated'))),
         'traffic_enabled'                  => env('TRACKING_TRAFFIC_ENABLED', true),
         'cache_ttl_seconds'                => env('TRACKING_CACHE_TTL_SECONDS', 60),
         'route_cache_ttl_seconds'          => env('TRACKING_ROUTE_CACHE_TTL_SECONDS', 600),

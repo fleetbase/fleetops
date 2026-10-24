@@ -1716,7 +1716,7 @@ test('track order distance command exits when another estimation run is locked',
     ]);
 
     expect($command->handle())->toBe(Command::SUCCESS)
-        ->and($command->messages)->toContain(['info', 'Using provider: '])
+        ->and($command->messages)->toContain(['info', 'Using provider: company routing settings'])
         ->and($command->messages)->toContain(['info', 'Looking back: last 2 day(s)'])
         ->and($command->messages)->toContain(['info', 'Chunk size: 250'])
         ->and($command->messages)->toContain(['warn', 'Another run appears to be in progress (lock active). Use --no-lock to bypass.'])
@@ -2487,6 +2487,26 @@ test('test email command reports send failures as a command failure', function (
     // the command reports the failure rather than surfacing the exception
     expect($command->handle())->toBe(Command::FAILURE)
         ->and(collect($command->messages)->pluck(0))->toContain('error');
+});
+
+test('track order distance command lets each order resolve its company provider without --provider', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-26 12:00:00'));
+
+    $order   = new FleetOpsTrackOrderFake(201);
+    $command = new FleetOpsTrackOrderDistanceAndTimeProbe([
+        'provider' => null,
+        'days'     => 2,
+        'chunk'    => 100,
+        'dry'      => false,
+        'no-lock'  => true,
+    ], [$order]);
+
+    expect($command->handle())->toBe(Command::SUCCESS)
+        ->and($command->messages)->toContain(['info', 'Using provider: company routing settings'])
+        ->and($command->messages)->toContain(['info', 'Updated 1/1 orders.'])
+        ->and($order->distanceCalls)->toBe([[]]);
+
+    Carbon::setTestNow();
 });
 
 test('track order distance command exits early when no qualifying orders exist', function () {
