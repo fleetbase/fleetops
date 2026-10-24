@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Console\Commands;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Notifications\OrderPing;
+use Fleetbase\FleetOps\Support\NavigatorReview;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Console\Command;
@@ -133,6 +134,9 @@ class DispatchAdhocOrders extends Command
             })
             ->whereNull('deleted_at')
             ->withoutGlobalScopes();
+
+        // An app store reviewer's driver is never offered a real order.
+        NavigatorReview::excludeFrom($driverQuery);
 
         if (!$testing) {
             $driverQuery->whereNotNull('location')->whereRaw('

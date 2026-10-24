@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Providers;
 
 use Brick\Geo\Engine\GeometryEngineRegistry;
 use Brick\Geo\Engine\GEOSEngine;
+use Fleetbase\FleetOps\Support\NavigatorReview;
 use Fleetbase\Providers\CoreServiceProvider;
 use Fleetbase\Support\NotificationRegistry;
 use Fleetbase\Support\Utils;
@@ -160,6 +161,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         $this->registerNotifications();
         $this->registerAiCapabilities();
         $this->registerSocketChannels();
+        $this->registerAppReviewTypes();
         $this->registerExpansionsFrom(__DIR__ . '/../Expansions');
 
         // Register built-in orchestration engines.
@@ -316,5 +318,16 @@ class FleetOpsServiceProvider extends CoreServiceProvider
                 $registry->register(new \Fleetbase\FleetOps\Support\Ai\Tools\ImportOrdersTool());
             }
         });
+    }
+
+    /**
+     * Registers the organization's Navigator app with core-api's App Review access, so its
+     * owner can let app store reviewers sign in to Navigator without a texted code.
+     */
+    public function registerAppReviewTypes(): void
+    {
+        if (NavigatorReview::isAvailable()) {
+            NavigatorReview::register();
+        }
     }
 }
