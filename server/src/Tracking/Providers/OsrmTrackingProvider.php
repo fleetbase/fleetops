@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Tracking\Providers;
 
 use Fleetbase\FleetOps\Support\OSRM;
+use Fleetbase\FleetOps\Support\Routing\RoutingEngineResolver;
 use Fleetbase\FleetOps\Tracking\Contracts\TrackingProviderInterface;
 use Fleetbase\FleetOps\Tracking\TrackingContext;
 use Fleetbase\FleetOps\Tracking\TrackingOptions;
@@ -22,9 +23,13 @@ class OsrmTrackingProvider implements TrackingProviderInterface
         return new TrackingProviderCapabilities(perLegEta: true, routeGeometry: true);
     }
 
+    /**
+     * Only a private OSRM host is used; the public demo server's usage policy
+     * does not allow production traffic.
+     */
     public function canTrack(TrackingContext $context): bool
     {
-        return $context->canRoute();
+        return $context->canRoute() && RoutingEngineResolver::hasPrivateOsrmHost();
     }
 
     public function track(TrackingContext $context, TrackingOptions $options): TrackingProviderResult

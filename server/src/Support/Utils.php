@@ -834,6 +834,11 @@ class Utils extends FleetbaseUtils
                 throw new \RuntimeException('The ' . $provider . ' provider is switched off for this organization.');
             }
 
+            // The public OSRM demo server's usage policy does not allow production traffic
+            if ($provider === 'osrm' && !RoutingEngineResolver::hasPrivateOsrmHost()) {
+                throw new \RuntimeException('No private OSRM host is configured.');
+            }
+
             $distanceMatrix = match ($provider) {
                 'valhalla' => static::getDistanceMatrixFromValhalla($origins, $destinations, $companyUuid),
                 'osrm'     => static::getDistanceMatrixFromOSRM($origins, $destinations),

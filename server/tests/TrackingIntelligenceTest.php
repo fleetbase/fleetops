@@ -304,6 +304,13 @@ test('osrm provider returns normalized route geometry legs and warnings', functi
         ],
     ];
 
+    // The public demo server never counts; only a private OSRM host can track
+    app('config')->set('fleetops.osrm.host', 'https://router.project-osrm.org');
+    expect($provider->canTrack(osrmTrackingContext()))->toBeFalse();
+    app('config')->set('fleetops.osrm.host', 'https://osrm.fleetbase.test');
+    expect($provider->canTrack(osrmTrackingContext()))->toBeTrue();
+    app('config')->set('fleetops.osrm.host', null);
+
     $result = $provider->track(osrmTrackingContext(), new TrackingOptions());
 
     expect($provider->key())->toBe('osrm')
@@ -313,7 +320,6 @@ test('osrm provider returns normalized route geometry legs and warnings', functi
             'map_matching'   => false,
             'route_geometry' => true,
         ])
-        ->and($provider->canTrack(osrmTrackingContext()))->toBeTrue()
         ->and($result->provider)->toBe('osrm')
         ->and($result->distanceMeters)->toBe(1234.5)
         ->and($result->durationSeconds)->toBe(321.0)

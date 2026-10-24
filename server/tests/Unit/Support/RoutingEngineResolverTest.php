@@ -516,7 +516,7 @@ test('the routing provider policy normalizes, saves and enforces provider access
     // Engine fallback: own choice, then the platform default, then OSRM
     expect(RoutingProviderPolicy::engineFor('google', 'osrm', 'company-1'))->toBe('google')
         ->and(RoutingProviderPolicy::engineFor('google', 'vroom', 'company-2'))->toBe('vroom')
-        ->and(RoutingProviderPolicy::engineFor(null, 'valhalla', 'company-2'))->toBe('osrm')
+        ->and(RoutingProviderPolicy::engineFor(null, 'valhalla', 'company-2'))->toBe('valhalla')
         ->and(RoutingProviderPolicy::engineFor('mapbox', 'osrm', 'company-2'))->toBe('mapbox');
 
     // A broken settings store falls back to the defaults
@@ -620,4 +620,31 @@ test('the setting controller saves the routing policy and scopes it to the sessi
     $saved = $controller->callHelper('saveRoutingProviderPolicy', ['providers' => ['google' => true]]);
     expect($saved['providers']['google'])->toBeTrue()
         ->and(RoutingProviderPolicy::allows('google_routes', 'company-9'))->toBeTrue();
+});
+
+test('osrm is never a fallback and never reaches the public demo server', function () {
+    $connection = fleetopsDistanceProviderBoot();
+    fleetopsDistanceProviderRouting($connection, 'company-osrm', ['display_engine' => 'osrm']);
+    config(['fleetops.routing.display_engine' => 'valhalla']);
+    Cache::flush();
+    $log      = $GLOBALS['fleetopsDistanceProviderLog'];
+    $requests = 0;
+    Http::fake(function () use (&$requests) {
+        $requests++;
+
+        return Http::response(['code' => 'Ok', 'routes' => [['distance' => 31520.0, 'duration' => 1610.0]]]);
+    });
+
+    // A private OSRM host serves only organizations that chose OSRM; Valhalla is the default and the only fallback
+    expect(RoutingEngineResolver::resolve('company-osrm'))->toBe('osrm')
+        ->and(RoutingEngineResolver::resolve('company-unsaved'))->toBe('calculate');
+
+    // An explicit OSRM request with only the demo server configured falls back to the estimate
+    config(['fleetops.osrm.host' => 'https://router.project-osrm.org']);
+    $estimate = Utils::calculateDrivingDistanceAndTime([-37.78, 144.83], [-37.68, 144.58]);
+    $matrix   = Utils::getDrivingDistanceAndTime([-37.78, 144.83], [-37.68, 144.58], ['provider' => 'osrm']);
+
+    expect($matrix->distance)->toBe($estimate->distance)
+        ->and($requests)->toBe(0)
+        ->and($log->warnings[0][1]['error'])->toBe('No private OSRM host is configured.');
 });

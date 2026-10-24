@@ -61,7 +61,7 @@ return [
     */
     'routing' => [
         'google_enabled'      => env('ROUTING_GOOGLE_ENABLED', env('DISTANCE_MATRIX_PROVIDER') === 'google'),
-        'display_engine'      => env('ROUTING_DISPLAY_ENGINE', in_array(env('DISTANCE_MATRIX_PROVIDER'), ['osrm', 'valhalla', 'google'], true) ? env('DISTANCE_MATRIX_PROVIDER') : 'osrm'),
+        'display_engine'      => env('ROUTING_DISPLAY_ENGINE', in_array(env('DISTANCE_MATRIX_PROVIDER'), ['osrm', 'valhalla', 'google'], true) ? env('DISTANCE_MATRIX_PROVIDER') : 'valhalla'),
         'optimization_engine' => env('ROUTING_OPTIMIZATION_ENGINE'),
         'server_routing'      => env('ROUTING_SERVER_ROUTING', env('DISTANCE_MATRIX_PROVIDER') === 'calculate' ? 'straight_line' : 'road'),
     ],

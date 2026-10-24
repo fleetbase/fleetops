@@ -65,18 +65,18 @@ export default class RouteEngineService extends Service {
         // A switched-off engine is never used for map routing, even when named explicitly
         const requested = name ?? this.getDisplayEngine();
         const key = underscore(this.isAllowed(requested) ? requested : this.getDisplayEngine());
-        const registration = this.registry.engines[key] ?? this.registry.engines.osrm;
+        const registration = this.registry.engines[key] ?? this.registry.engines.valhalla ?? this.registry.engines.osrm;
         return registration?.engine ?? null;
     }
 
-    getDisplayEngine(fallback = 'osrm') {
+    getDisplayEngine(fallback = 'valhalla') {
         const routingSettings = this.currentUser.getOption('routing', {});
         return routingSettings.routing_display_engine ?? routingSettings.router ?? fallback;
     }
 
     getOptimizationEngine(fallback = null) {
         const routingSettings = this.currentUser.getOption('routing', {});
-        return routingSettings.routing_optimization_engine ?? routingSettings.router ?? this.getDisplayEngine(fallback ?? 'osrm');
+        return routingSettings.routing_optimization_engine ?? routingSettings.router ?? this.getDisplayEngine(fallback ?? 'valhalla');
     }
 
     async compute(name, waypoints, options = {}) {

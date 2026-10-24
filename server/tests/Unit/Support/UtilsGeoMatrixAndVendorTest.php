@@ -220,6 +220,8 @@ test('strict and coordinate accessors resolve geojson and database records', fun
 test('osrm distance matrices serve cached results and fetch live routes', function () {
     fleetopsUtilsGeoBoot();
     $redis = $GLOBALS['fleetopsUtilsRedisFake'];
+    // Order distance never calls the public OSRM demo server, only a private host
+    config(['fleetops.osrm.host' => 'https://osrm.fleetbase.test']);
 
     // Cached matrix short-circuits any HTTP work
     $origins                                           = '1.3,103.8';
@@ -243,6 +245,7 @@ test('osrm distance matrices serve cached results and fetch live routes', functi
     expect($live->distance)->toBe(4321.0)
         ->and($live->time)->toBe(765.0)
         ->and(count($redis->store))->toBe(2);
+    config(['fleetops.osrm.host' => null]);
 });
 
 test('integrated vendor ids match prefixes and provider rows', function () {

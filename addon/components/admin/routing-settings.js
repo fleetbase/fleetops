@@ -16,8 +16,8 @@ export default class AdminRoutingSettingsComponent extends Component {
         { key: 'osrm', label: 'OSRM' },
         { key: 'vroom', label: 'VROOM' },
     ];
-    @tracked defaultDisplayEngine = 'osrm';
-    @tracked defaultOptimizationEngine = 'osrm';
+    @tracked defaultDisplayEngine = 'valhalla';
+    @tracked defaultOptimizationEngine = 'valhalla';
     @tracked providerExceptions = [];
     @tracked serverRouting = 'road';
     serverRoutingOptions = [

@@ -10,8 +10,8 @@ export default class SettingsRoutingController extends Controller {
     @service currentUser;
     @service routeEngine;
     @service routeOptimization;
-    @tracked displayEngine = 'osrm';
-    @tracked optimizationEngine = 'osrm';
+    @tracked displayEngine = 'valhalla';
+    @tracked optimizationEngine = 'valhalla';
     @tracked routingUnit = 'km';
     @tracked trackingTrafficEnabled = true;
     @tracked trackingCacheTtlSeconds = 60;
@@ -77,8 +77,8 @@ export default class SettingsRoutingController extends Controller {
     @task *getSettings() {
         try {
             const { router, display_engine, optimization_engine, unit } = yield this.fetch.get('fleet-ops/settings/routing-settings');
-            this.displayEngine = display_engine ?? router ?? 'osrm';
-            this.optimizationEngine = optimization_engine ?? display_engine ?? router ?? 'osrm';
+            this.displayEngine = display_engine ?? router ?? 'valhalla';
+            this.optimizationEngine = optimization_engine ?? display_engine ?? router ?? 'valhalla';
             this.routingUnit = unit;
             const trackingSettings = yield this.fetch.get('fleet-ops/settings/tracking-settings');
             this.trackingTrafficEnabled = trackingSettings.traffic_enabled ?? true;

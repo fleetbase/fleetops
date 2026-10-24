@@ -91,7 +91,7 @@ class RoutingProviderPolicy
             ->values()
             ->all();
 
-        $displayEngine = (string) (data_get($settings, 'defaults.display_engine') ?: config('fleetops.routing.display_engine') ?: 'osrm');
+        $displayEngine = (string) (data_get($settings, 'defaults.display_engine') ?: config('fleetops.routing.display_engine') ?: 'valhalla');
         $serverRouting = (string) data_get($settings, 'server_routing', config('fleetops.routing.server_routing', 'road'));
 
         return [
@@ -168,7 +168,7 @@ class RoutingProviderPolicy
 
     /**
      * The engine the organization may use: its own choice when allowed, otherwise
-     * the platform default, otherwise OSRM.
+     * the platform default, otherwise Valhalla.
      */
     public static function engineFor(?string $engine, string $default, ?string $companyUuid = null): string
     {
@@ -178,7 +178,7 @@ class RoutingProviderPolicy
             }
         }
 
-        return 'osrm';
+        return 'valhalla';
     }
 
     protected static function stored(): array

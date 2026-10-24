@@ -395,16 +395,16 @@ test('setting controller handles notification and routing settings contracts', f
     $controller->lookupCompanySettings['routing'] = ['display_engine' => 'google', 'optimization_engine' => 'google', 'unit' => 'mi'];
     expect(fleetopsJsonPayload($controller->getRoutingSettings()))->toMatchArray([
         'allowed_providers'   => ['valhalla', 'osrm', 'vroom'],
-        'display_engine'      => 'osrm',
-        'optimization_engine' => 'osrm',
+        'display_engine'      => 'valhalla',
+        'optimization_engine' => 'valhalla',
         'unit'                => 'mi',
     ]);
 
     // An organization that never chose an engine gets the platform defaults
     $controller->lookupCompanySettings = [];
     expect(fleetopsJsonPayload($controller->getRoutingSettings()))->toMatchArray([
-        'display_engine'      => 'osrm',
-        'optimization_engine' => 'osrm',
+        'display_engine'      => 'valhalla',
+        'optimization_engine' => 'valhalla',
         'unit'                => 'km',
     ]);
 });
@@ -415,7 +415,7 @@ test('setting controller reads and saves the admin routing provider policy', fun
 
     $policy = fleetopsJsonPayload($controller->getAdminRoutingProviders());
     expect($policy['providers'])->toBe(['google' => false, 'valhalla' => true, 'osrm' => true, 'vroom' => true])
-        ->and($policy['defaults'])->toBe(['display_engine' => 'osrm', 'optimization_engine' => 'osrm'])
+        ->and($policy['defaults'])->toBe(['display_engine' => 'valhalla', 'optimization_engine' => 'valhalla'])
         ->and($policy['server_routing'])->toBe('road')
         ->and($policy['exceptions'])->toBe([])
         ->and($policy['available_providers'])->toBe([

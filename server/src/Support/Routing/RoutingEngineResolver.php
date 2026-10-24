@@ -15,10 +15,12 @@ use Fleetbase\Models\Setting;
  *   1. Straight-line when the administrator switched server-side routing off.
  *   2. The organization's routing engine (Fleet-Ops Settings → Routing).
  *   3. The platform default routing engine.
- *   4. The platform's own engine: the configured Valhalla server, then a private OSRM host.
+ *   4. The platform's own Valhalla server.
  *   5. `calculate`, the straight-line estimate.
  * An engine counts only when the server can call it: Valhalla or OSRM on a
- * private server, or Google with a Maps key.
+ * private server, or Google with a Maps key. OSRM is used only when an
+ * organization chose it and a private OSRM host is configured; it is never a
+ * fallback, and the public OSRM demo server is never called.
  */
 class RoutingEngineResolver
 {
@@ -29,9 +31,9 @@ class RoutingEngineResolver
     public const PUBLIC_OSRM_HOST = 'router.project-osrm.org';
 
     /**
-     * Self-hosted engines, in the order the platform prefers them.
+     * The platform's own engine, tried when the organization's engine is unavailable.
      */
-    public const PLATFORM_ENGINES = ['valhalla', 'osrm'];
+    public const PLATFORM_ENGINES = ['valhalla'];
 
     /**
      * Tracking provider keys for routing engines whose tracking provider is named differently.
