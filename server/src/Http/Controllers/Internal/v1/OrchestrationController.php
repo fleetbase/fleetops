@@ -20,6 +20,7 @@ use Fleetbase\FleetOps\Orchestration\Engines\RouteSequencingEngine;
 use Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry;
 use Fleetbase\FleetOps\Orchestration\Support\OrchestratorSettings;
 use Fleetbase\FleetOps\Orchestration\Support\RouteMetrics;
+use Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy;
 use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -672,8 +673,11 @@ class OrchestrationController extends Controller
      */
     public function engines(): JsonResponse
     {
+        // Engines whose provider the administrator switched off are not offered
+        $companyUuid = $this->companyUuid();
+
         return response()->json([
-            'engines' => $this->registry->available(),
+            'engines' => array_values(array_filter($this->registry->available(), fn ($engine) => RoutingProviderPolicy::allows($engine['id'], $companyUuid))),
         ]);
     }
 

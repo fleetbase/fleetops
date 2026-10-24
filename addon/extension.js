@@ -95,7 +95,7 @@ export default {
 
         // Register admin sections
         menuService.registerAdminMenuPanel(
-            'Fleet-Ops Config',
+            'Fleet-Ops',
             [
                 new MenuItem({
                     title: 'Routing',

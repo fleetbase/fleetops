@@ -7,14 +7,14 @@ use Fleetbase\Models\Setting;
 /**
  * Decides which distance matrix provider measures an order's distance and time.
  *
+ * Every candidate must be allowed for the organization by RoutingProviderPolicy
+ * (Admin → Fleet-Ops → Routing), so switching a provider off there stops it at once.
  * In order of precedence:
  *   1. `DISTANCE_MATRIX_PROVIDER` when the operator set it, so an explicit
- *      platform choice (or `calculate` as a kill switch) always wins. This is
- *      the only way Google is ever used: metered providers are never picked
- *      from a company's settings.
- *   2. The company's routing engine from Fleet-Ops Settings → Routing, when it
- *      is a self-hosted engine the server is configured for (Valhalla, or OSRM
- *      on a host other than the public demo server).
+ *      platform choice (or `calculate` as a kill switch) wins.
+ *   2. The organization's routing engine from Fleet-Ops Settings → Routing (the
+ *      platform default display engine until it chooses one), when the server can
+ *      call it: Valhalla or OSRM on a private server, or Google with a Maps key.
  *   3. The platform's own engine: the configured Valhalla server, then a
  *      private OSRM host.
  *   4. `calculate`, the straight-line estimate.
@@ -37,16 +37,16 @@ class DistanceMatrixProviderResolver
     {
         $configured = config('fleetops.distance_matrix.provider');
         if (filled($configured)) {
-            return (string) $configured;
+            return RoutingProviderPolicy::allows($configured, $companyUuid) ? (string) $configured : 'calculate';
         }
 
         $engine = static::fromRoutingSettings($companyUuid);
-        if ($engine && static::isAvailable($engine)) {
+        if ($engine && static::isAvailable($engine, $companyUuid)) {
             return $engine;
         }
 
         foreach (static::PLATFORM_ENGINES as $platformEngine) {
-            if (static::isAvailable($platformEngine)) {
+            if (static::isAvailable($platformEngine, $companyUuid)) {
                 return $platformEngine;
             }
         }
@@ -55,8 +55,8 @@ class DistanceMatrixProviderResolver
     }
 
     /**
-     * Maps the company's routing display engine onto a self-hosted provider.
-     * Google and engines the server cannot call (VROOM, custom engines) map to null.
+     * Maps the organization's routing display engine onto a server-side provider.
+     * Engines the server cannot call (VROOM, custom engines) map to null.
      */
     public static function fromRoutingSettings(?string $companyUuid = null): ?string
     {
@@ -66,20 +66,26 @@ class DistanceMatrixProviderResolver
             $settings = [];
         }
 
-        $engine = data_get($settings, 'display_engine', data_get($settings, 'routing_display_engine', data_get($settings, 'router', 'osrm')));
+        $engine = data_get($settings, 'display_engine', data_get($settings, 'routing_display_engine', data_get($settings, 'router', RoutingProviderPolicy::defaultDisplayEngine())));
 
         return match ($engine) {
             'osrm'     => 'osrm',
             'valhalla' => 'valhalla',
+            'google'   => 'google',
             default    => null,
         };
     }
 
-    public static function isAvailable(string $provider): bool
+    public static function isAvailable(string $provider, ?string $companyUuid = null): bool
     {
+        if (!RoutingProviderPolicy::allows($provider, $companyUuid)) {
+            return false;
+        }
+
         return match ($provider) {
             'osrm'     => static::hasPrivateOsrmHost(),
-            'valhalla' => ValhallaClient::isConfigured(),
+            'valhalla' => ValhallaClient::isConfigured($companyUuid),
+            'google'   => filled(static::googleMapsApiKey()),
             default    => false,
         };
     }

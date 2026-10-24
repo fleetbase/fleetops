@@ -833,6 +833,8 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                         $router->post('tracking-settings', 'SettingController@saveTrackingSettings');
                                         $router->get('admin-tracking-settings', 'SettingController@getAdminTrackingSettings');
                                         $router->post('admin-tracking-settings', 'SettingController@saveAdminTrackingSettings');
+                                        $router->get('admin-routing-providers', 'SettingController@getAdminRoutingProviders');
+                                        $router->post('admin-routing-providers', 'SettingController@saveAdminRoutingProviders');
                                         $router->get('tracking-page-settings', 'SettingController@getTrackingPageSettings');
                                         $router->post('tracking-page-settings', 'SettingController@saveTrackingPageSettings');
                                         $router->post('tracking-page-settings/validate-slug', 'SettingController@validateTrackingPageSlug');

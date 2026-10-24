@@ -193,7 +193,12 @@ test('distance matrix helpers parse live google and osrm provider responses', fu
         };
     });
 
+    // Google is billed per request, so the admin routing policy must allow it
+    config(['fleetops.routing.google_enabled' => true]);
+    Cache::forget(Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy::CACHE_KEY);
     $google = Utils::getDrivingDistanceAndTime([47.9131423, 106.9338169], [47.9141423, 106.9348169], ['provider' => 'google']);
+    config(['fleetops.routing.google_enabled' => false]);
+    Cache::forget(Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy::CACHE_KEY);
     $osrm   = Utils::distanceMatrix([[47.9131423, 106.9338169]], [[47.9141423, 106.9348169]], ['provider' => 'osrm']);
 
     expect($google->distance)->toBe(2222.0)

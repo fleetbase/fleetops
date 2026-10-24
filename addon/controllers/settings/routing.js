@@ -13,7 +13,7 @@ export default class SettingsRoutingController extends Controller {
     @tracked displayEngine = 'osrm';
     @tracked optimizationEngine = 'osrm';
     @tracked routingUnit = 'km';
-    @tracked trackingProvider = 'google_routes';
+    @tracked trackingProvider = 'valhalla';
     @tracked trackingFallbacks = ['osrm', 'calculated'];
     @tracked trackingTrafficEnabled = true;
     @tracked trackingCacheTtlSeconds = 60;
@@ -28,6 +28,7 @@ export default class SettingsRoutingController extends Controller {
     @tracked prolongedStoppageDurationThresholdMinutes = 30;
     @tracked showTrackingAdvancedSettings = false;
     @tracked trackingProviderOptions = [
+        { value: 'valhalla', label: 'Valhalla' },
         { value: 'google_routes', label: 'Google Routes' },
         { value: 'osrm', label: 'OSRM' },
         { value: 'calculated', label: 'Calculated' },
@@ -88,7 +89,7 @@ export default class SettingsRoutingController extends Controller {
             this.optimizationEngine = optimization_engine ?? display_engine ?? router ?? 'osrm';
             this.routingUnit = unit;
             const trackingSettings = yield this.fetch.get('fleet-ops/settings/tracking-settings');
-            this.trackingProvider = trackingSettings.provider ?? 'google_routes';
+            this.trackingProvider = trackingSettings.provider ?? 'valhalla';
             this.trackingFallbacks = this.normalizeFallbacks(trackingSettings.fallbacks);
             this.trackingTrafficEnabled = trackingSettings.traffic_enabled ?? true;
             this.trackingCacheTtlSeconds = trackingSettings.cache_ttl_seconds ?? 60;

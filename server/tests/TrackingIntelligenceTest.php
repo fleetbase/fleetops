@@ -861,19 +861,28 @@ test('google routes provider handles non-traffic confidence and failed route res
         ->toThrow(RuntimeException::class, 'Google Routes returned no route.');
 });
 
-test('google routes tracking is skipped when the operator switches it off', function () {
-    $provider             = new GoogleRoutesTrackingProviderProbe();
-    $provider->fakeApiKey = 'test-api-key';
-    $context              = googleRoutesTrackingContext();
+test('tracking skips providers the administrator switched off, even when requested', function () {
+    config()->set('fleetops.routing.google_enabled', false);
+    Illuminate\Support\Facades\Cache::forget(Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy::CACHE_KEY);
+
+    $registry = new TrackingProviderRegistry();
+    $registry->register(new FakeTrackingProvider('google_routes'));
+    $registry->register(new FakeTrackingProvider('calculated'));
+    $manager = new TrackingProviderManager($registry);
+    $context = osrmTrackingContext();
+
+    $result = $manager->track($context, new TrackingOptions(provider: 'google_routes', fallbacks: ['calculated']));
+    expect($result->provider)->toBe('calculated')
+        ->and($result->warnings)->toContain('provider_disabled:google_routes')
+        ->and($result->warnings)->toContain('fallback_used');
 
     try {
-        app('config')->set('fleetops.tracking.google_routes_enabled', false);
-        expect($provider->canTrack($context))->toBeFalse();
-
-        app('config')->set('fleetops.tracking.google_routes_enabled', 'true');
-        expect($provider->canTrack($context))->toBeTrue();
+        config()->set('fleetops.routing.google_enabled', true);
+        Illuminate\Support\Facades\Cache::forget(Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy::CACHE_KEY);
+        expect($manager->track($context, new TrackingOptions(provider: 'google_routes', fallbacks: ['calculated']))->provider)->toBe('google_routes');
     } finally {
-        app('config')->set('fleetops.tracking.google_routes_enabled', true);
+        config()->set('fleetops.routing.google_enabled', false);
+        Illuminate\Support\Facades\Cache::forget(Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy::CACHE_KEY);
     }
 });
 

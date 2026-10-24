@@ -25,12 +25,12 @@ class ValhallaTrackingProvider implements TrackingProviderInterface
 
     public function canTrack(TrackingContext $context): bool
     {
-        return $context->canRoute() && ValhallaClient::isConfigured();
+        return $context->canRoute() && ValhallaClient::isConfigured($context->order->company_uuid);
     }
 
     public function track(TrackingContext $context, TrackingOptions $options): TrackingProviderResult
     {
-        $trip = ValhallaClient::route($context->routePoints());
+        $trip = ValhallaClient::route($context->routePoints(), [], $context->order->company_uuid);
 
         $legs   = [];
         $points = [];

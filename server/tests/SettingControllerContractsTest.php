@@ -1,7 +1,9 @@
 <?php
 
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\SettingController;
+use Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class FleetOpsSettingControllerProbe extends SettingController
 {
@@ -18,6 +20,20 @@ class FleetOpsSettingControllerProbe extends SettingController
     public array $providers                    = [];
     public string $googleMapsApiKey            = '';
     public array $reconciledTelematicsDefaults = [];
+    public ?string $policyCompany              = 'company-uuid';
+    public array $savedRoutingPolicies         = [];
+
+    protected function policyCompanyUuid(): ?string
+    {
+        return $this->policyCompany;
+    }
+
+    protected function saveRoutingProviderPolicy(array $input): array
+    {
+        $this->savedRoutingPolicies[] = $input;
+
+        return RoutingProviderPolicy::normalize($input);
+    }
 
     protected function configureSetting(string $key, mixed $value): mixed
     {
@@ -345,6 +361,19 @@ test('setting controller handles notification and routing settings contracts', f
     $notificationSave = fleetopsJsonPayload($controller->saveNotificationSettings(new Request([
         'notificationSettings' => ['fleet-ops' => ['sms' => false]],
     ])));
+
+    // Google is billed per request and stays switched off until the administrator enables it
+    Cache::forget(RoutingProviderPolicy::CACHE_KEY);
+    $refused = $controller->saveRoutingSettings(new Request([
+        'display_engine'      => 'google',
+        'optimization_engine' => 'vroom',
+    ]));
+    expect($refused->getStatusCode())->toBe(422)
+        ->and(json_encode(fleetopsJsonPayload($refused)))->toContain('The google provider has been switched off by the administrator.')
+        ->and($controller->configuredCompany)->not->toHaveKey('routing');
+
+    config()->set('fleetops.routing.google_enabled', true);
+    Cache::forget(RoutingProviderPolicy::CACHE_KEY);
     $routingSave = fleetopsJsonPayload($controller->saveRoutingSettings(new Request([
         'display_engine'      => 'google',
         'optimization_engine' => 'vroom',
@@ -379,12 +408,61 @@ test('setting controller handles notification and routing settings contracts', f
 
     expect(fleetopsJsonPayload($controller->getRoutingSettings()))->toBe([
         'routing_display_engine'      => 'mapbox',
+        'allowed_providers'           => ['google', 'valhalla', 'osrm', 'vroom'],
         'router'                      => 'mapbox',
         'display_engine'              => 'mapbox',
         'optimization_engine'         => 'mapbox',
         'routing_optimization_engine' => 'mapbox',
         'unit'                        => 'km',
     ]);
+
+    // Switched off again, a saved Google choice is replaced by the platform defaults
+    config()->set('fleetops.routing.google_enabled', false);
+    Cache::forget(RoutingProviderPolicy::CACHE_KEY);
+    $controller->lookupCompanySettings['routing'] = ['display_engine' => 'google', 'optimization_engine' => 'google', 'unit' => 'mi'];
+    expect(fleetopsJsonPayload($controller->getRoutingSettings()))->toMatchArray([
+        'allowed_providers'   => ['valhalla', 'osrm', 'vroom'],
+        'display_engine'      => 'osrm',
+        'optimization_engine' => 'osrm',
+        'unit'                => 'mi',
+    ]);
+
+    // An organization that never chose an engine gets the platform defaults
+    $controller->lookupCompanySettings = [];
+    expect(fleetopsJsonPayload($controller->getRoutingSettings()))->toMatchArray([
+        'display_engine'      => 'osrm',
+        'optimization_engine' => 'osrm',
+        'unit'                => 'km',
+    ]);
+});
+
+test('setting controller reads and saves the admin routing provider policy', function () {
+    Cache::forget(RoutingProviderPolicy::CACHE_KEY);
+    $controller = new FleetOpsSettingControllerProbe();
+
+    $policy = fleetopsJsonPayload($controller->getAdminRoutingProviders());
+    expect($policy['providers'])->toBe(['google' => false, 'valhalla' => true, 'osrm' => true, 'vroom' => true])
+        ->and($policy['defaults'])->toBe(['display_engine' => 'osrm', 'optimization_engine' => 'osrm'])
+        ->and($policy['exceptions'])->toBe([])
+        ->and($policy['available_providers'])->toBe([
+            ['key' => 'google', 'label' => 'Google'],
+            ['key' => 'valhalla', 'label' => 'Valhalla'],
+            ['key' => 'osrm', 'label' => 'OSRM'],
+            ['key' => 'vroom', 'label' => 'VROOM'],
+        ]);
+
+    $controller->saveAdminRoutingProviders(new Request([
+        'providers'  => ['google' => true],
+        'defaults'   => ['display_engine' => 'valhalla'],
+        'exceptions' => [['company_uuid' => 'company-1', 'providers' => ['google']]],
+        'ignored'    => 'value',
+    ]));
+
+    expect($controller->savedRoutingPolicies)->toBe([[
+        'providers'  => ['google' => true],
+        'defaults'   => ['display_engine' => 'valhalla'],
+        'exceptions' => [['company_uuid' => 'company-1', 'providers' => ['google']]],
+    ]]);
 });
 
 test('setting controller normalizes tracking settings and provider options', function () {
@@ -428,7 +506,8 @@ test('setting controller normalizes tracking settings and provider options', fun
     expect($saved)->toMatchArray(['status' => 'ok'])
         ->and($controller->configuredCompany['tracking'])->toMatchArray([
             'provider'                         => 'osrm',
-            'fallbacks'                        => ['google_routes', 'calculated'],
+            // Google Routes is switched off, so it is dropped from the fallbacks
+            'fallbacks'                        => ['calculated'],
             'traffic_enabled'                  => true,
             'cache_ttl_seconds'                => 75,
             'route_cache_ttl_seconds'          => 900,
@@ -456,6 +535,7 @@ test('setting controller normalizes tracking settings and provider options', fun
     $tracking = fleetopsJsonPayload($controller->getTrackingSettings());
     expect($tracking['provider'])->toBe('google_routes')
         ->and($tracking['alerts']['prolonged_stoppages']['duration_threshold_minutes'])->toBe(55)
+        // Organizations are only offered the providers they may use
         ->and($tracking['providers'])->toBe([
             [
                 'key'          => 'osrm',
@@ -464,14 +544,14 @@ test('setting controller normalizes tracking settings and provider options', fun
                 'label'        => 'OSRM',
                 'capabilities' => ['routes'],
             ],
-            [
-                'key'          => 'google_routes',
-                'name'         => 'Google Routes',
-                'value'        => 'google_routes',
-                'label'        => 'Google Routes',
-                'capabilities' => ['traffic', 'eta'],
-            ],
         ]);
+
+    $refused = $controller->saveTrackingSettings(new Request(['provider' => 'google_routes']));
+    expect($refused->getStatusCode())->toBe(422);
+
+    // Without an organization every registered provider is listed
+    $controller->policyCompany = null;
+    expect(fleetopsJsonPayload($controller->getTrackingSettings())['providers'])->toHaveCount(2);
 
     $adminSaved = fleetopsJsonPayload($controller->saveAdminTrackingSettings(new Request([
         'provider'  => 'calculated',
@@ -877,13 +957,13 @@ test('admin telematics cleanup dispatches the system-wide fanout job', function 
             $this->dispatchTelematicsPrune();
         }
     };
-    $originalCache       = Illuminate\Support\Facades\Cache::getFacadeRoot();
+    $originalCache       = Cache::getFacadeRoot();
     $originalCacheConfig = config('cache', []);
     $dispatcherContract  = Illuminate\Contracts\Bus\Dispatcher::class;
     $originalDispatcher  = app()->bound($dispatcherContract) ? app($dispatcherContract) : null;
     try {
         config(['cache.default' => 'array', 'cache.stores.array' => ['driver' => 'array']]);
-        Illuminate\Support\Facades\Cache::swap(new Illuminate\Cache\CacheManager(app()));
+        Cache::swap(new Illuminate\Cache\CacheManager(app()));
         $dispatcher = new class(app()) extends Illuminate\Bus\Dispatcher {
             public array $jobs = [];
             public bool $fail  = true;
@@ -908,7 +988,7 @@ test('admin telematics cleanup dispatches the system-wide fanout job', function 
             ->and($dispatcher->jobs[0])->toBeInstanceOf(Fleetbase\FleetOps\Jobs\DispatchTelematicsRetentionJobs::class)
             ->and($dispatcher->jobs[0]->afterCompanyId)->toBe(0);
     } finally {
-        Illuminate\Support\Facades\Cache::swap($originalCache);
+        Cache::swap($originalCache);
         config(['cache' => $originalCacheConfig]);
         if ($originalDispatcher) {
             app()->instance($dispatcherContract, $originalDispatcher);

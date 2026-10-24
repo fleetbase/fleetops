@@ -1,6 +1,7 @@
 import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { underscore } from '@ember/string';
+import isRoutingProviderAllowed from '../utils/routing-providers';
 
 export class RouteEngineRegistry {
     @tracked engines = {};
@@ -11,13 +12,27 @@ export default class RouteEngineService extends Service {
     @service currentUser;
     registry = this.#initializeRegistry();
 
+    /**
+     * Display engines the organization may choose: registered ones the administrator has not switched off.
+     */
     get availableServices() {
+        return this.allServices.filter(({ key }) => this.isAllowed(key));
+    }
+
+    /**
+     * Every registered display engine, for admin screens that set platform defaults.
+     */
+    get allServices() {
         return Object.entries(this.registry.engines)
             .filter(([, registration]) => registration?.capabilities?.display === true)
             .map(([key, registration]) => ({
                 key,
                 name: registration?.engine?.name ?? key,
             }));
+    }
+
+    isAllowed(name) {
+        return isRoutingProviderAllowed(name, this.currentUser.getOption('routing', {})?.allowed_providers);
     }
 
     register(name, engine, capabilities = {}) {
@@ -47,7 +62,9 @@ export default class RouteEngineService extends Service {
     }
 
     get(name) {
-        const key = underscore(name ?? this.getDisplayEngine());
+        // A switched-off engine is never used for map routing, even when named explicitly
+        const requested = name ?? this.getDisplayEngine();
+        const key = underscore(this.isAllowed(requested) ? requested : this.getDisplayEngine());
         const registration = this.registry.engines[key] ?? this.registry.engines.osrm;
         return registration?.engine ?? null;
     }

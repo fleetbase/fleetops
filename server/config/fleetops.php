@@ -42,12 +42,31 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Routing Providers
+    |--------------------------------------------------------------------------
+    |
+    | Starting values for Admin -> Fleet-Ops -> Routing, which overrides them
+    | once saved. Google is billed per request, so organizations cannot use it
+    | for routing, order distance or tracking unless it is switched on here or
+    | in the admin panel (globally or for named organizations).
+    |
+    */
+    'routing' => [
+        'google_enabled'      => env('ROUTING_GOOGLE_ENABLED', false),
+        'display_engine'      => env('ROUTING_DISPLAY_ENGINE', 'osrm'),
+        'optimization_engine' => env('ROUTING_OPTIMIZATION_ENGINE', 'osrm'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Valhalla
     |--------------------------------------------------------------------------
     |
     | A self-hosted Valhalla server used for order distance, time and tracking
-    | ETAs. Shares its variables with the Valhalla extension. The API key is
-    | sent as the X-Api-Key header. The public community servers are ignored.
+    | ETAs. The host and key set in the Valhalla extension's admin settings (or
+    | an organization's own) take precedence over these variables, which are
+    | shared with that extension. The key is sent as the X-Api-Key header. The
+    | public community servers are never used by the server.
     |
     */
     'valhalla' => [
@@ -105,14 +124,12 @@ return [
     |
     | Built-in providers: "google_routes", "valhalla", "osrm", "calculated"
     |
-    | Google Routes is billed per request. TRACKING_GOOGLE_ROUTES_ENABLED=false
-    | stops every Google Routes tracking call, whatever a company selects, and
-    | tracking falls through to the next provider.
+    | Providers switched off under Routing Providers are skipped, whatever an
+    | organization selects, and tracking falls through to the next provider.
     |--------------------------------------------------------------------------
     */
     'tracking' => [
-        'provider'                         => env('TRACKING_PROVIDER', 'google_routes'),
-        'google_routes_enabled'            => env('TRACKING_GOOGLE_ROUTES_ENABLED', true),
+        'provider'                         => env('TRACKING_PROVIDER', 'valhalla'),
         'fallbacks'                        => array_filter(explode(',', env('TRACKING_PROVIDER_FALLBACKS', 'osrm,calculated'))),
         'traffic_enabled'                  => env('TRACKING_TRAFFIC_ENABLED', true),
         'cache_ttl_seconds'                => env('TRACKING_CACHE_TTL_SECONDS', 60),

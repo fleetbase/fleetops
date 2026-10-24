@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Tracking;
 
+use Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy;
 use Fleetbase\FleetOps\Tracking\Contracts\TrackingProviderInterface;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
@@ -17,6 +18,12 @@ class TrackingProviderManager
     {
         $warnings = [];
         foreach ($this->providerOrder($options) as $providerKey) {
+            // Providers switched off in Admin → Fleet-Ops → Routing are never called, even when requested
+            if (!RoutingProviderPolicy::allows($providerKey, $context->order->company_uuid)) {
+                $warnings[] = 'provider_disabled:' . $providerKey;
+                continue;
+            }
+
             $provider = $this->registry->get($providerKey);
             if (!$provider instanceof TrackingProviderInterface) {
                 $warnings[] = 'provider_not_registered:' . $providerKey;

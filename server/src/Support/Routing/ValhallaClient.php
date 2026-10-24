@@ -3,14 +3,17 @@
 namespace Fleetbase\FleetOps\Support\Routing;
 
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\Models\Setting;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 /**
  * Minimal client for a Valhalla routing server's `/route` endpoint.
  *
- * Configured by `fleetops.valhalla.host` and `fleetops.valhalla.api_key`, read
- * from the same VALHALLA_HOST / VALHALLA_BASE_URI / VALHALLA_API_KEY variables
- * the Valhalla extension uses. The key is sent as the `X-Api-Key` header.
+ * The server is the one the Valhalla extension is configured with, resolved the
+ * same way: the organization's own `valhalla` setting, then the system setting
+ * from Admin → Fleet-Ops → Routing, then `fleetops.valhalla.*` (VALHALLA_HOST /
+ * VALHALLA_BASE_URI / VALHALLA_API_KEY). The key is sent as the `X-Api-Key` header.
  */
 class ValhallaClient
 {
@@ -20,23 +23,43 @@ class ValhallaClient
      */
     public const PUBLIC_HOSTS = ['valhalla1.openstreetmap.de', 'valhalla2.openstreetmap.de'];
 
-    public static function host(): ?string
-    {
-        $host = rtrim((string) config('fleetops.valhalla.host'), '/');
+    public const CACHE_TTL = 30;
 
-        return $host !== '' ? $host : null;
+    /**
+     * The first usable host with the key configured beside it, or null when
+     * only a public server (or nothing) is configured.
+     *
+     * @return array{host: string, api_key: ?string}|null
+     */
+    public static function connection(?string $companyUuid = null): ?array
+    {
+        $settings = Cache::remember('fleetops:valhalla-connection:' . ($companyUuid ?? 'system'), static::CACHE_TTL, function () use ($companyUuid) {
+            return [
+                static::lookup(fn () => Setting::lookupForCompany($companyUuid, 'valhalla', [])),
+                static::lookup(fn () => Setting::lookup('valhalla', [])),
+            ];
+        });
+
+        foreach ([...$settings, ['api_host' => config('fleetops.valhalla.host'), 'api_key' => config('fleetops.valhalla.api_key')]] as $level) {
+            $host = rtrim(trim((string) data_get($level, 'api_host')), '/');
+            if (static::isPrivateHost($host)) {
+                return ['host' => $host, 'api_key' => data_get($level, 'api_key') ?: null];
+            }
+        }
+
+        return null;
     }
 
-    public static function apiKey(): ?string
+    public static function isConfigured(?string $companyUuid = null): bool
     {
-        return config('fleetops.valhalla.api_key') ?: null;
+        return static::connection($companyUuid) !== null;
     }
 
-    public static function isConfigured(): bool
+    public static function isPrivateHost(?string $host): bool
     {
-        $host = parse_url((string) static::host(), PHP_URL_HOST);
+        $hostname = parse_url((string) $host, PHP_URL_HOST);
 
-        return filled($host) && !in_array(strtolower($host), static::PUBLIC_HOSTS, true);
+        return filled($hostname) && !in_array(strtolower($hostname), static::PUBLIC_HOSTS, true);
     }
 
     /**
@@ -45,16 +68,21 @@ class ValhallaClient
      *
      * @param Point[] $points
      *
-     * @throws \RuntimeException when the server fails or finds no route
+     * @throws \RuntimeException when no server is configured, the server fails or it finds no route
      */
-    public static function route(array $points, array $options = []): array
+    public static function route(array $points, array $options = [], ?string $companyUuid = null): array
     {
-        $request = Http::timeout((int) config('fleetops.valhalla.timeout', 5))->acceptJson();
-        if ($apiKey = static::apiKey()) {
-            $request = $request->withHeaders(['X-Api-Key' => $apiKey]);
+        $connection = static::connection($companyUuid);
+        if (!$connection) {
+            throw new \RuntimeException('No Valhalla server is configured.');
         }
 
-        $response = $request->post(static::host() . '/route', array_merge([
+        $request = Http::timeout((int) config('fleetops.valhalla.timeout', 5))->acceptJson();
+        if ($connection['api_key']) {
+            $request = $request->withHeaders(['X-Api-Key' => $connection['api_key']]);
+        }
+
+        $response = $request->post($connection['host'] . '/route', array_merge([
             'locations'       => array_map(fn (Point $point) => ['lat' => $point->getLat(), 'lon' => $point->getLng()], array_values($points)),
             'costing'         => config('fleetops.valhalla.costing', 'auto'),
             'units'           => 'kilometers',
@@ -72,5 +100,16 @@ class ValhallaClient
         }
 
         return $trip;
+    }
+
+    protected static function lookup(callable $lookup): array
+    {
+        try {
+            $settings = $lookup();
+        } catch (\Throwable) {
+            $settings = [];
+        }
+
+        return is_array($settings) ? $settings : [];
     }
 }

@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Support;
 
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Support\Routing\DistanceMatrixProviderResolver;
+use Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy;
 use Fleetbase\FleetOps\Support\Routing\ValhallaClient;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Company;
@@ -818,8 +819,9 @@ class Utils extends FleetbaseUtils
         $origins      = $origin->getLat() . ',' . $origin->getLng();
         $destinations = $destination->getLat() . ',' . $destination->getLng();
 
-        $provider = data_get($options, 'provider') ?: DistanceMatrixProviderResolver::resolve(data_get($options, 'company_uuid', session('company')));
-        $estimate = static::calculateDrivingDistanceAndTime($origins, $destinations);
+        $companyUuid = data_get($options, 'company_uuid', session('company'));
+        $provider    = data_get($options, 'provider') ?: DistanceMatrixProviderResolver::resolve($companyUuid);
+        $estimate    = static::calculateDrivingDistanceAndTime($origins, $destinations);
 
         // Nothing to route between identical points, and `calculate` is the estimate itself
         if ($provider === 'calculate' || $estimate->distance <= 0) {
@@ -827,8 +829,13 @@ class Utils extends FleetbaseUtils
         }
 
         try {
+            // An explicitly requested provider is still subject to the admin routing policy
+            if (!RoutingProviderPolicy::allows($provider, $companyUuid)) {
+                throw new \RuntimeException('The ' . $provider . ' provider is switched off for this organization.');
+            }
+
             $distanceMatrix = match ($provider) {
-                'valhalla' => static::getDistanceMatrixFromValhalla($origins, $destinations),
+                'valhalla' => static::getDistanceMatrixFromValhalla($origins, $destinations, $companyUuid),
                 'osrm'     => static::getDistanceMatrixFromOSRM($origins, $destinations),
                 'google'   => static::getDistanceMatrixFromGoogle($origins, $destinations),
                 default    => throw new \InvalidArgumentException('Unsupported distance matrix provider: ' . $provider),
@@ -1050,12 +1057,13 @@ class Utils extends FleetbaseUtils
      * other providers and are routed in order. Results are cached per coordinate pair;
      * a failed request or missing route throws so the caller can fall back.
      *
-     * @param string $origins      a string of origins in 'latitude,longitude' format, separated by `|`
-     * @param string $destinations a string of destinations in a similar format to origins
+     * @param string      $origins      a string of origins in 'latitude,longitude' format, separated by `|`
+     * @param string      $destinations a string of destinations in a similar format to origins
+     * @param string|null $companyUuid  the organization whose Valhalla settings apply
      *
      * @return DistanceMatrix the distance in metres and time in seconds
      */
-    public static function getDistanceMatrixFromValhalla(string $origins, string $destinations): DistanceMatrix
+    public static function getDistanceMatrixFromValhalla(string $origins, string $destinations, ?string $companyUuid = null): DistanceMatrix
     {
         $cacheKey     = 'valhalla:' . md5($origins . '_' . $destinations);
         $cachedResult = Redis::get($cacheKey);
@@ -1073,7 +1081,7 @@ class Utils extends FleetbaseUtils
             return new Point($latitude, $longitude);
         }, explode('|', $origins . '|' . $destinations));
 
-        $trip     = ValhallaClient::route($points);
+        $trip     = ValhallaClient::route($points, [], $companyUuid);
         $distance = (float) data_get($trip, 'summary.length', 0) * 1000;
         $time     = (float) data_get($trip, 'summary.time', 0);
 

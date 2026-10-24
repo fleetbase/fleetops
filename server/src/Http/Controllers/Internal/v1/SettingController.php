@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Jobs\DispatchTelematicsRetentionJobs;
 use Fleetbase\FleetOps\Orchestration\Support\OrchestratorSettings;
+use Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy;
 use Fleetbase\FleetOps\Support\Telematics\Retention\RetentionPolicy;
 use Fleetbase\FleetOps\Support\Telematics\Telemetry\Queue;
 use Fleetbase\FleetOps\Support\TrackingPage\TrackingPageConfig;
@@ -38,6 +39,8 @@ class SettingController extends Controller
             'saveRoutingSettings'                     => 'update routing-settings',
             'saveTrackingSettings'                    => 'update tracking-settings',
             'getAdminTrackingSettings'                => 'admin',
+            'getAdminRoutingProviders'                => 'admin',
+            'saveAdminRoutingProviders'               => 'admin',
             'saveAdminTrackingSettings'               => 'admin',
             'saveMapSettings'                         => 'update map-settings',
             'getAdminMapSettings'                     => 'admin',
@@ -248,9 +251,16 @@ class SettingController extends Controller
      */
     public function saveRoutingSettings(Request $request)
     {
-        $displayEngine      = $request->input('display_engine', $request->input('router', 'osrm'));
+        $displayEngine      = $request->input('display_engine', $request->input('router', RoutingProviderPolicy::defaultDisplayEngine()));
         $optimizationEngine = $request->input('optimization_engine', $displayEngine);
         $unit               = $request->input('unit', 'km');
+
+        foreach ([$displayEngine, $optimizationEngine] as $engine) {
+            if (!RoutingProviderPolicy::allows($engine, $this->policyCompanyUuid())) {
+                return response()->error($this->providerDisabledMessage($engine), 422);
+            }
+        }
+
         $this->configureCompanySetting('routing', [
             'router'                      => $displayEngine,
             'display_engine'              => $displayEngine,
@@ -273,10 +283,17 @@ class SettingController extends Controller
      */
     public function getRoutingSettings()
     {
-        $routingSettings = $this->lookupCompanySetting('routing', ['router' => 'osrm', 'unit' => 'km']);
+        $companyUuid       = $this->policyCompanyUuid();
+        $defaultDisplay    = RoutingProviderPolicy::defaultDisplayEngine();
+        $defaultOptimizing = RoutingProviderPolicy::defaultOptimizationEngine();
+        $routingSettings   = $this->lookupCompanySetting('routing', ['unit' => 'km']);
+        $savedDisplay      = data_get($routingSettings, 'display_engine', data_get($routingSettings, 'routing_display_engine', data_get($routingSettings, 'router')));
+        $savedOptimizing   = data_get($routingSettings, 'optimization_engine', data_get($routingSettings, 'routing_optimization_engine', $savedDisplay));
 
-        $displayEngine                                  = data_get($routingSettings, 'display_engine', data_get($routingSettings, 'routing_display_engine', data_get($routingSettings, 'router', 'osrm')));
-        $optimizationEngine                             = data_get($routingSettings, 'optimization_engine', data_get($routingSettings, 'routing_optimization_engine', $displayEngine));
+        // Platform defaults fill in what the organization never chose, and replace an engine the administrator switched off
+        $displayEngine                                  = RoutingProviderPolicy::engineFor($savedDisplay, $defaultDisplay, $companyUuid);
+        $optimizationEngine                             = RoutingProviderPolicy::engineFor($savedOptimizing, $defaultOptimizing, $companyUuid);
+        $routingSettings['allowed_providers']           = RoutingProviderPolicy::allowedProviders($companyUuid);
         $routingSettings['router']                      = $displayEngine;
         $routingSettings['display_engine']              = $displayEngine;
         $routingSettings['optimization_engine']         = $optimizationEngine;
@@ -306,9 +323,15 @@ class SettingController extends Controller
             $fallbacks = array_values(array_filter(array_map('trim', explode(',', $fallbacks))));
         }
 
+        $companyUuid = $this->policyCompanyUuid();
+        $provider    = $request->input('provider', data_get($config, 'provider', 'valhalla'));
+        if (!RoutingProviderPolicy::allows($provider, $companyUuid)) {
+            return response()->error($this->providerDisabledMessage($provider), 422);
+        }
+
         $this->configureCompanySetting('tracking', [
-            'provider'                         => $request->input('provider', data_get($config, 'provider', 'google_routes')),
-            'fallbacks'                        => $fallbacks,
+            'provider'                         => $provider,
+            'fallbacks'                        => array_values(array_filter($fallbacks, fn ($fallback) => RoutingProviderPolicy::allows($fallback, $companyUuid))),
             'traffic_enabled'                  => $request->boolean('traffic_enabled', data_get($config, 'traffic_enabled', true)),
             'cache_ttl_seconds'                => (int) $request->input('cache_ttl_seconds', data_get($config, 'cache_ttl_seconds', 60)),
             'route_cache_ttl_seconds'          => (int) $request->input('route_cache_ttl_seconds', data_get($config, 'route_cache_ttl_seconds', 600)),
@@ -332,7 +355,7 @@ class SettingController extends Controller
     {
         $config           = $this->trackingDefaults();
         $trackingSettings = $this->lookupCompanySetting('tracking', [
-            'provider'                         => data_get($config, 'provider', 'google_routes'),
+            'provider'                         => data_get($config, 'provider', 'valhalla'),
             'fallbacks'                        => data_get($config, 'fallbacks', ['osrm', 'calculated']),
             'traffic_enabled'                  => data_get($config, 'traffic_enabled', true),
             'cache_ttl_seconds'                => data_get($config, 'cache_ttl_seconds', 60),
@@ -342,9 +365,35 @@ class SettingController extends Controller
             'alerts'                           => data_get($config, 'alerts', $this->trackingAlertDefaults()),
         ]);
         $trackingSettings['alerts']    = $this->normalizeTrackingAlertSettings(data_get($trackingSettings, 'alerts', []));
-        $trackingSettings['providers'] = $this->trackingProviderOptions();
+        $trackingSettings['providers'] = $this->trackingProviderOptions($this->policyCompanyUuid());
 
         return response()->json($trackingSettings);
+    }
+
+    /**
+     * The routing provider policy: which providers organizations may use, the
+     * platform's default engines and per-organization exceptions.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAdminRoutingProviders()
+    {
+        return response()->json(array_merge(RoutingProviderPolicy::settings(), [
+            'available_providers' => collect(RoutingProviderPolicy::PROVIDERS)->map(fn ($label, $key) => ['key' => $key, 'label' => $label])->values()->all(),
+        ]));
+    }
+
+    /**
+     * Save the routing provider policy. Takes effect on every worker within
+     * RoutingProviderPolicy::CACHE_TTL seconds.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveAdminRoutingProviders(Request $request)
+    {
+        $this->saveRoutingProviderPolicy($request->only(['providers', 'defaults', 'exceptions']));
+
+        return $this->getAdminRoutingProviders();
     }
 
     public function getAdminTrackingSettings()
@@ -363,7 +412,7 @@ class SettingController extends Controller
         }
 
         $this->configureSetting('fleet-ops.tracking-settings', [
-            'provider'                         => $request->input('provider', data_get($config, 'provider', 'google_routes')),
+            'provider'                         => $request->input('provider', data_get($config, 'provider', 'valhalla')),
             'fallbacks'                        => $fallbacks,
             'traffic_enabled'                  => $request->boolean('traffic_enabled', data_get($config, 'traffic_enabled', true)),
             'cache_ttl_seconds'                => (int) $request->input('cache_ttl_seconds', data_get($config, 'cache_ttl_seconds', 60)),
@@ -772,9 +821,17 @@ class SettingController extends Controller
         ];
     }
 
-    protected function trackingProviderOptions(): array
+    /**
+     * Tracking providers as select options; given an organization, only the ones it may use.
+     */
+    protected function trackingProviderOptions(?string $companyUuid = null): array
     {
-        return collect($this->trackingProviders())->map(function ($provider, $key) {
+        $providers = collect($this->trackingProviders());
+        if ($companyUuid) {
+            $providers = $providers->filter(fn ($provider, $key) => RoutingProviderPolicy::allows($key, $companyUuid));
+        }
+
+        return $providers->map(function ($provider, $key) {
             $label = $key === 'osrm' ? 'OSRM' : str($key)->replace('_', ' ')->title()->toString();
 
             return [
@@ -1415,6 +1472,21 @@ class SettingController extends Controller
     protected function notificationsByPackage(string $package): array
     {
         return NotificationRegistry::getNotificationsByPackage($package);
+    }
+
+    protected function saveRoutingProviderPolicy(array $input): array
+    {
+        return RoutingProviderPolicy::save($input);
+    }
+
+    protected function policyCompanyUuid(): ?string
+    {
+        return session('company');
+    }
+
+    protected function providerDisabledMessage(string $provider): string
+    {
+        return 'The ' . $provider . ' provider has been switched off by the administrator.';
     }
 
     protected function trackingProviders(): array
