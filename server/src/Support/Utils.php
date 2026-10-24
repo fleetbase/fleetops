@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Support;
 
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Support\Routing\DistanceMatrixProviderResolver;
+use Fleetbase\FleetOps\Support\Routing\ValhallaClient;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\Setting;
@@ -827,8 +828,10 @@ class Utils extends FleetbaseUtils
 
         try {
             $distanceMatrix = match ($provider) {
-                'osrm'  => static::getDistanceMatrixFromOSRM($origins, $destinations),
-                default => static::getDistanceMatrixFromGoogle($origins, $destinations),
+                'valhalla' => static::getDistanceMatrixFromValhalla($origins, $destinations),
+                'osrm'     => static::getDistanceMatrixFromOSRM($origins, $destinations),
+                'google'   => static::getDistanceMatrixFromGoogle($origins, $destinations),
+                default    => throw new \InvalidArgumentException('Unsupported distance matrix provider: ' . $provider),
             };
         } catch (\Throwable $e) {
             $distanceMatrix = null;
@@ -1030,6 +1033,50 @@ class Utils extends FleetbaseUtils
         $time                      = (float) data_get($response, 'routes.0.duration', 0);
 
         // Create distance matrix
+        $distanceMatrix = new DistanceMatrix($distance, $time);
+
+        // Cache distance matrix, but never an empty result so a failed lookup is retried
+        if ($distance > 0 && $time > 0) {
+            Redis::set($cacheKey, json_encode($distanceMatrix), 'EX', self::DISTANCE_MATRIX_CACHE_TTL);
+        }
+
+        return $distanceMatrix;
+    }
+
+    /**
+     * Retrieves the driving distance and time from the configured Valhalla server.
+     *
+     * Origins and destinations use the same `lat,lng` strings (separated by `|`) as the
+     * other providers and are routed in order. Results are cached per coordinate pair;
+     * a failed request or missing route throws so the caller can fall back.
+     *
+     * @param string $origins      a string of origins in 'latitude,longitude' format, separated by `|`
+     * @param string $destinations a string of destinations in a similar format to origins
+     *
+     * @return DistanceMatrix the distance in metres and time in seconds
+     */
+    public static function getDistanceMatrixFromValhalla(string $origins, string $destinations): DistanceMatrix
+    {
+        $cacheKey     = 'valhalla:' . md5($origins . '_' . $destinations);
+        $cachedResult = Redis::get($cacheKey);
+        if ($cachedResult) {
+            $json = json_decode($cachedResult);
+
+            if (!empty($json->distance) && !empty($json->time)) {
+                return new DistanceMatrix($json->distance, $json->time);
+            }
+        }
+
+        $points = array_map(function ($coordinate) {
+            [$latitude, $longitude] = array_map('floatval', explode(',', $coordinate));
+
+            return new Point($latitude, $longitude);
+        }, explode('|', $origins . '|' . $destinations));
+
+        $trip     = ValhallaClient::route($points);
+        $distance = (float) data_get($trip, 'summary.length', 0) * 1000;
+        $time     = (float) data_get($trip, 'summary.time', 0);
+
         $distanceMatrix = new DistanceMatrix($distance, $time);
 
         // Cache distance matrix, but never an empty result so a failed lookup is retried

@@ -9,12 +9,15 @@ use Fleetbase\Models\Setting;
  *
  * In order of precedence:
  *   1. `DISTANCE_MATRIX_PROVIDER` when the operator set it, so an explicit
- *      platform choice (or `calculate` as a kill switch) always wins.
- *   2. The company's routing engine from Fleet-Ops Settings → Routing, the same
- *      engine that draws the route on the map (OSRM unless changed), when the
- *      server can serve it: OSRM needs a self-hosted `OSRM_HOST` rather than
- *      the public demo server, Google needs a Maps API key.
- *   3. `calculate`, the straight-line estimate.
+ *      platform choice (or `calculate` as a kill switch) always wins. This is
+ *      the only way Google is ever used: metered providers are never picked
+ *      from a company's settings.
+ *   2. The company's routing engine from Fleet-Ops Settings → Routing, when it
+ *      is a self-hosted engine the server is configured for (Valhalla, or OSRM
+ *      on a host other than the public demo server).
+ *   3. The platform's own engine: the configured Valhalla server, then a
+ *      private OSRM host.
+ *   4. `calculate`, the straight-line estimate.
  */
 class DistanceMatrixProviderResolver
 {
@@ -25,6 +28,11 @@ class DistanceMatrixProviderResolver
      */
     public const PUBLIC_OSRM_HOST = 'router.project-osrm.org';
 
+    /**
+     * Self-hosted engines, in the order the platform prefers them.
+     */
+    public const PLATFORM_ENGINES = ['valhalla', 'osrm'];
+
     public static function resolve(?string $companyUuid = null): string
     {
         $configured = config('fleetops.distance_matrix.provider');
@@ -32,17 +40,23 @@ class DistanceMatrixProviderResolver
             return (string) $configured;
         }
 
-        $provider = static::fromRoutingSettings($companyUuid);
-        if ($provider && static::isAvailable($provider)) {
-            return $provider;
+        $engine = static::fromRoutingSettings($companyUuid);
+        if ($engine && static::isAvailable($engine)) {
+            return $engine;
+        }
+
+        foreach (static::PLATFORM_ENGINES as $platformEngine) {
+            if (static::isAvailable($platformEngine)) {
+                return $platformEngine;
+            }
         }
 
         return 'calculate';
     }
 
     /**
-     * Maps the company's routing display engine onto a server-side provider.
-     * Engines the server cannot call (Valhalla, VROOM, custom engines) map to null.
+     * Maps the company's routing display engine onto a self-hosted provider.
+     * Google and engines the server cannot call (VROOM, custom engines) map to null.
      */
     public static function fromRoutingSettings(?string $companyUuid = null): ?string
     {
@@ -55,18 +69,18 @@ class DistanceMatrixProviderResolver
         $engine = data_get($settings, 'display_engine', data_get($settings, 'routing_display_engine', data_get($settings, 'router', 'osrm')));
 
         return match ($engine) {
-            'osrm'   => 'osrm',
-            'google' => 'google',
-            default  => null,
+            'osrm'     => 'osrm',
+            'valhalla' => 'valhalla',
+            default    => null,
         };
     }
 
     public static function isAvailable(string $provider): bool
     {
         return match ($provider) {
-            'osrm'   => static::hasPrivateOsrmHost(),
-            'google' => filled(static::googleMapsApiKey()),
-            default  => false,
+            'osrm'     => static::hasPrivateOsrmHost(),
+            'valhalla' => ValhallaClient::isConfigured(),
+            default    => false,
         };
     }
 

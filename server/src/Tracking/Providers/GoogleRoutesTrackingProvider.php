@@ -24,7 +24,7 @@ class GoogleRoutesTrackingProvider implements TrackingProviderInterface
 
     public function canTrack(TrackingContext $context): bool
     {
-        return $context->canRoute() && filled($this->apiKey());
+        return $context->canRoute() && $this->enabled() && filled($this->apiKey());
     }
 
     public function track(TrackingContext $context, TrackingOptions $options): TrackingProviderResult
@@ -109,6 +109,14 @@ class GoogleRoutesTrackingProvider implements TrackingProviderInterface
         }
 
         return (float) Str::replaceLast('s', '', $duration);
+    }
+
+    /**
+     * Operator kill switch for billed Google Routes calls.
+     */
+    protected function enabled(): bool
+    {
+        return filter_var(config('fleetops.tracking.google_routes_enabled', true), FILTER_VALIDATE_BOOLEAN);
     }
 
     protected function apiKey(): ?string

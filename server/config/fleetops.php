@@ -42,6 +42,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Valhalla
+    |--------------------------------------------------------------------------
+    |
+    | A self-hosted Valhalla server used for order distance, time and tracking
+    | ETAs. Shares its variables with the Valhalla extension. The API key is
+    | sent as the X-Api-Key header. The public community servers are ignored.
+    |
+    */
+    'valhalla' => [
+        'host'    => env('VALHALLA_HOST', env('VALHALLA_BASE_URI')),
+        'api_key' => env('VALHALLA_API_KEY'),
+        'costing' => env('VALHALLA_COSTING', 'auto'),
+        'timeout' => env('VALHALLA_TIMEOUT', 5),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | VROOM Route Optimisation Engine
     |--------------------------------------------------------------------------
     |
@@ -62,14 +79,17 @@ return [
     /*
     |--------------------------------------------------------------------------
     | Distance Matrix Calculator
-    | Options: "calculate", "google", "osrm"
+    |--------------------------------------------------------------------------
+    |
+    | Options: "calculate", "valhalla", "osrm", "google"
     |
     | Leave DISTANCE_MATRIX_PROVIDER unset to measure order distance and time
-    | with each company's routing engine (Fleet-Ops Settings -> Routing) when
-    | the server can call it: OSRM needs a self-hosted OSRM_HOST, Google needs
-    | GOOGLE_MAPS_API_KEY. Otherwise the straight-line "calculate" estimate is
-    | used. Setting it applies one provider to every company.
-    |--------------------------------------------------------------------------
+    | with a self-hosted engine: the company's routing engine when the server
+    | is configured for it, otherwise VALHALLA_HOST, then a private OSRM_HOST,
+    | otherwise the straight-line "calculate" estimate. Google is only used
+    | when this is set to "google", because it is billed per request. Setting
+    | it applies one provider to every company.
+    |
     */
     'distance_matrix' => [
         'provider' => env('DISTANCE_MATRIX_PROVIDER'),
@@ -83,11 +103,16 @@ return [
     | Provider-neutral tracking data for active orders. The provider registry
     | can be extended by third-party packages without editing FleetOps core.
     |
-    | Built-in providers: "google_routes", "osrm", "calculated"
+    | Built-in providers: "google_routes", "valhalla", "osrm", "calculated"
+    |
+    | Google Routes is billed per request. TRACKING_GOOGLE_ROUTES_ENABLED=false
+    | stops every Google Routes tracking call, whatever a company selects, and
+    | tracking falls through to the next provider.
     |--------------------------------------------------------------------------
     */
     'tracking' => [
         'provider'                         => env('TRACKING_PROVIDER', 'google_routes'),
+        'google_routes_enabled'            => env('TRACKING_GOOGLE_ROUTES_ENABLED', true),
         'fallbacks'                        => array_filter(explode(',', env('TRACKING_PROVIDER_FALLBACKS', 'osrm,calculated'))),
         'traffic_enabled'                  => env('TRACKING_TRAFFIC_ENABLED', true),
         'cache_ttl_seconds'                => env('TRACKING_CACHE_TTL_SECONDS', 60),

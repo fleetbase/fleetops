@@ -4,9 +4,12 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Support\Encoding\Polyline;
+use Fleetbase\FleetOps\Support\Encoding\Polyline6;
 use Fleetbase\FleetOps\Tracking\Providers\CalculatedTrackingProvider;
 use Fleetbase\FleetOps\Tracking\Providers\GoogleRoutesTrackingProvider;
 use Fleetbase\FleetOps\Tracking\Providers\OsrmTrackingProvider;
+use Fleetbase\FleetOps\Tracking\Providers\ValhallaTrackingProvider;
 use Fleetbase\FleetOps\Tracking\Support\FakeTrackingProvider;
 use Fleetbase\FleetOps\Tracking\TrackingContext;
 use Fleetbase\FleetOps\Tracking\TrackingContextBuilder;
@@ -856,4 +859,92 @@ test('google routes provider handles non-traffic confidence and failed route res
     Http::fake(['https://routes.googleapis.com/*' => Http::response(['routes' => []])]);
     expect(fn () => $provider->track($context, new TrackingOptions()))
         ->toThrow(RuntimeException::class, 'Google Routes returned no route.');
+});
+
+test('google routes tracking is skipped when the operator switches it off', function () {
+    $provider             = new GoogleRoutesTrackingProviderProbe();
+    $provider->fakeApiKey = 'test-api-key';
+    $context              = googleRoutesTrackingContext();
+
+    try {
+        app('config')->set('fleetops.tracking.google_routes_enabled', false);
+        expect($provider->canTrack($context))->toBeFalse();
+
+        app('config')->set('fleetops.tracking.google_routes_enabled', 'true');
+        expect($provider->canTrack($context))->toBeTrue();
+    } finally {
+        app('config')->set('fleetops.tracking.google_routes_enabled', true);
+    }
+});
+
+test('valhalla provider tracks through the configured server and stitches leg shapes', function () {
+    resetTrackingHttp();
+    $provider = new ValhallaTrackingProvider();
+    $context  = osrmTrackingContext();
+
+    try {
+        // Unconfigured or public community servers never route production traffic
+        foreach ([null, 'https://valhalla1.openstreetmap.de'] as $host) {
+            app('config')->set('fleetops.valhalla.host', $host);
+            expect($provider->canTrack($context))->toBeFalse();
+        }
+
+        app('config')->set('fleetops.valhalla.host', 'https://valhalla.routing.fleetbase.test/');
+        app('config')->set('fleetops.valhalla.api_key', 'test-valhalla-key');
+        expect($provider->key())->toBe('valhalla')
+            ->and($provider->capabilities()->toArray())->toBe([
+                'traffic'        => false,
+                'per_leg_eta'    => true,
+                'map_matching'   => false,
+                'route_geometry' => true,
+            ])
+            ->and($provider->canTrack($context))->toBeTrue();
+
+        $firstLeg  = [[1.30, 103.80], [1.305, 103.805]];
+        $secondLeg = [[1.305, 103.805], [1.31, 103.81]];
+        $sent      = null;
+        Http::fake(function ($request) use (&$sent, $firstLeg, $secondLeg) {
+            $sent = $request;
+
+            return Http::response(['trip' => [
+                'status'  => 0,
+                'summary' => ['length' => 1.85, 'time' => 412.5],
+                'legs'    => [
+                    ['summary' => ['length' => 0.8, 'time' => 190.0], 'shape' => Polyline6::encode($firstLeg)],
+                    ['summary' => ['length' => 1.05, 'time' => 222.5], 'shape' => Polyline6::encode($secondLeg)],
+                ],
+            ]]);
+        });
+
+        $result = $provider->track($context, new TrackingOptions());
+
+        expect((string) $sent->url())->toBe('https://valhalla.routing.fleetbase.test/route')
+            ->and($sent->header('X-Api-Key'))->toBe(['test-valhalla-key'])
+            ->and($sent->data()['locations'])->toBe([['lat' => 1.30, 'lon' => 103.80], ['lat' => 1.31, 'lon' => 103.81]])
+            ->and($sent->data()['shape_format'])->toBe('polyline6')
+            ->and($result->provider)->toBe('valhalla')
+            ->and($result->distanceMeters)->toBe(1850.0)
+            ->and($result->durationSeconds)->toBe(412.5)
+            ->and($result->durationInTrafficSeconds)->toBeNull()
+            ->and($result->polyline)->toBe(Polyline::encode([...$firstLeg, ...$secondLeg]))
+            ->and($result->coordinates)->toHaveCount(4)
+            ->and($result->coordinates[3]->getLat())->toBe(103.81)
+            ->and($result->coordinates[3]->getLng())->toBe(1.31)
+            ->and($result->legs)->toBe([
+                ['index' => 0, 'distance_m' => 800.0, 'duration_s' => 190.0, 'duration_in_traffic_s' => null, 'provider' => 'valhalla'],
+                ['index' => 1, 'distance_m' => 1050.0, 'duration_s' => 222.5, 'duration_in_traffic_s' => null, 'provider' => 'valhalla'],
+            ])
+            ->and($result->warnings)->toBe(['no_live_traffic']);
+
+        // A trip without leg shapes still reports distance and time
+        resetTrackingHttp();
+        Http::fake(['*' => Http::response(['trip' => ['status' => 0, 'summary' => ['length' => 2.0, 'time' => 300.0], 'legs' => []]])]);
+        $bare = $provider->track($context, new TrackingOptions());
+        expect($bare->polyline)->toBeNull()
+            ->and($bare->coordinates)->toBe([])
+            ->and($bare->distanceMeters)->toBe(2000.0);
+    } finally {
+        app('config')->set('fleetops.valhalla.host', null);
+        app('config')->set('fleetops.valhalla.api_key', null);
+    }
 });
