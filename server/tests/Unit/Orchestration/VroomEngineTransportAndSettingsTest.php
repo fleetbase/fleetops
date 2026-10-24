@@ -13,6 +13,7 @@ use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Orchestration\Engines\VroomOrchestrationEngine;
+use Fleetbase\FleetOps\Support\Routing\HostPolicy;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
@@ -190,6 +191,58 @@ test('failed solves raise runtime errors with the response detail', function () 
 
     expect(fn () => $callable->invoke($engine, ['jobs' => []]))
         ->toThrow(RuntimeException::class, 'VROOM returned an error');
+});
+
+beforeEach(function () {
+    // Example hosts resolve to a public address unless a test says otherwise.
+    HostPolicy::resolveHostsUsing(fn (string $host) => str_starts_with($host, 'internal.') ? ['10.0.0.12'] : ['93.184.216.34']);
+});
+
+afterEach(function () {
+    HostPolicy::resolveHostsUsing(null);
+    config(['vroom.allow_private_hosts' => null]);
+});
+
+test('connection settings ignore an organization host the server must not call', function (string $host) {
+    $connection = fleetopsVroomBoot();
+    $connection->table('settings')->insert([
+        ['key' => 'company.company-1.vroom', 'value' => json_encode(['api_host' => $host, 'endpoint_mode' => 'binary', 'api_key' => 'org-key'])],
+        ['key' => 'vroom', 'value' => json_encode(['api_host' => 'https://vroom.routing.fleetbase.test', 'endpoint_mode' => 'saas', 'api_key' => 'sys-key'])],
+    ]);
+
+    $engine = new VroomOrchestrationEngine();
+    $call   = function (string $method) use ($engine) {
+        $reflection = new ReflectionMethod(VroomOrchestrationEngine::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($engine);
+    };
+
+    expect($call('resolveVroomBaseUri'))->toBe('https://vroom.routing.fleetbase.test')
+        ->and($call('resolveVroomEndpointMode'))->toBe('saas')
+        ->and($call('resolveVroomApiKey'))->toBe('sys-key');
+
+    // Self-hosted installs can opt in to private organization hosts
+    config(['vroom.allow_private_hosts' => true]);
+    $expected = str_starts_with($host, 'file:') ? 'https://vroom.routing.fleetbase.test' : $host;
+    expect($call('resolveVroomBaseUri'))->toBe($expected);
+})->with([
+    'cloud metadata'      => 'http://169.254.169.254/latest/meta-data',
+    'resolves to private' => 'https://internal.vroom.test',
+    'file scheme'         => 'file:///etc/passwd',
+]);
+
+test('an organization key without its own host is used with the system host', function () {
+    $connection = fleetopsVroomBoot();
+    $connection->table('settings')->insert([
+        ['key' => 'company.company-1.vroom', 'value' => json_encode(['api_key' => 'org-key'])],
+        ['key' => 'vroom', 'value' => json_encode(['api_host' => 'https://vroom.routing.fleetbase.test', 'api_key' => 'sys-key'])],
+    ]);
+
+    $reflection = new ReflectionMethod(VroomOrchestrationEngine::class, 'resolveVroomApiKey');
+    $reflection->setAccessible(true);
+
+    expect($reflection->invoke(new VroomOrchestrationEngine()))->toBe('org-key');
 });
 
 test('connection settings resolve organization then system values', function () {

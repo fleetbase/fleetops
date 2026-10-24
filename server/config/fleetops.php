@@ -83,6 +83,8 @@ return [
         'api_key' => env('VALHALLA_API_KEY'),
         'costing' => env('VALHALLA_COSTING', 'auto'),
         'timeout' => env('VALHALLA_TIMEOUT', 5),
+        // Let organization hosts point at private network addresses (self-hosted installs only).
+        'allow_private_hosts' => env('VALHALLA_ALLOW_PRIVATE_HOSTS', false),
     ],
 
     /*

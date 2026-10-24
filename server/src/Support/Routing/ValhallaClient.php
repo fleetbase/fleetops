@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Http;
  * same way: the organization's own `valhalla` setting, then the system setting
  * from Admin → Fleet-Ops → Routing, then `fleetops.valhalla.*` (VALHALLA_HOST /
  * VALHALLA_BASE_URI / VALHALLA_API_KEY). The key is sent as the `X-Api-Key` header.
+ * An organization host must pass the HostPolicy (public addresses only, unless
+ * VALHALLA_ALLOW_PRIVATE_HOSTS is set), or the organization override is ignored.
  */
 class ValhallaClient
 {
@@ -35,7 +37,7 @@ class ValhallaClient
     {
         $settings = Cache::remember('fleetops:valhalla-connection:' . ($companyUuid ?? 'system'), static::CACHE_TTL, function () use ($companyUuid) {
             return [
-                static::lookup(fn () => Setting::lookupForCompany($companyUuid, 'valhalla', [])),
+                static::organizationLevel(static::lookup(fn () => Setting::lookupForCompany($companyUuid, 'valhalla', []))),
                 static::lookup(fn () => Setting::lookup('valhalla', [])),
             ];
         });
@@ -100,6 +102,23 @@ class ValhallaClient
         }
 
         return $trip;
+    }
+
+    /**
+     * An organization override whose host the server must not call (a private,
+     * loopback or metadata address) is dropped with its key, so the system
+     * server is used instead.
+     */
+    protected static function organizationLevel(array $settings): array
+    {
+        $host = trim((string) data_get($settings, 'api_host'));
+        if ($host === '') {
+            return $settings;
+        }
+
+        $allowPrivateHosts = filter_var(config('fleetops.valhalla.allow_private_hosts', false), FILTER_VALIDATE_BOOLEAN);
+
+        return HostPolicy::allows($host, $allowPrivateHosts) ? $settings : [];
     }
 
     protected static function lookup(callable $lookup): array

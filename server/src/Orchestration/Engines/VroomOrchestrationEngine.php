@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Orchestration\Engines;
 
 use Fleetbase\FleetOps\Orchestration\Contracts\OrchestrationEngineInterface;
 use Fleetbase\FleetOps\Orchestration\Support\OrchestrationPayloadBuilder;
+use Fleetbase\FleetOps\Support\Routing\HostPolicy;
 use Fleetbase\Models\Setting;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
@@ -558,8 +559,9 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
     protected function resolveVroomSetting(string $key, $default = null)
     {
         try {
-            $organizationValue = data_get(Setting::lookupForCompany($this->companyUuid ?? session('company'), 'vroom', []), $key);
-            if ($this->hasConfiguredValue($organizationValue)) {
+            $organizationSettings = Setting::lookupForCompany($this->companyUuid ?? session('company'), 'vroom', []);
+            $organizationValue    = data_get($organizationSettings, $key);
+            if ($this->hasConfiguredValue($organizationValue) && $this->organizationHostAllowed($organizationSettings)) {
                 return $organizationValue;
             }
 
@@ -572,6 +574,23 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
         }
 
         return $default;
+    }
+
+    /**
+     * An organization override whose host the server must not call (a private,
+     * loopback or metadata address) is ignored as a whole (host, key and endpoint
+     * mode), so the system server is used instead.
+     */
+    protected function organizationHostAllowed($organizationSettings): bool
+    {
+        $host = data_get($organizationSettings, 'api_host');
+        if (!$this->hasConfiguredValue($host)) {
+            return true;
+        }
+
+        $allowPrivateHosts = filter_var(config('vroom.allow_private_hosts', env('VROOM_ALLOW_PRIVATE_HOSTS', false)), FILTER_VALIDATE_BOOLEAN);
+
+        return HostPolicy::allows((string) $host, $allowPrivateHosts);
     }
 
     protected function hasConfiguredValue($value): bool

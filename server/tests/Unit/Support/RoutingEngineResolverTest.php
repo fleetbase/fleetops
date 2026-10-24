@@ -1,5 +1,6 @@
 <?php
 
+use Fleetbase\FleetOps\Support\Routing\HostPolicy;
 use Fleetbase\FleetOps\Support\Routing\RoutingEngineResolver;
 use Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy;
 use Fleetbase\FleetOps\Support\Routing\ValhallaClient;
@@ -118,7 +119,14 @@ function fleetopsDistanceProviderPolicy(array $policy): void
     RoutingProviderPolicy::save($policy);
 }
 
+beforeEach(function () {
+    // Example hosts resolve to a public address unless a test says otherwise.
+    HostPolicy::resolveHostsUsing(fn (string $host) => str_starts_with($host, 'internal.') ? ['10.0.0.12'] : ['93.184.216.34']);
+});
+
 afterEach(function () {
+    HostPolicy::resolveHostsUsing(null);
+    config(['fleetops.valhalla.allow_private_hosts' => false]);
     config([
         'fleetops.distance_matrix.provider'    => null,
         'fleetops.osrm.host'                   => null,
@@ -585,6 +593,29 @@ test('valhalla uses the extension admin settings, an organization override and t
     Cache::flush();
     expect(ValhallaClient::connection('company-1'))->toBeNull()
         ->and(fn () => ValhallaClient::route([]))->toThrow(RuntimeException::class, 'No Valhalla server is configured.');
+});
+
+test('valhalla ignores an organization host the server must not call and uses the system server', function (string $host) {
+    $connection = fleetopsDistanceProviderBoot();
+    $connection->table('settings')->insert(['key' => 'valhalla', 'value' => json_encode(['api_host' => 'https://valhalla.routing.fleetbase.test', 'api_key' => 'system-key'])]);
+    $connection->table('settings')->insert(['key' => 'company.company-1.valhalla', 'value' => json_encode(['api_host' => $host, 'api_key' => 'org-key'])]);
+    Cache::flush();
+
+    expect(ValhallaClient::connection('company-1'))->toBe(['host' => 'https://valhalla.routing.fleetbase.test', 'api_key' => 'system-key']);
+})->with([
+    'cloud metadata'      => 'http://169.254.169.254/latest/meta-data',
+    'loopback'            => 'http://127.0.0.1:8002',
+    'resolves to private' => 'https://internal.valhalla.test',
+    'file scheme'         => 'file:///etc/passwd',
+]);
+
+test('valhalla allows private organization hosts when the install opts in', function () {
+    $connection = fleetopsDistanceProviderBoot();
+    $connection->table('settings')->insert(['key' => 'company.company-1.valhalla', 'value' => json_encode(['api_host' => 'http://10.0.0.12:8002', 'api_key' => 'org-key'])]);
+    config(['fleetops.valhalla.allow_private_hosts' => true]);
+    Cache::flush();
+
+    expect(ValhallaClient::connection('company-1'))->toBe(['host' => 'http://10.0.0.12:8002', 'api_key' => 'org-key']);
 });
 
 test('the orchestrator falls back to the built-in engine when vroom is switched off', function () {

@@ -6,6 +6,7 @@ if (!function_exists('Fleetbase\Models\session')) {
 
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\OrderTracker;
+use Fleetbase\FleetOps\Support\Routing\HostPolicy;
 use Fleetbase\FleetOps\Tracking\TrackingIntelligenceService;
 use Fleetbase\FleetOps\Tracking\TrackingOptions;
 use Illuminate\Database\ConnectionResolver;
@@ -18,6 +19,15 @@ use Illuminate\Database\SQLiteConnection;
  * session company remains the fallback. The provider is the company's routing
  * engine; the company's tracking settings only tune behaviour.
  */
+beforeEach(function () {
+    // The example organization Valhalla host resolves to a public address.
+    HostPolicy::resolveHostsUsing(fn () => ['93.184.216.34']);
+});
+
+afterEach(function () {
+    HostPolicy::resolveHostsUsing(null);
+});
+
 function fleetopsTrackingOptionsBoot(): SQLiteConnection
 {
     $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
