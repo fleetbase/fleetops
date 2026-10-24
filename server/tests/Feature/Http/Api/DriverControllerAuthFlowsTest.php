@@ -587,3 +587,156 @@ test('current driver fails when the request has no matching driver', function ()
 
     expect($failure)->toBeInstanceOf(Illuminate\Database\Eloquent\ModelNotFoundException::class);
 });
+
+/**
+ * The driver auth harness with core's App Review access: the review_accesses table, a hasher
+ * that really checks, Navigator registered, and an existing review driver in two
+ * organizations (one is created on first sign-in in production; see ProfileAccountManagerTest).
+ */
+function fleetopsNavigatorReviewBoot(): SQLiteConnection
+{
+    $connection = fleetopsDriverAuthBoot();
+    $connection->getSchemaBuilder()->create('review_accesses', function ($table) {
+        $table->increments('id');
+        $table->string('uuid')->nullable();
+        $table->string('company_uuid')->nullable();
+        $table->string('subject_type');
+        $table->string('subject_uuid');
+        $table->boolean('enabled')->default(false);
+        $table->string('code')->nullable();
+        $table->timestamp('code_generated_at')->nullable();
+        $table->timestamp('enabled_at')->nullable();
+        $table->string('updated_by_uuid')->nullable();
+        $table->timestamps();
+        $table->timestamp('deleted_at')->nullable();
+    });
+    app()->instance('hash', new class implements Illuminate\Contracts\Hashing\Hasher {
+        public function info($hashedValue): array
+        {
+            return [];
+        }
+
+        public function make($value, array $options = []): string
+        {
+            return password_hash((string) $value, PASSWORD_BCRYPT);
+        }
+
+        public function check($value, $hashedValue, array $options = []): bool
+        {
+            return is_string($hashedValue) && password_verify((string) $value, $hashedValue);
+        }
+
+        public function needsRehash($hashedValue, array $options = []): bool
+        {
+            return false;
+        }
+
+        public function verifyConfiguration($value): bool
+        {
+            return true;
+        }
+    });
+    Illuminate\Support\Facades\Hash::clearResolvedInstance('hash');
+    app()->instance('cache', new Illuminate\Cache\Repository(new Illuminate\Cache\ArrayStore()));
+    Illuminate\Support\Facades\Cache::clearResolvedInstance('cache');
+    app()->instance('responsecache', new class {
+        public function clear(): void
+        {
+        }
+    });
+
+    Fleetbase\FleetOps\Support\NavigatorReview::register();
+
+    $connection->table('companies')->insert(['uuid' => 'company-2', 'public_id' => 'company_two', 'name' => 'Globex']);
+    foreach (['company-1', 'company-2'] as $company) {
+        $connection->table('users')->insert(['uuid' => 'reviewer-' . $company, 'company_uuid' => $company, 'name' => 'App Reviewer', 'phone' => Fleetbase\FleetOps\Support\NavigatorReview::PHONE, 'type' => 'driver', 'status' => 'active']);
+        $connection->table('drivers')->insert(['uuid' => 'review-driver-' . $company, 'company_uuid' => $company, 'user_uuid' => 'reviewer-' . $company, 'status' => 'available']);
+    }
+
+    return $connection;
+}
+
+function fleetopsNavigatorReviewOn(string $company): string
+{
+    [, $code] = Fleetbase\Support\AppReview::update(Fleetbase\Models\Company::where('uuid', $company)->first(), true);
+
+    return $code;
+}
+
+test('with Navigator review access on, the review number signs in as the organization review driver and is never texted', function () {
+    $connection = fleetopsNavigatorReviewBoot();
+    $twilio     = new FleetOpsDriverAuthTwilioFake();
+    app()->instance('twilio', $twilio);
+    Fleetbase\Twilio\Support\Laravel\Facade::clearResolvedInstances();
+    $code = fleetopsNavigatorReviewOn('company-1');
+
+    app()->instance('request', Request::create('/x', 'POST', ['phone' => '+1 202 555 0144']));
+    $sent     = (new DriverController())->loginWithPhone();
+    $resource = (new DriverController())->verifyCode(Request::create('/x', 'POST', ['identity' => '12025550144', 'code' => $code]));
+
+    expect($sent->getData(true))->toBe(['status' => 'OK', 'method' => 'sms'])
+        ->and($twilio->messages)->toBe([])
+        ->and($connection->table('verification_codes')->count())->toBe(0)
+        ->and($resource)->toBeInstanceOf(DriverResource::class)
+        ->and($resource->resource->uuid)->toBe('review-driver-company-1')
+        ->and($resource->token)->not->toBeEmpty()
+        ->and($connection->table('personal_access_tokens')->value('name'))->toBe('review-driver-company-1');
+});
+
+test('with Navigator review access off, the review number is refused and not texted', function () {
+    $connection = fleetopsNavigatorReviewBoot();
+    $twilio     = new FleetOpsDriverAuthTwilioFake();
+    app()->instance('twilio', $twilio);
+    Fleetbase\Twilio\Support\Laravel\Facade::clearResolvedInstances();
+    $code = fleetopsNavigatorReviewOn('company-1');
+    Fleetbase\Support\AppReview::update(Fleetbase\Models\Company::where('uuid', 'company-1')->first(), false);
+
+    app()->instance('request', Request::create('/x', 'POST', ['phone' => '12025550144']));
+    $sent    = (new DriverController())->loginWithPhone();
+    $refused = (new DriverController())->verifyCode(Request::create('/x', 'POST', ['identity' => '12025550144', 'code' => $code]));
+
+    expect($sent->getStatusCode())->toBe(422)
+        ->and($sent->getData(true)['error'])->toBe(Fleetbase\FleetOps\Support\NavigatorReview::OFF_MESSAGE)
+        ->and($twilio->messages)->toBe([])
+        ->and($refused->getData(true)['error'])->toBe('Invalid verification code!')
+        ->and($connection->table('personal_access_tokens')->count())->toBe(0);
+});
+
+test('a wrong code or another organization code does not sign the Navigator review number in', function () {
+    $connection = fleetopsNavigatorReviewBoot();
+    $codeOne    = fleetopsNavigatorReviewOn('company-1');
+    do {
+        [, $codeTwo] = Fleetbase\Support\AppReview::update(Fleetbase\Models\Company::where('uuid', 'company-2')->first(), true, true);
+    } while ($codeTwo === $codeOne);
+    $wrong = $codeOne === '000000' ? '000001' : '000000';
+
+    $crossed = (new DriverController())->verifyCode(Request::create('/x', 'POST', ['identity' => '12025550144', 'code' => $codeTwo]));
+    $guessed = (new DriverController())->verifyCode(Request::create('/x', 'POST', ['identity' => '12025550144', 'code' => $wrong]));
+
+    expect($crossed->getData(true)['error'])->toBe('Invalid verification code!')
+        ->and($guessed->getData(true)['error'])->toBe('Invalid verification code!')
+        ->and($connection->table('personal_access_tokens')->count())->toBe(0);
+
+    // At its own organization the second code signs in as that organization's review driver.
+    session(['company' => 'company-2']);
+    $resource = (new DriverController())->verifyCode(Request::create('/x', 'POST', ['identity' => '12025550144', 'code' => $codeTwo]));
+    expect($resource->resource->uuid)->toBe('review-driver-company-2');
+});
+
+test('the self-hosted Navigator review accounts still sign in where the organization has not turned access on', function () {
+    $connection = fleetopsNavigatorReviewBoot();
+    config([
+        'fleetops.navigator.bypass_verification_code' => '135790',
+        'fleetops.navigator.review_accounts'          => [Fleetbase\FleetOps\Support\NavigatorReview::PHONE],
+    ]);
+
+    try {
+        $resource = (new DriverController())->verifyCode(Request::create('/x', 'POST', ['identity' => '12025550144', 'code' => '135790']));
+
+        expect($resource)->toBeInstanceOf(DriverResource::class)
+            ->and(DriverController::verificationBypassListed('+12025550144'))->toBeTrue()
+            ->and(DriverController::verificationBypassListed('+6591234567'))->toBeFalse();
+    } finally {
+        config(['fleetops.navigator.bypass_verification_code' => null, 'fleetops.navigator.review_accounts' => []]);
+    }
+});

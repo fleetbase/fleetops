@@ -908,3 +908,41 @@ test('a managed account whose membership fails is removed from both databases', 
 
     expect($live->table('users')->where('email', 'contact@example.com')->count())->toBe(0);
 });
+
+test('each organization gets one Navigator review driver, never linked to another, and dispatch leaves it out', function () {
+    $connection = fleetopsProfileAccountBoot();
+    $schema     = $connection->getSchemaBuilder();
+    $schema->table('users', fn ($table) => $table->string('phone_verified_at')->nullable());
+    $schema->table('drivers', function ($table) use ($schema) {
+        foreach (['status', 'online', 'internal_id', '_key', 'slug', 'created_at', 'updated_at', 'deleted_at'] as $column) {
+            if (!$schema->hasColumn('drivers', $column)) {
+                $table->string($column)->nullable();
+            }
+        }
+    });
+    fleetopsProfileAccountRows($connection, 'users', [['uuid' => 'user-real', 'company_uuid' => 'company-1', 'phone' => '+6590003333', 'type' => 'driver']]);
+    fleetopsProfileAccountRows($connection, 'drivers', [['uuid' => 'driver-real', 'company_uuid' => 'company-1', 'user_uuid' => 'user-real', 'status' => 'available']]);
+
+    $acme   = Fleetbase\Models\Company::where('uuid', 'company-1')->first();
+    $globex = Fleetbase\Models\Company::where('uuid', 'company-2')->first();
+
+    $first  = Fleetbase\FleetOps\Support\NavigatorReview::driver($acme);
+    $again  = Fleetbase\FleetOps\Support\NavigatorReview::driver($acme);
+    $other  = Fleetbase\FleetOps\Support\NavigatorReview::driver($globex);
+    $user   = $connection->table('users')->where('uuid', $first->user_uuid)->first();
+
+    expect($again->uuid)->toBe($first->uuid)
+        ->and($first->company_uuid)->toBe('company-1')
+        ->and($other->company_uuid)->toBe('company-2')
+        ->and($other->user_uuid)->not->toBe($first->user_uuid)
+        ->and($user->phone)->toBe(Fleetbase\FleetOps\Support\NavigatorReview::PHONE)
+        ->and($user->type)->toBe('driver')
+        ->and($user->status)->toBe('active')
+        ->and($user->phone_verified_at)->not->toBeNull()
+        ->and(fleetopsProfileAccountRoles($connection, $first->user_uuid, 'company-1'))->toBe(['Driver'])
+        ->and(Fleetbase\FleetOps\Support\NavigatorReview::isReviewDriver($first))->toBeTrue()
+        ->and(Fleetbase\FleetOps\Support\NavigatorReview::isReviewDriver(Driver::withoutGlobalScopes()->where('uuid', 'driver-real')->first()))->toBeFalse();
+
+    $offered = Fleetbase\FleetOps\Support\NavigatorReview::excludeFrom(Driver::withoutGlobalScopes())->pluck('uuid')->all();
+    expect($offered)->toBe(['driver-real']);
+});
