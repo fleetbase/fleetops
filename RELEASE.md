@@ -1,8 +1,11 @@
-> v0.6.75 ~ "Safer integrations, tenant-isolated profile accounts and App Review access for Navigator"
+> v0.6.75 ~ "Road distance and ETAs from one routing engine, tenant-isolated profile accounts and App Review access for Navigator"
 
 ---
 ## Highlights
 
+- **Feature: one routing engine for order distance, ETAs and the map.** An order's stored distance and time, its live ETAs and remaining distance, and the route drawn on the map now all come from the organization's routing engine. Before this, order distance defaulted to a straight-line estimate at a flat ~50 km/h; a reported ~30 km run was stored as 25.0 km / 30 min and is now 32.1 km / 32 min. The engine is chosen in order: the organization's routing engine, then the admin default, then the platform's Valhalla server, then the straight-line estimate. An engine only counts if it is allowed and configured. A failed road lookup falls back to the straight-line estimate and is logged, instead of storing 0. Road results are cached for 24 hours. (#406)
+- **Feature: routing provider controls in Admin → Fleet-Ops → Routing.** Administrators choose which providers organizations may use (Google, Valhalla, OSRM, VROOM), with per-organization exceptions. They also set the default routing and optimization engines, and whether server-side routing uses roads or only the straight-line estimate. Saved admin settings take precedence over environment variables. **Google is off until an administrator enables it**, for map routing, optimization, order distance and ETAs. The public OSRM demo server is never called by the server. The admin menu entry "Fleet-Ops Config" is now "Fleet-Ops". (#406)
+- **Security: an organization's routing host can't point at a private address.** Order distance, ETAs and VROOM allocation ignore an organization's Valhalla or VROOM override whose host is loopback, a private or link-local network, cloud metadata or another non-public range, and use the system server instead. This also covers values saved before the Valhalla and VROOM extensions started rejecting them. (#417)
 - **Security: a profile never links to another organization's login account.** Creating a driver, customer or contact with an email or phone that belongs to another organization's account linked that account and exposed its name, email and phone. The new organization could then reset its password or deactivate it. Only accounts that already belong to the organization, or belong to no organization, are reused now. The refusal does not say whose account it is. `POST /v1/drivers` also ignores a `company` that is not the API credential's own. Logins already shared by the old behaviour can only be managed by their holder. (#414)
 - **Fix: orders can be edited with a partial payload.** `PUT /v1/orders/{id}` accepts a `payload` with only the parts that change, such as only entities or only a new dropoff. (#411)
 - **Fix: addresses sent with coordinates keep their street.** A place given as a street address plus `latitude`/`longitude` was reverse-geocoded and stored as a different nearby address. The street and the coordinates are now kept as sent, without a geocoding call. (#411)
@@ -15,6 +18,15 @@
 ---
 ## Upgrading
 - **Requires fleetbase/core-api v1.6.74** (`composer.json` now requires `^1.6.74`), which adds App Review access and its `review_accesses` table: run `php artisan migrate`.
+- **Routing defaults changed (#406).** Review **Admin → Fleet-Ops → Routing** after upgrading:
+  - The default routing engine is now **Valhalla** (it was OSRM). Without a Valhalla server (`VALHALLA_HOST`, or the Valhalla extension's settings), order distance and ETAs use the straight-line estimate. Self-hosters running their own OSRM can make it the default in the panel or with `ROUTING_DISPLAY_ENGINE=osrm`.
+  - **Google is off.** Turn it on in the panel or set `ROUTING_GOOGLE_ENABLED=true`. `DISTANCE_MATRIX_PROVIDER=google` also enables it until the panel is saved.
+  - Tracking follows the routing engine. `TRACKING_PROVIDER` and `TRACKING_PROVIDER_FALLBACKS` are no longer read, and saved tracking provider and fallback choices are ignored.
+  - `DISTANCE_MATRIX_PROVIDER` only seeds the admin defaults now; it no longer overrides order distance.
+  - New starting values, read until the panel is first saved: `ROUTING_GOOGLE_ENABLED`, `ROUTING_DISPLAY_ENGINE`, `ROUTING_OPTIMIZATION_ENGINE`, `ROUTING_SERVER_ROUTING`, plus `VALHALLA_HOST`, `VALHALLA_API_KEY`, `VALHALLA_COSTING` and `VALHALLA_TIMEOUT`.
+  - Existing orders: started, unfinished orders from the last 2 days are re-measured by `fleetops:update-estimations`; unstarted orders pick up road distance at their next ready or edit; completed and cancelled orders keep their stored values. No migration.
+- **Private routing hosts (#417).** On self-hosted installs, an organization override pointing at a private host (for example `http://valhalla:8002`) now falls back to the system server. Set `VALHALLA_ALLOW_PRIVATE_HOSTS=true` or `VROOM_ALLOW_PRIVATE_HOSTS=true` to allow it. System-level private hosts are unaffected.
+- **Fleetbase Cloud.** After deploying, set the Valhalla host to `https://valhalla.routing.fleetbase.io` with Cloud's gateway key, Google and OSRM off, and Valhalla as the default engine with road routing. Enter the gateway key only after fleetbase/valhalla#9 and fleetbase/vroom#8 ship, because the extensions' settings endpoints return the key to any signed-in user until then.
 
 ---
 ## Need help?
