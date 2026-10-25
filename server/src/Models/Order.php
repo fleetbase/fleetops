@@ -12,6 +12,7 @@ use Fleetbase\FleetOps\Events\OrderDriverUnassigned;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Notifications\OrderUnassigned;
 use Fleetbase\FleetOps\Support\LabelPdf;
+use Fleetbase\FleetOps\Support\NavigatorReview;
 use Fleetbase\FleetOps\Support\OrderEditPolicy;
 use Fleetbase\FleetOps\Support\OrderTracker;
 use Fleetbase\FleetOps\Support\Utils;
@@ -2314,7 +2315,8 @@ class Order extends Model
             return collect();
         }
 
-        $drivers = Driver::where(['status' => 'available', 'online' => 1])
+        // An app store reviewer's driver is never assigned a real order.
+        $drivers = NavigatorReview::excludeFrom(Driver::where(['status' => 'available', 'online' => 1]))
             ->whereHas('company', function ($q) {
                 $q->whereHas('users', function ($q) {
                     $q->whereHas('driver', function ($q) {

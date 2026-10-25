@@ -25,6 +25,7 @@ use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Support\ApiCacheThrottle;
 use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
+use Fleetbase\FleetOps\Support\NavigatorReview;
 use Fleetbase\FleetOps\Support\OSRM;
 use Fleetbase\FleetOps\Support\ProfileAccountManager;
 use Fleetbase\FleetOps\Support\TrackingPublisher;
@@ -581,6 +582,16 @@ class DriverController extends Controller
     {
         $phone = static::phone();
 
+        // An app store reviewer is sent nothing: they sign in with the code the organization
+        // set up for its Navigator (Settings → Navigator App), and verify-code creates the
+        // organization's review driver the first time. The number is refused, still unsent,
+        // where that access is off.
+        if (NavigatorReview::isReviewPhone($phone) && !static::verificationBypassListed($phone)) {
+            return NavigatorReview::isEnabledFor($this->navigatorReviewCompany())
+                ? response()->json(['status' => 'OK', 'method' => 'sms'])
+                : response()->apiError(NavigatorReview::OFF_MESSAGE, 422);
+        }
+
         // check if user exists
         $user = User::where('phone', $phone)->whereHas('driver')->whereNull('deleted_at')->first();
         if (!$user) {
@@ -655,6 +666,14 @@ class DriverController extends Controller
             return $this->create($request);
         }
 
+        // The organization's App Review code signs the review number in as its review driver.
+        if (NavigatorReview::isReviewPhone($identity)) {
+            $reviewCompany = $this->navigatorReviewCompany();
+            if (NavigatorReview::acceptsCode($reviewCompany, $identity, $code)) {
+                return $this->issueDriverToken(NavigatorReview::driver($reviewCompany));
+            }
+        }
+
         // check if user exists
         $user = User::whereHas('driver')->where(function ($query) use ($identity) {
             $query->where('phone', $identity);
@@ -685,6 +704,20 @@ class DriverController extends Controller
                 'company_uuid' => $company->uuid,
             ]
         )->first();
+
+        return $this->issueDriverToken($driver, $user);
+    }
+
+    /**
+     * Sign a driver in: a new access token for its account, stored on the driver and returned
+     * with the driver resource.
+     */
+    protected function issueDriverToken(?Driver $driver, ?User $user = null)
+    {
+        $user ??= $driver ? User::where('uuid', $driver->user_uuid)->first() : null;
+        if (!$driver || !$user) {
+            return response()->apiError('Unable to authenticate driver.');
+        }
 
         // generate auth token
         try {
@@ -1007,6 +1040,16 @@ class DriverController extends Controller
         return session('company');
     }
 
+    /**
+     * The organization whose Navigator the request is for: the API credential's.
+     */
+    protected function navigatorReviewCompany(): ?Company
+    {
+        $uuid = $this->sessionCompany();
+
+        return $uuid ? Company::where('uuid', $uuid)->first() : null;
+    }
+
     protected function applyUserInfoFromRequest(Request $request, array $userDetails): array
     {
         return User::applyUserInfoFromRequest($request, $userDetails);
@@ -1178,6 +1221,15 @@ class DriverController extends Controller
      * Shared with Internal\v1\DriverController so both verify-code paths cannot
      * drift apart.
      */
+    /**
+     * Whether an identity is a self-hosted review account listed in env config.
+     */
+    public static function verificationBypassListed(?string $identity): bool
+    {
+        return NavigatorReview::isAvailable()
+            && \Fleetbase\Support\AppReview::isConfiguredAccount('fleetops.navigator.bypass_verification_code', 'fleetops.navigator.review_accounts', $identity);
+    }
+
     public static function verificationBypassMatches(?string $identity, ?string $code): bool
     {
         return static::reviewAccountBypassMatches(
