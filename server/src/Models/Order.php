@@ -1950,7 +1950,8 @@ class Order extends Model
 
     /**
      * Sets the accurate distance and time for the order based on driving distance.
-     * Uses a utility method to calculate the driving distance and time between the current origin and destination positions.
+     * Uses a utility method to calculate the driving distance and time between the current origin and destination positions,
+     * with the provider the order's company routing settings resolve to unless `$options['provider']` is given.
      *
      * @return Order the updated Order instance
      */
@@ -1968,7 +1969,7 @@ class Order extends Model
         // Unreachable: `getDrivingDistanceAndTime()` is typed `: DistanceMatrix`
         // and every provider path casts both fields to float before constructing
         // it, so neither the null check nor the isset check can fail.
-        $matrix = Utils::getDrivingDistanceAndTime($origin, $destination, $options);
+        $matrix = Utils::getDrivingDistanceAndTime($origin, $destination, array_merge(['company_uuid' => $this->company_uuid], $options));
         // @codeCoverageIgnoreStart
         if (!$matrix || !isset($matrix->distance, $matrix->time)) {
             return $this;

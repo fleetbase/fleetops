@@ -193,6 +193,9 @@ class FleetOpsServiceProvider extends CoreServiceProvider
                 if (!$registry->has('osrm')) {
                     $registry->register(new \Fleetbase\FleetOps\Tracking\Providers\OsrmTrackingProvider());
                 }
+                if (!$registry->has('valhalla')) {
+                    $registry->register(new \Fleetbase\FleetOps\Tracking\Providers\ValhallaTrackingProvider());
+                }
                 if (!$registry->has('calculated')) {
                     $registry->register(new \Fleetbase\FleetOps\Tracking\Providers\CalculatedTrackingProvider());
                 }

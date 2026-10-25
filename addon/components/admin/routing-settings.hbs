@@ -1,36 +1,117 @@
 <div class="space-y-6">
     <InfoBlock @type="info" @icon="circle-info" class="mb-4">
-        Configure system-wide routing engine defaults here. Organizations can optionally override these values from their own routing settings.
+        Configure system-wide routing engine defaults here. Organizations can optionally override these values from their own routing settings, but only with providers that are switched on
+        below.
     </InfoBlock>
 
-    <ContentPanel @title="Tracking Defaults" @open={{true}} @wrapperClass="bordered-classic">
-        <InputGroup @name="Default Tracking Provider" @helpText="Default provider for organization-level tracking intelligence unless an organization overrides it.">
+    <ContentPanel @title="Provider Access" @open={{true}} @wrapperClass="bordered-classic">
+        <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">
+            Choose which providers organizations may use for map routing, route optimization, order distance and tracking. A provider switched off here is never called, even if an
+            organization selected it; they fall back to the defaults below. Changes apply on every server within 30 seconds.
+        </p>
+        <div class="space-y-3">
+            {{#each this.providerAccessRows as |provider|}}
+                <div class="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2 dark:border-gray-700" data-test-provider-access={{provider.key}}>
+                    <div>
+                        <div class="text-sm font-semibold">{{provider.label}}</div>
+                        {{#if provider.billed}}
+                            <div class="text-xs text-red-600 dark:text-red-400">Billed per request to the platform's Google Maps key.</div>
+                        {{/if}}
+                    </div>
+                    <Toggle @isToggled={{provider.enabled}} @onToggle={{fn this.toggleProvider provider.key}} />
+                </div>
+            {{/each}}
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="Routing Defaults" @open={{true}} @wrapperClass="bordered-classic">
+        <InputGroup
+            @name="Default Routing Engine"
+            @helpText="Used for everything route, distance and time for organizations that have not chosen their own: map routes, each order's distance and time, and live ETAs while it is in progress."
+        >
             <Select
                 class="w-full"
-                @value={{this.trackingProvider}}
-                @options={{this.trackingProviderOptions}}
-                @optionLabel="label"
-                @optionValue="value"
-                @placeholder="Select default tracking provider"
-                @onSelect={{fn (mut this.trackingProvider)}}
+                @value={{this.defaultDisplayEngine}}
+                @options={{this.displayEngineOptions}}
+                @optionLabel="name"
+                @optionValue="key"
+                @placeholder="Select default routing engine"
+                @onSelect={{fn (mut this.defaultDisplayEngine)}}
             />
         </InputGroup>
-        <InputGroup @name="Default Fallback Providers" @helpText="Providers used when the selected tracking provider is unavailable.">
-            <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                <PowerSelectMultiple
-                    @searchEnabled={{true}}
-                    @searchField="label"
-                    @options={{this.trackingProviderOptions}}
-                    @selected={{this.selectedTrackingFallbackOptions}}
-                    @onChange={{this.setTrackingFallbacks}}
-                    @placeholder="Select default fallback providers"
-                    @triggerClass="form-select form-input form-input-sm flex-1"
-                    as |provider|
-                >
-                    {{provider.label}}
-                </PowerSelectMultiple>
-            </div>
+        <InputGroup @name="Default Route Optimization Engine" @helpText="Decides the order stops are visited in, for organizations that have not chosen their own.">
+            <Select
+                class="w-full"
+                @value={{this.defaultOptimizationEngine}}
+                @options={{this.optimizationEngineOptions}}
+                @optionLabel="name"
+                @optionValue="key"
+                @placeholder="Select default route optimization engine"
+                @onSelect={{fn (mut this.defaultOptimizationEngine)}}
+            />
         </InputGroup>
+        <InputGroup
+            @name="Server-side Routing"
+            @helpText="Straight-line stops every routing call for order distance, time and live ETAs at once, for every organization. Map routes are not affected."
+        >
+            <Select
+                class="w-full"
+                @value={{this.serverRouting}}
+                @options={{this.serverRoutingOptions}}
+                @optionLabel="label"
+                @optionValue="value"
+                @onSelect={{fn (mut this.serverRouting)}}
+                data-test-server-routing
+            />
+        </InputGroup>
+    </ContentPanel>
+
+    <ContentPanel @title="Organization Exceptions" @open={{true}} @wrapperClass="bordered-classic">
+        <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">
+            Switch a provider on for specific organizations only, for example Google for a customer who pays for it.
+        </p>
+        <div class="space-y-3">
+            {{#each this.providerExceptionRows as |row|}}
+                <div class="flex items-center gap-3 rounded-md border border-gray-200 px-3 py-2 dark:border-gray-700" data-test-provider-exception={{row.exception.company_uuid}}>
+                    <div class="w-1/3 truncate text-sm font-semibold">{{row.exception.company_name}}</div>
+                    <div class="fleetbase-model-select fleetbase-power-select ember-model-select flex-1">
+                        <PowerSelectMultiple
+                            @options={{this.exceptionProviderOptions}}
+                            @selected={{row.selected}}
+                            @onChange={{fn this.setExceptionProviders row.exception}}
+                            @placeholder="Select providers"
+                            @triggerClass="form-select form-input form-input-sm flex-1"
+                            as |provider|
+                        >
+                            {{provider.label}}
+                        </PowerSelectMultiple>
+                    </div>
+                    <Button @type="danger" @size="xs" @icon="trash" @onClick={{fn this.removeProviderException row.exception}} />
+                </div>
+            {{else}}
+                <div class="text-sm text-gray-500">No exceptions. Every organization follows Provider Access.</div>
+            {{/each}}
+        </div>
+        <InputGroup @name="Add Organization" class="mt-4">
+            <ModelSelect
+                @modelName="company"
+                @query={{hash view="admin"}}
+                @placeholder="Search organizations"
+                @triggerClass="form-select form-input"
+                @infiniteScroll={{false}}
+                @renderInPlace={{true}}
+                @onChange={{this.addProviderException}}
+                as |company|
+            >
+                {{company.name}}
+            </ModelSelect>
+        </InputGroup>
+    </ContentPanel>
+
+    <ContentPanel @title="Tracking Behaviour" @open={{true}} @wrapperClass="bordered-classic">
+        <p class="mb-2 text-sm text-gray-600 dark:text-gray-400">
+            Live ETAs, remaining distance and route lines come from each organization's routing engine. These settings only tune their behaviour.
+        </p>
         <div class="flex justify-end">
             <Button
                 @type="default"

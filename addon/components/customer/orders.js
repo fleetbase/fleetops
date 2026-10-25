@@ -255,7 +255,7 @@ export default class CustomerOrdersComponent extends Component {
             debug(`Leaflet Map Error: ${error.message}`);
         }
 
-        const routingService = this.currentUser.getOption('routing', { router: 'osrm' }).router;
+        const routingService = this.currentUser.getOption('routing', { router: 'valhalla' }).router;
         const { router, formatter } = this.leafletRoutingControl.get(routingService);
 
         this.routeControl = new RoutingControl({

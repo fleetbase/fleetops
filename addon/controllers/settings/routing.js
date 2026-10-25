@@ -10,11 +10,9 @@ export default class SettingsRoutingController extends Controller {
     @service currentUser;
     @service routeEngine;
     @service routeOptimization;
-    @tracked displayEngine = 'osrm';
-    @tracked optimizationEngine = 'osrm';
+    @tracked displayEngine = 'valhalla';
+    @tracked optimizationEngine = 'valhalla';
     @tracked routingUnit = 'km';
-    @tracked trackingProvider = 'google_routes';
-    @tracked trackingFallbacks = ['osrm', 'calculated'];
     @tracked trackingTrafficEnabled = true;
     @tracked trackingCacheTtlSeconds = 60;
     @tracked trackingRouteCacheTtlSeconds = 600;
@@ -27,11 +25,6 @@ export default class SettingsRoutingController extends Controller {
     @tracked prolongedStoppageAlertsEnabled = true;
     @tracked prolongedStoppageDurationThresholdMinutes = 30;
     @tracked showTrackingAdvancedSettings = false;
-    @tracked trackingProviderOptions = [
-        { value: 'google_routes', label: 'Google Routes' },
-        { value: 'osrm', label: 'OSRM' },
-        { value: 'calculated', label: 'Calculated' },
-    ];
     @tracked routingUnitOptions = [
         { label: 'Kilometers', value: 'km' },
         { label: 'Miles', value: 'mi' },
@@ -84,12 +77,10 @@ export default class SettingsRoutingController extends Controller {
     @task *getSettings() {
         try {
             const { router, display_engine, optimization_engine, unit } = yield this.fetch.get('fleet-ops/settings/routing-settings');
-            this.displayEngine = display_engine ?? router ?? 'osrm';
-            this.optimizationEngine = optimization_engine ?? display_engine ?? router ?? 'osrm';
+            this.displayEngine = display_engine ?? router ?? 'valhalla';
+            this.optimizationEngine = optimization_engine ?? display_engine ?? router ?? 'valhalla';
             this.routingUnit = unit;
             const trackingSettings = yield this.fetch.get('fleet-ops/settings/tracking-settings');
-            this.trackingProvider = trackingSettings.provider ?? 'google_routes';
-            this.trackingFallbacks = this.normalizeFallbacks(trackingSettings.fallbacks);
             this.trackingTrafficEnabled = trackingSettings.traffic_enabled ?? true;
             this.trackingCacheTtlSeconds = trackingSettings.cache_ttl_seconds ?? 60;
             this.trackingRouteCacheTtlSeconds = trackingSettings.route_cache_ttl_seconds ?? 600;
@@ -101,22 +92,13 @@ export default class SettingsRoutingController extends Controller {
             this.routeDeviationDistanceThresholdMeters = trackingSettings.alerts?.route_deviations?.distance_threshold_meters ?? 500;
             this.prolongedStoppageAlertsEnabled = trackingSettings.alerts?.prolonged_stoppages?.enabled ?? true;
             this.prolongedStoppageDurationThresholdMinutes = trackingSettings.alerts?.prolonged_stoppages?.duration_threshold_minutes ?? 30;
-            this.trackingProviderOptions = this.normalizeProviderOptions(trackingSettings.providers ?? this.trackingProviderOptions);
         } catch (error) {
             this.notifications.serverError(error);
         }
     }
 
-    get selectedTrackingFallbackOptions() {
-        const selected = new Set(this.normalizeFallbacks(this.trackingFallbacks));
-
-        return this.trackingProviderOptions.filter((option) => selected.has(this.optionValue(option)));
-    }
-
     get trackingSettingsPayload() {
         return {
-            provider: this.trackingProvider,
-            fallbacks: this.normalizeFallbacks(this.trackingFallbacks),
             traffic_enabled: this.trackingTrafficEnabled,
             cache_ttl_seconds: Number(this.trackingCacheTtlSeconds) || 60,
             route_cache_ttl_seconds: Number(this.trackingRouteCacheTtlSeconds) || 600,
@@ -137,55 +119,6 @@ export default class SettingsRoutingController extends Controller {
                 },
             },
         };
-    }
-
-    normalizeFallbacks(fallbacks) {
-        if (Array.isArray(fallbacks)) {
-            return fallbacks
-                .map((fallback) => this.optionValue(fallback))
-                .map((fallback) => String(fallback).trim())
-                .filter(Boolean);
-        }
-
-        return String(fallbacks ?? '')
-            .split(',')
-            .map((fallback) => fallback.trim())
-            .filter(Boolean);
-    }
-
-    normalizeProviderOptions(options = []) {
-        return options.map((option) => {
-            const value = this.optionValue(option);
-            const label = option?.label ?? option?.name ?? this.providerLabel(value);
-
-            return {
-                ...option,
-                key: option?.key ?? value,
-                name: option?.name ?? label,
-                value,
-                label,
-            };
-        });
-    }
-
-    providerLabel(value) {
-        if (value === 'osrm') {
-            return 'OSRM';
-        }
-
-        return String(value ?? '')
-            .replace(/[_-]+/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .replace(/\b\w/g, (character) => character.toUpperCase());
-    }
-
-    optionValue(option) {
-        return typeof option === 'object' && option !== null ? (option.value ?? option.key) : option;
-    }
-
-    @action setTrackingFallbacks(options) {
-        this.trackingFallbacks = this.normalizeFallbacks(options);
     }
 
     @action toggleTrackingAdvancedSettings() {

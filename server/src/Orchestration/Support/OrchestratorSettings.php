@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Orchestration\Support;
 
+use Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy;
 use Fleetbase\Models\Setting;
 
 /**
@@ -52,10 +53,13 @@ class OrchestratorSettings
     }
 
     /**
-     * Identifier of the orchestration engine the organization selected.
+     * Identifier of the orchestration engine the organization selected, or the
+     * built-in engine when the administrator has switched that provider off.
      */
     public static function engineForCompany(?string $companyUuid): string
     {
-        return (string) static::forCompany($companyUuid)['allocation_engine'];
+        $engine = (string) static::forCompany($companyUuid)['allocation_engine'];
+
+        return RoutingProviderPolicy::allows($engine, $companyUuid) ? $engine : static::DEFAULT_ENGINE;
     }
 }

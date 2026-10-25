@@ -2871,7 +2871,7 @@ settings:
         configure-routing: Configure Routing
         select-routing-service: Select Routing Service
         routing-service: Routing Service
-        routing-service-help-text: Select the service which is responsible for calculating and plotting routes on the map.
+        routing-service-help-text: Select the service that plots routes on the map and measures each order's distance, time and live ETA.
         select-routing-distance-unit: Select Routing Distance Unit
         routing-distance-unit: Routing Distance Unit
         routing-distance-unit-help-text: The unit used for calculating distance and routes.
