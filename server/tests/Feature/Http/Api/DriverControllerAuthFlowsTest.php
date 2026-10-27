@@ -740,3 +740,26 @@ test('the self-hosted Navigator review accounts still sign in where the organiza
         config(['fleetops.navigator.bypass_verification_code' => null, 'fleetops.navigator.review_accounts' => []]);
     }
 });
+
+test('a driver token is never issued without a driver or its account', function () {
+    $connection = fleetopsDriverAuthBoot();
+    $controller = new DriverController();
+    $issue      = (new ReflectionMethod(DriverController::class, 'issueDriverToken'))->getClosure($controller);
+
+    // No driver at all, and a driver whose login account no longer exists
+    $connection->table('drivers')->insert(['uuid' => 'driver-orphan', 'company_uuid' => 'company-1', 'user_uuid' => 'user-missing']);
+
+    foreach ([$issue(null), $issue(Driver::withoutGlobalScopes()->where('uuid', 'driver-orphan')->first())] as $response) {
+        expect($response)->toBeInstanceOf(JsonResponse::class)
+            ->and($response->getData(true)['error'])->toBe('Unable to authenticate driver.');
+    }
+});
+
+test('blank identities and drivers without an account are never the Navigator review number', function () {
+    fleetopsDriverAuthBoot();
+
+    expect(Fleetbase\FleetOps\Support\NavigatorReview::isReviewPhone(null))->toBeFalse()
+        ->and(Fleetbase\FleetOps\Support\NavigatorReview::isReviewPhone(''))->toBeFalse()
+        ->and(Fleetbase\FleetOps\Support\NavigatorReview::isReviewDriver(null))->toBeFalse()
+        ->and(Fleetbase\FleetOps\Support\NavigatorReview::isReviewDriver(new Driver()))->toBeFalse();
+});
