@@ -30,6 +30,8 @@ export default class AdminRoutingSettingsComponent extends Component {
     @tracked trackingStaleLocationThresholdSeconds = 300;
     @tracked trackingDefaultVehicleSpeedKph = 35;
     @tracked showTrackingAdvancedSettings = false;
+    @tracked osrmHost = '';
+    @tracked osrmEnvironmentHost = null;
 
     constructor() {
         super(...arguments);
@@ -40,6 +42,9 @@ export default class AdminRoutingSettingsComponent extends Component {
         try {
             const policy = yield this.fetch.get('fleet-ops/settings/admin-routing-providers');
             this.applyProviderPolicy(policy);
+
+            const osrm = yield this.fetch.get('fleet-ops/settings/admin-osrm-settings');
+            this.applyOsrmSettings(osrm);
 
             const settings = yield this.fetch.get('fleet-ops/settings/admin-tracking-settings');
             this.trackingTrafficEnabled = settings.traffic_enabled ?? true;
@@ -56,11 +61,24 @@ export default class AdminRoutingSettingsComponent extends Component {
         try {
             const policy = yield this.fetch.post('fleet-ops/settings/admin-routing-providers', this.providerPolicyPayload);
             this.applyProviderPolicy(policy);
+            const osrm = yield this.fetch.post('fleet-ops/settings/admin-osrm-settings', { api_host: this.osrmHost });
+            this.applyOsrmSettings(osrm);
             yield this.fetch.post('fleet-ops/settings/admin-tracking-settings', this.trackingSettingsPayload);
             this.notifications.success('Routing settings saved.');
         } catch (error) {
             this.notifications.serverError(error);
         }
+    }
+
+    applyOsrmSettings(settings = {}) {
+        this.osrmHost = settings.api_host ?? '';
+        this.osrmEnvironmentHost = settings.environment_host ?? null;
+    }
+
+    get osrmHelpText() {
+        const environment = this.osrmEnvironmentHost ? ` Empty uses OSRM_HOST (${this.osrmEnvironmentHost}).` : '';
+
+        return `The OSRM server organizations use unless they set their own. The public demo server (router.project-osrm.org) only draws map routes; order distance and ETAs never use it.${environment}`;
     }
 
     applyProviderPolicy(policy = {}) {

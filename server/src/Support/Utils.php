@@ -835,13 +835,13 @@ class Utils extends FleetbaseUtils
             }
 
             // The public OSRM demo server's usage policy does not allow production traffic
-            if ($provider === 'osrm' && !RoutingEngineResolver::hasPrivateOsrmHost()) {
+            if ($provider === 'osrm' && !RoutingEngineResolver::hasPrivateOsrmHost($companyUuid)) {
                 throw new \RuntimeException('No private OSRM host is configured.');
             }
 
             $distanceMatrix = match ($provider) {
                 'valhalla' => static::getDistanceMatrixFromValhalla($origins, $destinations, $companyUuid),
-                'osrm'     => static::getDistanceMatrixFromOSRM($origins, $destinations),
+                'osrm'     => OSRM::forCompany($companyUuid, fn () => static::getDistanceMatrixFromOSRM($origins, $destinations)),
                 'google'   => static::getDistanceMatrixFromGoogle($origins, $destinations),
                 default    => throw new \InvalidArgumentException('Unsupported distance matrix provider: ' . $provider),
             };

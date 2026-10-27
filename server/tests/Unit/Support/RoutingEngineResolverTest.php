@@ -1,6 +1,8 @@
 <?php
 
+use Fleetbase\FleetOps\Support\OSRM;
 use Fleetbase\FleetOps\Support\Routing\HostPolicy;
+use Fleetbase\FleetOps\Support\Routing\OsrmConnection;
 use Fleetbase\FleetOps\Support\Routing\RoutingEngineResolver;
 use Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy;
 use Fleetbase\FleetOps\Support\Routing\ValhallaClient;
@@ -126,7 +128,7 @@ beforeEach(function () {
 
 afterEach(function () {
     HostPolicy::resolveHostsUsing(null);
-    config(['fleetops.valhalla.allow_private_hosts' => false]);
+    config(['fleetops.valhalla.allow_private_hosts' => false, 'fleetops.osrm.allow_private_hosts' => false]);
     config([
         'fleetops.distance_matrix.provider'    => null,
         'fleetops.osrm.host'                   => null,
@@ -678,4 +680,100 @@ test('osrm is never a fallback and never reaches the public demo server', functi
     expect($matrix->distance)->toBe($estimate->distance)
         ->and($requests)->toBe(0)
         ->and($log->warnings[0][1]['error'])->toBe('No private OSRM host is configured.');
+});
+
+test('osrm uses an organization server, then the admin server, then OSRM_HOST', function () {
+    $connection = fleetopsDistanceProviderBoot();
+    config(['fleetops.osrm.host' => 'https://router.project-osrm.org']);
+
+    // Only the public demo server: a source of map routes, never server traffic
+    expect(OsrmConnection::resolve('company-1'))->toBe(['host' => 'https://router.project-osrm.org', 'source' => 'environment'])
+        ->and(OsrmConnection::isConfigured('company-1'))->toBeFalse()
+        ->and(RoutingEngineResolver::hasPrivateOsrmHost('company-1'))->toBeFalse();
+
+    config(['fleetops.osrm.host' => '']);
+    Cache::flush();
+    expect(OsrmConnection::resolve())->toBe(['host' => 'https://router.project-osrm.org', 'source' => 'default']);
+
+    // The system server saved in Admin -> Fleet-Ops -> Routing wins over the environment
+    config(['fleetops.osrm.host' => 'https://env-osrm.fleetbase.test']);
+    $connection->table('settings')->insert(['key' => 'osrm', 'value' => json_encode(['api_host' => 'https://osrm.fleetbase.test/'])]);
+    // An organization with its own server uses it; one the server must not call is ignored
+    $connection->table('settings')->insert(['key' => 'company.company-2.osrm', 'value' => json_encode(['api_host' => 'https://own.osrm.test'])]);
+    $connection->table('settings')->insert(['key' => 'company.company-3.osrm', 'value' => json_encode(['api_host' => 'http://169.254.169.254/latest'])]);
+    Cache::flush();
+
+    expect(OsrmConnection::resolve('company-1'))->toBe(['host' => 'https://osrm.fleetbase.test', 'source' => 'system'])
+        ->and(OsrmConnection::resolve('company-2'))->toBe(['host' => 'https://own.osrm.test', 'source' => 'organization'])
+        ->and(OsrmConnection::resolve('company-3'))->toBe(['host' => 'https://osrm.fleetbase.test', 'source' => 'system'])
+        ->and(OsrmConnection::resolve(null))->toBe(['host' => 'https://osrm.fleetbase.test', 'source' => 'system'])
+        ->and(RoutingEngineResolver::hasPrivateOsrmHost('company-2'))->toBeTrue();
+
+    // Results are cached until a save forgets them
+    $connection->table('settings')->where('key', 'company.company-2.osrm')->update(['value' => json_encode(['api_host' => 'https://moved.osrm.test'])]);
+    expect(OsrmConnection::host('company-2'))->toBe('https://own.osrm.test');
+    OsrmConnection::forget('company-2');
+    expect(OsrmConnection::host('company-2'))->toBe('https://moved.osrm.test');
+
+    // Private organization hosts only when the install opts in
+    $connection->table('settings')->insert(['key' => 'company.company-4.osrm', 'value' => json_encode(['api_host' => 'http://10.0.0.12:5000'])]);
+    expect(OsrmConnection::host('company-4'))->toBe('https://osrm.fleetbase.test');
+    config(['fleetops.osrm.allow_private_hosts' => true]);
+    OsrmConnection::forget('company-4');
+    expect(OsrmConnection::host('company-4'))->toBe('http://10.0.0.12:5000')
+        ->and(OsrmConnection::isPrivateHost('not a url'))->toBeFalse();
+
+    // An unreadable settings store falls back to the environment
+    $connection->getSchemaBuilder()->drop('settings');
+    Cache::flush();
+    expect(OsrmConnection::resolve('company-2'))->toBe(['host' => 'https://env-osrm.fleetbase.test', 'source' => 'environment']);
+});
+
+test('osrm calls go to the organization server the caller names, then the session company', function () {
+    $connection = fleetopsDistanceProviderBoot();
+    config(['fleetops.osrm.host' => 'https://env-osrm.fleetbase.test']);
+    $connection->table('settings')->insert(['key' => 'company.company-2.osrm', 'value' => json_encode(['api_host' => 'https://own.osrm.test'])]);
+    Cache::flush();
+    $urls = [];
+    Http::fake(function ($request) use (&$urls) {
+        $urls[] = (string) $request->url();
+
+        return Http::response(['code' => 'Ok', 'routes' => [['distance' => 1000.0, 'duration' => 60.0]]]);
+    });
+
+    OSRM::getRouteFromCoordinatesString('144.83,-37.78;144.58,-37.68');
+    $result = OSRM::forCompany('company-2', fn () => OSRM::getRouteFromCoordinatesString('144.83,-37.79;144.58,-37.68'));
+    session(['company' => 'company-2']);
+    OSRM::getRouteFromCoordinatesString('144.83,-37.80;144.58,-37.68');
+
+    expect($urls[0])->toStartWith('https://env-osrm.fleetbase.test/route/v1/driving/')
+        ->and($urls[1])->toStartWith('https://own.osrm.test/route/v1/driving/')
+        ->and($urls[2])->toStartWith('https://own.osrm.test/route/v1/driving/')
+        ->and((float) data_get($result, 'routes.0.distance'))->toBe(1000.0);
+
+    // The scope is restored even when the call fails
+    session(['company' => null]);
+    expect(fn () => OSRM::forCompany('company-2', fn () => throw new RuntimeException('boom')))->toThrow(RuntimeException::class, 'boom');
+    OSRM::getRouteFromCoordinatesString('144.83,-37.81;144.58,-37.68');
+    expect($urls[3])->toStartWith('https://env-osrm.fleetbase.test/');
+});
+
+test('order distance from osrm uses the organization osrm server', function () {
+    $connection = fleetopsDistanceProviderBoot();
+    config(['fleetops.osrm.host' => 'https://router.project-osrm.org']);
+    $connection->table('settings')->insert(['key' => 'company.company-2.osrm', 'value' => json_encode(['api_host' => 'https://own.osrm.test'])]);
+    fleetopsDistanceProviderRouting($connection, 'company-2', ['display_engine' => 'osrm']);
+    Cache::flush();
+    $urls = [];
+    Http::fake(function ($request) use (&$urls) {
+        $urls[] = (string) $request->url();
+
+        return Http::response(['code' => 'Ok', 'routes' => [['distance' => 31520.0, 'duration' => 1610.0]]]);
+    });
+
+    expect(RoutingEngineResolver::resolve('company-2'))->toBe('osrm');
+    $matrix = Utils::getDrivingDistanceAndTime([-37.78, 144.83], [-37.68, 144.58], ['company_uuid' => 'company-2']);
+
+    expect($matrix->distance)->toBe(31520.0)
+        ->and($urls[0])->toStartWith('https://own.osrm.test/route/v1/driving/');
 });

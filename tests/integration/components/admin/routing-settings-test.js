@@ -23,6 +23,10 @@ class FetchStubService extends Service {
             });
         }
 
+        if (url === 'fleet-ops/settings/admin-osrm-settings') {
+            return Promise.resolve({ api_host: 'https://osrm.example.com', environment_host: 'https://router.project-osrm.org' });
+        }
+
         return Promise.resolve({ traffic_enabled: false, cache_ttl_seconds: 45 });
     }
 
@@ -72,6 +76,7 @@ module('Integration | Component | admin/routing-settings', function (hooks) {
         assert.dom('[data-test-provider-access]').exists({ count: 4 });
         assert.dom('[data-test-provider-access="google"]').includesText('Billed per request');
         assert.dom('[data-test-provider-exception="company-1"]').includesText('Acme Logistics');
+        assert.dom('[data-test-osrm-host]').hasValue('https://osrm.example.com');
 
         // Switch Google on for everyone, then remove the now-redundant exception
         await click('[data-test-provider-access="google"] [role="checkbox"]');
@@ -88,11 +93,12 @@ module('Integration | Component | admin/routing-settings', function (hooks) {
                 exceptions: [],
             },
         ]);
+        assert.deepEqual(fetch.posts[1], ['fleet-ops/settings/admin-osrm-settings', { api_host: 'https://osrm.example.com' }]);
         // Tracking only saves behaviour; its provider is the routing engine
-        assert.strictEqual(fetch.posts[1][0], 'fleet-ops/settings/admin-tracking-settings');
-        assert.false('provider' in fetch.posts[1][1]);
-        assert.false(fetch.posts[1][1].traffic_enabled);
-        assert.strictEqual(fetch.posts[1][1].cache_ttl_seconds, 45);
+        assert.strictEqual(fetch.posts[2][0], 'fleet-ops/settings/admin-tracking-settings');
+        assert.false('provider' in fetch.posts[2][1]);
+        assert.false(fetch.posts[2][1].traffic_enabled);
+        assert.strictEqual(fetch.posts[2][1].cache_ttl_seconds, 45);
         assert.deepEqual(this.owner.lookup('service:notifications').successes, ['Routing settings saved.']);
     });
 });

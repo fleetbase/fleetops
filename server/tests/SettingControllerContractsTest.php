@@ -387,6 +387,8 @@ test('setting controller handles notification and routing settings contracts', f
         'optimization_engine'         => 'mapbox',
         'routing_optimization_engine' => 'mapbox',
         'unit'                        => 'km',
+        'osrm_host'                   => 'https://router.project-osrm.org',
+        'osrm_host_source'            => 'default',
     ]);
 
     // Switched off again, a saved Google choice is replaced by the platform defaults
@@ -999,5 +1001,63 @@ test('optional payload counts omit timeouts but surface other database errors', 
         } else {
             app()->forgetInstance('request');
         }
+    }
+});
+
+test('setting controller reads and saves the system and organization OSRM servers', function () {
+    Cache::flush();
+    Fleetbase\FleetOps\Support\Routing\HostPolicy::resolveHostsUsing(fn (string $host) => str_starts_with($host, 'internal.') ? ['10.0.0.12'] : ['93.184.216.34']);
+    config(['fleetops.osrm.host' => 'https://router.project-osrm.org', 'fleetops.osrm.allow_private_hosts' => false]);
+    $controller = new FleetOpsSettingControllerProbe();
+
+    try {
+        expect(fleetopsJsonPayload($controller->getAdminOsrmSettings()))->toBe([
+            'api_host'         => null,
+            'environment_host' => 'https://router.project-osrm.org',
+            'host'             => 'https://router.project-osrm.org',
+        ]);
+
+        // Administrators may use a private address; the trailing slash is dropped
+        $saved = fleetopsJsonPayload($controller->saveAdminOsrmSettings(new Request(['api_host' => ' http://10.0.0.5:5000/ '])));
+        expect($controller->configured['osrm'])->toBe(['api_host' => 'http://10.0.0.5:5000'])
+            ->and($saved['api_host'])->toBe('http://10.0.0.5:5000');
+
+        // ...but never a non-http URL or one carrying credentials
+        foreach (['file:///etc/passwd', 'https://user:pass@osrm.example.com'] as $host) {
+            $refused = $controller->saveAdminOsrmSettings(new Request(['api_host' => $host]));
+            expect($refused->getStatusCode())->toBe(422);
+        }
+        expect($controller->configured['osrm'])->toBe(['api_host' => 'http://10.0.0.5:5000']);
+
+        // Blank clears the system server
+        $controller->saveAdminOsrmSettings(new Request(['api_host' => '  ']));
+        expect($controller->configured['osrm'])->toBe(['api_host' => null]);
+
+        // An organization's own server must be a public address
+        $controller->lookupCompanySettings['osrm'] = ['api_host' => 'https://old.osrm.example.com'];
+        expect(fleetopsJsonPayload($controller->getOsrmSettings()))->toBe([
+            'api_host'    => 'https://old.osrm.example.com',
+            'system_host' => 'https://router.project-osrm.org',
+        ]);
+
+        $private = $controller->saveOsrmSettings(new Request(['api_host' => 'https://internal.osrm.example.com']));
+        expect($private->getStatusCode())->toBe(422)
+            ->and(json_encode(fleetopsJsonPayload($private)))->toContain('private, loopback or reserved address')
+            ->and($controller->configuredCompany)->not->toHaveKey('osrm');
+
+        fleetopsJsonPayload($controller->saveOsrmSettings(new Request(['api_host' => 'https://osrm.example.com/'])));
+        expect($controller->configuredCompany['osrm'])->toBe(['api_host' => 'https://osrm.example.com']);
+
+        // ...unless the install allows private organization hosts
+        config(['fleetops.osrm.allow_private_hosts' => true]);
+        $controller->saveOsrmSettings(new Request(['api_host' => 'https://internal.osrm.example.com']));
+        expect($controller->configuredCompany['osrm'])->toBe(['api_host' => 'https://internal.osrm.example.com']);
+
+        $controller->saveOsrmSettings(new Request([]));
+        expect($controller->configuredCompany['osrm'])->toBe(['api_host' => null]);
+    } finally {
+        Fleetbase\FleetOps\Support\Routing\HostPolicy::resolveHostsUsing(null);
+        config(['fleetops.osrm.host' => null, 'fleetops.osrm.allow_private_hosts' => false]);
+        Cache::flush();
     }
 });

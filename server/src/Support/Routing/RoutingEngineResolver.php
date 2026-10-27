@@ -86,18 +86,20 @@ class RoutingEngineResolver
         }
 
         return match ($engine) {
-            'osrm'     => static::hasPrivateOsrmHost(),
+            'osrm'     => static::hasPrivateOsrmHost($companyUuid),
             'valhalla' => ValhallaClient::isConfigured($companyUuid),
             'google'   => filled(static::googleMapsApiKey()),
             default    => false,
         };
     }
 
-    public static function hasPrivateOsrmHost(): bool
+    /**
+     * Whether the organization's OSRM server (its own, the admin's, or OSRM_HOST)
+     * is a private one the server may call: never the public demo server.
+     */
+    public static function hasPrivateOsrmHost(?string $companyUuid = null): bool
     {
-        $host = parse_url((string) config('fleetops.osrm.host'), PHP_URL_HOST);
-
-        return filled($host) && strcasecmp($host, static::PUBLIC_OSRM_HOST) !== 0;
+        return OsrmConnection::isConfigured($companyUuid);
     }
 
     public static function googleMapsApiKey(): ?string

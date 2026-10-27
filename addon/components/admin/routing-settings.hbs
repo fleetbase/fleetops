@@ -66,6 +66,12 @@
         </InputGroup>
     </ContentPanel>
 
+    <ContentPanel @title="OSRM Server" @open={{true}} @wrapperClass="bordered-classic">
+        <InputGroup @name="OSRM Host" @helpText={{this.osrmHelpText}}>
+            <Input @value={{this.osrmHost}} placeholder="https://osrm.example.com" class="w-full form-input" data-test-osrm-host />
+        </InputGroup>
+    </ContentPanel>
+
     <ContentPanel @title="Organization Exceptions" @open={{true}} @wrapperClass="bordered-classic">
         <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">
             Switch a provider on for specific organizations only, for example Google for a customer who pays for it.
@@ -149,6 +155,7 @@
             <RegistryComponent />
         </div>
     </RegistryYield>
+    <Spacer @height="200px" />
 </div>
 
 <EmberWormhole @to="next-view-section-subheader-actions">

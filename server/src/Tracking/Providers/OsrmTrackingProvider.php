@@ -29,7 +29,7 @@ class OsrmTrackingProvider implements TrackingProviderInterface
      */
     public function canTrack(TrackingContext $context): bool
     {
-        return $context->canRoute() && RoutingEngineResolver::hasPrivateOsrmHost();
+        return $context->canRoute() && RoutingEngineResolver::hasPrivateOsrmHost($context->order->company_uuid);
     }
 
     public function track(TrackingContext $context, TrackingOptions $options): TrackingProviderResult
@@ -71,11 +71,11 @@ class OsrmTrackingProvider implements TrackingProviderInterface
 
     protected function routeResponse(TrackingContext $context): array
     {
-        return OSRM::getRouteFromPoints($context->routePoints(), [
+        return OSRM::forCompany($context->order->company_uuid, fn () => OSRM::getRouteFromPoints($context->routePoints(), [
             'overview'    => 'full',
             'geometries'  => 'polyline',
             'steps'       => 'false',
             'annotations' => 'false',
-        ]);
+        ]));
     }
 }

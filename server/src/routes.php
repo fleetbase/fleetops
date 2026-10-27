@@ -834,6 +834,10 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                         $router->get('admin-tracking-settings', 'SettingController@getAdminTrackingSettings');
                                         $router->post('admin-tracking-settings', 'SettingController@saveAdminTrackingSettings');
                                         $router->get('admin-routing-providers', 'SettingController@getAdminRoutingProviders');
+                                        $router->get('admin-osrm-settings', 'SettingController@getAdminOsrmSettings');
+                                        $router->post('admin-osrm-settings', 'SettingController@saveAdminOsrmSettings');
+                                        $router->get('osrm-settings', 'SettingController@getOsrmSettings');
+                                        $router->post('osrm-settings', 'SettingController@saveOsrmSettings');
                                         $router->post('admin-routing-providers', 'SettingController@saveAdminRoutingProviders');
                                         $router->get('tracking-page-settings', 'SettingController@getTrackingPageSettings');
                                         $router->post('tracking-page-settings', 'SettingController@saveTrackingPageSettings');

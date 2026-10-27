@@ -25,11 +25,23 @@ export default class SettingsRoutingController extends Controller {
     @tracked prolongedStoppageAlertsEnabled = true;
     @tracked prolongedStoppageDurationThresholdMinutes = 30;
     @tracked showTrackingAdvancedSettings = false;
+    @tracked osrmUseOwnServer = false;
+    @tracked osrmHost = '';
+    @tracked osrmSystemHost = null;
     @tracked routingUnitOptions = [
         { label: 'Kilometers', value: 'km' },
         { label: 'Miles', value: 'mi' },
     ];
     saveTasks = new Map();
+
+    /** Whether the organization routes or optimizes with OSRM, so its own OSRM server applies. */
+    get usesOsrm() {
+        return this.displayEngine === 'osrm' || this.optimizationEngine === 'osrm';
+    }
+
+    get osrmSystemHelpText() {
+        return this.osrmSystemHost ? `Otherwise this organization uses ${this.osrmSystemHost}.` : 'Otherwise this organization uses the platform OSRM server.';
+    }
 
     get hasEngineOverrides() {
         return ['vroom', 'valhalla'].includes(this.displayEngine) || ['vroom', 'valhalla'].includes(this.optimizationEngine);
@@ -54,14 +66,13 @@ export default class SettingsRoutingController extends Controller {
             });
             const trackingSettings = this.trackingSettingsPayload;
             yield this.fetch.post('fleet-ops/settings/tracking-settings', trackingSettings);
+            if (this.usesOsrm) {
+                yield this.fetch.post('fleet-ops/settings/osrm-settings', { api_host: this.osrmUseOwnServer ? this.osrmHost : null });
+            }
             yield this.performAdditionalSaveTasks();
-            // Save in local memory too
-            this.currentUser.setOption('routing', {
-                router: this.displayEngine,
-                routing_display_engine: this.displayEngine,
-                routing_optimization_engine: this.optimizationEngine,
-                unit: this.routingUnit,
-            });
+            // Refresh the routing settings in memory: they carry the resolved OSRM server the map uses
+            const routingSettings = yield this.fetch.get('fleet-ops/settings/routing-settings');
+            this.currentUser.setOption('routing', routingSettings);
             this.currentUser.setOption('tracking', trackingSettings);
             this.notifications.success('Routing and tracking settings saved.');
         } catch (error) {
@@ -80,6 +91,7 @@ export default class SettingsRoutingController extends Controller {
             this.displayEngine = display_engine ?? router ?? 'valhalla';
             this.optimizationEngine = optimization_engine ?? display_engine ?? router ?? 'valhalla';
             this.routingUnit = unit;
+            yield this.loadOsrmSettings.perform();
             const trackingSettings = yield this.fetch.get('fleet-ops/settings/tracking-settings');
             this.trackingTrafficEnabled = trackingSettings.traffic_enabled ?? true;
             this.trackingCacheTtlSeconds = trackingSettings.cache_ttl_seconds ?? 60;
@@ -94,6 +106,17 @@ export default class SettingsRoutingController extends Controller {
             this.prolongedStoppageDurationThresholdMinutes = trackingSettings.alerts?.prolonged_stoppages?.duration_threshold_minutes ?? 30;
         } catch (error) {
             this.notifications.serverError(error);
+        }
+    }
+
+    @task *loadOsrmSettings() {
+        try {
+            const { api_host, system_host } = yield this.fetch.get('fleet-ops/settings/osrm-settings');
+            this.osrmHost = api_host ?? '';
+            this.osrmUseOwnServer = Boolean(api_host);
+            this.osrmSystemHost = system_host ?? null;
+        } catch {
+            // Without the permission or the endpoint, the OSRM panel keeps its defaults.
         }
     }
 

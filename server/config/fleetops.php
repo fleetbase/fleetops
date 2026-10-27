@@ -37,7 +37,11 @@ return [
     |--------------------------------------------------------------------------
     */
     'osrm' => [
-        'host' => env('OSRM_HOST', 'https://router.project-osrm.org'),
+        // Starting value: Admin -> Fleet-Ops -> Routing and an organization's own
+        // OSRM server (Fleet-Ops Settings -> Routing) take precedence.
+        'host'                => env('OSRM_HOST', 'https://router.project-osrm.org'),
+        // Let organization OSRM hosts point at private network addresses (self-hosted installs only).
+        'allow_private_hosts' => env('OSRM_ALLOW_PRIVATE_HOSTS', false),
     ],
 
     /*

@@ -48,6 +48,18 @@
                     />
                 </InputGroup>
             </ContentPanel>
+            {{#if this.usesOsrm}}
+                <ContentPanel @title="OSRM Server" @open={{true}} @wrapperClass="bordered-classic">
+                    <InputGroup @name="Use my own OSRM server" @helpText={{this.osrmSystemHelpText}}>
+                        <Toggle @isToggled={{this.osrmUseOwnServer}} @onToggle={{fn (mut this.osrmUseOwnServer)}} data-test-osrm-use-own />
+                    </InputGroup>
+                    {{#if this.osrmUseOwnServer}}
+                        <InputGroup @name="OSRM Host" @helpText="A public OSRM server this organization's routes, distances and ETAs use. Private network addresses are refused.">
+                            <Input @value={{this.osrmHost}} placeholder="https://osrm.example.com" class="w-full form-input" data-test-osrm-host />
+                        </InputGroup>
+                    {{/if}}
+                </ContentPanel>
+            {{/if}}
             <ContentPanel @title="Tracking Intelligence" @open={{true}} @wrapperClass="bordered-classic">
                 <p class="mb-2 text-sm text-gray-600 dark:text-gray-400">
                     Live ETAs, remaining distance and route lines use the routing service selected above, the same one that measures each order's distance and time. These settings only tune

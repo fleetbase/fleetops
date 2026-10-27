@@ -4,6 +4,8 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Jobs\DispatchTelematicsRetentionJobs;
 use Fleetbase\FleetOps\Orchestration\Support\OrchestratorSettings;
+use Fleetbase\FleetOps\Support\Routing\HostPolicy;
+use Fleetbase\FleetOps\Support\Routing\OsrmConnection;
 use Fleetbase\FleetOps\Support\Routing\RoutingEngineResolver;
 use Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy;
 use Fleetbase\FleetOps\Support\Telematics\Retention\RetentionPolicy;
@@ -41,6 +43,10 @@ class SettingController extends Controller
             'getAdminTrackingSettings'                => 'admin',
             'getAdminRoutingProviders'                => 'admin',
             'saveAdminRoutingProviders'               => 'admin',
+            'getAdminOsrmSettings'                    => 'admin',
+            'saveAdminOsrmSettings'                   => 'admin',
+            'getOsrmSettings'                         => ['view routing-settings', 'update routing-settings'],
+            'saveOsrmSettings'                        => 'update routing-settings',
             'saveAdminTrackingSettings'               => 'admin',
             'saveMapSettings'                         => 'update map-settings',
             'getAdminMapSettings'                     => 'admin',
@@ -305,7 +311,98 @@ class SettingController extends Controller
             $routingSettings['unit'] = 'km';
         }
 
+        // The OSRM server the console draws OSRM routes with (not a secret)
+        $osrm                                = OsrmConnection::resolve($companyUuid);
+        $routingSettings['osrm_host']        = $osrm['host'];
+        $routingSettings['osrm_host_source'] = $osrm['source'];
+
         return response()->json($routingSettings);
+    }
+
+    /**
+     * The system OSRM server (Admin -> Fleet-Ops -> Routing): the saved host, the
+     * OSRM_HOST starting value, and the server in use for organizations without
+     * their own.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAdminOsrmSettings()
+    {
+        return response()->json([
+            'api_host'         => data_get($this->lookupSetting(OsrmConnection::SETTING_KEY, []), 'api_host'),
+            'environment_host' => config('fleetops.osrm.host'),
+            'host'             => OsrmConnection::host(),
+        ]);
+    }
+
+    /**
+     * Save the system OSRM server. Administrators may use private addresses; the
+     * host must still be an http(s) URL without credentials. Blank clears it.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveAdminOsrmSettings(Request $request)
+    {
+        $host = $this->submittedOsrmHost($request, true);
+        if (!is_string($host) && $host !== null) {
+            return $host;
+        }
+
+        $this->configureSetting(OsrmConnection::SETTING_KEY, ['api_host' => $host]);
+        OsrmConnection::forget();
+
+        return $this->getAdminOsrmSettings();
+    }
+
+    /**
+     * The organization's own OSRM server, if any, and the server it otherwise uses.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getOsrmSettings()
+    {
+        return response()->json([
+            'api_host'    => data_get($this->lookupCompanySetting(OsrmConnection::SETTING_KEY, []), 'api_host'),
+            'system_host' => OsrmConnection::host(),
+        ]);
+    }
+
+    /**
+     * Save the organization's own OSRM server. The host must be a public address
+     * (unless OSRM_ALLOW_PRIVATE_HOSTS is set). Blank clears it.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveOsrmSettings(Request $request)
+    {
+        $host = $this->submittedOsrmHost($request, OsrmConnection::allowsPrivateHosts());
+        if (!is_string($host) && $host !== null) {
+            return $host;
+        }
+
+        $this->configureCompanySetting(OsrmConnection::SETTING_KEY, ['api_host' => $host]);
+        OsrmConnection::forget($this->policyCompanyUuid());
+
+        return $this->getOsrmSettings();
+    }
+
+    /**
+     * The submitted OSRM host without a trailing slash, null when blank, or a
+     * 422 response when the host policy refuses it.
+     */
+    protected function submittedOsrmHost(Request $request, bool $allowPrivateHosts): mixed
+    {
+        $host = rtrim(trim((string) $request->input('api_host')), '/');
+        if ($host === '') {
+            return null;
+        }
+
+        $violation = HostPolicy::violation($host, $allowPrivateHosts);
+        if ($violation !== null) {
+            return response()->error($violation, 422);
+        }
+
+        return $host;
     }
 
     /**
