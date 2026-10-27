@@ -1,3 +1,4 @@
+import { inject as service } from '@ember/service';
 import RouteOptimizationInterfaceService from './route-optimization-interface';
 import { isArray } from '@ember/array';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
@@ -5,7 +6,22 @@ import polyline from '@fleetbase/ember-core/utils/polyline';
 import { debug } from '@ember/debug';
 
 export default class OsrmService extends RouteOptimizationInterfaceService {
+    @service currentUser;
     name = 'OSRM';
+
+    /**
+     * The OSRM server to call from the console: the organization's own or the
+     * admin's (Fleet-Ops routing settings carry the resolved host), otherwise
+     * the console build's OSRM_HOST, with its per-country servers.
+     */
+    routingHost(payload, waypoints) {
+        const routing = this.currentUser?.getOption?.('routing') ?? {};
+        if (routing.osrm_host && ['organization', 'system'].includes(routing.osrm_host_source)) {
+            return routing.osrm_host;
+        }
+
+        return getRoutingHost(payload, waypoints);
+    }
 
     async computeRoute(waypoints = [], options = {}) {
         const normalizedWaypoints = (isArray(waypoints) ? waypoints : [])
@@ -16,7 +32,7 @@ export default class OsrmService extends RouteOptimizationInterfaceService {
             throw new Error('At least 2 waypoints are required to compute a route.');
         }
 
-        const routingHost = getRoutingHost(options.payload, options.waypoints);
+        const routingHost = this.routingHost(options.payload, options.waypoints);
         const coordStr = normalizedWaypoints.map(([lat, lng]) => `${lng},${lat}`).join(';');
         const response = await fetch(`${routingHost}/route/v1/driving/${coordStr}?overview=full&geometries=polyline&steps=true`);
 
@@ -55,7 +71,7 @@ export default class OsrmService extends RouteOptimizationInterfaceService {
         const source = 'first';
         const destination = preserveEndpoints ? 'last' : 'any';
         const roundtrip = false; // don’t loop back
-        const routingHost = getRoutingHost(payload, waypoints);
+        const routingHost = this.routingHost(payload, waypoints);
 
         try {
             const result = await this.fetch.routing(coordinates, { source, destination, roundtrip }, { host: routingHost, ...options });

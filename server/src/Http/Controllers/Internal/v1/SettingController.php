@@ -4,11 +4,14 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Jobs\DispatchTelematicsRetentionJobs;
 use Fleetbase\FleetOps\Orchestration\Support\OrchestratorSettings;
+use Fleetbase\FleetOps\Support\Routing\HostPolicy;
+use Fleetbase\FleetOps\Support\Routing\OsrmConnection;
+use Fleetbase\FleetOps\Support\Routing\RoutingEngineResolver;
+use Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy;
 use Fleetbase\FleetOps\Support\Telematics\Retention\RetentionPolicy;
 use Fleetbase\FleetOps\Support\Telematics\Telemetry\Queue;
 use Fleetbase\FleetOps\Support\TrackingPage\TrackingPageConfig;
 use Fleetbase\FleetOps\Support\Utils;
-use Fleetbase\FleetOps\Tracking\TrackingProviderRegistry;
 use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
@@ -38,6 +41,12 @@ class SettingController extends Controller
             'saveRoutingSettings'                     => 'update routing-settings',
             'saveTrackingSettings'                    => 'update tracking-settings',
             'getAdminTrackingSettings'                => 'admin',
+            'getAdminRoutingProviders'                => 'admin',
+            'saveAdminRoutingProviders'               => 'admin',
+            'getAdminOsrmSettings'                    => 'admin',
+            'saveAdminOsrmSettings'                   => 'admin',
+            'getOsrmSettings'                         => ['view routing-settings', 'update routing-settings'],
+            'saveOsrmSettings'                        => 'update routing-settings',
             'saveAdminTrackingSettings'               => 'admin',
             'saveMapSettings'                         => 'update map-settings',
             'getAdminMapSettings'                     => 'admin',
@@ -248,9 +257,16 @@ class SettingController extends Controller
      */
     public function saveRoutingSettings(Request $request)
     {
-        $displayEngine      = $request->input('display_engine', $request->input('router', 'osrm'));
+        $displayEngine      = $request->input('display_engine', $request->input('router', RoutingProviderPolicy::defaultDisplayEngine()));
         $optimizationEngine = $request->input('optimization_engine', $displayEngine);
         $unit               = $request->input('unit', 'km');
+
+        foreach ([$displayEngine, $optimizationEngine] as $engine) {
+            if (!RoutingProviderPolicy::allows($engine, $this->policyCompanyUuid())) {
+                return response()->error($this->providerDisabledMessage($engine), 422);
+            }
+        }
+
         $this->configureCompanySetting('routing', [
             'router'                      => $displayEngine,
             'display_engine'              => $displayEngine,
@@ -273,10 +289,17 @@ class SettingController extends Controller
      */
     public function getRoutingSettings()
     {
-        $routingSettings = $this->lookupCompanySetting('routing', ['router' => 'osrm', 'unit' => 'km']);
+        $companyUuid       = $this->policyCompanyUuid();
+        $defaultDisplay    = RoutingProviderPolicy::defaultDisplayEngine();
+        $defaultOptimizing = RoutingProviderPolicy::defaultOptimizationEngine();
+        $routingSettings   = $this->lookupCompanySetting('routing', ['unit' => 'km']);
+        $savedDisplay      = data_get($routingSettings, 'display_engine', data_get($routingSettings, 'routing_display_engine', data_get($routingSettings, 'router')));
+        $savedOptimizing   = data_get($routingSettings, 'optimization_engine', data_get($routingSettings, 'routing_optimization_engine', $savedDisplay));
 
-        $displayEngine                                  = data_get($routingSettings, 'display_engine', data_get($routingSettings, 'routing_display_engine', data_get($routingSettings, 'router', 'osrm')));
-        $optimizationEngine                             = data_get($routingSettings, 'optimization_engine', data_get($routingSettings, 'routing_optimization_engine', $displayEngine));
+        // Platform defaults fill in what the organization never chose, and replace an engine the administrator switched off
+        $displayEngine                                  = RoutingProviderPolicy::engineFor($savedDisplay, $defaultDisplay, $companyUuid);
+        $optimizationEngine                             = RoutingProviderPolicy::engineFor($savedOptimizing, $defaultOptimizing, $companyUuid);
+        $routingSettings['allowed_providers']           = RoutingProviderPolicy::allowedProviders($companyUuid);
         $routingSettings['router']                      = $displayEngine;
         $routingSettings['display_engine']              = $displayEngine;
         $routingSettings['optimization_engine']         = $optimizationEngine;
@@ -288,7 +311,98 @@ class SettingController extends Controller
             $routingSettings['unit'] = 'km';
         }
 
+        // The OSRM server the console draws OSRM routes with (not a secret)
+        $osrm                                = OsrmConnection::resolve($companyUuid);
+        $routingSettings['osrm_host']        = $osrm['host'];
+        $routingSettings['osrm_host_source'] = $osrm['source'];
+
         return response()->json($routingSettings);
+    }
+
+    /**
+     * The system OSRM server (Admin -> Fleet-Ops -> Routing): the saved host, the
+     * OSRM_HOST starting value, and the server in use for organizations without
+     * their own.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAdminOsrmSettings()
+    {
+        return response()->json([
+            'api_host'         => data_get($this->lookupSetting(OsrmConnection::SETTING_KEY, []), 'api_host'),
+            'environment_host' => config('fleetops.osrm.host'),
+            'host'             => OsrmConnection::host(),
+        ]);
+    }
+
+    /**
+     * Save the system OSRM server. Administrators may use private addresses; the
+     * host must still be an http(s) URL without credentials. Blank clears it.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveAdminOsrmSettings(Request $request)
+    {
+        $host = $this->submittedOsrmHost($request, true);
+        if (!is_string($host) && $host !== null) {
+            return $host;
+        }
+
+        $this->configureSetting(OsrmConnection::SETTING_KEY, ['api_host' => $host]);
+        OsrmConnection::forget();
+
+        return $this->getAdminOsrmSettings();
+    }
+
+    /**
+     * The organization's own OSRM server, if any, and the server it otherwise uses.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getOsrmSettings()
+    {
+        return response()->json([
+            'api_host'    => data_get($this->lookupCompanySetting(OsrmConnection::SETTING_KEY, []), 'api_host'),
+            'system_host' => OsrmConnection::host(),
+        ]);
+    }
+
+    /**
+     * Save the organization's own OSRM server. The host must be a public address
+     * (unless OSRM_ALLOW_PRIVATE_HOSTS is set). Blank clears it.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveOsrmSettings(Request $request)
+    {
+        $host = $this->submittedOsrmHost($request, OsrmConnection::allowsPrivateHosts());
+        if (!is_string($host) && $host !== null) {
+            return $host;
+        }
+
+        $this->configureCompanySetting(OsrmConnection::SETTING_KEY, ['api_host' => $host]);
+        OsrmConnection::forget($this->policyCompanyUuid());
+
+        return $this->getOsrmSettings();
+    }
+
+    /**
+     * The submitted OSRM host without a trailing slash, null when blank, or a
+     * 422 response when the host policy refuses it.
+     */
+    protected function submittedOsrmHost(Request $request, bool $allowPrivateHosts): mixed
+    {
+        $host = rtrim(trim((string) $request->input('api_host')), '/');
+        if ($host === '') {
+            return null;
+        }
+
+        $violation = HostPolicy::violation($host, $allowPrivateHosts);
+        if ($violation !== null) {
+            return response()->error($violation, 422);
+        }
+
+        return $host;
     }
 
     /**
@@ -300,15 +414,10 @@ class SettingController extends Controller
      */
     public function saveTrackingSettings(Request $request)
     {
-        $config    = $this->trackingDefaults();
-        $fallbacks = $request->input('fallbacks', data_get($config, 'fallbacks', ['osrm', 'calculated']));
-        if (is_string($fallbacks)) {
-            $fallbacks = array_values(array_filter(array_map('trim', explode(',', $fallbacks))));
-        }
+        // The provider is the organization's routing engine; only tracking behaviour is saved here
+        $config = $this->trackingDefaults();
 
         $this->configureCompanySetting('tracking', [
-            'provider'                         => $request->input('provider', data_get($config, 'provider', 'google_routes')),
-            'fallbacks'                        => $fallbacks,
             'traffic_enabled'                  => $request->boolean('traffic_enabled', data_get($config, 'traffic_enabled', true)),
             'cache_ttl_seconds'                => (int) $request->input('cache_ttl_seconds', data_get($config, 'cache_ttl_seconds', 60)),
             'route_cache_ttl_seconds'          => (int) $request->input('route_cache_ttl_seconds', data_get($config, 'route_cache_ttl_seconds', 600)),
@@ -332,8 +441,6 @@ class SettingController extends Controller
     {
         $config           = $this->trackingDefaults();
         $trackingSettings = $this->lookupCompanySetting('tracking', [
-            'provider'                         => data_get($config, 'provider', 'google_routes'),
-            'fallbacks'                        => data_get($config, 'fallbacks', ['osrm', 'calculated']),
             'traffic_enabled'                  => data_get($config, 'traffic_enabled', true),
             'cache_ttl_seconds'                => data_get($config, 'cache_ttl_seconds', 60),
             'route_cache_ttl_seconds'          => data_get($config, 'route_cache_ttl_seconds', 600),
@@ -341,30 +448,50 @@ class SettingController extends Controller
             'default_vehicle_speed_kph'        => data_get($config, 'default_vehicle_speed_kph', 35),
             'alerts'                           => data_get($config, 'alerts', $this->trackingAlertDefaults()),
         ]);
-        $trackingSettings['alerts']    = $this->normalizeTrackingAlertSettings(data_get($trackingSettings, 'alerts', []));
-        $trackingSettings['providers'] = $this->trackingProviderOptions();
+        // Provider choices saved before tracking followed the routing engine are no longer used
+        unset($trackingSettings['provider'], $trackingSettings['fallbacks']);
+        $trackingSettings['alerts']         = $this->normalizeTrackingAlertSettings(data_get($trackingSettings, 'alerts', []));
+        $trackingSettings['routing_engine'] = RoutingEngineResolver::resolve($this->policyCompanyUuid());
 
         return response()->json($trackingSettings);
     }
 
+    /**
+     * The routing provider policy: which providers organizations may use, the
+     * platform's default engines and per-organization exceptions.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAdminRoutingProviders()
+    {
+        return response()->json(array_merge(RoutingProviderPolicy::settings(), [
+            'available_providers' => collect(RoutingProviderPolicy::PROVIDERS)->map(fn ($label, $key) => ['key' => $key, 'label' => $label])->values()->all(),
+        ]));
+    }
+
+    /**
+     * Save the routing provider policy. Takes effect on every worker within
+     * RoutingProviderPolicy::CACHE_TTL seconds.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveAdminRoutingProviders(Request $request)
+    {
+        $this->saveRoutingProviderPolicy($request->only(['providers', 'defaults', 'server_routing', 'exceptions']));
+
+        return $this->getAdminRoutingProviders();
+    }
+
     public function getAdminTrackingSettings()
     {
-        return response()->json(array_merge($this->trackingDefaults(), [
-            'providers' => $this->trackingProviderOptions(),
-        ]));
+        return response()->json($this->trackingDefaults());
     }
 
     public function saveAdminTrackingSettings(Request $request)
     {
-        $config    = config('fleetops.tracking', []);
-        $fallbacks = $request->input('fallbacks', data_get($config, 'fallbacks', ['osrm', 'calculated']));
-        if (is_string($fallbacks)) {
-            $fallbacks = array_values(array_filter(array_map('trim', explode(',', $fallbacks))));
-        }
+        $config = config('fleetops.tracking', []);
 
         $this->configureSetting('fleet-ops.tracking-settings', [
-            'provider'                         => $request->input('provider', data_get($config, 'provider', 'google_routes')),
-            'fallbacks'                        => $fallbacks,
             'traffic_enabled'                  => $request->boolean('traffic_enabled', data_get($config, 'traffic_enabled', true)),
             'cache_ttl_seconds'                => (int) $request->input('cache_ttl_seconds', data_get($config, 'cache_ttl_seconds', 60)),
             'route_cache_ttl_seconds'          => (int) $request->input('route_cache_ttl_seconds', data_get($config, 'route_cache_ttl_seconds', 600)),
@@ -728,7 +855,8 @@ class SettingController extends Controller
         $config         = config('fleetops.tracking', []);
         $systemSettings = $this->lookupSetting('fleet-ops.tracking-settings', []);
 
-        $defaults           = array_merge($config, is_array($systemSettings) ? $systemSettings : []);
+        $defaults = array_merge($config, is_array($systemSettings) ? $systemSettings : []);
+        unset($defaults['provider'], $defaults['fallbacks']);
         $defaults['alerts'] = $this->normalizeTrackingAlertSettings(data_get($defaults, 'alerts', []));
 
         return $defaults;
@@ -770,21 +898,6 @@ class SettingController extends Controller
                 'duration_threshold_minutes' => max(0, (int) data_get($alerts, 'prolonged_stoppages.duration_threshold_minutes', data_get($defaults, 'prolonged_stoppages.duration_threshold_minutes'))),
             ],
         ];
-    }
-
-    protected function trackingProviderOptions(): array
-    {
-        return collect($this->trackingProviders())->map(function ($provider, $key) {
-            $label = $key === 'osrm' ? 'OSRM' : str($key)->replace('_', ' ')->title()->toString();
-
-            return [
-                'key'          => $key,
-                'name'         => $label,
-                'value'        => $key,
-                'label'        => $label,
-                'capabilities' => $provider->capabilities()->toArray(),
-            ];
-        })->values()->all();
     }
 
     /**
@@ -1417,9 +1530,19 @@ class SettingController extends Controller
         return NotificationRegistry::getNotificationsByPackage($package);
     }
 
-    protected function trackingProviders(): array
+    protected function saveRoutingProviderPolicy(array $input): array
     {
-        return app(TrackingProviderRegistry::class)->all();
+        return RoutingProviderPolicy::save($input);
+    }
+
+    protected function policyCompanyUuid(): ?string
+    {
+        return session('company');
+    }
+
+    protected function providerDisabledMessage(string $provider): string
+    {
+        return 'The ' . $provider . ' provider has been switched off by the administrator.';
     }
 
     protected function googleMapsApiKey(): string

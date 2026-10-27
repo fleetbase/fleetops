@@ -13,7 +13,7 @@ class TrackOrderDistanceAndTime extends Command
      * The name and signature of the console command.
      *
      * Options:
-     *  --provider=           : distance/time provider (calculate, google, osrm). Defaults to config(fleetops.distance_matrix.provider)
+     *  --provider=           : distance/time provider (calculate, google, osrm). Defaults to each order's company routing settings
      *  --days=               : only include orders created in last N days (default: 2)
      *  --chunk=              : records per chunk (default: 250)
      *  --no-lock             : skip single-run lock (not recommended)
@@ -33,13 +33,14 @@ class TrackOrderDistanceAndTime extends Command
         // Always operate in UTC
         date_default_timezone_set('UTC');
 
-        $provider = $this->option('provider') ?: (string) config('fleetops.distance_matrix.provider');
+        // Without --provider each order resolves its own company's provider
+        $provider = $this->option('provider') ?: null;
         $days     = max(1, (int) $this->option('days'));           // guardrail
         $perChunk = max(50, (int) $this->option('chunk'));         // sane lower bound
         $dryRun   = (bool) $this->option('dry');
         $useLock  = !$this->option('no-lock');
 
-        $this->info("Using provider: {$provider}");
+        $this->info('Using provider: ' . ($provider ?? 'company routing settings'));
         $this->info("Looking back: last {$days} day(s)");
         $this->info("Chunk size: {$perChunk}" . ($dryRun ? ' (dry-run)' : ''));
 
@@ -83,7 +84,7 @@ class TrackOrderDistanceAndTime extends Command
                 foreach ($orders as $order) {
                     try {
                         if (!$dryRun) {
-                            $order->setDistanceAndTime(['provider' => $provider]);
+                            $order->setDistanceAndTime($provider ? ['provider' => $provider] : []);
                         }
                         $updated++;
                     } catch (\Throwable $e) {

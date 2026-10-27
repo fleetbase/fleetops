@@ -1,6 +1,7 @@
 import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { underscore } from '@ember/string';
+import isRoutingProviderAllowed from '../utils/routing-providers';
 
 export class RoutingControlRegistry {
     @tracked routers = {};
@@ -51,17 +52,21 @@ export default class LeafletRoutingControlService extends Service {
 
     get(name) {
         name = name ?? this.getRouter();
+        // A switched-off engine is never used, even when named explicitly
+        if (!isRoutingProviderAllowed(name, this.currentUser.getOption('routing', {})?.allowed_providers)) {
+            name = this.getRouter();
+        }
         let router = this.registry.routers[underscore(name)];
         if (!router) {
-            // Fallback to OSRM default router
-            router = this.registry.routers.osrm;
+            // Fall back to Valhalla (the platform's routing engine), then OSRM
+            router = this.registry.routers.valhalla ?? this.registry.routers.osrm;
         }
 
         return router;
     }
 
-    getRouter(fallback = 'osrm') {
-        const routingSettings = this.currentUser.getOption('routing', { router: fallback ?? 'osrm' });
+    getRouter(fallback = 'valhalla') {
+        const routingSettings = this.currentUser.getOption('routing', { router: fallback ?? 'valhalla' });
         return routingSettings.router;
     }
 

@@ -1175,7 +1175,7 @@ test('api service quote controller exposes preliminary and quote item helpers', 
             ['name' => 'Box'],
         ],
         'cod'      => true,
-        'currency' => true,
+        'currency' => 'USD',
     ])->and($controller->callHelper('preliminaryStops', $pickup, [null, 'waypoint-public'], $dropoff)->values()->all())->toBe([
         $pickup,
         'waypoint-public',

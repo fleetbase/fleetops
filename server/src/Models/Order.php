@@ -12,6 +12,7 @@ use Fleetbase\FleetOps\Events\OrderDriverUnassigned;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Notifications\OrderUnassigned;
 use Fleetbase\FleetOps\Support\LabelPdf;
+use Fleetbase\FleetOps\Support\NavigatorReview;
 use Fleetbase\FleetOps\Support\OrderEditPolicy;
 use Fleetbase\FleetOps\Support\OrderTracker;
 use Fleetbase\FleetOps\Support\Utils;
@@ -769,6 +770,38 @@ class Order extends Model
     }
 
     /**
+     * Store scheduled_at in the application timezone.
+     *
+     * @see toStorageDateTime()
+     */
+    public function setScheduledAtAttribute($value): void
+    {
+        $this->attributes['scheduled_at'] = static::toStorageDateTime($value);
+    }
+
+    /**
+     * Format a datetime for storage in the application timezone.
+     *
+     * The `datetime` cast formats a parsed value as Y-m-d H:i:s and drops its UTC offset, so
+     * "2026-10-21T11:00:00-07:00" was stored as 11:00 UTC instead of 18:00 UTC. Converting to the
+     * application timezone first keeps the instant. Values without an offset parse in the
+     * application timezone and are stored unchanged. Unix timestamps, numeric strings included,
+     * are accepted as the cast accepted them.
+     *
+     * @param mixed $value A Unix timestamp, anything Carbon::parse() accepts, or null
+     */
+    public static function toStorageDateTime($value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $date = is_numeric($value) ? Carbon::createFromTimestamp($value) : Carbon::parse($value);
+
+        return $date->setTimezone(config('app.timezone', 'UTC'))->toDateTimeString();
+    }
+
+    /**
      * Normalise the date portion of time_window_start on write.
      *
      * If the incoming value has a Unix-epoch date (1970-01-01) — which happens
@@ -823,7 +856,7 @@ class Order extends Model
             $parsed->setDate($ref->year, $ref->month, $ref->day);
         }
 
-        return $parsed->toDateTimeString();
+        return $parsed->setTimezone(config('app.timezone', 'UTC'))->toDateTimeString();
     }
 
     /**
@@ -1917,7 +1950,8 @@ class Order extends Model
 
     /**
      * Sets the accurate distance and time for the order based on driving distance.
-     * Uses a utility method to calculate the driving distance and time between the current origin and destination positions.
+     * Uses a utility method to calculate the driving distance and time between the current origin and destination positions,
+     * with the provider the order's company routing settings resolve to unless `$options['provider']` is given.
      *
      * @return Order the updated Order instance
      */
@@ -1935,7 +1969,7 @@ class Order extends Model
         // Unreachable: `getDrivingDistanceAndTime()` is typed `: DistanceMatrix`
         // and every provider path casts both fields to float before constructing
         // it, so neither the null check nor the isset check can fail.
-        $matrix = Utils::getDrivingDistanceAndTime($origin, $destination, $options);
+        $matrix = Utils::getDrivingDistanceAndTime($origin, $destination, array_merge(['company_uuid' => $this->company_uuid], $options));
         // @codeCoverageIgnoreStart
         if (!$matrix || !isset($matrix->distance, $matrix->time)) {
             return $this;
@@ -2282,7 +2316,8 @@ class Order extends Model
             return collect();
         }
 
-        $drivers = Driver::where(['status' => 'available', 'online' => 1])
+        // An app store reviewer's driver is never assigned a real order.
+        $drivers = NavigatorReview::excludeFrom(Driver::where(['status' => 'available', 'online' => 1]))
             ->whereHas('company', function ($q) {
                 $q->whereHas('users', function ($q) {
                     $q->whereHas('driver', function ($q) {
