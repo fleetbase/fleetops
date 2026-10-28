@@ -159,7 +159,7 @@ function fleetopsModelAccessorsUseProfileAccountTables(): void
         $table->string('phone')->nullable();
         $table->timestamp('deleted_at')->nullable();
     });
-    foreach (['drivers', 'contacts'] as $profileTable) {
+    foreach (['drivers', 'contacts', 'company_users'] as $profileTable) {
         $schema->create($profileTable, function ($table) {
             $table->string('uuid')->nullable();
             $table->string('user_uuid')->nullable();

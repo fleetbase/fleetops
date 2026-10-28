@@ -10,11 +10,9 @@ export default class SettingsRoutingController extends Controller {
     @service currentUser;
     @service routeEngine;
     @service routeOptimization;
-    @tracked displayEngine = 'osrm';
-    @tracked optimizationEngine = 'osrm';
+    @tracked displayEngine = 'valhalla';
+    @tracked optimizationEngine = 'valhalla';
     @tracked routingUnit = 'km';
-    @tracked trackingProvider = 'google_routes';
-    @tracked trackingFallbacks = ['osrm', 'calculated'];
     @tracked trackingTrafficEnabled = true;
     @tracked trackingCacheTtlSeconds = 60;
     @tracked trackingRouteCacheTtlSeconds = 600;
@@ -27,16 +25,23 @@ export default class SettingsRoutingController extends Controller {
     @tracked prolongedStoppageAlertsEnabled = true;
     @tracked prolongedStoppageDurationThresholdMinutes = 30;
     @tracked showTrackingAdvancedSettings = false;
-    @tracked trackingProviderOptions = [
-        { value: 'google_routes', label: 'Google Routes' },
-        { value: 'osrm', label: 'OSRM' },
-        { value: 'calculated', label: 'Calculated' },
-    ];
+    @tracked osrmUseOwnServer = false;
+    @tracked osrmHost = '';
+    @tracked osrmSystemHost = null;
     @tracked routingUnitOptions = [
         { label: 'Kilometers', value: 'km' },
         { label: 'Miles', value: 'mi' },
     ];
     saveTasks = new Map();
+
+    /** Whether the organization routes or optimizes with OSRM, so its own OSRM server applies. */
+    get usesOsrm() {
+        return this.displayEngine === 'osrm' || this.optimizationEngine === 'osrm';
+    }
+
+    get osrmSystemHelpText() {
+        return this.osrmSystemHost ? `Otherwise this organization uses ${this.osrmSystemHost}.` : 'Otherwise this organization uses the platform OSRM server.';
+    }
 
     get hasEngineOverrides() {
         return ['vroom', 'valhalla'].includes(this.displayEngine) || ['vroom', 'valhalla'].includes(this.optimizationEngine);
@@ -61,14 +66,13 @@ export default class SettingsRoutingController extends Controller {
             });
             const trackingSettings = this.trackingSettingsPayload;
             yield this.fetch.post('fleet-ops/settings/tracking-settings', trackingSettings);
+            if (this.usesOsrm) {
+                yield this.fetch.post('fleet-ops/settings/osrm-settings', { api_host: this.osrmUseOwnServer ? this.osrmHost : null });
+            }
             yield this.performAdditionalSaveTasks();
-            // Save in local memory too
-            this.currentUser.setOption('routing', {
-                router: this.displayEngine,
-                routing_display_engine: this.displayEngine,
-                routing_optimization_engine: this.optimizationEngine,
-                unit: this.routingUnit,
-            });
+            // Refresh the routing settings in memory: they carry the resolved OSRM server the map uses
+            const routingSettings = yield this.fetch.get('fleet-ops/settings/routing-settings');
+            this.currentUser.setOption('routing', routingSettings);
             this.currentUser.setOption('tracking', trackingSettings);
             this.notifications.success('Routing and tracking settings saved.');
         } catch (error) {
@@ -84,12 +88,11 @@ export default class SettingsRoutingController extends Controller {
     @task *getSettings() {
         try {
             const { router, display_engine, optimization_engine, unit } = yield this.fetch.get('fleet-ops/settings/routing-settings');
-            this.displayEngine = display_engine ?? router ?? 'osrm';
-            this.optimizationEngine = optimization_engine ?? display_engine ?? router ?? 'osrm';
+            this.displayEngine = display_engine ?? router ?? 'valhalla';
+            this.optimizationEngine = optimization_engine ?? display_engine ?? router ?? 'valhalla';
             this.routingUnit = unit;
+            yield this.loadOsrmSettings.perform();
             const trackingSettings = yield this.fetch.get('fleet-ops/settings/tracking-settings');
-            this.trackingProvider = trackingSettings.provider ?? 'google_routes';
-            this.trackingFallbacks = this.normalizeFallbacks(trackingSettings.fallbacks);
             this.trackingTrafficEnabled = trackingSettings.traffic_enabled ?? true;
             this.trackingCacheTtlSeconds = trackingSettings.cache_ttl_seconds ?? 60;
             this.trackingRouteCacheTtlSeconds = trackingSettings.route_cache_ttl_seconds ?? 600;
@@ -101,22 +104,24 @@ export default class SettingsRoutingController extends Controller {
             this.routeDeviationDistanceThresholdMeters = trackingSettings.alerts?.route_deviations?.distance_threshold_meters ?? 500;
             this.prolongedStoppageAlertsEnabled = trackingSettings.alerts?.prolonged_stoppages?.enabled ?? true;
             this.prolongedStoppageDurationThresholdMinutes = trackingSettings.alerts?.prolonged_stoppages?.duration_threshold_minutes ?? 30;
-            this.trackingProviderOptions = this.normalizeProviderOptions(trackingSettings.providers ?? this.trackingProviderOptions);
         } catch (error) {
             this.notifications.serverError(error);
         }
     }
 
-    get selectedTrackingFallbackOptions() {
-        const selected = new Set(this.normalizeFallbacks(this.trackingFallbacks));
-
-        return this.trackingProviderOptions.filter((option) => selected.has(this.optionValue(option)));
+    @task *loadOsrmSettings() {
+        try {
+            const { api_host, system_host } = yield this.fetch.get('fleet-ops/settings/osrm-settings');
+            this.osrmHost = api_host ?? '';
+            this.osrmUseOwnServer = Boolean(api_host);
+            this.osrmSystemHost = system_host ?? null;
+        } catch {
+            // Without the permission or the endpoint, the OSRM panel keeps its defaults.
+        }
     }
 
     get trackingSettingsPayload() {
         return {
-            provider: this.trackingProvider,
-            fallbacks: this.normalizeFallbacks(this.trackingFallbacks),
             traffic_enabled: this.trackingTrafficEnabled,
             cache_ttl_seconds: Number(this.trackingCacheTtlSeconds) || 60,
             route_cache_ttl_seconds: Number(this.trackingRouteCacheTtlSeconds) || 600,
@@ -137,55 +142,6 @@ export default class SettingsRoutingController extends Controller {
                 },
             },
         };
-    }
-
-    normalizeFallbacks(fallbacks) {
-        if (Array.isArray(fallbacks)) {
-            return fallbacks
-                .map((fallback) => this.optionValue(fallback))
-                .map((fallback) => String(fallback).trim())
-                .filter(Boolean);
-        }
-
-        return String(fallbacks ?? '')
-            .split(',')
-            .map((fallback) => fallback.trim())
-            .filter(Boolean);
-    }
-
-    normalizeProviderOptions(options = []) {
-        return options.map((option) => {
-            const value = this.optionValue(option);
-            const label = option?.label ?? option?.name ?? this.providerLabel(value);
-
-            return {
-                ...option,
-                key: option?.key ?? value,
-                name: option?.name ?? label,
-                value,
-                label,
-            };
-        });
-    }
-
-    providerLabel(value) {
-        if (value === 'osrm') {
-            return 'OSRM';
-        }
-
-        return String(value ?? '')
-            .replace(/[_-]+/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .replace(/\b\w/g, (character) => character.toUpperCase());
-    }
-
-    optionValue(option) {
-        return typeof option === 'object' && option !== null ? (option.value ?? option.key) : option;
-    }
-
-    @action setTrackingFallbacks(options) {
-        this.trackingFallbacks = this.normalizeFallbacks(options);
     }
 
     @action toggleTrackingAdvancedSettings() {

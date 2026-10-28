@@ -8,7 +8,6 @@ import { later } from '@ember/runloop';
 import { debug } from '@ember/debug';
 import { task, timeout } from 'ember-concurrency';
 import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
-import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 import engineService from '@fleetbase/ember-core/decorators/engine-service';
 import registerHelper from '@fleetbase/ember-core/utils/register-helper';
 import WaypointLabelHelper from '../../helpers/waypoint-label';
@@ -22,6 +21,7 @@ export default class CustomerCreateOrderFormComponent extends Component {
     @engineService('@fleetbase/fleetops-engine') contextPanel;
     @service store;
     @service currentUser;
+    @service osrm;
     @service notifications;
     @service modalsManager;
     @service customerSession;
@@ -359,7 +359,7 @@ export default class CustomerCreateOrderFormComponent extends Component {
             this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.new.no-route-warning'));
         }
 
-        const routingHost = getRoutingHost(payload, waypoints);
+        const routingHost = this.osrm.routingHost(payload, waypoints);
         const router = new OSRMv1({
             serviceUrl: `${routingHost}/route/v1`,
             profile: 'driving',

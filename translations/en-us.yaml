@@ -2127,6 +2127,29 @@ entity-field-editing-settings:
     enable-driver-to-edit-entity-fields: Allow driver to edit entity details
     enable-driver-to-edit-entity-fields-help-text: Enabling this toggle grants the driver permission to modify specific entity fields chosen below.
 
+navigator-app-review-settings:
+    title: App Review
+    lede: Apple and Google test Navigator before it goes live, and their reviewers can't receive a text message. Turn this on to let them sign in as a test driver with a phone number and a code you give the app store.
+    'on': 'On'
+    'off': 'Off'
+    phone-label: Reviewer phone number
+    phone-help: A test number that is never texted. The code decides which organization it signs in to.
+    code-label: Sign-in code
+    code-new: Copy this code now. It is only shown once.
+    code-hidden: Code created {date}. It is only shown once, so create a new one if you've lost it.
+    code-none: No code yet. Turning this on creates one.
+    where: In App Store Connect, enter both under App Review Information, Sign-in required. In Google Play Console, enter them under App content, App access.
+    driver: The reviewer signs in as a test driver, App Reviewer, in your drivers list. It is never offered or assigned orders automatically; assign one by hand if you want them to see an order.
+    turn-on: Turn on
+    turn-off: Turn off
+    turn-off-title: Turn off App Review access?
+    turn-off-body: Reviewers can no longer sign in to Navigator. Turn it off once your app is approved, and turn it back on before you submit an update.
+    regenerate: Create new code
+    regenerate-title: Create a new code?
+    regenerate-body: The current code stops working at once. Enter the new one in App Store Connect and Google Play Console.
+    turned-on: App Review access is on.
+    turned-off: App Review access is off.
+    regenerated: New code created.
 driver-onboard-settings:
     driver-onboard-settings: Driver Onboard Settings
     enable-driver-onboard-from-app: Enable driver onboard from Navigator App
@@ -3250,7 +3273,7 @@ settings:
         configure-routing: Configure Routing
         select-routing-service: Select Routing Service
         routing-service: Routing Service
-        routing-service-help-text: Select the service which is responsible for calculating and plotting routes on the map.
+        routing-service-help-text: Select the service that plots routes on the map and measures each order's distance, time and live ETA.
         select-routing-distance-unit: Select Routing Distance Unit
         routing-distance-unit: Routing Distance Unit
         routing-distance-unit-help-text: The unit used for calculating distance and routes.

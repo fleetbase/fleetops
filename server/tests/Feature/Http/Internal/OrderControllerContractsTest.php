@@ -1651,6 +1651,14 @@ test('internal order controller export lookup and schedule endpoints use resolve
     expect($controller->lookup(new Request(['tracking' => 'TN-404']))->getData(true))->toBe($notFound)
         ->and($controller->trackingLookups)->toBe(['TN-404']);
 
+    // Numbers generated for companies with a space in the first three letters of
+    // their name ("AL 7796486490AE") reach the query; other spacing does not.
+    foreach (['AL  1', "AL\t1", "AL\n1", 'AL&1'] as $tracking) {
+        expect($controller->lookup(new Request(['tracking' => $tracking]))->getData(true))->toBe($notFound);
+    }
+    expect($controller->lookup(new Request(['tracking' => 'AL 7796486490AE']))->getData(true))->toBe($notFound)
+        ->and($controller->trackingLookups)->toBe(['TN-404', 'AL 7796486490AE']);
+
     $trackedOrder                 = fleetopsInternalOrderLifecycleOrder('tracked-order');
     $trackedOrder->trackerForTest = new FleetOpsInternalOrderLifecycleTrackerFake($trackedOrder);
     $controller->trackingOrder    = $trackedOrder;

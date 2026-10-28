@@ -41,6 +41,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -58,6 +59,74 @@ class OrderController extends Controller
      * @return \Fleetbase\Http\Resources\Order
      */
     public function create(CreateOrderRequest $request)
+    {
+        $idempotencyKey = $this->idempotencyKeyFromRequest($request);
+        if ($idempotencyKey === null) {
+            return $this->createOrderFromRequest($request);
+        }
+
+        // An `Idempotency-Key` makes retries safe: the first request creates the order, and any
+        // repeat with the same key (same company and credential) within a day returns that order
+        // instead of creating another. A concurrent duplicate is refused while the first runs.
+        $cacheKey = $this->orderIdempotencyCacheKey($idempotencyKey);
+        if ($replayed = $this->replayIdempotentOrder($cacheKey, $request)) {
+            return $replayed;
+        }
+
+        $lock = Cache::lock($cacheKey . ':lock', 180);
+        if (!$lock->get()) {
+            return response()->json(['errors' => ['A request with this Idempotency-Key is already being processed.']], 409);
+        }
+
+        try {
+            if ($replayed = $this->replayIdempotentOrder($cacheKey, $request)) {
+                return $replayed;
+            }
+
+            $response = $this->createOrderFromRequest($request);
+            if ($response instanceof OrderResource && $response->resource instanceof Order && $response->resource->public_id) {
+                Cache::put($cacheKey, $response->resource->public_id, now()->addDay());
+            }
+
+            return $response;
+        } finally {
+            $lock->release();
+        }
+    }
+
+    protected function idempotencyKeyFromRequest(Request $request): ?string
+    {
+        $key = trim((string) $request->header('Idempotency-Key', ''));
+
+        return $key !== '' && strlen($key) <= 255 ? $key : null;
+    }
+
+    protected function orderIdempotencyCacheKey(string $idempotencyKey): string
+    {
+        return 'fleetops:order-create:' . sha1(implode('|', [(string) $this->sessionCompany(), (string) session('api_credential'), $idempotencyKey]));
+    }
+
+    protected function replayIdempotentOrder(string $cacheKey, Request $request)
+    {
+        $publicId = Cache::get($cacheKey);
+        if (!is_string($publicId) || $publicId === '') {
+            return null;
+        }
+
+        $order = Order::where('public_id', $publicId)->where('company_uuid', $this->sessionCompany())->first();
+        if (!$order) {
+            return null;
+        }
+
+        return $this->orderResource($order)->response($request)->header('Idempotent-Replayed', 'true');
+    }
+
+    /**
+     * Creates a Fleetbase Order resource from the request (the body of create()).
+     *
+     * @return \Fleetbase\Http\Resources\v1\Order
+     */
+    protected function createOrderFromRequest(CreateOrderRequest $request)
     {
         set_time_limit(180);
 

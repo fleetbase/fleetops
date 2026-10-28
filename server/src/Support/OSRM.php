@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Support;
 
 use Fleetbase\FleetOps\Support\Encoding\Polyline;
+use Fleetbase\FleetOps\Support\Routing\OsrmConnection;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -20,6 +21,27 @@ class OSRM
      * @var string
      */
     protected static $baseUrl = 'https://router.project-osrm.org';
+
+    /**
+     * The organization whose OSRM server is called, when the caller knows it
+     * (otherwise the session company). See OsrmConnection.
+     */
+    protected static ?string $companyUuid = null;
+
+    /**
+     * Run OSRM calls against an organization's OSRM server.
+     */
+    public static function forCompany(?string $companyUuid, callable $callback): mixed
+    {
+        $previous            = static::$companyUuid;
+        static::$companyUuid = $companyUuid;
+
+        try {
+            return $callback();
+        } finally {
+            static::$companyUuid = $previous;
+        }
+    }
 
     /**
      * Get the route between two points.
@@ -262,6 +284,6 @@ class OSRM
 
     protected static function baseUrl(): string
     {
-        return rtrim(config('fleetops.osrm.host', static::$baseUrl), '/');
+        return OsrmConnection::host(static::$companyUuid ?? session('company'));
     }
 }

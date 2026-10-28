@@ -276,6 +276,65 @@ test('a driver without a reported location does not turn the order origin into n
     expect($order->getCurrentOriginPosition()?->getLat())->toBe(-37.70);
 });
 
+test('accurate distance uses the company routing engine and keeps the estimate when it fails', function () {
+    $connection = fleetopsOrderPayloadBoot();
+    $connection->getSchemaBuilder()->create('settings', function ($blueprint) {
+        $blueprint->increments('id');
+        $blueprint->string('key')->nullable();
+        $blueprint->text('value')->nullable();
+        $blueprint->timestamps();
+    });
+    $connection->table('settings')->insert(['key' => 'company.company-1.routing', 'value' => json_encode(['display_engine' => 'osrm'])]);
+    // Sunshine -> Melton, Victoria: ~25 km straight line, ~31 km by road
+    $connection->table('places')->insert([
+        ['uuid' => '11111111-1111-4111-8111-111111111111', 'public_id' => 'place_vicpickup', 'company_uuid' => 'company-1', 'location' => fleetopsOrderPayloadWkb(-37.78, 144.83)],
+        ['uuid' => '22222222-2222-4222-8222-222222222222', 'public_id' => 'place_vicdropoff', 'company_uuid' => 'company-1', 'location' => fleetopsOrderPayloadWkb(-37.68, 144.58)],
+    ]);
+    $connection->table('payloads')->insert(['uuid' => 'payload-1', 'company_uuid' => 'company-1', 'pickup_uuid' => '11111111-1111-4111-8111-111111111111', 'dropoff_uuid' => '22222222-2222-4222-8222-222222222222']);
+    $connection->table('orders')->insert(['uuid' => 'order-1', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-1']);
+
+    $redis = new class {
+        public function get($key)
+        {
+            return null;
+        }
+
+        public function set($key, $value, ...$options)
+        {
+            return true;
+        }
+    };
+    app()->instance('redis', $redis);
+    Illuminate\Support\Facades\Redis::clearResolvedInstance('redis');
+    // Queued listeners and the estimations command run without a session company
+    session(['company' => null]);
+    config(['fleetops.distance_matrix.provider' => null, 'fleetops.osrm.host' => 'https://osrm.fleetbase.test']);
+
+    try {
+        Illuminate\Support\Facades\Http::clearResolvedInstances();
+        app()->forgetInstance(Illuminate\Http\Client\Factory::class);
+        Illuminate\Support\Facades\Http::fake(['*' => Illuminate\Support\Facades\Http::response(['code' => 'Ok', 'routes' => [['distance' => 31520.0, 'duration' => 1610.0]]])]);
+
+        Order::query()->where('uuid', 'order-1')->first()->setDistanceAndTime();
+        expect((float) $connection->table('orders')->value('distance'))->toBe(31520.0)
+            ->and((float) $connection->table('orders')->value('time'))->toBe(1610.0);
+
+        // The road provider failing leaves the straight-line estimate, never zero
+        Illuminate\Support\Facades\Http::clearResolvedInstances();
+        app()->forgetInstance(Illuminate\Http\Client\Factory::class);
+        Illuminate\Support\Facades\Http::fake(['*' => Illuminate\Support\Facades\Http::response(['code' => 'NoRoute', 'routes' => []])]);
+
+        Order::query()->where('uuid', 'order-1')->first()->setDistanceAndTime();
+        $distance = (float) $connection->table('orders')->value('distance');
+        expect($distance)->toBeGreaterThan(20000)->toBeLessThan(30000)
+            ->and((float) $connection->table('orders')->value('time'))->toBe(round($distance / 100) * 7.2);
+    } finally {
+        config(['fleetops.osrm.host' => null]);
+        Illuminate\Support\Facades\Http::clearResolvedInstances();
+        app()->forgetInstance(Illuminate\Http\Client\Factory::class);
+    }
+});
+
 test('distance setters leave the order untouched when an endpoint is an ungeocoded placeholder', function () {
     $connection = fleetopsOrderPayloadBoot();
     $connection->table('places')->insert([

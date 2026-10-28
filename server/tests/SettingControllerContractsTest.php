@@ -1,7 +1,9 @@
 <?php
 
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\SettingController;
+use Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class FleetOpsSettingControllerProbe extends SettingController
 {
@@ -15,9 +17,22 @@ class FleetOpsSettingControllerProbe extends SettingController
     public mixed $company                      = null;
     public array $notifiables                  = [];
     public array $notifications                = [];
-    public array $providers                    = [];
     public string $googleMapsApiKey            = '';
     public array $reconciledTelematicsDefaults = [];
+    public ?string $policyCompany              = 'company-uuid';
+    public array $savedRoutingPolicies         = [];
+
+    protected function policyCompanyUuid(): ?string
+    {
+        return $this->policyCompany;
+    }
+
+    protected function saveRoutingProviderPolicy(array $input): array
+    {
+        $this->savedRoutingPolicies[] = $input;
+
+        return RoutingProviderPolicy::normalize($input);
+    }
 
     protected function configureSetting(string $key, mixed $value): mixed
     {
@@ -86,11 +101,6 @@ class FleetOpsSettingControllerProbe extends SettingController
         return $this->notifications[$package] ?? [];
     }
 
-    protected function trackingProviders(): array
-    {
-        return $this->providers;
-    }
-
     protected function googleMapsApiKey(): string
     {
         return $this->googleMapsApiKey;
@@ -133,27 +143,6 @@ class FleetOpsSettingControllerProbe extends SettingController
     protected function dispatchTelematicsPrune(): void
     {
         $this->pruned[] = 'system';
-    }
-}
-
-class FleetOpsTrackingProviderOptionFake
-{
-    public function __construct(private array $capabilities)
-    {
-    }
-
-    public function capabilities(): object
-    {
-        return new class($this->capabilities) {
-            public function __construct(private array $capabilities)
-            {
-            }
-
-            public function toArray(): array
-            {
-                return $this->capabilities;
-            }
-        };
     }
 }
 
@@ -345,6 +334,19 @@ test('setting controller handles notification and routing settings contracts', f
     $notificationSave = fleetopsJsonPayload($controller->saveNotificationSettings(new Request([
         'notificationSettings' => ['fleet-ops' => ['sms' => false]],
     ])));
+
+    // Google is billed per request and stays switched off until the administrator enables it
+    Cache::forget(RoutingProviderPolicy::CACHE_KEY);
+    $refused = $controller->saveRoutingSettings(new Request([
+        'display_engine'      => 'google',
+        'optimization_engine' => 'vroom',
+    ]));
+    expect($refused->getStatusCode())->toBe(422)
+        ->and(json_encode(fleetopsJsonPayload($refused)))->toContain('The google provider has been switched off by the administrator.')
+        ->and($controller->configuredCompany)->not->toHaveKey('routing');
+
+    config()->set('fleetops.routing.google_enabled', true);
+    Cache::forget(RoutingProviderPolicy::CACHE_KEY);
     $routingSave = fleetopsJsonPayload($controller->saveRoutingSettings(new Request([
         'display_engine'      => 'google',
         'optimization_engine' => 'vroom',
@@ -379,29 +381,81 @@ test('setting controller handles notification and routing settings contracts', f
 
     expect(fleetopsJsonPayload($controller->getRoutingSettings()))->toBe([
         'routing_display_engine'      => 'mapbox',
+        'allowed_providers'           => ['google', 'valhalla', 'osrm', 'vroom'],
         'router'                      => 'mapbox',
         'display_engine'              => 'mapbox',
         'optimization_engine'         => 'mapbox',
         'routing_optimization_engine' => 'mapbox',
         'unit'                        => 'km',
+        'osrm_host'                   => 'https://router.project-osrm.org',
+        'osrm_host_source'            => 'default',
+    ]);
+
+    // Switched off again, a saved Google choice is replaced by the platform defaults
+    config()->set('fleetops.routing.google_enabled', false);
+    Cache::forget(RoutingProviderPolicy::CACHE_KEY);
+    $controller->lookupCompanySettings['routing'] = ['display_engine' => 'google', 'optimization_engine' => 'google', 'unit' => 'mi'];
+    expect(fleetopsJsonPayload($controller->getRoutingSettings()))->toMatchArray([
+        'allowed_providers'   => ['valhalla', 'osrm', 'vroom'],
+        'display_engine'      => 'valhalla',
+        'optimization_engine' => 'valhalla',
+        'unit'                => 'mi',
+    ]);
+
+    // An organization that never chose an engine gets the platform defaults
+    $controller->lookupCompanySettings = [];
+    expect(fleetopsJsonPayload($controller->getRoutingSettings()))->toMatchArray([
+        'display_engine'      => 'valhalla',
+        'optimization_engine' => 'valhalla',
+        'unit'                => 'km',
     ]);
 });
 
-test('setting controller normalizes tracking settings and provider options', function () {
+test('setting controller reads and saves the admin routing provider policy', function () {
+    Cache::forget(RoutingProviderPolicy::CACHE_KEY);
+    $controller = new FleetOpsSettingControllerProbe();
+
+    $policy = fleetopsJsonPayload($controller->getAdminRoutingProviders());
+    expect($policy['providers'])->toBe(['google' => false, 'valhalla' => true, 'osrm' => true, 'vroom' => true])
+        ->and($policy['defaults'])->toBe(['display_engine' => 'valhalla', 'optimization_engine' => 'valhalla'])
+        ->and($policy['server_routing'])->toBe('road')
+        ->and($policy['exceptions'])->toBe([])
+        ->and($policy['available_providers'])->toBe([
+            ['key' => 'google', 'label' => 'Google'],
+            ['key' => 'valhalla', 'label' => 'Valhalla'],
+            ['key' => 'osrm', 'label' => 'OSRM'],
+            ['key' => 'vroom', 'label' => 'VROOM'],
+        ]);
+
+    $controller->saveAdminRoutingProviders(new Request([
+        'providers'      => ['google' => true],
+        'defaults'       => ['display_engine' => 'valhalla'],
+        'server_routing' => 'straight_line',
+        'exceptions'     => [['company_uuid' => 'company-1', 'providers' => ['google']]],
+        'ignored'        => 'value',
+    ]));
+
+    expect($controller->savedRoutingPolicies)->toBe([[
+        'providers'      => ['google' => true],
+        'defaults'       => ['display_engine' => 'valhalla'],
+        'server_routing' => 'straight_line',
+        'exceptions'     => [['company_uuid' => 'company-1', 'providers' => ['google']]],
+    ]]);
+});
+
+test('setting controller saves tracking behaviour while the provider follows the routing engine', function () {
     config()->set('fleetops.tracking', [
-        'provider'                  => 'osrm',
-        'fallbacks'                 => ['calculated'],
         'traffic_enabled'           => false,
         'cache_ttl_seconds'         => 30,
         'route_cache_ttl_seconds'   => 120,
         'default_vehicle_speed_kph' => 25,
     ]);
+    config()->set('fleetops.osrm.host', null);
+    config()->set('fleetops.valhalla.host', null);
+    Cache::forget(RoutingProviderPolicy::CACHE_KEY);
 
-    $controller            = new FleetOpsSettingControllerProbe();
-    $controller->providers = [
-        'osrm'          => new FleetOpsTrackingProviderOptionFake(['routes']),
-        'google_routes' => new FleetOpsTrackingProviderOptionFake(['traffic', 'eta']),
-    ];
+    $controller = new FleetOpsSettingControllerProbe();
+    // Saved before tracking followed the routing engine
     $controller->settings['fleet-ops.tracking-settings'] = [
         'provider'                         => 'google_routes',
         'fallbacks'                        => 'osrm, calculated',
@@ -413,8 +467,8 @@ test('setting controller normalizes tracking settings and provider options', fun
     ];
 
     $saved = fleetopsJsonPayload($controller->saveTrackingSettings(new Request([
-        'provider'                         => 'osrm',
-        'fallbacks'                        => 'google_routes, calculated',
+        'provider'                         => 'google_routes',
+        'fallbacks'                        => 'osrm, calculated',
         'traffic_enabled'                  => '1',
         'cache_ttl_seconds'                => '75',
         'route_cache_ttl_seconds'          => '900',
@@ -425,10 +479,10 @@ test('setting controller normalizes tracking settings and provider options', fun
         ],
     ])));
 
+    // A provider in the request is ignored rather than refused
     expect($saved)->toMatchArray(['status' => 'ok'])
+        ->and($controller->configuredCompany['tracking'])->not->toHaveKeys(['provider', 'fallbacks'])
         ->and($controller->configuredCompany['tracking'])->toMatchArray([
-            'provider'                         => 'osrm',
-            'fallbacks'                        => ['google_routes', 'calculated'],
             'traffic_enabled'                  => true,
             'cache_ttl_seconds'                => 75,
             'route_cache_ttl_seconds'          => 900,
@@ -453,35 +507,22 @@ test('setting controller normalizes tracking settings and provider options', fun
         ],
     ];
 
+    // The response names the routing engine tracking will use; no routing server is configured here
     $tracking = fleetopsJsonPayload($controller->getTrackingSettings());
-    expect($tracking['provider'])->toBe('google_routes')
-        ->and($tracking['alerts']['prolonged_stoppages']['duration_threshold_minutes'])->toBe(55)
-        ->and($tracking['providers'])->toBe([
-            [
-                'key'          => 'osrm',
-                'name'         => 'OSRM',
-                'value'        => 'osrm',
-                'label'        => 'OSRM',
-                'capabilities' => ['routes'],
-            ],
-            [
-                'key'          => 'google_routes',
-                'name'         => 'Google Routes',
-                'value'        => 'google_routes',
-                'label'        => 'Google Routes',
-                'capabilities' => ['traffic', 'eta'],
-            ],
-        ]);
+    expect($tracking)->not->toHaveKeys(['provider', 'fallbacks', 'providers'])
+        ->and($tracking['routing_engine'])->toBe('calculate')
+        ->and($tracking['alerts']['prolonged_stoppages']['duration_threshold_minutes'])->toBe(55);
 
     $adminSaved = fleetopsJsonPayload($controller->saveAdminTrackingSettings(new Request([
-        'provider'  => 'calculated',
-        'fallbacks' => 'osrm',
+        'provider'          => 'calculated',
+        'fallbacks'         => 'osrm',
+        'cache_ttl_seconds' => '20',
     ])));
 
-    expect($controller->configured['fleet-ops.tracking-settings']['provider'])->toBe('calculated')
-        ->and($controller->configured['fleet-ops.tracking-settings']['fallbacks'])->toBe(['osrm'])
-        ->and($adminSaved['providers'])->toHaveCount(2)
-        ->and(fleetopsJsonPayload($controller->getAdminTrackingSettings())['providers'])->toHaveCount(2);
+    expect($controller->configured['fleet-ops.tracking-settings'])->not->toHaveKeys(['provider', 'fallbacks'])
+        ->and($controller->configured['fleet-ops.tracking-settings']['cache_ttl_seconds'])->toBe(20)
+        ->and($adminSaved)->not->toHaveKeys(['provider', 'fallbacks', 'providers'])
+        ->and($adminSaved['cache_ttl_seconds'])->toBe(20);
 });
 
 test('setting controller handles map scheduling orchestrator and card field settings', function () {
@@ -877,13 +918,13 @@ test('admin telematics cleanup dispatches the system-wide fanout job', function 
             $this->dispatchTelematicsPrune();
         }
     };
-    $originalCache       = Illuminate\Support\Facades\Cache::getFacadeRoot();
+    $originalCache       = Cache::getFacadeRoot();
     $originalCacheConfig = config('cache', []);
     $dispatcherContract  = Illuminate\Contracts\Bus\Dispatcher::class;
     $originalDispatcher  = app()->bound($dispatcherContract) ? app($dispatcherContract) : null;
     try {
         config(['cache.default' => 'array', 'cache.stores.array' => ['driver' => 'array']]);
-        Illuminate\Support\Facades\Cache::swap(new Illuminate\Cache\CacheManager(app()));
+        Cache::swap(new Illuminate\Cache\CacheManager(app()));
         $dispatcher = new class(app()) extends Illuminate\Bus\Dispatcher {
             public array $jobs = [];
             public bool $fail  = true;
@@ -908,7 +949,7 @@ test('admin telematics cleanup dispatches the system-wide fanout job', function 
             ->and($dispatcher->jobs[0])->toBeInstanceOf(Fleetbase\FleetOps\Jobs\DispatchTelematicsRetentionJobs::class)
             ->and($dispatcher->jobs[0]->afterCompanyId)->toBe(0);
     } finally {
-        Illuminate\Support\Facades\Cache::swap($originalCache);
+        Cache::swap($originalCache);
         config(['cache' => $originalCacheConfig]);
         if ($originalDispatcher) {
             app()->instance($dispatcherContract, $originalDispatcher);
@@ -960,5 +1001,63 @@ test('optional payload counts omit timeouts but surface other database errors', 
         } else {
             app()->forgetInstance('request');
         }
+    }
+});
+
+test('setting controller reads and saves the system and organization OSRM servers', function () {
+    Cache::flush();
+    Fleetbase\FleetOps\Support\Routing\HostPolicy::resolveHostsUsing(fn (string $host) => str_starts_with($host, 'internal.') ? ['10.0.0.12'] : ['93.184.216.34']);
+    config(['fleetops.osrm.host' => 'https://router.project-osrm.org', 'fleetops.osrm.allow_private_hosts' => false]);
+    $controller = new FleetOpsSettingControllerProbe();
+
+    try {
+        expect(fleetopsJsonPayload($controller->getAdminOsrmSettings()))->toBe([
+            'api_host'         => null,
+            'environment_host' => 'https://router.project-osrm.org',
+            'host'             => 'https://router.project-osrm.org',
+        ]);
+
+        // Administrators may use a private address; the trailing slash is dropped
+        $saved = fleetopsJsonPayload($controller->saveAdminOsrmSettings(new Request(['api_host' => ' http://10.0.0.5:5000/ '])));
+        expect($controller->configured['osrm'])->toBe(['api_host' => 'http://10.0.0.5:5000'])
+            ->and($saved['api_host'])->toBe('http://10.0.0.5:5000');
+
+        // ...but never a non-http URL or one carrying credentials
+        foreach (['file:///etc/passwd', 'https://user:pass@osrm.example.com'] as $host) {
+            $refused = $controller->saveAdminOsrmSettings(new Request(['api_host' => $host]));
+            expect($refused->getStatusCode())->toBe(422);
+        }
+        expect($controller->configured['osrm'])->toBe(['api_host' => 'http://10.0.0.5:5000']);
+
+        // Blank clears the system server
+        $controller->saveAdminOsrmSettings(new Request(['api_host' => '  ']));
+        expect($controller->configured['osrm'])->toBe(['api_host' => null]);
+
+        // An organization's own server must be a public address
+        $controller->lookupCompanySettings['osrm'] = ['api_host' => 'https://old.osrm.example.com'];
+        expect(fleetopsJsonPayload($controller->getOsrmSettings()))->toBe([
+            'api_host'    => 'https://old.osrm.example.com',
+            'system_host' => 'https://router.project-osrm.org',
+        ]);
+
+        $private = $controller->saveOsrmSettings(new Request(['api_host' => 'https://internal.osrm.example.com']));
+        expect($private->getStatusCode())->toBe(422)
+            ->and(json_encode(fleetopsJsonPayload($private)))->toContain('private, loopback or reserved address')
+            ->and($controller->configuredCompany)->not->toHaveKey('osrm');
+
+        fleetopsJsonPayload($controller->saveOsrmSettings(new Request(['api_host' => 'https://osrm.example.com/'])));
+        expect($controller->configuredCompany['osrm'])->toBe(['api_host' => 'https://osrm.example.com']);
+
+        // ...unless the install allows private organization hosts
+        config(['fleetops.osrm.allow_private_hosts' => true]);
+        $controller->saveOsrmSettings(new Request(['api_host' => 'https://internal.osrm.example.com']));
+        expect($controller->configuredCompany['osrm'])->toBe(['api_host' => 'https://internal.osrm.example.com']);
+
+        $controller->saveOsrmSettings(new Request([]));
+        expect($controller->configuredCompany['osrm'])->toBe(['api_host' => null]);
+    } finally {
+        Fleetbase\FleetOps\Support\Routing\HostPolicy::resolveHostsUsing(null);
+        config(['fleetops.osrm.host' => null, 'fleetops.osrm.allow_private_hosts' => false]);
+        Cache::flush();
     }
 });

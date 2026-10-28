@@ -199,7 +199,8 @@ test('schedule order combines date time and timezone inputs', function () {
     ]);
     $response = $probe->scheduleOrder('order_test', $request);
 
-    expect($connection->table('orders')->value('scheduled_at'))->toContain('2026-08-01 14:30');
+    // 14:30 in the company timezone (Singapore, UTC+8) is stored as the same instant in UTC
+    expect($connection->table('orders')->value('scheduled_at'))->toContain('2026-08-01 06:30');
 
     $missing = $probe->scheduleOrder('missing', $request);
     expect($missing->getStatusCode())->toBe(404)

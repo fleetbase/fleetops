@@ -179,7 +179,7 @@ class DriverController extends FleetOpsController
                     $input     = $input->except(['name', 'password', 'email', 'phone', 'meta', 'avatar_uuid', 'photo_uuid', 'user_uuid', 'user'])->toArray();
 
                     // Update the driver's login account through its proxy fields
-                    ProfileAccountManager::syncProxyFields($driver->getUser(), $userInput);
+                    ProfileAccountManager::syncProxyFields($driver->getUser(), $userInput, $driver->company_uuid);
 
                     // Flush cache
                     $driver->flushAttributesCache();
@@ -331,6 +331,11 @@ class DriverController extends FleetOpsController
 
         if (ProfileAccountManager::isStaffAccount($user)) {
             return [$driver, $user, response()->error('This driver signs in with a team member account. Manage this login in IAM.', 422)];
+        }
+
+        // Its password and status are not this organization's to change
+        if (ProfileAccountManager::isSharedWithAnotherCompany($user, $driver->company_uuid)) {
+            return [$driver, $user, response()->error(ProfileAccountManager::SHARED_LOGIN_MESSAGE, 422)];
         }
 
         return [$driver, $user, null];

@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Orchestration\Engines;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\NavigatorReview;
 use Illuminate\Support\Collection;
 
 /**
@@ -242,7 +243,8 @@ class DriverAssignmentEngine
 
     protected function availableDriversForCompany(?string $companyUuid): Collection
     {
-        return Driver::where('company_uuid', $companyUuid)
+        // An app store reviewer's driver is never assigned a real order.
+        return NavigatorReview::excludeFrom(Driver::where('company_uuid', $companyUuid))
             ->with(['scheduleItems'])
             ->get();
     }

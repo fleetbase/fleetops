@@ -580,7 +580,7 @@ class Contact extends Model
             return false;
         }
 
-        return ProfileAccountManager::syncProxyFields($this->getUser(), $updates);
+        return ProfileAccountManager::syncProxyFields($this->getUser(), $updates, $this->company_uuid);
     }
 
     /**
