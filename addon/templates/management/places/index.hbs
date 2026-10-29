@@ -14,19 +14,19 @@
     @emptyStateComponent={{component
         "table/empty-state"
         icon="location-dot"
-        title="Add your first place"
-        description="Places keep frequent pickup, dropoff, facility, and service locations ready for orders and routing."
-        filteredTitle="No places match your filters"
-        filteredDescription="Adjust the search or filters to find another saved location."
-        primaryText="New place"
+        title=(t "management.empty-states.places.title")
+        description=(t "management.empty-states.places.description")
+        filteredTitle=(t "management.empty-states.places.filtered-title")
+        filteredDescription=(t "management.empty-states.places.filtered-description")
+        primaryText=(t "management.empty-states.places.primary-text")
         primaryIcon="plus"
         primaryAction=this.placeActions.transition.create
-        secondaryText="Import"
+        secondaryText=(t "common.import")
         secondaryIcon="upload"
         secondaryAction=this.placeActions.import
         docsSlug="fleet-ops/resources/places/overview"
-        docsTitle="Places guide"
-        docsText="Places guide"
+        docsTitle=(t "management.empty-states.places.docs-title")
+        docsText=(t "management.empty-states.places.docs-text")
         docsSource="fleet-ops-empty-places"
     }}
 />

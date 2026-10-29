@@ -2,7 +2,7 @@
     @resource={{this.device}}
     @controller={{this}}
     @actionButtons={{this.actionButtons}}
-    @headerTitle="Create a new device"
+    @headerTitle={{t "common.create-a-new-resource" resource=(lowercase (t "resource.device"))}}
     @saveTask={{this.save}}
     @onPressCancel={{transition-to "connectivity.devices.index"}}
     @onOverlayReady={{fn (mut this.overlay)}}

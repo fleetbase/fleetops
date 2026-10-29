@@ -1,7 +1,274 @@
 fleet-ops:
     extension-name: Fleet-Ops
 
+management:
+    hub:
+        eyebrow: Resources
+        title: Resources Hub
+        subtitle: Manage the people, vehicles, places, partners, and operating records that keep dispatch grounded.
+        action-queue: Action Queue
+        action-queue-description: Prioritized from current resource readiness.
+        guides: Guides
+        guides-description: Read the guide before changing resource setup.
+        read-guide: Read the guide on {resource}
+        sections:
+            people_assets:
+                title: People and Assets
+                description: Keep dispatchable drivers, vehicles, and fleet groupings ready for live work.
+            network:
+                title: Operating Network
+                description: Maintain the partners, contacts, and places used while creating and dispatching orders.
+            exceptions:
+                title: Fuel and Exceptions
+                description: Review fuel activity and operational issues before they affect service quality.
+        links:
+            drivers:
+                label: Drivers
+                description: Manage driver profiles, assignments, and schedules.
+            vehicles:
+                label: Vehicles
+                description: Track vehicles, device links, equipment, and service context.
+            fleets:
+                label: Fleets
+                description: Group drivers and vehicles by team, region, or service type.
+            vendors:
+                label: Vendors
+                description: Service partners connected to operational work.
+            contacts:
+                label: Contacts
+                description: Customer and contact records for order workflows.
+            places:
+                label: Places
+                description: Reusable locations, zones, and address context.
+            fuel-reports:
+                label: Fuel Reports
+                description: Review reported fuel activity and costs.
+            fuel-transactions:
+                label: Fuel Transactions
+                description: Inspect transaction-level fueling data and matching context.
+            issues:
+                label: Issues
+                description: Track incidents, service issues, and follow-up work.
+        kpis:
+            drivers:
+                label: Drivers
+                caption-ready: Driver profiles available for dispatch.
+                caption-empty: Add driver profiles before dispatching work.
+                action: Manage Drivers
+                loading: Loading resource readiness.
+            vehicles:
+                label: Vehicles
+                caption-ready: Vehicles ready for assignment and tracking.
+                caption-empty: Add vehicles so dispatch has assignable assets.
+                action: Track Vehicles
+                loading: Loading fleet asset coverage.
+            issues:
+                label: Open Issues
+                caption-ready: Issues need review before they affect service quality.
+                caption-empty: No open issues are visible right now.
+                action: Review Issues
+                loading: Loading exception health.
+            fuel_records:
+                label: Fuel Records
+                caption-ready: Fuel activity is available for review.
+                caption-empty: Fuel records will appear as reports or transactions arrive.
+                action: Review Fuel Records
+                loading: Loading fuel activity.
+        docs:
+            drivers:
+                label: Drivers
+                title: Drivers guide
+                description: Create driver profiles, app access, assignment context, and operating status.
+            vehicles:
+                label: Vehicles
+                title: Vehicles guide
+                description: Track fleet assets, assignment readiness, and vehicle operating details.
+            fleets:
+                label: Fleets
+                title: Fleets guide
+                description: Group drivers and vehicles by team, region, or service coverage.
+            contacts:
+                label: Contacts
+                title: Contacts guide
+                description: Manage people and organizations used across orders and operational records.
+            places:
+                label: Places
+                title: Places guide
+                description: Manage reusable pickup, dropoff, hub, and facility locations.
+            issues:
+                label: Issues
+                title: Issues guide
+                description: Track incidents, service exceptions, and operational follow-up.
+        actions:
+            add_drivers:
+                label: Add driver profiles
+                description: Drivers are required before dispatch can assign live orders.
+            add_vehicles:
+                label: Add vehicles
+                description: Vehicles make assignment, tracking, and service context usable.
+            assign_vehicles_to_drivers:
+                label: Assign vehicles to drivers
+                description: '{count, plural, one {# driver does} other {# drivers do}} not have an assigned vehicle.'
+            assign_drivers_to_vehicles:
+                label: Assign drivers to vehicles
+                description: '{count, plural, one {# vehicle does} other {# vehicles do}} not have an assigned driver.'
+            attach_devices_to_vehicles:
+                label: Attach devices to vehicles
+                description: '{count, plural, one {# device is} other {# devices are}} ready to attach to vehicles without telemetry hardware.'
+            review_resource_issues:
+                label: Review vehicle and driver issues
+                description: '{count, plural, one {# issue is} other {# issues are}} linked to drivers or vehicles.'
+            review_issues:
+                label: Review open issues
+                description: '{count, plural, one {# issue needs} other {# issues need}} follow-up.'
+            prepare_vehicle_maintenance:
+                label: Prepare upcoming maintenance
+                description: '{count, plural, one {# vehicle schedule needs} other {# vehicle schedules need}} maintenance planning.'
+            close_overdue_work_orders:
+                label: Close overdue work orders
+                description: '{count, plural, one {# resource work order is} other {# resource work orders are}} past due.'
+            review_open_work_orders:
+                label: Review open work orders
+                description: '{count, plural, one {# resource work order is} other {# resource work orders are}} open for vehicles or equipment.'
+            replenish_low_stock_parts:
+                label: Replenish low-stock parts
+                description: '{count, plural, one {# stocked part is} other {# stocked parts are}} at or below the default threshold.'
+            review_unmatched_fuel_transactions:
+                label: Review unmatched fuel transactions
+                description: '{count, plural, one {# fuel transaction needs} other {# fuel transactions need}} resource matching.'
+            create_fleets:
+                label: Create fleet groups
+                description: Group active drivers and vehicles by team, region, or service type.
+            add_operating_places:
+                label: Add operating places
+                description: Places keep recurring pickup, dropoff, facility, and service locations ready.
+            add_service_vendors:
+                label: Add vendors for service work
+                description: Vendors connect maintenance, service work, and operating partners to resources.
+            add_contacts:
+                label: Add operating contacts
+                description: Contacts connect customers, partners, and service people to order workflows.
+            review_fuel:
+                label: Open fuel records
+                description: Fuel activity will appear here once reports or transactions are captured.
+            ready:
+                label: Core resources look ready
+                description: Drivers, vehicles, issues, and supporting records are in a healthy operating posture.
+    empty-states:
+        customers:
+            title: Add your first customer
+            description: Customers give orders an owner, contact details, and account context for service history.
+            filtered-title: No customers match your filters
+            filtered-description: Adjust the search or filters to find another customer.
+            primary-text: New customer
+        contacts:
+            title: Add your first contact
+            description: Contacts keep customer, vendor, and internal stakeholder details ready for orders and communication.
+            filtered-title: No contacts match your filters
+            filtered-description: Adjust the search or filters to find another contact.
+            primary-text: New contact
+            docs-title: Contacts guide
+            docs-text: Contacts guide
+        fleets:
+            title: Create your first fleet
+            description: Fleets help group vehicles and drivers for dispatching, reporting, and operational coverage.
+            filtered-title: No fleets match your filters
+            filtered-description: Adjust the search or filters to find another fleet.
+            primary-text: New fleet
+            docs-title: Fleets guide
+            docs-text: Fleet guide
+        fuel-reports:
+            title: No fuel reports yet
+            description: Create fuel reports to track vehicle fuel usage, cost, and supporting transaction records.
+            filtered-title: No fuel reports match your filters
+            filtered-description: Adjust the search or filters to find another fuel report.
+            primary-text: New fuel report
+            docs-title: Fuel reports guide
+            docs-text: Fuel reports guide
+        fuel-transactions:
+            ledger-title: Fuel transaction ledger
+            ledger-description: Imported fuel card bills and provider purchase records are reviewed here before, during, and after they match to vehicles, trips, and linked Fuel Reports.
+            title: No fuel transactions
+            description: Imported fuel card bills and provider purchase records appear here after provider syncs complete.
+            filtered-title: No transactions match your filters
+            filtered-description: Adjust the search or filters to review other imported transactions.
+            docs-title: Fuel reports guide
+            docs-text: Fuel reports guide
+            no-unmatched-title: No unmatched fuel transactions
+            no-unmatched-description: Fleet-Ops did not find imported provider bills that still need vehicle or trip matching.
+            no-integration-title: No transactions imported for this integration
+            no-integration-description: Run a sync from the fuel integration detail page to import provider bills into this ledger.
+            no-imported-title: No fuel transactions imported yet
+            no-imported-description: Connect PetroApp or another fuel integration, then run a transaction sync. Imported provider bills appear here before linked Fuel Reports are created.
+            open-integrations: Open Fuel Integrations
+            refresh: Refresh
+            reprocess-selected: 'Reprocess {count} selected'
+            actions-menu: Fuel Transaction Actions
+            review-details: Review Details
+            open-fuel-report: Open Fuel Report
+            match-vehicle: Match to Vehicle
+            match-order: Match to Order
+            reprocess-rematch: Reprocess / Rematch
+            ignore-transaction: Ignore Transaction
+            mark-reviewed: Mark Reviewed
+            unlinked-info: This transaction does not have a linked Fuel Report yet.
+            reprocessed: Fuel transaction reprocessed.
+            ignored: Fuel transaction ignored.
+            marked-reviewed: Fuel transaction marked reviewed.
+            columns:
+                transaction: Transaction
+                provider: Provider
+                status: Status
+                vehicle: Vehicle
+                card-internal: Card / Internal
+                trip: Trip
+                station: Station
+                liters: Liters
+                amount: Amount
+                fuel-report: Fuel Report
+                date: Date
+        issues:
+            title: No issues reported
+            description: Track vehicle, driver, facility, and service issues here so follow-up work stays visible.
+            filtered-title: No issues match your filters
+            filtered-description: Clear the search or filters to review other reported issues.
+            primary-text: New issue
+            docs-title: Issues guide
+            docs-text: Issues guide
+        places:
+            title: Add your first place
+            description: Places keep frequent pickup, dropoff, facility, and service locations ready for orders and routing.
+            filtered-title: No places match your filters
+            filtered-description: Adjust the search or filters to find another saved location.
+            primary-text: New place
+            docs-title: Places guide
+            docs-text: Places guide
+        vehicles:
+            title: Add your first vehicle
+            description: Vehicles connect assignments, live tracking, fleet capacity, maintenance, and compliance history.
+            filtered-title: No vehicles match your filters
+            filtered-description: Adjust the search or filters to find another vehicle.
+            primary-text: New vehicle
+            docs-title: Vehicles guide
+            docs-text: Vehicle guide
+        vendors:
+            title: Add your first vendor
+            description: Vendors let your team manage external carriers, service providers, and operational partners.
+            filtered-title: No vendors match your filters
+            filtered-description: Adjust the search or filters to find another vendor.
+            primary-text: New vendor
+            docs-title: Vendors guide
+            docs-text: Vendor guide
+        integrated-vendors:
+            title: No integrated vendors yet
+            description: Integrated vendor records appear here after vendor integrations are connected and synchronized.
+            filtered-title: No integrated vendors match your filters
+            filtered-description: Adjust the search or filters to find another integrated vendor.
+            docs-title: Integrated vendors guide
+            docs-text: Integrated vendors guide
+
 common:
+    import: Import
     last-modified: Last modified
     "yes": "Yes"
     "no": "No"
@@ -805,14 +1072,25 @@ driver:
     fields:
         avatar: Avatar
         driver-details: Driver Details
+        select-user: Select User
         select-vehicle: Select Vehicle
         upload-new-photo: Upload new photo
         user-account: User Account
         vendor: Vendor
+        user-account-help-text: Each driver profile needs to be connected to a specific user account. This association is essential for managing authentication so each driver can securely access and manage their profile.
         select-vendor: Select Vendor
         driver-license: Drivers License
         license-expiry: License Expiry
         no-vehicle-assigned: No Vehicle Assigned
+    empty-state:
+        title: Add your first driver
+        description: Drivers power dispatching, live fleet visibility, assignments, and delivery activity.
+        filtered-title: No drivers match your search
+        filtered-description: Adjust the search or filters to find another driver.
+        primary-text: New driver
+        secondary-text: Import
+        docs-title: Drivers guide
+        docs-text: Driver guide
     actions:
         unassign-orders: Unassign Orders
         unassign-vehicle: Unassign Vehicle
@@ -1532,6 +1810,130 @@ vehicle:
         vehicle-year: Vehicle year
         vin-number: VIN Number
         year: Year
+    form:
+        vehicle-identification: Vehicle Identification
+        trim: Trim
+        color: Color
+        vehicle-color: Vehicle Color
+        serial-number: Serial Number
+        fuel-card-number: Fuel Card Number
+        class: Class
+        assignment-status: Assignment & Status
+        call-sign: Call Sign
+        location: Location
+        measurement-units: Measurement & Units
+        system-of-measurement: System of Measurement
+        select-system-of-measurement: Select System of Measurement
+        fuel-volume-unit: Fuel Volume Unit
+        select-fuel-volume-unit: Select Fuel Volume Unit
+        odometer-usage: Odometer & Usage
+        current-odometer: 'Current Odometer ({unit})'
+        current-odometer-reading: Current Odometer Reading
+        odometer-unit: Odometer Unit
+        select-unit: Select unit
+        odometer-at-purchase: Odometer at Purchase
+        odometer-reading-at-purchase: Odometer reading at purchase
+        body-usage: Body & Usage
+        body-type: Body Type
+        select-body-type: Select body type
+        body-subtype: Body Subtype
+        select-body-subtype: Select body sub-type
+        usage-type: Usage Type
+        select-usage-type: Select usage type
+        ownership-type: Ownership Type
+        select-ownership-type: Select ownership type
+        fuel-type: Fuel Type
+        select-fuel-type: Select fuel type
+        transmission: Transmission
+        select-transmission: Select transmission
+        technical-specifications: Technical Specifications
+        powertrain-engine: Powertrain & Engine
+        engine-number: Engine Number
+        engine-make: Engine Make
+        engine-manufacturer: Engine Manufacturer
+        engine-model: Engine Model
+        engine-family: Engine Family
+        engine-configuration: Engine Configuration
+        engine-configuration-example: 'e.g., Inline-4, V6'
+        cylinder-arrangement: Cylinder Arrangement
+        cylinder-arrangement-example: 'e.g., I, V, H'
+        number-of-cylinders: Number of Cylinders
+        number-of-cylinders-example: 'e.g., 4, 6'
+        engine-size: Engine Size
+        engine-displacement: Engine Displacement
+        horsepower: Horsepower
+        horsepower-rpm: Horsepower RPM
+        rpm-at-max-horsepower: RPM at Max Horsepower
+        torque: Torque
+        torque-rpm: Torque RPM
+        rpm-at-max-torque: RPM at Max Torque
+        capacity-dimensions: Capacity & Dimensions
+        fuel-capacity: Fuel Capacity
+        fuel-tank-capacity: Fuel Tank Capacity
+        payload-capacity: Payload Capacity
+        maximum-payload: Maximum Payload
+        towing-capacity: Towing Capacity
+        seating-capacity: Seating Capacity
+        number-of-seats: Number of Seats
+        vehicle-weight: Vehicle Weight
+        length: Length
+        width: Width
+        height: Height
+        cargo-volume: Cargo Volume
+        payload-volume: Payload Volume (m³)
+        payload-volume-help: The maximum cargo volume this vehicle can carry, in cubic metres.
+        pallet-capacity: Pallet Capacity
+        pallet-capacity-help: The maximum number of standard pallets this vehicle can carry.
+        parcel-capacity: Parcel Capacity
+        parcel-capacity-help: The maximum number of parcels or packages this vehicle can carry.
+        passenger-volume: Passenger Volume
+        interior-volume: Interior Volume
+        ground-clearance: Ground Clearance
+        bed-length: Bed Length
+        example-40: 'e.g. 40'
+        example-20: 'e.g. 20'
+        example-200: 'e.g. 200'
+        regulatory-compliance: Regulatory & Compliance
+        emission-standard: Emission Standard
+        emission-standard-example: 'e.g., Euro 6, EPA Tier 3'
+        gvwr: GVWR (Gross Vehicle Weight Rating)
+        gvwr-short: GVWR
+        gcwr: GCWR (Gross Combined Weight Rating)
+        gcwr-short: GCWR
+        dpf-equipped: DPF Equipped
+        scr-equipped: SCR Equipped
+        financial-lifecycle: Financial & Lifecycle
+        asset-values: Asset Values
+        currency: Currency
+        acquisition-cost: Acquisition Cost
+        current-value: Current Value
+        insurance-value: Insurance Value
+        depreciation-rate: Depreciation Rate (%)
+        lifecycle-service-life: Lifecycle & Service Life
+        estimated-service-life-distance: Estimated Service Life (Distance)
+        total-distance: Total distance
+        service-life-distance-unit: Service Life Distance Unit
+        estimated-service-life-months: Estimated Service Life (Months)
+        purchase-date: Purchase Date
+        lease-expiry-date: Lease Expiry Date
+        date-placeholder: DD-MM-YYYY
+        financing-loan: Financing (Loan)
+        loan-amount: Loan Amount
+        number-of-payments: Number of Payments
+        first-payment-date: First Payment Date
+        orchestrator-constraints: Orchestrator Constraints
+        skills-capabilities: Skills & Capabilities
+        vehicle-skills: Vehicle Skills
+        vehicle-skills-help: Skills this vehicle can fulfil (e.g. refrigerated, hazmat). Used by the Orchestrator for order matching.
+        select-skills: Select skills…
+        availability-window: Availability Window
+        available-from: Available From
+        available-from-help: Earliest time this vehicle is available for dispatch (HH:MM).
+        available-until: Available Until
+        available-until-help: Latest time this vehicle should complete its last stop (HH:MM).
+        task-limits: Task Limits
+        max-tasks: Max Tasks
+        max-tasks-help: Maximum number of stops/orders this vehicle can be assigned per Orchestrator run. Leave blank for no limit.
     actions:
         attach-trailer: Attach trailer
         attach-equipment: Attach equipment
