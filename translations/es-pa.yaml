@@ -323,16 +323,12 @@ common:
   schedule: Programar
   optional: Opcional
   unauthorized-access: No tiene autorización para acceder a este recurso.
-  online: En línea
   refresh: Actualizar
   loading-route: Cargando ruta...
   hover-to-load-route: Cargando vista previa de la ruta...
   unable-to-load-route: No se pudo cargar la vista previa de la ruta.
   calendar-view: Vista de calendario
-  change-layout: Cambiar diseño
-  positions: Posiciones
-
-  current-job: Current Job
+  current-job: Trabajo actual
   "yes": Sí
   "no": No
 menu:
