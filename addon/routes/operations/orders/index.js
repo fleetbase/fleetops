@@ -3,6 +3,11 @@ import { inject as service } from '@ember/service';
 
 export default class OperationsOrdersIndexRoute extends Route {
     @service store;
+    @service resourceContextPanel;
+
+    deactivate() {
+        this.resourceContextPanel.closeAll();
+    }
 
     queryParams = {
         page: { refreshModel: true },
