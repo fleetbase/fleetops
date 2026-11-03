@@ -85,6 +85,16 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "policy": {
+            "advisories": {
+                "ignore-id": {
+                    "PKSA-zwc5-qtrz-zm1n": {
+                        "reason": "CVE-2026-48019 has no patched illuminate/mail 9.x or 10.x release. This only stops the install block; composer audit still reports it. Remove at the Laravel 12.69+ upgrade.",
+                        "on-audit": false
+                    }
+                }
+            }
         }
     },
     "scripts": {
