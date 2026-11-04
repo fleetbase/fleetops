@@ -103,7 +103,7 @@ class GeofenceDwelled implements ShouldBroadcast
         $this->geofence             = $geofence;
         $this->geofenceType         = $geofenceType;
         $this->enteredAt            = $enteredAt;
-        $this->dwellDurationMinutes = (int) $enteredAt->diffInMinutes(now());
+        $this->dwellDurationMinutes = (int) $enteredAt->diffInMinutes(now(), true);
         $this->timestamp            = now();
         $this->modelRecordName      = $geofence->name ?? $geofence->public_id ?? $geofence->uuid ?? null;
         $this->userSession          = session('user');
