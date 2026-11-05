@@ -923,11 +923,7 @@ class CustomerController extends Controller
             return response()->apiError('Not authenticated.', 401);
         }
 
-        $query = Place::where('company_uuid', $this->sessionCompany())
-            ->where('owner_uuid', $customer->uuid)
-            ->whereNull('deleted_at');
-
-        return $this->placeResourceCollection($this->runPlaceSearch($query, (string) $request->input('query', ''), [
+        return $this->placeResourceCollection($this->runPlaceSearch($this->riderPlaceQuery($customer), (string) $request->input('query', ''), [
             'limit'          => min((int) $request->input('limit', 10), 50),
             'geo'            => true,
             'latitude'       => $request->input('latitude', false),
@@ -1599,6 +1595,13 @@ class CustomerController extends Controller
     protected function placeResource(Place $place): mixed
     {
         return new PlaceResource($place);
+    }
+
+    protected function riderPlaceQuery(Contact $customer): mixed
+    {
+        return Place::where('company_uuid', $this->sessionCompany())
+            ->where('owner_uuid', $customer->uuid)
+            ->whereNull('deleted_at');
     }
 
     protected function runPlaceSearch(mixed $query, string $searchQuery, array $options): mixed

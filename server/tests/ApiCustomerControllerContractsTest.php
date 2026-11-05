@@ -79,6 +79,11 @@ class FleetOpsApiCustomerControllerProbe extends CustomerController
     public array $uuidLookups                                         = [];
     public array $devices                                             = [];
 
+    protected function riderPlaceQuery(Contact $customer): mixed
+    {
+        return null;
+    }
+
     protected function runPlaceSearch(mixed $query, string $searchQuery, array $options): mixed
     {
         $this->placeQueries[] = ['search', $searchQuery, $options];
@@ -1368,4 +1373,233 @@ test('a customer token gets the narrow customer socket principal', function () {
     expect($source)->toContain("registerPrincipalResolver([static::class, 'customerPrincipal'])")
         ->and($source)->toContain("kind: 'customer'")
         ->and(Fleetbase\FleetOps\Support\SocketChannels::customerPrincipal(Request::create('/'), null))->toBeNull();
+});
+
+class FleetOpsRiderOrderFake extends FleetOpsApiCustomerOrderFake
+{
+    public array $faked       = [];
+    public array $calls       = [];
+    public mixed $trackerFake = null;
+
+    public function __get($key)
+    {
+        return array_key_exists($key, $this->faked) ? $this->faked[$key] : parent::__get($key);
+    }
+
+    public function __isset($key)
+    {
+        return array_key_exists($key, $this->faked) ? isset($this->faked[$key]) : parent::__isset($key);
+    }
+
+    public function dispatch(bool $save = true): self
+    {
+        $this->calls[] = 'dispatch';
+
+        return $this;
+    }
+
+    public function insertDispatchActivity(): Order
+    {
+        $this->calls[] = 'activity';
+
+        return $this;
+    }
+
+    public function cancel()
+    {
+        $this->calls[] = 'cancel';
+    }
+
+    public function cancelWithReason(?string $reason = null)
+    {
+        $this->calls[] = ['reason', $reason];
+    }
+
+    public function tracker(): Fleetbase\FleetOps\Support\OrderTracker
+    {
+        return $this->trackerFake;
+    }
+}
+
+class FleetOpsRiderTrackerFake extends Fleetbase\FleetOps\Support\OrderTracker
+{
+    public function __construct(private bool $fails = false)
+    {
+    }
+
+    public function eta(array $options = []): array
+    {
+        return $this->answer('eta');
+    }
+
+    public function toArray(array $options = []): array
+    {
+        return $this->answer('tracker');
+    }
+
+    private function answer(string $name): array
+    {
+        if ($this->fails) {
+            throw new RuntimeException('tracking is down');
+        }
+
+        return ['answer' => $name];
+    }
+}
+
+class FleetOpsRiderPlaceFake extends Place
+{
+    public array $updates = [];
+    public bool $deleted  = false;
+
+    public function update(array $attributes = [], array $options = [])
+    {
+        $this->updates[] = $attributes;
+
+        return true;
+    }
+
+    public function delete()
+    {
+        $this->deleted = true;
+
+        return true;
+    }
+}
+
+function fleetopsRiderController(array $order = [], array $faked = []): FleetOpsApiCustomerControllerProbe
+{
+    $controller = fleetopsApiCustomerController();
+    $rider      = new FleetOpsRiderOrderFake();
+    $rider->setRawAttributes(array_merge(['uuid' => 'order-uuid', 'customer_uuid' => $controller->currentCustomer->uuid, 'status' => 'created'], $order), true);
+    $rider->faked      = array_merge(['dispatched' => false, 'hasDriverAssigned' => false, 'adhoc' => true, 'driverAssigned' => null, 'vehicleAssigned' => null], $faked);
+    $controller->order = $rider;
+
+    return $controller;
+}
+
+test('every rider route answers 401 without a signed-in rider', function () {
+    $controller                  = fleetopsApiCustomerController();
+    $controller->currentCustomer = null;
+    $request                     = Request::create('/', 'GET');
+
+    expect($controller->searchPlaces($request)->getStatusCode())->toBe(401)
+        ->and($controller->geocode($request)->getStatusCode())->toBe(401)
+        ->and($controller->savePlace($request)->getStatusCode())->toBe(401)
+        ->and($controller->requestPhoneChangeCode($request)->getStatusCode())->toBe(401)
+        ->and($controller->updatePlace('place_1', $request)->getStatusCode())->toBe(404)
+        ->and($controller->deletePlace('place_1')->getStatusCode())->toBe(404)
+        ->and($controller->cancelOrder('order_1', $request)->getStatusCode())->toBe(404);
+});
+
+test('rider place search only asks for the rider and caps the limit', function () {
+    $controller = fleetopsApiCustomerController();
+
+    $controller->searchPlaces(Request::create('/', 'GET', ['query' => 'home', 'limit' => 500, 'latitude' => 1.2, 'longitude' => 103.8]));
+
+    expect($controller->placeQueries[0][0])->toBe('search')
+        ->and($controller->placeQueries[0][1])->toBe('home')
+        ->and($controller->placeQueries[0][2])->toMatchArray(['limit' => 50, 'geo' => true, 'latitude' => 1.2, 'longitude' => 103.8]);
+});
+
+test('a rider saves, edits and deletes their own place', function () {
+    $controller                 = fleetopsApiCustomerController();
+    $controller->place          = new FleetOpsRiderPlaceFake();
+    $controller->place->setRawAttributes(['uuid' => 'place-uuid', 'owner_uuid' => $controller->currentCustomer->uuid], true);
+
+    $saved = $controller->savePlace(Request::create('/', 'POST', ['name' => 'Home', 'latitude' => 1.28, 'longitude' => 103.85, 'street1' => '1 Raffles Place', 'owner_uuid' => 'someone-else']));
+    $edit  = $controller->updatePlace('place_1', Request::create('/', 'PUT', ['name' => 'Work', 'latitude' => 1.3, 'longitude' => 103.9]));
+    $name  = $controller->updatePlace('place_1', Request::create('/', 'PUT', ['name' => 'Office']));
+    $bad   = $controller->updatePlace('place_1', Request::create('/', 'PUT', ['latitude' => 95, 'longitude' => 103.9]));
+    $gone  = $controller->deletePlace('place_1');
+
+    $created = collect($controller->createdPlaces)->first(fn ($entry) => isset($entry['name']));
+
+    expect($saved)->toBeInstanceOf(Fleetbase\FleetOps\Http\Resources\v1\Place::class)
+        ->and($created['owner_uuid'])->toBe($controller->currentCustomer->uuid)
+        ->and($created['location']->getLat())->toBe(1.28)
+        ->and($edit)->toBeInstanceOf(Fleetbase\FleetOps\Http\Resources\v1\Place::class)
+        ->and($controller->place->updates[0]['location']->getLng())->toBe(103.9)
+        ->and($controller->place->updates[1])->toBe(['name' => 'Office'])
+        ->and($bad->getStatusCode())->toBe(422)
+        ->and(fleetopsApiCustomerJson($gone))->toBe(['status' => 'ok'])
+        ->and($controller->place->deleted)->toBeTrue();
+});
+
+test('a phone change code covers missing input, unknown users and send failures', function () {
+    $request = fn () => Request::create('/', 'POST', ['phone' => '+15550002222']);
+
+    $missing = fleetopsApiCustomerController();
+
+    $noUser             = fleetopsApiCustomerController();
+    $noUser->activeUser = null;
+    $noUser->uuidUser   = null;
+
+    $blocked                        = fleetopsApiCustomerController();
+    $blocked->activeUser            = null;
+    $blocked->smsVerificationThrows = SmsBlockedException::limited('company_per_hour', 45);
+
+    $down                       = fleetopsApiCustomerController();
+    $down->activeUser           = null;
+    $down->smsVerificationFails = true;
+
+    expect($missing->requestPhoneChangeCode(Request::create('/', 'POST'))->getStatusCode())->toBe(400)
+        ->and($noUser->requestPhoneChangeCode($request())->getStatusCode())->toBe(400)
+        ->and($blocked->requestPhoneChangeCode($request())->getStatusCode())->toBe(429)
+        ->and($down->requestPhoneChangeCode($request())->getStatusCode())->toBeGreaterThanOrEqual(400);
+});
+
+test('a rider dispatches their own order only when it can go out', function () {
+    $ready = fleetopsRiderController();
+    $ready->dispatchOrder('order_1');
+
+    expect($ready->order->calls)->toBe(['dispatch', 'activity'])
+        ->and(fleetopsRiderController([], ['dispatched' => true])->dispatchOrder('order_1')->getStatusCode())->toBe(422)
+        ->and(fleetopsRiderController(['status' => 'started'])->dispatchOrder('order_1')->getStatusCode())->toBe(422)
+        ->and(fleetopsRiderController([], ['adhoc' => false])->dispatchOrder('order_1')->getStatusCode())->toBe(422);
+});
+
+test('a rider cancels their own order, with or without a reason', function () {
+    $plain = fleetopsRiderController();
+    $plain->cancelOrder('order_1', Request::create('/', 'POST', ['reason' => '   ']));
+
+    $reason = fleetopsRiderController();
+    $reason->cancelOrder('order_1', Request::create('/', 'POST', ['reason' => ' Changed my mind ']));
+
+    expect($plain->order->calls)->toBe(['cancel'])
+        ->and($reason->order->calls)->toBe([['reason', 'Changed my mind']]);
+});
+
+test('a rider sees the driver and car but no contact details', function () {
+    $driver  = (object) ['name' => 'Dee Driver', 'photo_url' => 'photo', 'location' => 'here', 'phone' => '+15550009999', 'email' => 'd@example.test', 'vehicle' => null];
+    $vehicle = (object) ['make' => 'Toyota', 'model' => 'Prius', 'color' => 'Blue', 'plate_number' => 'SGX1'];
+
+    $none    = fleetopsApiCustomerJson(fleetopsRiderController()->orderDriver('order_1'));
+    $noCar   = fleetopsApiCustomerJson(fleetopsRiderController([], ['driverAssigned' => $driver])->orderDriver('order_1'));
+    $withCar = fleetopsApiCustomerJson(fleetopsRiderController([], ['driverAssigned' => $driver, 'vehicleAssigned' => $vehicle])->orderDriver('order_1'));
+
+    expect($none)->toBe(['driver' => null, 'vehicle' => null])
+        ->and($noCar['vehicle'])->toBeNull()
+        ->and($withCar['driver'])->toBe(['name' => 'Dee Driver', 'photo_url' => 'photo', 'location' => 'here'])
+        ->and($withCar['vehicle'])->toBe(['make' => 'Toyota', 'model' => 'Prius', 'color' => 'Blue', 'plate_number' => 'SGX1']);
+});
+
+test('rider tracking answers, and says so when tracking is down', function () {
+    $working                     = fleetopsRiderController();
+    $working->order->trackerFake = new FleetOpsRiderTrackerFake();
+    $broken                      = fleetopsRiderController();
+    $broken->order->trackerFake  = new FleetOpsRiderTrackerFake(true);
+    $request                     = Request::create('/', 'GET');
+
+    expect(fleetopsApiCustomerJson($working->orderTracker('order_1', $request)))->toBe(['answer' => 'tracker'])
+        ->and(fleetopsApiCustomerJson($working->orderEta('order_1', $request)))->toBe(['answer' => 'eta'])
+        ->and($broken->orderTracker('order_1', $request)->getStatusCode())->toBe(503)
+        ->and($broken->orderEta('order_1', $request)->getStatusCode())->toBe(503);
+});
+
+test('an order that does not exist is not found for a rider', function () {
+    $controller                 = fleetopsApiCustomerController();
+    $controller->findOrderFails = true;
+
+    expect($controller->orderDriver('order_missing')->getStatusCode())->toBe(404);
 });

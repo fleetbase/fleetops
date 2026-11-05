@@ -147,22 +147,19 @@ class ServiceQuote extends Model
         }
 
         if (Str::isUuid($serviceQuote)) {
-            $serviceQuote = static::forSessionCompany()->where('uuid', $serviceQuote)->first();
+            $serviceQuote = static::where('uuid', $serviceQuote)->first();
         }
 
         if (Utils::isPublicId($serviceQuote)) {
-            $serviceQuote = static::forSessionCompany()->where('public_id', $serviceQuote)->first();
+            $serviceQuote = static::where('public_id', $serviceQuote)->first();
+        }
+
+        // A quote from another company is treated as not found.
+        if ($serviceQuote instanceof self && session('company') && $serviceQuote->company_uuid !== session('company')) {
+            return null;
         }
 
         return $serviceQuote;
-    }
-
-    /**
-     * A quote from another company is treated as not found.
-     */
-    protected static function forSessionCompany()
-    {
-        return session('company') ? static::where('company_uuid', session('company')) : static::query();
     }
 
     public function getPluralName(): string
