@@ -273,6 +273,6 @@ class SimulateGeofenceEvents extends Command
             return $fallback;
         }
 
-        return max(1, Carbon::parse($state->entered_at)->diffInMinutes(now()));
+        return max(1, (int) Carbon::parse($state->entered_at)->diffInMinutes(now(), true));
     }
 }

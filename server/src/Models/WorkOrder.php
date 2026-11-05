@@ -261,7 +261,7 @@ class WorkOrder extends Model
             return null;
         }
 
-        $days = now()->diffInDays($this->due_at, false);
+        $days = (int) now()->diffInDays($this->due_at, false);
 
         return $days;
     }
@@ -526,7 +526,7 @@ class WorkOrder extends Model
             return null;
         }
 
-        return $this->opened_at->diffInHours($this->closed_at);
+        return (int) $this->opened_at->diffInHours($this->closed_at, true);
     }
 
     /**
