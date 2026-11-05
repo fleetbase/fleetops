@@ -2361,6 +2361,8 @@ test('dispatch orders command dispatches ready scheduled orders and warns for un
 });
 
 test('assign driver roles command assigns non admin driver users and reports failures', function () {
+    fleetopsTestConnectionResolver();
+
     $company = new Company();
     $company->setRawAttributes(['uuid' => 'company-uuid', 'name' => 'Acme Logistics'], true);
 

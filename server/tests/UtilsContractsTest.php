@@ -10,7 +10,7 @@ use Illuminate\Database\Query\Grammars\Grammar;
 
 function fleetOpsUtilsExpressionValue(Expression $expression): string
 {
-    return method_exists($expression, 'getValue') ? $expression->getValue(new Grammar()) : (string) $expression;
+    return method_exists($expression, 'getValue') ? $expression->getValue(new Grammar(new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:')))) : (string) $expression;
 }
 
 test('utility coordinate validators accept only finite coordinate ranges', function () {

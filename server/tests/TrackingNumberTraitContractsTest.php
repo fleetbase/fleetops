@@ -42,7 +42,7 @@ class FleetOpsTrackingNumberPayloadHostFake extends FleetOpsTrackingNumberTraitH
 
 function fleetopsTrackingExpressionValue(Expression $expression): string
 {
-    return method_exists($expression, 'getValue') ? $expression->getValue(new Grammar()) : (string) $expression;
+    return method_exists($expression, 'getValue') ? $expression->getValue(new Grammar(new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:')))) : (string) $expression;
 }
 
 test('tracking number trait handles assignment status location and pickup fallbacks', function () {
