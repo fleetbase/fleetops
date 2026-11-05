@@ -1229,8 +1229,8 @@ function fleetopsRiderOrderFor(FleetOpsApiCustomerControllerProbe $controller, a
 }
 
 test('request code answers the same for known and unknown phone numbers', function () {
-    $known             = fleetopsApiCustomerController();
-    $unknown           = fleetopsApiCustomerController();
+    $known               = fleetopsApiCustomerController();
+    $unknown             = fleetopsApiCustomerController();
     $unknown->activeUser = null;
 
     $request = fn () => Request::create('/v1/customers/request-code', 'POST', ['phone' => '+15550001111']);
@@ -1369,4 +1369,3 @@ test('a customer token gets the narrow customer socket principal', function () {
         ->and($source)->toContain("kind: 'customer'")
         ->and(Fleetbase\FleetOps\Support\SocketChannels::customerPrincipal(Request::create('/'), null))->toBeNull();
 });
-
