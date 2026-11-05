@@ -67,7 +67,7 @@ class FleetOpsCompactResourceRequest extends Request
         return is_array($this->input($key));
     }
 
-    public function array(string $key): array
+    public function inputArray(string $key): array
     {
         $value = $this->input($key);
 

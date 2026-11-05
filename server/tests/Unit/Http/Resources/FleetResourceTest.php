@@ -17,8 +17,8 @@ if (!Request::hasMacro('isArray')) {
     Request::macro('isArray', fn (string $key) => is_array($this->input($key)));
 }
 
-if (!Request::hasMacro('array')) {
-    Request::macro('array', fn (string $key, $default = []) => (array) $this->input($key, $default));
+if (!Request::hasMacro('inputArray')) {
+    Request::macro('inputArray', fn (string $key, $default = []) => (array) $this->input($key, $default));
 }
 
 function fleetopsFleetResourceBoot(): SQLiteConnection

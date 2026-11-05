@@ -196,7 +196,7 @@ namespace {
 
     class FleetOpsInternalIssueRequestFake extends Request
     {
-        public function array($key = null, $default = []): array
+        public function inputArray($key = null, $default = []): array
         {
             $value = data_get($this->all(), $key, $default);
 

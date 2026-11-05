@@ -300,8 +300,8 @@ if (!class_exists('Illuminate\Validation\ValidationException')) {
 }
 
 if (class_exists('Illuminate\Http\Request') && method_exists('Illuminate\Http\Request', 'macro')) {
-    if (!method_exists('Illuminate\Http\Request', 'array')) {
-        Illuminate\Http\Request::macro('array', function (string $key, array $default = []): array {
+    if (!method_exists('Illuminate\Http\Request', 'inputArray')) {
+        Illuminate\Http\Request::macro('inputArray', function (string $key, array $default = []): array {
             $value = $this->input($key, $default);
 
             return is_array($value) ? $value : $default;

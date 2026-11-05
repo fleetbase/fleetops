@@ -44,7 +44,7 @@ class VendorController extends FleetOpsController
      */
     public function afterSave(Request $request, Vendor $vendor)
     {
-        $customFieldValues = $request->array('vendor.custom_field_values');
+        $customFieldValues = $request->inputArray('vendor.custom_field_values');
         if ($customFieldValues) {
             $vendor->syncCustomFieldValues($customFieldValues);
         }
@@ -94,7 +94,7 @@ class VendorController extends FleetOpsController
     public static function export(ExportRequest $request)
     {
         $format       = $request->input('format', 'xlsx');
-        $selections   = $request->array('selections');
+        $selections   = $request->inputArray('selections');
         $fileName     = trim(Str::slug('vendors-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return Excel::download(new VendorExport($selections), $fileName);

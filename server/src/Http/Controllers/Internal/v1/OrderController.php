@@ -97,18 +97,18 @@ class OrderController extends FleetOpsController
      */
     public function onAfterUpdate($request, $order)
     {
-        $uploads = $request->array('order.files');
+        $uploads = $request->inputArray('order.files');
         if ($uploads) {
             $order->attachFiles($uploads);
         }
 
-        $waypoints = $request->array('order.payload.waypoints');
+        $waypoints = $request->inputArray('order.payload.waypoints');
         if ($waypoints) {
             $order->loadMissing('payload');
             $order->payload->updateWaypoints($waypoints);
         }
 
-        $customFieldValues = $request->array('order.custom_field_values');
+        $customFieldValues = $request->inputArray('order.custom_field_values');
         if ($customFieldValues) {
             $order->syncCustomFieldValues($customFieldValues);
         }
@@ -310,7 +310,7 @@ class OrderController extends FleetOpsController
         $pickup            = $request->input('pickup');
         $dropoff           = $request->input('dropoff');
         $return            = $request->input('return');
-        $waypoints         = $request->array('waypoints', []);
+        $waypoints         = $request->inputArray('waypoints', []);
         $hasPickupInput    = $request->exists('pickup');
         $hasDropoffInput   = $request->exists('dropoff');
         $hasReturnInput    = $request->exists('return');
@@ -957,7 +957,7 @@ class OrderController extends FleetOpsController
 
         $proof       = $request->input('proof');
         $bypassProof = $request->boolean('bypass_proof');
-        $activity    = $request->array('activity');
+        $activity    = $request->inputArray('activity');
         $activity    = new Activity($activity, $order->getConfigFlow());
 
         // Configs with strict transitions only accept a configured child of the current
@@ -1932,7 +1932,7 @@ class OrderController extends FleetOpsController
     public function export(ExportRequest $request)
     {
         $format       = $request->input('format', 'xlsx');
-        $selections   = $request->array('selections');
+        $selections   = $request->inputArray('selections');
         $fileName     = trim(Str::slug('order-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return $this->downloadOrderExport($selections, $fileName);

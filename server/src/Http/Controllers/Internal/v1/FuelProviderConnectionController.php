@@ -59,7 +59,7 @@ class FuelProviderConnectionController extends FleetOpsController
 
         $result = $this->fuelProviderService->testCredentials(
             $provider,
-            $request->array('credentials'),
+            $request->inputArray('credentials'),
             $request->input('environment', 'production')
         );
 
@@ -89,7 +89,7 @@ class FuelProviderConnectionController extends FleetOpsController
         $async   = $request->boolean('async', true);
         $from    = $request->input('from') ? Carbon::parse($request->input('from'))->startOfDay() : null;
         $to      = $request->input('to') ? Carbon::parse($request->input('to'))->endOfDay() : null;
-        $options = $request->array('options', []);
+        $options = $request->inputArray('options', []);
         $syncRun = $this->fuelProviderService->createSyncRun($connection, $from, $to, $async ? 'queued' : 'running');
 
         if ($async) {
