@@ -92,7 +92,7 @@ function fleetopsDispatchHelperBoot(): SQLiteConnection
         'orders'            => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'driver_assigned_uuid', 'status', 'adhoc', 'dispatched', 'dispatched_at', 'payload_uuid', 'meta', 'type'],
         'tracking_statuses' => ['uuid', 'company_uuid', 'code', 'tracking_number_uuid', 'status', 'details'],
         'tracking_numbers'  => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'owner_uuid', 'owner_type', 'status_uuid', 'type'],
-        'drivers'           => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'status', 'online', 'location', 'meta'],
+        'drivers'           => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'status', 'online', 'location', 'meta', 'current_job_uuid'],
         'companies'         => ['uuid', 'public_id', 'name'],
         'company_users'     => ['uuid', 'company_uuid', 'user_uuid'],
         'users'             => ['uuid', 'public_id', 'company_uuid', 'name', 'phone', 'email'],
@@ -156,6 +156,13 @@ test('nearby available drivers runs the spatial company scoped query', function 
 
     expect($drivers)->toHaveCount(1)
         ->and($drivers->first()->uuid)->toBe('driver-1');
+
+    // For an order, only its own company's drivers who aren't on another job
+    $own   = Order::where('uuid', 'order-1')->withoutGlobalScopes()->first();
+    $other = new Order();
+    $other->setRawAttributes(['uuid' => 'order-x', 'company_uuid' => 'company-2'], true);
+    expect($probe->callHelper('nearbyAvailableDrivers', new Point(1.3, 103.8), 5000, $own))->toHaveCount(1)
+        ->and($probe->callHelper('nearbyAvailableDrivers', new Point(1.3, 103.8), 5000, $other))->toHaveCount(0);
 
     // Offline drivers are excluded
     $connection->table('drivers')->where('uuid', 'driver-1')->update(['online' => '0']);

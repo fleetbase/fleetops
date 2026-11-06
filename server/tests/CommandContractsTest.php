@@ -355,6 +355,16 @@ class FleetOpsDispatchAdhocOrdersCommandFake extends DispatchAdhocOrders
         return $this->drivers;
     }
 
+    protected function usesTimedOffers(Order $order): bool
+    {
+        return false;
+    }
+
+    protected function markPinged(Order $order): void
+    {
+        $order->dispatchedForPing = true;
+    }
+
     public function info($string, $verbosity = null)
     {
         $this->messages[] = ['info', $string];
@@ -413,6 +423,13 @@ class FleetOpsDispatchAdhocOrdersQueryProbe extends DispatchAdhocOrders
     protected function newDriverQuery()
     {
         return $this->driverQuery;
+    }
+
+    protected function matchDrivers($driverQuery, Order $order)
+    {
+        $driverQuery->calls[] = ['matchDrivers', $order->company_uuid];
+
+        return $driverQuery;
     }
 }
 

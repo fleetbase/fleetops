@@ -4,8 +4,11 @@ namespace Fleetbase\FleetOps\Console\Commands;
 
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\OrderOffer;
 use Fleetbase\FleetOps\Notifications\OrderPing;
+use Fleetbase\FleetOps\Support\DriverMatching;
 use Fleetbase\FleetOps\Support\NavigatorReview;
+use Fleetbase\FleetOps\Support\OrderOffers;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Console\Command;
@@ -57,6 +60,12 @@ class DispatchAdhocOrders extends Command
         $this->table(['Order', 'Dispatched At'], $orders->map(fn ($order) => [$order->public_id, $order->dispatched_at]));
 
         foreach ($orders as $order) {
+            // Orders with timed offers go to one driver at a time, so only a stuck offer is moved on here.
+            if ($this->usesTimedOffers($order)) {
+                $this->advanceOffers($order);
+                continue;
+            }
+
             $pickup   = $order->getPickupLocation();
             $distance = $order->getAdhocPingDistance();
 
@@ -70,7 +79,8 @@ class DispatchAdhocOrders extends Command
             $this->line('Checking order ' . $order->public_id . ' for nearby drivers within ' . $distance . ' meters.');
 
             if ($drivers->count()) {
-                $order->dispatch(true);
+                // Dispatching again would fire OrderDispatched, whose listener pings every driver a second time.
+                $this->markPinged($order);
                 $this->info('Order ' . $order->public_id . ' dispatched successfully to ' . $drivers->count() . ' nearby drivers.');
                 foreach ($drivers as $driver) {
                     $this->info('Pinging driver ' . $driver->name . ' (' . $driver->public_id . ') ...');
@@ -95,16 +105,16 @@ class DispatchAdhocOrders extends Command
     {
         $sandbox = Utils::castBoolean($this->option('sandbox'));
 
+        // Each bound gets its own instance: subtracting from one shared Carbon moved both ends
+        // back 72 hours, leaving a window that never matched.
         $cutoffDate = Carbon::now()->subDays($days);
-        $now        = Carbon::now();
+        $oldest     = Carbon::now()->subHours($expiryHours);
+        $newest     = Carbon::now()->subMinutes($intervalMinutes);
 
         return $this->newOrderQuery($sandbox ? 'sandbox' : 'mysql')
             ->withoutGlobalScopes()
             ->where(['adhoc' => 1, 'dispatched' => 1, 'started' => 0])
-            ->whereBetween('dispatched_at', [
-                $now->subHours($expiryHours),   // not older than 72 hours
-                $now->subMinutes($intervalMinutes),
-            ])
+            ->whereBetween('dispatched_at', [$oldest, $newest])
             ->where('created_at', '>=', $cutoffDate)
             ->whereNull('driver_assigned_uuid')
             ->whereNull('deleted_at')
@@ -148,7 +158,45 @@ class DispatchAdhocOrders extends Command
             $driverQuery->distanceSphereValue('location', $pickup);
         }
 
-        return $driverQuery->get();
+        return $this->matchDrivers($driverQuery, $order)->get();
+    }
+
+    /**
+     * Leave out drivers already on another job and drivers of another vehicle class.
+     */
+    protected function matchDrivers($driverQuery, Order $order)
+    {
+        DriverMatching::notBusy($driverQuery);
+
+        return DriverMatching::forVehicleClass($driverQuery, DriverMatching::vehicleClass($order));
+    }
+
+    /**
+     * Restart the order's re-ping interval without dispatching it again.
+     */
+    protected function markPinged(Order $order): void
+    {
+        $order->forceFill(['dispatched_at' => Carbon::now()])->saveQuietly();
+    }
+
+    protected function usesTimedOffers(Order $order): bool
+    {
+        return (bool) $order->config()?->usesTimedOffers();
+    }
+
+    /**
+     * Close an offer whose expiry job was lost, or start offers that never began.
+     */
+    protected function advanceOffers(Order $order): void
+    {
+        $pending = OrderOffers::pending($order);
+        if ($pending && $pending->expires_at?->isPast()) {
+            OrderOffers::expire($pending);
+            $this->info('Moved order ' . $order->public_id . ' to the next driver.');
+        } elseif (!$pending && !OrderOffer::where('order_uuid', $order->uuid)->exists()) {
+            OrderOffers::start($order);
+            $this->info('Started offers for order ' . $order->public_id . '.');
+        }
     }
 
     protected function newOrderQuery(string $connection)

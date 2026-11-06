@@ -5,9 +5,12 @@ namespace Fleetbase\FleetOps\Listeners;
 use Fleetbase\FleetOps\Events\OrderDispatched;
 use Fleetbase\FleetOps\Events\OrderDispatchFailed;
 use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Notifications\OrderDispatched as OrderDispatchedNotification;
 use Fleetbase\FleetOps\Notifications\OrderPing;
+use Fleetbase\FleetOps\Support\DriverMatching;
+use Fleetbase\FleetOps\Support\OrderOffers;
 use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
@@ -26,7 +29,7 @@ class HandleOrderDispatched implements ShouldQueue
      */
     public function handle(OrderDispatched $event)
     {
-        /** @var \Fleetbase\FleetOps\Models\Order $order */
+        /** @var Order $order */
         $order = $event->getModelRecord();
 
         // set company session
@@ -62,6 +65,11 @@ class HandleOrderDispatched implements ShouldQueue
 
         /* if order is adhoc ping drivers within radius of pickup to accept order * */
         if ($order->adhoc) {
+            // A config with timed offers goes to one driver at a time instead of everyone nearby.
+            if ($this->usesTimedOffers($order)) {
+                return $this->startOffers($order);
+            }
+
             $order->load(['company']);
             $pickup   = $order->getPickupLocation();
             $distance = $order->getAdhocDistance();
@@ -69,7 +77,7 @@ class HandleOrderDispatched implements ShouldQueue
                 return;
             }
 
-            $drivers = $this->nearbyAvailableDrivers($pickup, $distance);
+            $drivers = $this->nearbyAvailableDrivers($pickup, $distance, $order);
 
             return $drivers->each(function ($driver) use ($order) {
                 try {
@@ -110,9 +118,22 @@ class HandleOrderDispatched implements ShouldQueue
         return $order->config()?->getDispatchActivity();
     }
 
-    protected function nearbyAvailableDrivers($pickup, int|float $distance)
+    protected function usesTimedOffers($order): bool
     {
-        return Driver::where(['status' => 'available', 'online' => 1])
+        return (bool) $order->config()?->usesTimedOffers();
+    }
+
+    protected function startOffers($order): mixed
+    {
+        return OrderOffers::start($order);
+    }
+
+    /**
+     * Drivers to ping for the order: of its company, not on another job, and of its vehicle class.
+     */
+    protected function nearbyAvailableDrivers($pickup, int|float $distance, ?Order $order = null)
+    {
+        $query = Driver::where(['status' => 'available', 'online' => 1])
             ->whereHas('company', function ($q) {
                 $q->whereHas('users', function ($q) {
                     $q->whereHas('driver', function ($q) {
@@ -129,8 +150,13 @@ class HandleOrderDispatched implements ShouldQueue
             ')
             ->distanceSphere('location', $pickup, $distance)
             ->distanceSphereValue('location', $pickup)
-            ->withoutGlobalScopes()
-            ->get();
+            ->withoutGlobalScopes();
+
+        if ($order) {
+            DriverMatching::forOrder($query, $order);
+        }
+
+        return $query->get();
     }
 
     protected function notifyAdhocDriver(Driver $driver, $order): void

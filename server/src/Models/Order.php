@@ -11,9 +11,11 @@ use Fleetbase\FleetOps\Events\OrderDriverAssigned;
 use Fleetbase\FleetOps\Events\OrderDriverUnassigned;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Notifications\OrderUnassigned;
+use Fleetbase\FleetOps\Support\DriverMatching;
 use Fleetbase\FleetOps\Support\LabelPdf;
 use Fleetbase\FleetOps\Support\NavigatorReview;
 use Fleetbase\FleetOps\Support\OrderEditPolicy;
+use Fleetbase\FleetOps\Support\OrderOffers;
 use Fleetbase\FleetOps\Support\OrderTracker;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
@@ -1506,6 +1508,14 @@ class Order extends Model
         $this->status     = $canceledActivity->code ?? 'canceled';
         $this->updateActivity($canceledActivity);
 
+        // The driver is free for other work, and nobody else is offered a canceled order.
+        if ($this->driver_assigned_uuid) {
+            Driver::withoutGlobalScopes()->where(['uuid' => $this->driver_assigned_uuid, 'current_job_uuid' => $this->uuid])->update(['current_job_uuid' => null]);
+        }
+        if ($orderConfig->usesTimedOffers()) {
+            OrderOffers::withdraw($this);
+        }
+
         if ($this->isIntegratedVendorOrder()) {
             $api = $this->facilitator->api();
 
@@ -2334,9 +2344,9 @@ class Order extends Model
             ')
             ->distanceSphere('location', $pickup, $distance)
             ->distanceSphereValue('location', $pickup)
-            ->withoutGlobalScopes()
-            ->get();
+            ->withoutGlobalScopes();
 
-        return $drivers;
+        // Only this order's company, and not drivers already on another job.
+        return DriverMatching::forOrder($drivers, $this)->get();
     }
 }

@@ -244,7 +244,12 @@ class FleetOpsHandleOrderDispatchedProbe extends HandleOrderDispatched
         return $order->dispatchActivity;
     }
 
-    protected function nearbyAvailableDrivers($pickup, int|float $distance)
+    protected function usesTimedOffers($order): bool
+    {
+        return false;
+    }
+
+    protected function nearbyAvailableDrivers($pickup, int|float $distance, ?Order $order = null)
     {
         $this->nearbyQueries[] = [(string) $pickup, $distance];
 

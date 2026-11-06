@@ -292,7 +292,7 @@ test('a driver reaches only their own driver record, vehicle, devices, positions
     expect(socketChannelsAllows($walker, 'vehicle.vehicles-a'))->toBeFalse();
 });
 
-test('a customer reaches their own orders and the driver and vehicle of their active orders', function () {
+test('a customer reaches their own orders and the vehicle of their active orders, never a driver', function () {
     socketChannelsBoot();
     $customer = socketChannelsCustomer();
 
@@ -302,10 +302,10 @@ test('a customer reaches their own orders and the driver and vehicle of their ac
         ->and(socketChannelsAllows($customer, 'order.order-a2'))->toBeFalse()
         ->and(socketChannelsAllows($customer, 'order.orders-b'))->toBeFalse();
 
-    // driver-a1 drives an active order of theirs; driver-a2 only a completed one.
-    expect(socketChannelsAllows($customer, 'driver.driver-a1'))->toBeTrue()
-        ->and(socketChannelsAllows($customer, 'driverAssigned.driver_a1'))->toBeTrue()
-        ->and(socketChannelsAllows($customer, 'driver.driver-a3'))->toBeTrue()
+    // Not even the driver of an active order of theirs: driver events carry the driver's phone.
+    expect(socketChannelsAllows($customer, 'driver.driver-a1'))->toBeFalse()
+        ->and(socketChannelsAllows($customer, 'driverAssigned.driver_a1'))->toBeFalse()
+        ->and(socketChannelsAllows($customer, 'driver.driver-a3'))->toBeFalse()
         ->and(socketChannelsAllows($customer, 'driver.driver-a2'))->toBeFalse();
 
     // vehicle-a1 is assigned to an active order; vehicle-a3 is driven by an active order's driver.

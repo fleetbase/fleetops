@@ -443,6 +443,23 @@ class OrderConfig extends Model
     }
 
     /**
+     * Whether orders using this config are offered to one driver at a time (`meta.offers.enabled`)
+     * rather than pinged to every nearby driver at once.
+     */
+    public function usesTimedOffers(): bool
+    {
+        return (bool) data_get($this->meta, 'offers.enabled', false);
+    }
+
+    /**
+     * Seconds a driver has to accept an offer (`meta.offers.timeout`), from 10 to 120, default 20.
+     */
+    public function offerTimeout(): int
+    {
+        return max(10, min(120, (int) data_get($this->meta, 'offers.timeout', 20)));
+    }
+
+    /**
      * Determines if activity updates must follow the configured flow graph.
      */
     public function hasStrictTransitions(): bool

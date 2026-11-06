@@ -119,7 +119,12 @@ class FleetOpsConcreteHandleOrderDispatchedProbe extends HandleOrderDispatched
         return $this->assignedDriver;
     }
 
-    protected function nearbyAvailableDrivers($pickup, int|float $distance)
+    protected function usesTimedOffers($order): bool
+    {
+        return false;
+    }
+
+    protected function nearbyAvailableDrivers($pickup, int|float $distance, ?Order $order = null)
     {
         return collect([
             new FleetOpsConcreteDriverForDispatch(),
