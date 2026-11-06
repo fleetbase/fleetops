@@ -19,12 +19,19 @@ return new class extends Migration {
             $table->char('company_uuid', 36)->nullable()->index();
             $table->char('order_uuid', 36)->nullable()->index();
             $table->json('details')->nullable();
-            $table->double('total_distance', 12, 2)->nullable();
-            $table->double('total_time', 12, 2)->nullable();
+            $table->double('total_distance')->nullable();
+            $table->double('total_time')->nullable();
             $table->softDeletes();
             $table->timestamp('created_at')->nullable()->index();
             $table->timestamp('updated_at')->nullable();
         });
+
+        // Blueprint::double() only takes total and places before Laravel 11, so set them in SQL.
+        if (Schema::getConnection()->getDriverName() === 'mysql') {
+            Schema::getConnection()->statement(
+                'ALTER TABLE `routes` MODIFY COLUMN `total_distance` DOUBLE(12,2) NULL, MODIFY COLUMN `total_time` DOUBLE(12,2) NULL'
+            );
+        }
     }
 
     /**

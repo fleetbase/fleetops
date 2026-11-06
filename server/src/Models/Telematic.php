@@ -377,7 +377,7 @@ class Telematic extends Model
             return 'never_connected';
         }
 
-        $minutesOffline = $this->last_seen_at->diffInMinutes(now());
+        $minutesOffline = (int) $this->last_seen_at->diffInMinutes(now(), true);
 
         if ($minutesOffline <= 5) {
             return 'online';

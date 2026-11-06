@@ -128,7 +128,7 @@ class HOSConstraint
         $dutyStart = Carbon::parse($lastOffDutyPeriod);
         $itemEnd   = Carbon::parse($item->end_at);
 
-        $hoursSinceDutyStart = $dutyStart->diffInHours($itemEnd);
+        $hoursSinceDutyStart = (int) $dutyStart->diffInHours($itemEnd, true);
 
         return $hoursSinceDutyStart <= 14;
     }
@@ -172,7 +172,7 @@ class HOSConstraint
 
         foreach ($recentItems as $recentItem) {
             if ($recentItem->break_start_at && $recentItem->break_end_at) {
-                $breakDuration = Carbon::parse($recentItem->break_start_at)->diffInMinutes($recentItem->break_end_at);
+                $breakDuration = (int) Carbon::parse($recentItem->break_start_at)->diffInMinutes($recentItem->break_end_at, true);
                 if ($breakDuration >= 30) {
                     $lastBreak    = $recentItem->break_end_at;
                     $drivingHours = 0; // Reset driving hours after break
@@ -188,7 +188,7 @@ class HOSConstraint
         // If more than 8 hours of driving, require a 30-minute break
         if ($drivingHours > 8) {
             return $item->break_start_at && $item->break_end_at
-                   && Carbon::parse($item->break_start_at)->diffInMinutes($item->break_end_at) >= 30;
+                   && (int) Carbon::parse($item->break_start_at)->diffInMinutes($item->break_end_at, true) >= 30;
         }
 
         return true;

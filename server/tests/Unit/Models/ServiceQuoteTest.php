@@ -615,3 +615,20 @@ test('service quote replaces active stripe prices and creates embedded checkout 
         Facade::setFacadeApplication($previousContainer);
     }
 });
+
+test('service quote from another company resolves as not found', function () {
+    $quote = new ServiceQuote();
+    $quote->setRawAttributes(['uuid' => '11111111-1111-4111-8111-111111111111', 'company_uuid' => 'company-b'], true);
+
+    FleetOpsServiceQuoteUnitResolvableFake::$lookups = [];
+    FleetOpsServiceQuoteUnitResolvableFake::$records = ['uuid' => ['11111111-1111-4111-8111-111111111111' => $quote], 'public_id' => []];
+    $request                                         = fleetopsServiceQuoteUnitRequestWithQuote('11111111-1111-4111-8111-111111111111');
+
+    session(['company' => 'company-a']);
+    expect(FleetOpsServiceQuoteUnitResolvableFake::resolveFromRequest($request))->toBeNull();
+
+    session(['company' => 'company-b']);
+    expect(FleetOpsServiceQuoteUnitResolvableFake::resolveFromRequest($request))->toBe($quote);
+
+    session(['company' => null]);
+});

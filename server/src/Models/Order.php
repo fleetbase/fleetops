@@ -11,9 +11,11 @@ use Fleetbase\FleetOps\Events\OrderDriverAssigned;
 use Fleetbase\FleetOps\Events\OrderDriverUnassigned;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Notifications\OrderUnassigned;
+use Fleetbase\FleetOps\Support\DriverMatching;
 use Fleetbase\FleetOps\Support\LabelPdf;
 use Fleetbase\FleetOps\Support\NavigatorReview;
 use Fleetbase\FleetOps\Support\OrderEditPolicy;
+use Fleetbase\FleetOps\Support\OrderOffers;
 use Fleetbase\FleetOps\Support\OrderTracker;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
@@ -35,6 +37,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Carbon;
@@ -114,6 +117,11 @@ class Order extends Model
         'dispatched',
         'adhoc',
         'adhoc_distance',
+        'adhoc_strategy',
+        'required_vehicle_type',
+        'chat_channel_uuid',
+        'fare_finalized_at',
+        'paid_at',
         'started',
         'started_at',
         'pod_method',
@@ -239,17 +247,19 @@ class Order extends Model
      * @var array
      */
     protected $casts = [
-        'meta'             => Json::class,
-        'options'          => Json::class,
-        'customer_type'    => PolymorphicType::class,
-        'facilitator_type' => PolymorphicType::class,
-        'dispatched'       => 'boolean',
-        'adhoc'            => 'boolean',
-        'started'          => 'boolean',
-        'pod_required'     => 'boolean',
-        'scheduled_at'     => 'datetime',
-        'dispatched_at'    => 'datetime',
-        'started_at'       => 'datetime',
+        'meta'              => Json::class,
+        'options'           => Json::class,
+        'customer_type'     => PolymorphicType::class,
+        'facilitator_type'  => PolymorphicType::class,
+        'dispatched'        => 'boolean',
+        'adhoc'             => 'boolean',
+        'started'           => 'boolean',
+        'pod_required'      => 'boolean',
+        'scheduled_at'      => 'datetime',
+        'dispatched_at'     => 'datetime',
+        'fare_finalized_at' => 'datetime',
+        'paid_at'           => 'datetime',
+        'started_at'        => 'datetime',
         // Orchestrator
         'required_skills'       => Json::class,
         'time_window_start'     => 'datetime',
@@ -501,6 +511,68 @@ class Order extends Model
     public function purchaseRate(): BelongsTo
     {
         return $this->belongsTo(PurchaseRate::class);
+    }
+
+    /**
+     * The rider's rating of the driver, once the order is finished and rated.
+     */
+    public function driverRating(): HasOne
+    {
+        return $this->hasOne(DriverRating::class, 'order_uuid', 'uuid');
+    }
+
+    /**
+     * The chat between the order's customer and its driver, once opened.
+     */
+    public function chatChannel(): BelongsTo
+    {
+        return $this->belongsTo(\Fleetbase\Models\ChatChannel::class, 'chat_channel_uuid', 'uuid');
+    }
+
+    /**
+     * How offering the order to drivers ended, for example `no_driver_found`. Null while it is
+     * still being offered, once a driver took it, or for an order that wasn't adhoc.
+     */
+    public function dispatchOutcome(): ?string
+    {
+        return OrderOffers::outcome($this);
+    }
+
+    /**
+     * Record that the order has been paid. Called by the billing package (Ledger).
+     */
+    public function markPaid(?Carbon $at = null): bool
+    {
+        if ($this->paid_at) {
+            return false;
+        }
+
+        return $this->forceFill(['paid_at' => $at ?? Carbon::now()])->saveQuietly();
+    }
+
+    /**
+     * The order's fare: the price it was bought at, with its lines, and the first price it was
+     * booked at as the estimate. `final` once the price was set from the actual trip.
+     */
+    public function fare(): ?array
+    {
+        $quote = data_get($this, 'purchaseRate.serviceQuote');
+        if (!$quote instanceof ServiceQuote) {
+            return null;
+        }
+
+        $first = PurchaseRate::where('payload_uuid', $this->payload_uuid)->whereNotNull('payload_uuid')->oldest()->first()?->serviceQuote;
+
+        return [
+            'final'    => (bool) $this->fare_finalized_at,
+            'total'    => (int) $quote->amount,
+            'currency' => $quote->currency,
+            'estimate' => $first ? (int) $first->amount : null,
+            'distance' => $quote->distance,
+            'time'     => $quote->time,
+            'service'  => data_get($quote, 'serviceRate.service_name'),
+            'lines'    => $quote->items()->get()->map(fn ($item) => ['label' => (string) ($item->details ?? $item->code), 'amount' => (int) $item->amount])->all(),
+        ];
     }
 
     /**
@@ -1506,6 +1578,14 @@ class Order extends Model
         $this->status     = $canceledActivity->code ?? 'canceled';
         $this->updateActivity($canceledActivity);
 
+        // The driver is free for other work, and nobody else is offered a canceled order.
+        if ($this->driver_assigned_uuid) {
+            Driver::withoutGlobalScopes()->where(['uuid' => $this->driver_assigned_uuid, 'current_job_uuid' => $this->uuid])->update(['current_job_uuid' => null]);
+        }
+        if ($this->adhoc) {
+            OrderOffers::withdraw($this);
+        }
+
         if ($this->isIntegratedVendorOrder()) {
             $api = $this->facilitator->api();
 
@@ -2334,9 +2414,9 @@ class Order extends Model
             ')
             ->distanceSphere('location', $pickup, $distance)
             ->distanceSphereValue('location', $pickup)
-            ->withoutGlobalScopes()
-            ->get();
+            ->withoutGlobalScopes();
 
-        return $drivers;
+        // Only this order's company, and not drivers already on another job.
+        return DriverMatching::forOrder($drivers, $this)->get();
     }
 }

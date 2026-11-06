@@ -35,6 +35,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
             $router->get('{number}/proofs/{id}', 'TrackingController@proof');
             $router->post('{number}/report', 'TrackingController@report');
             $router->get('{number}/socket-token', 'TrackingController@socketToken');
+            $router->post('{number}/share', 'TrackingController@redeemShare');
         });
 
         $router->prefix('public')->namespace('Public')->middleware([Fleetbase\FleetOps\Http\Middleware\ForceJsonResponse::class, 'throttle:60,1,inspection-public'])->group(function ($router) {
@@ -103,6 +104,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->post('/', 'CustomerController@create');
                 $router->post('login', 'CustomerController@login');
                 $router->post('login-with-sms', 'CustomerController@loginWithPhone')->middleware('throttle:5,1,fleetops-sms');
+                $router->post('request-code', 'CustomerController@requestCode')->middleware('throttle:5,1,fleetops-sms');
                 $router->post('verify-code', 'CustomerController@verifyCode');
                 $router->post('forgot-password', 'CustomerController@forgotPassword')->middleware('throttle:5,1,fleetops-sms');
                 $router->post('reset-password', 'CustomerController@resetPassword');
@@ -115,10 +117,27 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                     $router->post('logout', 'CustomerController@logout');
                     $router->post('logout-all', 'CustomerController@logoutAll');
                     $router->post('register-device', 'CustomerController@registerDevice');
+                    $router->post('me/phone-code', 'CustomerController@requestPhoneChangeCode')->middleware('throttle:5,1,fleetops-sms');
+                    $router->get('geocode', 'CustomerController@geocode');
                     $router->get('places', 'CustomerController@places');
+                    $router->get('places/search', 'CustomerController@searchPlaces');
+                    $router->post('places', 'CustomerController@savePlace');
+                    $router->put('places/{id}', 'CustomerController@updatePlace');
+                    $router->delete('places/{id}', 'CustomerController@deletePlace');
                     $router->get('orders', 'CustomerController@orders');
                     $router->post('orders', 'CustomerController@createOrder');
                     $router->get('orders/{id}', 'CustomerController@findOrder');
+                    $router->post('orders/{id}/dispatch', 'CustomerController@dispatchOrder');
+                    $router->post('orders/{id}/cancel', 'CustomerController@cancelOrder');
+                    $router->get('orders/{id}/driver', 'CustomerController@orderDriver');
+                    $router->get('orders/{id}/tracker', 'CustomerController@orderTracker');
+                    $router->get('orders/{id}/eta', 'CustomerController@orderEta');
+                    $router->get('orders/{id}/messages', 'CustomerController@orderMessages');
+                    $router->post('orders/{id}/messages', 'CustomerController@sendOrderMessage')->middleware('throttle:30,1');
+                    $router->post('orders/{id}/rating', 'CustomerController@rateOrder');
+                    $router->post('orders/{id}/share', 'CustomerController@shareOrder');
+                    $router->get('ride-settings', 'CustomerController@rideSettings');
+                    $router->delete('me', 'CustomerController@deleteMe');
                 });
             });
             // vendors routes
@@ -211,6 +230,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->match(['post', 'patch'], '{id}/schedule', 'OrderController@scheduleOrder');
                 $router->match(['post', 'patch'], '{id}/dispatch', 'OrderController@dispatchOrder');
                 $router->post('{id}/start', 'OrderController@startOrder');
+                $router->post('{id}/decline', 'OrderController@declineOrder');
                 $router->delete('{id}/cancel', 'OrderController@cancelOrder');
                 $router->match(['post', 'patch'], '{id}/update-activity', 'OrderController@updateActivity');
                 $router->post('{id}/complete', 'OrderController@completeOrder');
@@ -827,6 +847,9 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                         $router->get('notification-registry', 'SettingController@getNotificationRegistry');
                                         $router->get('notification-settings', 'SettingController@getNotificationSettings');
                                         $router->post('notification-settings', 'SettingController@saveNotificationSettings');
+                                        $router->get('adhoc-dispatch-settings', 'SettingController@getAdhocDispatchSettings');
+                                        $router->post('adhoc-dispatch-settings', 'SettingController@saveAdhocDispatchSettings');
+                                        $router->get('adhoc-dispatch-strategies', 'SettingController@getAdhocDispatchStrategies');
                                         $router->get('routing-settings', 'SettingController@getRoutingSettings');
                                         $router->post('routing-settings', 'SettingController@saveRoutingSettings');
                                         $router->get('tracking-settings', 'SettingController@getTrackingSettings');

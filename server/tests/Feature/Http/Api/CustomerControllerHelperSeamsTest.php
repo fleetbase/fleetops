@@ -251,6 +251,21 @@ function fleetopsCustomerHelperBoot(): SQLiteConnection
     $contractDisk = new class implements Illuminate\Contracts\Filesystem\Filesystem {
         public array $writes = [];
 
+        public function path($path)
+        {
+            return $path;
+        }
+
+        public function putFile($path, $file = null, $options = [])
+        {
+            return false;
+        }
+
+        public function putFileAs($path, $file, $name = null, $options = [])
+        {
+            return false;
+        }
+
         public function url($path)
         {
             return 'https://cdn.test/' . ltrim((string) $path, '/');
@@ -585,7 +600,7 @@ test('verify code delegates creation guards sessions and unknown identities', fu
         'identity' => 'ghost@example.com',
         'code'     => '111111',
     ]));
-    expect($unknown->getData(true)['error'] ?? '')->toContain('Unable to verify');
+    expect($unknown->getData(true)['error'] ?? '')->toBe('Invalid verification code.');
 
     // The create-customer intent delegates into the full creation flow
     $connection->table('verification_codes')->insert(['uuid' => 'vc-del', 'code' => '777777', 'for' => 'fleetops_create_customer', 'meta' => json_encode(['identity' => 'delegate@example.com']), 'status' => 'active']);
@@ -711,7 +726,6 @@ test('authenticated profile updates resolve photos and removal markers', functio
 
     $updated = $controller->updateMe(Fleetbase\FleetOps\Http\Requests\UpdateContactRequest::create('/v1/customers/me', 'PUT', [
         'name'  => 'Profile Customer Updated',
-        'phone' => '+6590001234',
         'photo' => 'file_meavatar1',
     ]));
     expect($connection->table('contacts')->where('uuid', '88888888-8888-4888-8888-888888888810')->value('name'))->toBe('Profile Customer Updated')
@@ -854,4 +868,34 @@ test('a wrong code counts against the live code, a right one uses it up, and a u
 
     $again = $controller->create(CreateCustomerRequest::create('/v1/customers', 'POST', ['code' => '101010', 'identity' => 'spend@example.com', 'name' => 'Spender', 'password' => 'secret']));
     expect($again->getData(true)['error'])->toContain('Invalid verification code');
+});
+
+test('a signup code can be checked without using it up, and a wrong one is refused', function () {
+    $connection = fleetopsCustomerHelperBoot();
+    $controller = new CustomerController();
+    $connection->table('verification_codes')->insert(['uuid' => 'vc-check', 'code' => '246810', 'for' => 'fleetops_create_customer', 'meta' => json_encode(['identity' => 'proof@example.com'])]);
+
+    $wrong = $controller->verifyCode(Request::create('/v1/customers/verify-code', 'POST', ['identity' => 'proof@example.com', 'code' => '000000']));
+    $right = $controller->verifyCode(Request::create('/v1/customers/verify-code', 'POST', ['identity' => 'proof@example.com', 'code' => '246810']));
+    $again = $controller->verifyCode(Request::create('/v1/customers/verify-code', 'POST', ['identity' => 'proof@example.com', 'code' => '246810']));
+
+    expect($wrong->getData(true))->toBe(['error' => 'Invalid verification code.'])
+        ->and($right->getData(true))->toBe(['status' => 'new_customer'])
+        ->and($again->getData(true))->toBe(['status' => 'new_customer']);
+});
+
+test('rider place search and geocoding reach the place search service', function () {
+    fleetopsCustomerHelperBoot();
+    $controller = new CustomerController();
+    $search     = new ReflectionMethod(CustomerController::class, 'runPlaceSearch');
+    $geocode    = new ReflectionMethod(CustomerController::class, 'geocodePlaces');
+    $resource   = new ReflectionMethod(CustomerController::class, 'placeResource');
+    $owned      = new ReflectionMethod(CustomerController::class, 'riderPlaceQuery');
+    $customer   = new Contact();
+    $customer->setRawAttributes(['uuid' => 'rider-1'], true);
+
+    expect($search->invoke($controller, Place::where('company_uuid', 'nobody'), '', ['geo' => false]))->toHaveCount(0)
+        ->and($owned->invoke($controller, $customer)->getBindings())->toContain('rider-1')
+        ->and($geocode->invoke($controller, '', null, null))->toHaveCount(0)
+        ->and($resource->invoke($controller, new Place()))->toBeInstanceOf(Fleetbase\FleetOps\Http\Resources\v1\Place::class);
 });

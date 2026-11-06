@@ -7,8 +7,7 @@ use Fleetbase\FleetOps\Events\OrderDispatchFailed;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Notifications\OrderDispatched as OrderDispatchedNotification;
-use Fleetbase\FleetOps\Notifications\OrderPing;
-use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocDispatch;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Carbon;
@@ -26,7 +25,7 @@ class HandleOrderDispatched implements ShouldQueue
      */
     public function handle(OrderDispatched $event)
     {
-        /** @var \Fleetbase\FleetOps\Models\Order $order */
+        /** @var Order $order */
         $order = $event->getModelRecord();
 
         // set company session
@@ -60,24 +59,9 @@ class HandleOrderDispatched implements ShouldQueue
         $order->save();
         $order->flushAttributesCache();
 
-        /* if order is adhoc ping drivers within radius of pickup to accept order * */
+        // An adhoc order is offered to drivers by its dispatch strategy.
         if ($order->adhoc) {
-            $order->load(['company']);
-            $pickup   = $order->getPickupLocation();
-            $distance = $order->getAdhocDistance();
-            if (!Utils::isPoint($pickup)) {
-                return;
-            }
-
-            $drivers = $this->nearbyAvailableDrivers($pickup, $distance);
-
-            return $drivers->each(function ($driver) use ($order) {
-                try {
-                    $this->notifyAdhocDriver($driver, $order);
-                } catch (\Exception $exception) {
-                    // failed to notify driver for order dispatch for reason uknown -- exit silently
-                }
-            });
+            return $this->dispatchAdhoc($order);
         }
 
         /** @var \Fleetbase\Models\Driver */
@@ -95,6 +79,13 @@ class HandleOrderDispatched implements ShouldQueue
         }
     }
 
+    protected function dispatchAdhoc($order): mixed
+    {
+        AdhocDispatch::for($order)->dispatch($order);
+
+        return null;
+    }
+
     protected function dispatchFailed($order, string $reason): mixed
     {
         return event(new OrderDispatchFailed($order, $reason));
@@ -108,34 +99,6 @@ class HandleOrderDispatched implements ShouldQueue
     protected function getDispatchActivity($order): mixed
     {
         return $order->config()?->getDispatchActivity();
-    }
-
-    protected function nearbyAvailableDrivers($pickup, int|float $distance)
-    {
-        return Driver::where(['status' => 'available', 'online' => 1])
-            ->whereHas('company', function ($q) {
-                $q->whereHas('users', function ($q) {
-                    $q->whereHas('driver', function ($q) {
-                        $q->where(['status' => 'available', 'online' => 1]);
-                        $q->whereNull('deleted_at');
-                    });
-                });
-            })
-            ->whereNull('deleted_at')
-            ->whereNotNull('location')->whereRaw('
-                ST_Y(location) BETWEEN -90 AND 90
-                AND ST_X(location) BETWEEN -180 AND 180
-                AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
-            ')
-            ->distanceSphere('location', $pickup, $distance)
-            ->distanceSphereValue('location', $pickup)
-            ->withoutGlobalScopes()
-            ->get();
-    }
-
-    protected function notifyAdhocDriver(Driver $driver, $order): void
-    {
-        $driver->notify(new OrderPing($order, $driver->distance));
     }
 
     protected function findAssignedDriver($order): ?Driver

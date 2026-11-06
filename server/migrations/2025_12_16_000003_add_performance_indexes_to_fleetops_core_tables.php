@@ -1,5 +1,6 @@
 <?php
 
+use Fleetbase\FleetOps\Support\Database\TableIndexes;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -430,11 +431,7 @@ return new class extends Migration {
     protected function indexExists(string $table, string $index): bool
     {
         try {
-            $connection            = Schema::getConnection();
-            $doctrineSchemaManager = $connection->getDoctrineSchemaManager();
-            $indexes               = $doctrineSchemaManager->listTableIndexes($table);
-
-            return isset($indexes[$index]);
+            return isset(TableIndexes::for($table)[$index]);
         } catch (Exception $e) {
             return false;
         }

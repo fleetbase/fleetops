@@ -122,7 +122,7 @@ class DriverController extends FleetOpsController
                 },
                 function ($request, &$driver) {
                     $driver->load(['user']);
-                    $customFieldValues = $request->array('driver.custom_field_values');
+                    $customFieldValues = $request->inputArray('driver.custom_field_values');
                     if ($customFieldValues) {
                         $driver->syncCustomFieldValues($customFieldValues);
                     }
@@ -191,7 +191,7 @@ class DriverController extends FleetOpsController
                     }
 
                     $driver->setHidden(['user']);
-                    $customFieldValues = $request->array('driver.custom_field_values');
+                    $customFieldValues = $request->inputArray('driver.custom_field_values');
                     if ($customFieldValues) {
                         $driver->syncCustomFieldValues($customFieldValues);
                     }
@@ -395,7 +395,7 @@ class DriverController extends FleetOpsController
     public static function export(ExportRequest $request)
     {
         $format       = $request->input('format', 'xlsx');
-        $selections   = $request->array('selections');
+        $selections   = $request->inputArray('selections');
         $fileName     = trim(Str::slug('drivers-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return static::downloadExport(new DriverExport($selections), $fileName);

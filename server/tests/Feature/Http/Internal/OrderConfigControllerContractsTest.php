@@ -178,8 +178,8 @@ function fleetopsInternalOrderConfigDbBoot(): SQLiteConnection
             return $default;
         });
     }
-    if (!Request::hasMacro('array')) {
-        Request::macro('array', fn (string $key, $default = []) => (array) $this->input($key, $default));
+    if (!Request::hasMacro('inputArray')) {
+        Request::macro('inputArray', fn (string $key, $default = []) => (array) $this->input($key, $default));
     }
     if (!class_exists('Illuminate\\Validation\\Rule', false)) {
         eval('namespace Illuminate\\Validation; class Rule { public static function __callStatic($method, $arguments) { return new class { public function __call($method, $arguments) { return $this; } }; } }');

@@ -26,20 +26,22 @@ class CreateOrderRequest extends FleetbaseRequest
         $podMethods = is_array($podMethods) ? implode(',', $podMethods) : (string) $podMethods;
 
         $validations = [
-            'order_config_uuid' => ['required'],
-            'adhoc'             => ['nullable', 'boolean'],
-            'dispatch'          => ['nullable', 'boolean'],
-            'adhoc_distance'    => ['nullable', 'numeric'],
-            'pod_required'      => ['nullable', 'boolean'],
-            'pod_method'        => ['nullable', 'in:' . $podMethods],
-            'scheduled_at'      => ['nullable', 'date'],
-            'driver'            => ['nullable', 'exists:drivers,uuid'],
-            'service_quote'     => ['nullable', 'exists:service_quotes,uuid'],
-            'purchase_rate'     => ['nullable', 'exists:purchase_rates,uuid'],
-            'facilitator'       => ['nullable', new ExistsInAny(['vendors', 'contacts', 'integrated_vendors'], ['uuid', 'provider'])],
-            'customer'          => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'uuid')],
-            'status'            => ['nullable', 'string'],
-            'type'              => ['string'],
+            'order_config_uuid'     => ['required'],
+            'adhoc'                 => ['nullable', 'boolean'],
+            'dispatch'              => ['nullable', 'boolean'],
+            'adhoc_distance'        => ['nullable', 'numeric'],
+            'adhoc_strategy'        => ['nullable', 'string', 'in:' . implode(',', \Fleetbase\FleetOps\Support\AdhocDispatch\AdhocDispatch::names())],
+            'required_vehicle_type' => ['nullable', 'string', 'max:191'],
+            'pod_required'          => ['nullable', 'boolean'],
+            'pod_method'            => ['nullable', 'in:' . $podMethods],
+            'scheduled_at'          => ['nullable', 'date'],
+            'driver'                => ['nullable', 'exists:drivers,uuid'],
+            'service_quote'         => ['nullable', 'exists:service_quotes,uuid'],
+            'purchase_rate'         => ['nullable', 'exists:purchase_rates,uuid'],
+            'facilitator'           => ['nullable', new ExistsInAny(['vendors', 'contacts', 'integrated_vendors'], ['uuid', 'provider'])],
+            'customer'              => ['nullable', new ExistsInAny(['vendors', 'contacts'], 'uuid')],
+            'status'                => ['nullable', 'string'],
+            'type'                  => ['string'],
         ];
 
         // Conditionally require 'pod_method' if 'pod_required' is truthy

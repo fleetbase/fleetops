@@ -30,7 +30,7 @@ class TrackingContextBuilder
         $payload           = $order->payload;
         $driver            = $order->driverAssigned;
         $warnings          = [];
-        $driverLocationAge = $driver?->updated_at ? now()->diffInSeconds($driver->updated_at) : null;
+        $driverLocationAge = $driver?->updated_at ? (int) now()->diffInSeconds($driver->updated_at, true) : null;
 
         $origin         = null;
         $driverLocation = null;

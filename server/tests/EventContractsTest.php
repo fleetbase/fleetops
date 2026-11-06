@@ -821,6 +821,8 @@ test('geofence entered listener calculates proximity and ignores terminal orders
 });
 
 test('geofence entered listener handles arrival branch outcomes', function () {
+    fleetopsTestConnectionResolver();
+
     $listener = new HandleGeofenceEntered();
     $arrival  = new ReflectionMethod(HandleGeofenceEntered::class, 'handleOrderArrival');
     $arrival->setAccessible(true);

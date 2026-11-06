@@ -111,7 +111,7 @@ trait Maintainable
 
         // Check time-based intervals
         $maintenanceIntervalDays = $specs['maintenance_interval_days'] ?? $meta['maintenance_interval_days'] ?? null;
-        if ($maintenanceIntervalDays && $date->diffInDays(now()) >= $maintenanceIntervalDays) {
+        if ($maintenanceIntervalDays && (int) $date->diffInDays(now(), true) >= $maintenanceIntervalDays) {
             return true;
         }
 
@@ -199,7 +199,7 @@ trait Maintainable
         }
 
         $totalHours = $maintenances->sum(function ($maintenance) {
-            return $maintenance->started_at->diffInHours($maintenance->completed_at);
+            return (int) $maintenance->started_at->diffInHours($maintenance->completed_at, true);
         });
 
         return $totalHours / $maintenances->count();
