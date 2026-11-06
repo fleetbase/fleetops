@@ -41,7 +41,7 @@ class WorkOrderController extends FleetOpsController
     public function export(ExportRequest $request)
     {
         $format     = $request->input('format', 'xlsx');
-        $selections = $request->array('selections');
+        $selections = $request->inputArray('selections');
         $fileName   = trim(Str::slug('work-orders-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return $this->downloadExport(new WorkOrderExport($selections), $fileName);

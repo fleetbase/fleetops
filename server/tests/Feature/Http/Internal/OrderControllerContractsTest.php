@@ -912,7 +912,7 @@ function fleetopsInternalOrderExportRequest(array $payload): ExportRequest
             return data_get($this->payload, $key, $default);
         }
 
-        public function array($key = null, $default = [])
+        public function inputArray($key = null, $default = [])
         {
             $value = $this->input($key, $default);
 
