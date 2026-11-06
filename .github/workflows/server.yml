@@ -31,6 +31,11 @@ jobs:
     - name: Configure Composer Auth for Github
       run: composer config --global github-oauth.github.com ${{ secrets._GITHUB_AUTH_TOKEN }}
 
+    # CVE-2026-48019 in illuminate/mail has no patch for Laravel 10, and Composer refuses to install
+    # it. CI only: remove this when the Laravel 12 upgrade lands.
+    - name: Allow the unpatched illuminate/mail advisory
+      run: composer config --global --json policy.advisories.ignore-id '["PKSA-zwc5-qtrz-zm1n"]'
+
     - name: Validate composer.json and composer.lock
       run: composer validate
 

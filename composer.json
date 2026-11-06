@@ -44,7 +44,7 @@
         "nunomaduro/collision": "^7.0",
         "pestphp/pest": "^2.33.2",
         "phpstan/phpstan": "^1.10.38",
-        "symfony/var-dumper": "^5.4.29"
+        "symfony/var-dumper": "^5.4.29|^6.4"
     },
     "autoload": {
         "psr-4": {

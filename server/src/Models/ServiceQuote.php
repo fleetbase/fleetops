@@ -154,6 +154,11 @@ class ServiceQuote extends Model
             $serviceQuote = static::where('public_id', $serviceQuote)->first();
         }
 
+        // A quote from another company is treated as not found.
+        if ($serviceQuote instanceof self && session('company') && $serviceQuote->company_uuid !== session('company')) {
+            return null;
+        }
+
         return $serviceQuote;
     }
 

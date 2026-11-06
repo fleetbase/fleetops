@@ -110,6 +110,7 @@ class SocketChannels
         $registry->register(TrackingChannel::PREFIX, static fn (): bool => false);
 
         $registry->registerPrincipalResolver([static::class, 'driverPrincipal']);
+        $registry->registerPrincipalResolver([static::class, 'customerPrincipal']);
     }
 
     /**
@@ -303,6 +304,40 @@ class SocketChannels
             cpid: is_string($cpid) && $cpid !== '' ? $cpid : null,
             env: $connection === 'sandbox' ? 'test' : 'live',
             ids: array_values(array_filter([$driver->uuid, $driver->public_id, $user->uuid, $user->public_id], fn ($id) => is_string($id) && $id !== '')),
+            adm: false,
+        );
+    }
+
+    /**
+     * A customer's token gets the customer principal, so its socket reaches only their own
+     * records and not the whole company.
+     */
+    public static function customerPrincipal(Request $request, $user): ?SocketPrincipal
+    {
+        if (!$user instanceof User || !$user->uuid || !$user->isType('customer')) {
+            return null;
+        }
+
+        $companyUuid = session('company') ?: $user->company_uuid;
+        if (!$companyUuid) {
+            return null;
+        }
+
+        $customer = Contact::where('user_uuid', $user->uuid)->where('company_uuid', $companyUuid)->where('type', 'customer')->first();
+        if (!$customer) {
+            return null;
+        }
+
+        $connection = $customer->getConnectionName();
+        $cpid       = Company::on($connection)->where('uuid', $companyUuid)->value('public_id');
+
+        return new SocketPrincipal(
+            kind: 'customer',
+            sub: (string) $customer->uuid,
+            cid: (string) $companyUuid,
+            cpid: is_string($cpid) && $cpid !== '' ? $cpid : null,
+            env: $connection === 'sandbox' ? 'test' : 'live',
+            ids: array_values(array_filter([$customer->uuid, $customer->public_id, $user->uuid])),
             adm: false,
         );
     }
