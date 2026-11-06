@@ -49,7 +49,7 @@ class MaintenanceScheduleController extends FleetOpsController
     public function export(ExportRequest $request)
     {
         $format     = $request->input('format', 'xlsx');
-        $selections = $request->array('selections');
+        $selections = $request->inputArray('selections');
         $fileName   = trim(Str::slug('maintenance-schedules-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return Excel::download(new MaintenanceScheduleExport($selections), $fileName);

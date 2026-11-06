@@ -342,7 +342,8 @@ class ServiceQuoteController extends Controller
 
     protected function createPlaceFromMixed(mixed $value): Place
     {
-        return Place::createFromMixed($value);
+        // A preview must not leave a place behind for every fare a rider checks.
+        return Place::createFromMixed($value, [], !$this->previewOnly);
     }
 
     protected function findPlaceByPublicId(string $publicId): ?Place

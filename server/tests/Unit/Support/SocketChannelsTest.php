@@ -379,6 +379,39 @@ test('a sanctum user who drives for the current company gets a driver principal'
     expect(SocketChannels::driverPrincipal($request, $homeless))->toBeNull();
 });
 
+test('a customer token gets the customer principal limited to their own records', function () {
+    socketChannelsBoot();
+    $request  = Request::create('/v1/socket/token', 'POST');
+    $customer = new User();
+    $customer->setRawAttributes(['uuid' => 'user-rider-a', 'company_uuid' => 'company-a', 'type' => 'customer'], true);
+    Fleetbase\FleetOps\Models\Contact::query()->insert(['uuid' => 'contact-rider-a', 'public_id' => 'contact_ridera', 'company_uuid' => 'company-a', 'user_uuid' => 'user-rider-a', 'type' => 'customer']);
+
+    session(['company' => 'company-a']);
+    $principal = SocketChannels::customerPrincipal($request, $customer);
+
+    expect($principal)->toBeInstanceOf(SocketPrincipal::class)
+        ->and($principal->kind)->toBe('customer')
+        ->and($principal->sub)->toBe('contact-rider-a')
+        ->and($principal->ids)->toBe(['contact-rider-a', 'contact_ridera', 'user-rider-a'])
+        ->and($principal->cid)->toBe('company-a')
+        ->and($principal->cpid)->toBe('company_a')
+        ->and($principal->adm)->toBeFalse();
+
+    // Another company's rider, an office user and a stranger object: no claim.
+    session(['company' => 'company-b']);
+    expect(SocketChannels::customerPrincipal($request, $customer))->toBeNull();
+
+    session(['company' => 'company-a']);
+    expect(SocketChannels::customerPrincipal($request, User::where('uuid', 'user-office-a')->first()))->toBeNull()
+        ->and(SocketChannels::customerPrincipal($request, (object) ['uuid' => 'user-rider-a']))->toBeNull()
+        ->and(SocketChannels::customerPrincipal($request, null))->toBeNull();
+
+    session(['company' => null]);
+    $homeless = new User();
+    $homeless->setRawAttributes(['uuid' => 'user-rider-a', 'company_uuid' => null, 'type' => 'customer'], true);
+    expect(SocketChannels::customerPrincipal($request, $homeless))->toBeNull();
+});
+
 test('the service provider registers the fleetops channels when the registry is built', function () {
     socketChannelsBoot();
     app()->forgetInstance(SocketChannelRegistry::class);

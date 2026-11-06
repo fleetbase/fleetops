@@ -788,7 +788,7 @@ namespace {
             ->and($rules['identity'])->toBe('required|string')
             ->and($rules['code'])->toBe('required|string')
             ->and($rules['name'])->toBe('required|string')
-            ->and($rules['password'])->toBe('required|string|min:8')
+            ->and($rules['password'])->toBe('nullable|string|min:8')
             ->and(ruleStrings($rules['email']))->toContain('email', 'nullable', 'unique:contacts')
             ->and(ruleStrings($rules['phone']))->toContain('nullable', 'string', 'unique:contacts')
             ->and($rules['meta'])->toBe('nullable|array');

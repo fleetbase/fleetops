@@ -20,7 +20,7 @@ class ZoneController extends FleetOpsController
      */
     public function afterSave(Request $request, Zone $zone)
     {
-        $customFieldValues = $request->array('zone.custom_field_values');
+        $customFieldValues = $request->inputArray('zone.custom_field_values');
         if ($customFieldValues) {
             $zone->syncCustomFieldValues($customFieldValues);
         }

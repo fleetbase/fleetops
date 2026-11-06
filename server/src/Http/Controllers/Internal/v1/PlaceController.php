@@ -28,7 +28,7 @@ class PlaceController extends FleetOpsController
      */
     public function afterSave(Request $request, Place $place)
     {
-        $customFieldValues = $request->array('place.custom_field_values');
+        $customFieldValues = $request->inputArray('place.custom_field_values');
         if ($customFieldValues) {
             $this->syncCustomFieldValues($place, $customFieldValues);
         }
@@ -86,7 +86,7 @@ class PlaceController extends FleetOpsController
     public function export(ExportRequest $request)
     {
         $format       = $request->input('format', 'xlsx');
-        $selections   = $request->array('selections');
+        $selections   = $request->inputArray('selections');
         $fileName     = trim(Str::slug('places-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return Excel::download(new PlaceExport($selections), $fileName);

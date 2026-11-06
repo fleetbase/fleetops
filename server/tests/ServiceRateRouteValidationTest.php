@@ -151,7 +151,7 @@ test('service rates route filters real service types normalizes values and expor
 
     // Exports stream through the excel facade
     if (!class_exists('Fleetbase\\Http\\Requests\\ExportRequest', false)) {
-        eval('namespace Fleetbase\\Http\\Requests; class ExportRequest extends \\Illuminate\\Http\\Request { public function array($key = null, $default = []) { return (array) $this->input($key, $default); } }');
+        eval('namespace Fleetbase\\Http\\Requests; class ExportRequest extends \\Illuminate\\Http\\Request { public function inputArray($key, $default = []) { return (array) $this->input($key, $default); } }');
     }
     $excelFake = new class {
         public array $downloads = [];

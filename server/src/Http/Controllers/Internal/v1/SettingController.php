@@ -137,7 +137,7 @@ class SettingController extends Controller
      */
     public function savedDriverOnboardSettings(Request $request)
     {
-        $driverOnboardSettings              = $request->array('driverOnboardSettings', []);
+        $driverOnboardSettings              = $request->inputArray('driverOnboardSettings', []);
         $driverOnboardSettings['companyId'] = session('company');
 
         if (empty($driverOnboardSettings['enableDriverOnboardFromApp'])) {
@@ -154,7 +154,7 @@ class SettingController extends Controller
 
     public function saveCustomerEnabledOrderConfigs(Request $request)
     {
-        $enabledOrderConfigs = array_values($request->array('enabledOrderConfigs'));
+        $enabledOrderConfigs = array_values($request->inputArray('enabledOrderConfigs'));
         $this->configureCompanySetting('fleet-ops.customer-enabled-order-configs', $enabledOrderConfigs);
 
         return response()->json($enabledOrderConfigs);
@@ -169,7 +169,7 @@ class SettingController extends Controller
 
     public function saveCustomerPortalPaymentConfig(Request $request)
     {
-        $paymentsConfig = $request->array('paymentsConfig');
+        $paymentsConfig = $request->inputArray('paymentsConfig');
         $this->configureCompanySetting('fleet-ops.customer-payments-configs', $paymentsConfig);
 
         return response()->json($paymentsConfig);

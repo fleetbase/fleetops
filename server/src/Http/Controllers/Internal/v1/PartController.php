@@ -27,7 +27,7 @@ class PartController extends FleetOpsController
     public function export(ExportRequest $request)
     {
         $format     = $request->input('format', 'xlsx');
-        $selections = $request->array('selections');
+        $selections = $request->inputArray('selections');
         $fileName   = trim(Str::slug('parts-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return $this->downloadExport(new PartExport($selections), $fileName);

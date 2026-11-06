@@ -1255,7 +1255,7 @@ class OrderController extends Controller
 
         // Get the order config
         $orderConfig = $order->config();
-        $activity    = $request->array('activity');
+        $activity    = $request->inputArray('activity');
         if (!Utils::isActivity($activity)) {
             $activity = new Activity($activity, $order->getConfigFlow());
         }
