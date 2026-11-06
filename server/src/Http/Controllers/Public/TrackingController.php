@@ -10,6 +10,7 @@ use Fleetbase\FleetOps\Support\TrackingChannel;
 use Fleetbase\FleetOps\Support\TrackingPage\TrackingAccess;
 use Fleetbase\FleetOps\Support\TrackingPage\TrackingRecipient;
 use Fleetbase\FleetOps\Support\TrackingPage\TrackingResolver;
+use Fleetbase\FleetOps\Support\TrackingPage\TrackingShare;
 use Fleetbase\FleetOps\Support\TrackingPage\TrackingTarget;
 use Fleetbase\FleetOps\Support\TrackingPage\TrackingView;
 use Fleetbase\FleetOps\Support\TrackingPublisher;
@@ -150,6 +151,24 @@ class TrackingController extends Controller
             VerificationCode::CHECK_EXPIRED => $this->json(['error' => 'expired'], 410),
             default                         => $this->json(['error' => 'invalid', 'attempts_left' => $result['attempts_left']], 422),
         };
+    }
+
+    /**
+     * Open a link a rider shared: a valid token gives this device the rider's live view, as a
+     * verified code would.
+     */
+    public function redeemShare(Request $request, string $number): JsonResponse
+    {
+        if (!$this->access->allowVerify($request)) {
+            return $this->json(['error' => 'limited', 'retry_after' => TrackingAccess::LOOKUP_WINDOW], 429);
+        }
+
+        $target = $this->resolve($request, $number);
+        if (!$target || !$target->scope) {
+            return $this->notFound();
+        }
+
+        return TrackingShare::valid($request->input('token'), $target->scope) ? $this->verified($request, $target, 'share') : $this->json(['error' => 'invalid'], 422);
     }
 
     /**

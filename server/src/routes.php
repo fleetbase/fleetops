@@ -35,6 +35,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
             $router->get('{number}/proofs/{id}', 'TrackingController@proof');
             $router->post('{number}/report', 'TrackingController@report');
             $router->get('{number}/socket-token', 'TrackingController@socketToken');
+            $router->post('{number}/share', 'TrackingController@redeemShare');
         });
 
         $router->prefix('public')->namespace('Public')->middleware([Fleetbase\FleetOps\Http\Middleware\ForceJsonResponse::class, 'throttle:60,1,inspection-public'])->group(function ($router) {
@@ -131,6 +132,12 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                     $router->get('orders/{id}/driver', 'CustomerController@orderDriver');
                     $router->get('orders/{id}/tracker', 'CustomerController@orderTracker');
                     $router->get('orders/{id}/eta', 'CustomerController@orderEta');
+                    $router->get('orders/{id}/messages', 'CustomerController@orderMessages');
+                    $router->post('orders/{id}/messages', 'CustomerController@sendOrderMessage')->middleware('throttle:30,1');
+                    $router->post('orders/{id}/rating', 'CustomerController@rateOrder');
+                    $router->post('orders/{id}/share', 'CustomerController@shareOrder');
+                    $router->get('ride-settings', 'CustomerController@rideSettings');
+                    $router->delete('me', 'CustomerController@deleteMe');
                 });
             });
             // vendors routes
@@ -223,6 +230,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->match(['post', 'patch'], '{id}/schedule', 'OrderController@scheduleOrder');
                 $router->match(['post', 'patch'], '{id}/dispatch', 'OrderController@dispatchOrder');
                 $router->post('{id}/start', 'OrderController@startOrder');
+                $router->post('{id}/decline', 'OrderController@declineOrder');
                 $router->delete('{id}/cancel', 'OrderController@cancelOrder');
                 $router->match(['post', 'patch'], '{id}/update-activity', 'OrderController@updateActivity');
                 $router->post('{id}/complete', 'OrderController@completeOrder');

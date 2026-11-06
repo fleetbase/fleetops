@@ -28,6 +28,7 @@ use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
 use Fleetbase\FleetOps\Support\NavigatorReview;
 use Fleetbase\FleetOps\Support\OSRM;
 use Fleetbase\FleetOps\Support\ProfileAccountManager;
+use Fleetbase\FleetOps\Support\Rides\RideUpdates;
 use Fleetbase\FleetOps\Support\TrackingPublisher;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
@@ -393,6 +394,9 @@ class DriverController extends Controller
 
         broadcast(new DriverLocationChanged($driver));
         app(TrackingPublisher::class)->driverMoved($driver);
+
+        // A rider is told once when their car is about to arrive.
+        RideUpdates::driverMoved($driver, $order instanceof Order ? $order : null);
 
         // ----------------------------------------------------------------
         // Geofence intersection detection

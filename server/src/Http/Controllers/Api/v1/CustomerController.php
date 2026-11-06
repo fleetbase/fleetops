@@ -19,6 +19,11 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Support\CustomerAuth;
 use Fleetbase\FleetOps\Support\PlaceSearch;
+use Fleetbase\FleetOps\Support\Rides\DriverRatings;
+use Fleetbase\FleetOps\Support\Rides\RideChat;
+use Fleetbase\FleetOps\Support\TrackingCode;
+use Fleetbase\FleetOps\Support\TrackingPage\TrackingShare;
+use Fleetbase\FleetOps\Support\TrackingScope;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
@@ -28,6 +33,7 @@ use Fleetbase\Models\UserDevice;
 use Fleetbase\Models\VerificationCode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
@@ -53,6 +59,11 @@ class CustomerController extends Controller
      * Relations a rider's order is returned with.
      */
     protected const RIDER_ORDER_RELATIONS = ['payload', 'payload.pickup', 'payload.dropoff'];
+
+    /**
+     * Order meta the server sets and a rider may not send.
+     */
+    protected const RESERVED_ORDER_META = ['vehicle_class', 'service_name', 'dispatch_outcome', 'fare', 'rating', 'chat_channel', 'paid_at'];
 
     /**
      * Wrong guesses a single code tolerates before it locks itself (core's check()).
@@ -692,6 +703,30 @@ class CustomerController extends Controller
     }
 
     /**
+     * Delete the rider's account: sign them out everywhere, delete their saved places and remove
+     * their name and contact details. Their past trips stay on the operator's books without them.
+     */
+    public function deleteMe()
+    {
+        $customer = $this->currentCustomer();
+        if (!$customer) {
+            return response()->apiError('Not authenticated.', 401);
+        }
+
+        if ($this->hasActiveRide($customer)) {
+            return response()->apiError('Finish or cancel your ride before deleting your account.', 422);
+        }
+
+        $user = $customer->user_uuid ? $this->findUserByUuid($customer->user_uuid) : null;
+        if ($user) {
+            $this->deleteUserTokens($user);
+        }
+        $this->eraseCustomer($customer, $user);
+
+        return response()->json(['status' => 'deleted']);
+    }
+
+    /**
      * Revoke the Customer-Token used on this request.
      */
     public function logout(Request $request)
@@ -807,6 +842,22 @@ class CustomerController extends Controller
             return response()->apiError('This fare has expired. Please get a new one.', 422);
         }
 
+        // A ride is priced and matched by the class the rider picked, so it needs a fare.
+        $isRide = $orderConfig->usesTimedOffers();
+        if ($isRide && !$serviceQuote instanceof ServiceQuote) {
+            return response()->apiError('Choose a ride option first.', 422);
+        }
+        if ($isRide && $this->hasUnpaidRide($customer)) {
+            return response()->apiError('Pay for your last trip before you book another.', 402);
+        }
+
+        // Keys the server sets can't come from the rider.
+        $meta = Arr::except((array) $request->input('meta', []), static::RESERVED_ORDER_META);
+        if ($isRide) {
+            $meta['vehicle_class'] = $serviceQuote->serviceRate?->service_type;
+            $meta['service_name']  = $serviceQuote->serviceRate?->service_name;
+        }
+
         // Build the Payload (matching the operator OrderController convention).
         // - `payload` may be an array of {pickup, dropoff, return, waypoints, entities}
         // - `payload` may be a string public_id referencing an existing Payload
@@ -838,7 +889,8 @@ class CustomerController extends Controller
             'scheduled_at'      => $request->input('scheduled_at'),
             'notes'             => $request->input('notes'),
             'internal_id'       => $request->input('internal_id'),
-            'meta'              => (array) $request->input('meta', []),
+            'adhoc'             => $isRide,
+            'meta'              => $meta,
         ]);
 
         // If the customer picked a ServiceQuote up front, consume it now to
@@ -1095,7 +1147,7 @@ class CustomerController extends Controller
             return response()->apiError('Order not found.', 404);
         }
 
-        if (in_array($order->status, ['completed', 'canceled'], true)) {
+        if (in_array($order->status, ['completed', 'canceled'], true) || $order->config()->isTerminalActivityCode($order->status)) {
             return response()->apiError('This order can no longer be canceled.', 422);
         }
 
@@ -1127,7 +1179,7 @@ class CustomerController extends Controller
         }
 
         return response()->json([
-            'driver'  => ['name' => $driver->name, 'photo_url' => $driver->photo_url, 'location' => $driver->location],
+            'driver'  => ['name' => $driver->name, 'photo_url' => $driver->photo_url, 'location' => $driver->location, 'rating' => DriverRatings::average($driver)],
             'vehicle' => $vehicle ? [
                 'make'         => $vehicle->make,
                 'model'        => $vehicle->model,
@@ -1169,6 +1221,116 @@ class CustomerController extends Controller
         } catch (\Throwable) {
             return response()->apiError('Unable to track this order.', 503);
         }
+    }
+
+    /**
+     * The chat with the driver of one of the rider's rides, oldest message first. Empty until a
+     * driver accepts.
+     */
+    public function orderMessages(string $id)
+    {
+        $order = $this->ownedOrder($id);
+        if (!$order) {
+            return response()->apiError('Order not found.', 404);
+        }
+
+        $channel = $this->rideChannel($order);
+
+        return response()->json($channel ? RideChat::messages($channel, $this->currentCustomer()->user_uuid)->all() : []);
+    }
+
+    /**
+     * Send the driver a message. The rider always writes as themselves.
+     */
+    public function sendOrderMessage(string $id, Request $request)
+    {
+        $order = $this->ownedOrder($id);
+        if (!$order) {
+            return response()->apiError('Order not found.', 404);
+        }
+
+        $text = trim((string) $request->input('text'));
+        if ($text === '' || mb_strlen($text) > 2000) {
+            return response()->apiError('Write a message of up to 2000 characters.', 422);
+        }
+        if ($this->rideHasEnded($order)) {
+            return response()->apiError('This ride has ended.', 422);
+        }
+
+        $channel = $this->rideChannel($order);
+        if (!$channel) {
+            return response()->apiError('You can message your driver once they accept.', 422);
+        }
+
+        $riderUser = $this->currentCustomer()->user_uuid;
+        $message   = RideChat::send($channel, $riderUser, $text);
+
+        return response()->json(RideChat::messages($channel, $riderUser)->firstWhere('id', $message->public_id ?? $message->uuid), 201);
+    }
+
+    /**
+     * Rate the driver of a finished ride, once.
+     */
+    public function rateOrder(string $id, Request $request)
+    {
+        $order = $this->ownedOrder($id);
+        if (!$order) {
+            return response()->apiError('Order not found.', 404);
+        }
+
+        $stars = $request->input('stars');
+        if (!is_numeric($stars) || (int) $stars != $stars || $stars < 1 || $stars > 5) {
+            return response()->apiError('Rate from 1 to 5 stars.', 422);
+        }
+        if ($order->status !== 'completed' || !$order->driver_assigned_uuid) {
+            return response()->apiError('Only a finished ride can be rated.', 422);
+        }
+
+        $comment = $request->input('comment');
+        if (!DriverRatings::rate($order, (int) $stars, is_string($comment) ? Str::limit($comment, 1000, '') : null)) {
+            return response()->apiError('You already rated this ride.', 409);
+        }
+
+        return response()->json(['status' => 'rated']);
+    }
+
+    /**
+     * A link the rider can send to someone they trust to follow the ride live, without a code.
+     */
+    public function shareOrder(string $id)
+    {
+        $order = $this->ownedOrder($id);
+        if (!$order) {
+            return response()->apiError('Order not found.', 404);
+        }
+
+        $number = data_get($order, 'trackingNumber.tracking_number');
+        if (!$number || $this->rideHasEnded($order)) {
+            return response()->apiError('This ride can no longer be shared.', 422);
+        }
+
+        $scope     = TrackingScope::forCustomer($order, $this->currentCustomer());
+        $expiresAt = now()->addHours(TrackingShare::HOURS);
+        $url       = $this->trackingPageUrl($number, $order->company_uuid);
+
+        return response()->json([
+            'url'        => $url . (str_contains($url, '?') ? '&' : '?') . 'share=' . TrackingShare::token($scope->order_uuid, $scope->customer_uuid, $expiresAt),
+            'expires_at' => $expiresAt->toISOString(),
+        ]);
+    }
+
+    /**
+     * What the rider app shows from the operator's ride settings: the emergency number and support contacts.
+     */
+    public function rideSettings()
+    {
+        $config = OrderConfig::where('company_uuid', $this->sessionCompany())->where('key', 'ride')->first();
+        $rider  = (array) data_get($config?->meta, 'rider', []);
+
+        return response()->json([
+            'emergency_number' => $rider['emergency_number'] ?? null,
+            'support'          => ['phone' => $rider['support_phone'] ?? null, 'email' => $rider['support_email'] ?? null],
+        ]);
     }
 
     /**
@@ -1223,6 +1385,69 @@ class CustomerController extends Controller
         }
 
         return null;
+    }
+
+    protected function trackingPageUrl(string $number, ?string $companyUuid): string
+    {
+        return TrackingCode::pageUrl($number, $companyUuid);
+    }
+
+    protected function rideChannel(Order $order): mixed
+    {
+        return RideChat::channel($order);
+    }
+
+    protected function rideHasEnded(Order $order): bool
+    {
+        return in_array($order->status, ['completed', 'canceled'], true) || (bool) $order->config()?->isTerminalActivityCode($order->status);
+    }
+
+    /**
+     * Whether one of the rider's recent card trips has a final fare that Ledger hasn't marked
+     * paid (`meta.paid_at`). Cash is collected by the driver, so it never blocks a booking.
+     */
+    protected function hasUnpaidRide(Contact $customer): bool
+    {
+        return Order::withoutGlobalScopes()
+            ->where('customer_uuid', $customer->uuid)
+            ->where('type', 'ride')
+            ->where('status', 'completed')
+            ->whereNull('deleted_at')
+            ->latest()
+            ->limit(20)
+            ->get(['uuid', 'meta'])
+            ->contains(fn (Order $order) => data_get($order->meta, 'payment') === 'card' && data_get($order->meta, 'fare.final') && !data_get($order->meta, 'paid_at'));
+    }
+
+    /**
+     * Whether the rider has a ride that was sent to drivers and hasn't ended.
+     */
+    protected function hasActiveRide(Contact $customer): bool
+    {
+        return Order::withoutGlobalScopes()
+            ->where('customer_uuid', $customer->uuid)
+            ->where('dispatched', 1)
+            ->whereNull('deleted_at')
+            ->whereNotIn('status', ['completed', 'canceled', 'no_show'])
+            ->exists();
+    }
+
+    /**
+     * Remove what identifies the rider, then delete their records. A user who is only this
+     * company's rider goes too; one with other roles or companies keeps their account.
+     */
+    protected function eraseCustomer(Contact $customer, ?User $user): void
+    {
+        Place::where('owner_uuid', $customer->uuid)->delete();
+
+        $customer->forceFill(['name' => 'Deleted rider', 'email' => null, 'phone' => null, 'photo_uuid' => null, 'meta' => []])->saveQuietly();
+        $customer->delete();
+
+        $otherContacts = $user ? Contact::withoutGlobalScopes()->where('user_uuid', $user->uuid)->where('uuid', '!=', $customer->uuid)->exists() : true;
+        if ($user && $user->type === 'customer' && !$otherContacts) {
+            $user->forceFill(['name' => 'Deleted rider', 'email' => 'deleted-' . $user->uuid . '@deleted.invalid', 'phone' => null])->saveQuietly();
+            $user->delete();
+        }
     }
 
     protected function ownedOrder(string $id): ?Order

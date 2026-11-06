@@ -331,6 +331,13 @@ class FleetOpsApiCustomerControllerProbe extends CustomerController
         return $this->orderConfig;
     }
 
+    public bool $unpaidRide = false;
+
+    protected function hasUnpaidRide(Contact $customer): bool
+    {
+        return $this->unpaidRide;
+    }
+
     protected function getUuid(array|string $table, array $where, array $options = []): mixed
     {
         $this->uuidLookups[] = [$table, $where, $options];
@@ -1415,6 +1422,11 @@ class FleetOpsRiderOrderFake extends FleetOpsApiCustomerOrderFake
         $this->calls[] = ['reason', $reason];
     }
 
+    public function config(): ?OrderConfig
+    {
+        return $this->faked['config'] ?? new OrderConfig();
+    }
+
     public function tracker(): Fleetbase\FleetOps\Support\OrderTracker
     {
         return $this->trackerFake;
@@ -1580,7 +1592,7 @@ test('a rider sees the driver and car but no contact details', function () {
 
     expect($none)->toBe(['driver' => null, 'vehicle' => null])
         ->and($noCar['vehicle'])->toBeNull()
-        ->and($withCar['driver'])->toBe(['name' => 'Dee Driver', 'photo_url' => 'photo', 'location' => 'here'])
+        ->and($withCar['driver'])->toBe(['name' => 'Dee Driver', 'photo_url' => 'photo', 'location' => 'here', 'rating' => null])
         ->and($withCar['vehicle'])->toBe(['make' => 'Toyota', 'model' => 'Prius', 'color' => 'Blue', 'plate_number' => 'SGX1']);
 });
 
@@ -1602,4 +1614,56 @@ test('an order that does not exist is not found for a rider', function () {
     $controller->findOrderFails = true;
 
     expect($controller->orderDriver('order_missing')->getStatusCode())->toBe(404);
+});
+
+test('a ride needs a fare, is adhoc, and its class comes from the fare, not the rider', function () {
+    $ride                    = new OrderConfig(['key' => 'ride', 'meta' => ['offers' => ['enabled' => true]]]);
+    $ride->uuid              = 'config-ride';
+    $noFare                  = fleetopsApiCustomerController();
+    $noFare->orderConfig     = $ride;
+    $noFare->serviceQuote    = null;
+    $booked                  = fleetopsApiCustomerController();
+    $booked->orderConfig     = $ride;
+    $rate                    = new Fleetbase\FleetOps\Models\ServiceRate();
+    $rate->setRawAttributes(['service_type' => 'economy', 'service_name' => 'Economy'], true);
+    $booked->serviceQuote->setRawAttributes(['company_uuid' => 'company-uuid'], true);
+    $booked->serviceQuote->setRelation('serviceRate', $rate);
+
+    $refused = $noFare->createOrder(new FleetOpsApiCustomerOrderRequest(['pickup' => ['name' => 'A']]));
+    $booked->createOrder(new FleetOpsApiCustomerOrderRequest([
+        'service_quote' => 'quote_1',
+        'pickup'        => ['name' => 'A'],
+        'meta'          => ['payment' => 'cash', 'vehicle_class' => 'xl', 'fare' => ['total' => 1], 'dispatch_outcome' => 'x'],
+    ]));
+
+    $owing              = fleetopsApiCustomerController();
+    $owing->orderConfig = $ride;
+    $owing->unpaidRide  = true;
+    $owing->serviceQuote->setRawAttributes(['company_uuid' => 'company-uuid'], true);
+    $blocked = $owing->createOrder(new FleetOpsApiCustomerOrderRequest(['service_quote' => 'quote_1']));
+
+    expect($refused->getStatusCode())->toBe(422)
+        ->and(fleetopsApiCustomerJson($refused))->toBe(['error' => 'Choose a ride option first.'])
+        ->and($blocked->getStatusCode())->toBe(402)
+        ->and($owing->createdOrders)->toBe([])
+        ->and($booked->createdOrders[0]['adhoc'])->toBeTrue()
+        ->and($booked->createdOrders[0]['meta'])->toBe(['payment' => 'cash', 'vehicle_class' => 'economy', 'service_name' => 'Economy']);
+});
+
+test('a ride that ended in a no-show can no longer be canceled', function () {
+    $controller = fleetopsRiderController(['status' => 'no_show'], ['config' => new OrderConfig(Fleetbase\FleetOps\Support\FleetOps::rideConfigDefaults())]);
+
+    expect($controller->cancelOrder('order_1', Request::create('/', 'POST'))->getStatusCode())->toBe(422)
+        ->and($controller->order->calls)->toBe([]);
+});
+
+test('a shared ride links to the public tracking page', function () {
+    config()->set('fleetbase.console.host', 'https://console.test');
+    $url = fleetopsApiCustomerWithEnvironment('production', function () {
+        $method = new ReflectionMethod(CustomerController::class, 'trackingPageUrl');
+
+        return $method->invoke(new CustomerController(), 'RIDE1', null);
+    });
+
+    expect($url)->toContain('track/RIDE1');
 });

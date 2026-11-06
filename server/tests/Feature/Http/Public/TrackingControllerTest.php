@@ -2,7 +2,6 @@
 
 use Fleetbase\FleetOps\Http\Controllers\Public\TrackingController;
 use Fleetbase\FleetOps\Models\Contact;
-use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Proof;
@@ -23,10 +22,10 @@ use Symfony\Component\HttpFoundation\Cookie;
 class TrackingControllerResolverFake extends TrackingResolver
 {
     public ?TrackingTarget $target = null;
-    public ?string $slugCompany   = null;
-    public array $company         = [];
-    public array $admin           = [];
-    public array $resolved        = [];
+    public ?string $slugCompany    = null;
+    public array $company          = [];
+    public array $admin            = [];
+    public array $resolved         = [];
 
     public function resolve(mixed $input, ?string $slug = null): ?TrackingTarget
     {
@@ -264,7 +263,7 @@ function trackingControllerRequest(array $input = []): Request
 
 test('the page config shows a company page or the shared page, and nothing for a page that is off', function () {
     $controller = trackingController();
-    TrackingPageDatabase::insert(Illuminate\Database\Eloquent\Model::getConnectionResolver()->connection(), 'companies', ['uuid' => 'co-1', 'name' => 'Northwind Couriers', 'phone' => '+15105550142']);
+    TrackingPageDatabase::insert(EloquentModel::getConnectionResolver()->connection(), 'companies', ['uuid' => 'co-1', 'name' => 'Northwind Couriers', 'phone' => '+15105550142']);
 
     expect($controller->config(trackingControllerRequest(['org' => 'northwind']))->getStatusCode())->toBe(404);
 
@@ -299,7 +298,7 @@ test('lookups answer unknown and throttled numbers alike, and show what the view
     // A tracking number alone: the public view, with the channels a code can use.
     $controller->fakeAccess->lookup = true;
     $controller->providers          = ['vonage' => ['available' => true]];
-    TrackingPageDatabase::insert(Illuminate\Database\Eloquent\Model::getConnectionResolver()->connection(), 'contacts', ['uuid' => 'contact-1', 'email' => 'maya@example.com', 'phone' => '+15105554821']);
+    TrackingPageDatabase::insert(EloquentModel::getConnectionResolver()->connection(), 'contacts', ['uuid' => 'contact-1', 'email' => 'maya@example.com', 'phone' => '+15105554821']);
     $public = $controller->show(trackingControllerRequest(['org' => 'Northwind']), 'NOR1000000001US')->getData(true);
     expect($public['level'])->toBe(0)
         ->and(array_column($public['channels'], 'type'))->toBe(['sms', 'email'])
@@ -317,10 +316,10 @@ test('lookups answer unknown and throttled numbers alike, and show what the view
 
     $controller->fakeAccess->granted = false;
     $controller->user                = (object) ['uuid' => 'user-1', 'type' => 'customer', 'company_uuid' => 'co-1'];
-    TrackingPageDatabase::insert(Illuminate\Database\Eloquent\Model::getConnectionResolver()->connection(), 'contacts', ['uuid' => 'contact-x', 'user_uuid' => 'user-1']);
+    TrackingPageDatabase::insert(EloquentModel::getConnectionResolver()->connection(), 'contacts', ['uuid' => 'contact-x', 'user_uuid' => 'user-1']);
     expect($controller->show(trackingControllerRequest(), 'NOR1000000001US')->getData(true)['level'])->toBe(0);
 
-    Illuminate\Database\Eloquent\Model::getConnectionResolver()->connection()->table('contacts')->where('uuid', 'contact-1')->update(['user_uuid' => 'user-1']);
+    EloquentModel::getConnectionResolver()->connection()->table('contacts')->where('uuid', 'contact-1')->update(['user_uuid' => 'user-1']);
     expect($controller->show(trackingControllerRequest(), 'NOR1000000001US')->getData(true))->toMatchArray(['viewer' => 'account', 'level' => 2, 'expires_at' => null]);
 
     $controller->user = (object) ['uuid' => 'user-2', 'type' => 'user', 'company_uuid' => 'co-1'];
@@ -335,7 +334,7 @@ test('lookups answer unknown and throttled numbers alike, and show what the view
 
 test('codes go out on an available channel, within the limits', function () {
     $controller = trackingController();
-    $db         = Illuminate\Database\Eloquent\Model::getConnectionResolver()->connection();
+    $db         = EloquentModel::getConnectionResolver()->connection();
     TrackingPageDatabase::insert($db, 'contacts', ['uuid' => 'contact-1', 'email' => 'maya@example.com']);
     TrackingPageDatabase::insert($db, 'companies', ['uuid' => 'co-1', 'name' => 'Northwind', 'options' => json_encode(['alpha_numeric_sender_id_enabled' => true, 'alpha_numeric_sender_id' => 'NORTHWIND'])]);
 
@@ -473,7 +472,7 @@ test('delivery instructions, proofs, reports and socket tokens need a verified v
 
 test('a signed-in customer lists their orders with the number that opens their part', function () {
     $controller = trackingController();
-    $db         = Illuminate\Database\Eloquent\Model::getConnectionResolver()->connection();
+    $db         = EloquentModel::getConnectionResolver()->connection();
 
     expect($controller->accountOrders(trackingControllerRequest())->getStatusCode())->toBe(401);
 
@@ -492,4 +491,25 @@ test('a signed-in customer lists their orders with the number that opens their p
         ['tracking_number' => 'NOR2-STOP', 'title' => null, 'status' => 'created', 'stage' => 'preparing', 'updated_at' => null],
         ['tracking_number' => 'NOR1', 'title' => 'Ceramic lamp', 'status' => 'completed', 'stage' => 'delivered', 'updated_at' => '2026-10-07T10:00:00.000000Z'],
     ]);
+});
+
+test('a shared ride link opens the rider\'s live view, and a bad one doesn\'t', function () {
+    config()->set('app.key', 'base64:' . base64_encode(str_repeat('k', 32)));
+    $controller = trackingController();
+    $token      = Fleetbase\FleetOps\Support\TrackingPage\TrackingShare::token('order-1', 'contact-1');
+
+    $controller->fakeAccess->verify = false;
+    expect($controller->redeemShare(trackingControllerRequest(['token' => $token]), 'NOR1')->getStatusCode())->toBe(429);
+
+    $controller->fakeAccess->verify = true;
+    expect($controller->redeemShare(trackingControllerRequest(['token' => $token]), 'NOR1')->getStatusCode())->toBe(404);
+
+    $controller->fakeResolver->target = trackingControllerTarget();
+    $bad                              = $controller->redeemShare(trackingControllerRequest(['token' => 'nope']), 'NOR1');
+    $opened                           = $controller->redeemShare(trackingControllerRequest(['token' => $token]), 'NOR1');
+
+    expect($bad->getData(true))->toBe(['error' => 'invalid'])
+        ->and($opened->getStatusCode())->toBe(200)
+        ->and($opened->getData(true)['viewer'])->toBe('verified')
+        ->and($controller->fakeAccess->grants[0][1])->toBe('share');
 });
