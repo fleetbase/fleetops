@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\FleetOps\Http\Requests\QueryServiceQuotesRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\ServiceQuote as ServiceQuoteResource;
+use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\IntegratedVendor;
 use Fleetbase\FleetOps\Models\Payload;
@@ -11,8 +12,11 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceQuoteItem;
 use Fleetbase\FleetOps\Models\ServiceRate;
+use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\DriverMatching;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
+use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -168,22 +172,23 @@ class ServiceQuoteController extends Controller
      */
     public function queryFromPreliminary(QueryServiceQuotesRequest $request)
     {
-        $facilitator      = $request->input('facilitator');
-        $scheduledAt      = $request->input('scheduled_at');
-        $service          = $request->input('service', 'all'); // the specific service rate to query - defaults to `all`
-        $serviceType      = $request->input('service_type'); // the specific type of service rate to query
-        $isCashOnDelivery = $request->has('cod');
-        $currency         = $this->currencyFromRequest($request);
-        $totalDistance    = $request->input('distance');
-        $totalTime        = $request->input('time');
-        $preliminaryData  = $this->preliminaryDataFromRequest($request);
-        $pickup           = $preliminaryData['pickup'];
-        $dropoff          = $preliminaryData['dropoff'];
-        $return           = $preliminaryData['return'];
-        $waypoints        = $preliminaryData['waypoints'];
-        $entities         = $preliminaryData['entities'];
-        $single           = $request->boolean('single');
-        $isRouteOptimized = $request->boolean('is_route_optimized', true);
+        $facilitator            = $request->input('facilitator');
+        $scheduledAt            = $request->input('scheduled_at');
+        $service                = $request->input('service', 'all'); // the specific service rate to query - defaults to `all`
+        $serviceType            = $request->input('service_type'); // the specific type of service rate to query
+        $isCashOnDelivery       = $request->has('cod');
+        $currency               = $this->currencyFromRequest($request);
+        $totalDistance          = $request->input('distance');
+        $totalTime              = $request->input('time');
+        $preliminaryData        = $this->preliminaryDataFromRequest($request);
+        $pickup                 = $preliminaryData['pickup'];
+        $this->availabilityFrom = $this->availabilityPoint($request, $pickup);
+        $dropoff                = $preliminaryData['dropoff'];
+        $return                 = $preliminaryData['return'];
+        $waypoints              = $preliminaryData['waypoints'];
+        $entities               = $preliminaryData['entities'];
+        $single                 = $request->boolean('single');
+        $isRouteOptimized       = $request->boolean('is_route_optimized', true);
 
         $requestId     = $this->generateServiceQuoteRequestId();
         $serviceQuotes = [];
@@ -439,7 +444,61 @@ class ServiceQuoteController extends Controller
 
     protected function serviceQuoteResourceCollection(iterable $serviceQuotes)
     {
+        if ($this->availabilityFrom) {
+            foreach ($serviceQuotes as $quote) {
+                $this->addAvailability($quote, $this->availabilityFrom);
+            }
+        }
+
         return ServiceQuoteResource::collection($serviceQuotes);
+    }
+
+    /**
+     * Where a rider asked to be picked up, when they asked how soon a car could come (`availability`).
+     */
+    protected ?SpatialPoint $availabilityFrom = null;
+
+    /**
+     * The pickup to measure availability from, when the request asked for it with coordinates.
+     */
+    protected function availabilityPoint(Request $request, mixed $pickup): ?SpatialPoint
+    {
+        return $request->boolean('availability') && is_array($pickup) && Utils::isCoordinates($pickup) ? Utils::getPointFromMixed($pickup) : null;
+    }
+
+    /**
+     * Average speed in metres per second used to turn the nearest car's distance into a pickup ETA.
+     */
+    public const PICKUP_SPEED = 7.0;
+
+    /**
+     * Add the class's seats and how soon its nearest free car could reach the pickup, in seconds.
+     * Both are null when the company has no such car; the ETA is a straight-line estimate.
+     */
+    protected function addAvailability(ServiceQuote $quote, SpatialPoint $pickup): void
+    {
+        $class   = data_get($quote, 'serviceRate.service_type');
+        $company = $quote->company_uuid;
+
+        $seats = $class ? Vehicle::where('company_uuid', $company)->whereRaw('LOWER(type) = ?', [strtolower($class)])->max('seating_capacity') : null;
+
+        $drivers = Driver::query()
+            ->withoutGlobalScopes()
+            ->where(['status' => 'available', 'online' => 1])
+            ->whereNull('deleted_at')
+            ->whereNotNull('location')
+            ->distanceSphere('location', $pickup, 15000)
+            ->distanceSphereValue('location', $pickup)
+            ->orderBy('distance');
+        DriverMatching::inCompany($drivers, $company);
+        DriverMatching::notBusy($drivers);
+        DriverMatching::forVehicleClass($drivers, $class);
+        $nearest = $drivers->first();
+
+        $quote->availability = [
+            'seats'      => $seats ? (int) $seats : null,
+            'pickup_eta' => $nearest ? (int) round(60 + (float) $nearest->distance / self::PICKUP_SPEED) : null,
+        ];
     }
 
     protected function preliminaryDataFromRequest(Request $request): array

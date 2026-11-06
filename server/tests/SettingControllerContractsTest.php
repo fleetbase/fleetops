@@ -1061,3 +1061,48 @@ test('setting controller reads and saves the system and organization OSRM server
         Cache::flush();
     }
 });
+
+test('adhoc dispatch settings read and save the company defaults and list the strategies', function () {
+    $company = new class extends Fleetbase\Models\Company {
+        public array $savedOptions = [];
+        public bool $saved         = false;
+
+        public function getOption($key = null, $defaultValue = null)
+        {
+            return $this->savedOptions[$key] ?? $defaultValue;
+        }
+
+        public function setOption($keys, $value)
+        {
+            $this->savedOptions[$keys] = $value;
+
+            return $this;
+        }
+
+        public function save(array $options = [])
+        {
+            return $this->saved = true;
+        }
+    };
+    $controller          = new FleetOpsSettingControllerProbe();
+    $controller->company = $company;
+    $save                = fn (array $input) => $controller->saveAdhocDispatchSettings(Request::create('/', 'POST', $input));
+
+    $defaults = $controller->getAdhocDispatchSettings()->getData(true);
+    expect($defaults)->toMatchArray(['adhoc_distance' => 6000, 'adhoc_strategy' => 'sequential', 'adhoc_offer_timeout' => 20])
+        ->and(array_column($defaults['strategies'], 'name'))->toContain('broadcast', 'sequential')
+        ->and($controller->getAdhocDispatchStrategies()->getData(true)['strategies'][0])->toHaveKeys(['name', 'label', 'description']);
+
+    expect($save(['adhoc_distance' => 50, 'adhoc_strategy' => 'broadcast', 'adhoc_offer_timeout' => 30])->getStatusCode())->toBe(422)
+        ->and($save(['adhoc_distance' => 5000, 'adhoc_strategy' => 'lottery', 'adhoc_offer_timeout' => 30])->getStatusCode())->toBe(422)
+        ->and($save(['adhoc_distance' => 5000, 'adhoc_strategy' => 'broadcast', 'adhoc_offer_timeout' => 5])->getStatusCode())->toBe(422)
+        ->and($company->saved)->toBeFalse();
+
+    $saved = $save(['adhoc_distance' => '5000', 'adhoc_strategy' => 'broadcast', 'adhoc_offer_timeout' => '30']);
+    expect($saved->getData(true)['status'])->toBe('ok')
+        ->and($company->savedOptions)->toBe(['fleetops.adhoc_distance' => 5000, 'fleetops.adhoc_strategy' => 'broadcast', 'fleetops.adhoc_offer_timeout' => 30])
+        ->and($controller->getAdhocDispatchSettings()->getData(true))->toMatchArray(['adhoc_distance' => 5000, 'adhoc_strategy' => 'broadcast', 'adhoc_offer_timeout' => 30]);
+
+    $controller->company = null;
+    expect($save(['adhoc_distance' => 5000, 'adhoc_strategy' => 'broadcast', 'adhoc_offer_timeout' => 30])->getStatusCode())->toBe(404);
+});

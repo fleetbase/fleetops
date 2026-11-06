@@ -2,12 +2,10 @@
 
 namespace Fleetbase\FleetOps\Console\Commands;
 
-use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Contracts\AdhocDispatchStrategy;
 use Fleetbase\FleetOps\Models\Order;
-use Fleetbase\FleetOps\Notifications\OrderPing;
-use Fleetbase\FleetOps\Support\NavigatorReview;
+use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocDispatch;
 use Fleetbase\FleetOps\Support\Utils;
-use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
@@ -29,7 +27,7 @@ class DispatchAdhocOrders extends Command
      *
      * @var string
      */
-    protected $description = 'Dispatch & ping ad-hoc orders without assigned drivers (within a recent time window)';
+    protected $description = 'Offer ad-hoc orders still without a driver again, through each order\'s dispatch strategy (within a recent time window)';
 
     /**
      * Execute the console command.
@@ -57,29 +55,23 @@ class DispatchAdhocOrders extends Command
         $this->table(['Order', 'Dispatched At'], $orders->map(fn ($order) => [$order->public_id, $order->dispatched_at]));
 
         foreach ($orders as $order) {
-            $pickup   = $order->getPickupLocation();
-            $distance = $order->getAdhocPingDistance();
+            $strategy = $this->strategyFor($order);
+            $offered  = $strategy->redispatch($order, $testingMode);
 
-            if (!Utils::isPoint($pickup)) {
-                $this->error('Invalid pickup location for order ' . $order->public_id);
-                continue;
-            }
-
-            $drivers = $this->getNearbyDriversForOrder($order, $pickup, $distance, $testingMode);
-
-            $this->line('Checking order ' . $order->public_id . ' for nearby drivers within ' . $distance . ' meters.');
-
-            if ($drivers->count()) {
-                $order->dispatch(true);
-                $this->info('Order ' . $order->public_id . ' dispatched successfully to ' . $drivers->count() . ' nearby drivers.');
-                foreach ($drivers as $driver) {
-                    $this->info('Pinging driver ' . $driver->name . ' (' . $driver->public_id . ') ...');
-                    $driver->notify(new OrderPing($order, $distance));
-                }
+            if ($offered) {
+                $this->info('Order ' . $order->public_id . ' offered to ' . $offered . ' driver(s) (' . $strategy->name() . ').');
             } else {
-                $this->warn('No available drivers found for order ' . $order->public_id);
+                $this->line('No new offer for order ' . $order->public_id . ' (' . $strategy->name() . ').');
             }
         }
+    }
+
+    /**
+     * The strategy that offers the order to drivers.
+     */
+    protected function strategyFor(Order $order): AdhocDispatchStrategy
+    {
+        return AdhocDispatch::for($order);
     }
 
     /**
@@ -95,16 +87,16 @@ class DispatchAdhocOrders extends Command
     {
         $sandbox = Utils::castBoolean($this->option('sandbox'));
 
+        // Each bound gets its own instance: subtracting from one shared Carbon moved both ends
+        // back 72 hours, leaving a window that never matched.
         $cutoffDate = Carbon::now()->subDays($days);
-        $now        = Carbon::now();
+        $oldest     = Carbon::now()->subHours($expiryHours);
+        $newest     = Carbon::now()->subMinutes($intervalMinutes);
 
         return $this->newOrderQuery($sandbox ? 'sandbox' : 'mysql')
             ->withoutGlobalScopes()
             ->where(['adhoc' => 1, 'dispatched' => 1, 'started' => 0])
-            ->whereBetween('dispatched_at', [
-                $now->subHours($expiryHours),   // not older than 72 hours
-                $now->subMinutes($intervalMinutes),
-            ])
+            ->whereBetween('dispatched_at', [$oldest, $newest])
             ->where('created_at', '>=', $cutoffDate)
             ->whereNull('driver_assigned_uuid')
             ->whereNull('deleted_at')
@@ -121,43 +113,8 @@ class DispatchAdhocOrders extends Command
             ->get();
     }
 
-    /**
-     * Fetch nearby drivers for a given order.
-     */
-    public function getNearbyDriversForOrder(Order $order, Point $pickup, int $distance, bool $testing = false): Collection
-    {
-        $driverQuery = $this->newDriverQuery()
-            ->where(['online' => 1])
-            ->where(function ($q) use ($order) {
-                $q->where('company_uuid', $order->company_uuid)
-                    ->orWhereHas('user', fn ($q) => $q->where('company_uuid', $order->company_uuid));
-            })
-            ->whereNull('deleted_at')
-            ->withoutGlobalScopes();
-
-        // An app store reviewer's driver is never offered a real order.
-        NavigatorReview::excludeFrom($driverQuery);
-
-        if (!$testing) {
-            $driverQuery->whereNotNull('location')->whereRaw('
-                ST_Y(location) BETWEEN -90 AND 90
-                AND ST_X(location) BETWEEN -180 AND 180
-                AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
-            ');
-            $driverQuery->distanceSphere('location', $pickup, $distance);
-            $driverQuery->distanceSphereValue('location', $pickup);
-        }
-
-        return $driverQuery->get();
-    }
-
     protected function newOrderQuery(string $connection)
     {
         return Order::on($connection);
-    }
-
-    protected function newDriverQuery()
-    {
-        return Driver::query();
     }
 }

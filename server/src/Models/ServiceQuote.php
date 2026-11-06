@@ -62,10 +62,16 @@ class ServiceQuote extends Model
 
     /**
      * The attributes that are mass assignable.
-     *
-     * @var array
      */
-    protected $fillable = ['_key', 'request_id', 'company_uuid', 'service_rate_uuid', 'payload_uuid', 'amount', 'currency', 'meta', 'expired_at'];
+    /**
+     * Seats and pickup ETA for the quote's vehicle type, when the request asked for availability.
+     * Not stored.
+     *
+     * @var array{seats: ?int, pickup_eta: ?int}|null
+     */
+    public ?array $availability = null;
+
+    protected $fillable = ['_key', 'request_id', 'company_uuid', 'service_rate_uuid', 'payload_uuid', 'amount', 'currency', 'meta', 'expired_at', 'distance', 'time'];
 
     /**
      * Dynamic attributes that are appended to object.

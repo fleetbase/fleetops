@@ -213,18 +213,12 @@ class SocketChannels
     }
 
     /**
-     * Drivers: a driver only themselves; a customer the driver of one of their active orders.
+     * Drivers: a driver only themselves. Never a customer, because the driver's location events
+     * carry their phone number; riders follow the car through their order instead.
      */
     public static function narrowDriver(SocketPrincipal $principal, Model $driver): bool
     {
-        if ($principal->kind === 'driver') {
-            return static::isSelf($principal, $driver->uuid);
-        }
-
-        return $principal->kind === 'customer'
-            && static::activeCustomerOrders($principal, $driver->getConnectionName())
-                ->where('driver_assigned_uuid', $driver->uuid)
-                ->exists();
+        return $principal->kind === 'driver' && static::isSelf($principal, $driver->uuid);
     }
 
     /**

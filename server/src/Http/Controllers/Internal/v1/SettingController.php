@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Jobs\DispatchTelematicsRetentionJobs;
 use Fleetbase\FleetOps\Orchestration\Support\OrchestratorSettings;
+use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocDispatch;
 use Fleetbase\FleetOps\Support\Routing\HostPolicy;
 use Fleetbase\FleetOps\Support\Routing\OsrmConnection;
 use Fleetbase\FleetOps\Support\Routing\RoutingEngineResolver;
@@ -246,6 +247,58 @@ class SettingController extends Controller
             'message'              => 'Notification settings successfully fetched.',
             'notificationSettings' => $notificationSettings,
         ]);
+    }
+
+    /**
+     * How adhoc orders are offered by default: the ping radius, the strategy and the offer
+     * timeout, kept in the company's Fleet-Ops options. Orders and order configs can override them.
+     */
+    public function getAdhocDispatchSettings()
+    {
+        $company = $this->currentCompany();
+
+        return response()->json([
+            'adhoc_distance'      => (int) ($company?->getOption('fleetops.adhoc_distance') ?? 6000),
+            'adhoc_strategy'      => AdhocDispatch::companyDefault($company),
+            'adhoc_offer_timeout' => (int) ($company?->getOption('fleetops.adhoc_offer_timeout') ?? AdhocDispatch::OFFER_TIMEOUT),
+            'strategies'          => AdhocDispatch::describe(),
+        ]);
+    }
+
+    public function saveAdhocDispatchSettings(Request $request)
+    {
+        $distance = $request->input('adhoc_distance');
+        $strategy = $request->input('adhoc_strategy');
+        $timeout  = $request->input('adhoc_offer_timeout');
+        if (!is_numeric($distance) || $distance < 100 || $distance > 100000) {
+            return response()->error('Choose a ping radius between 100 m and 100 km.', 422);
+        }
+        if (!AdhocDispatch::has($strategy)) {
+            return response()->error('Choose a dispatch strategy.', 422);
+        }
+        if (!is_numeric($timeout) || $timeout < AdhocDispatch::MIN_OFFER_TIMEOUT || $timeout > AdhocDispatch::MAX_OFFER_TIMEOUT) {
+            return response()->error('Choose an offer time between ' . AdhocDispatch::MIN_OFFER_TIMEOUT . ' and ' . AdhocDispatch::MAX_OFFER_TIMEOUT . ' seconds.', 422);
+        }
+
+        $company = $this->currentCompany();
+        if (!$company) {
+            return response()->error('No organization found.', 404);
+        }
+
+        $company->setOption('fleetops.adhoc_distance', (int) $distance);
+        $company->setOption('fleetops.adhoc_strategy', $strategy);
+        $company->setOption('fleetops.adhoc_offer_timeout', (int) $timeout);
+        $company->save();
+
+        return response()->json(['status' => 'ok', 'message' => 'Dispatch settings saved.']);
+    }
+
+    /**
+     * The adhoc dispatch strategies an order, order config or company can use.
+     */
+    public function getAdhocDispatchStrategies()
+    {
+        return response()->json(['strategies' => AdhocDispatch::describe()]);
     }
 
     /**

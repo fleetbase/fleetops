@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Requests\Internal;
 
+use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocDispatch;
 use Fleetbase\Http\Requests\FleetbaseRequest;
 use Fleetbase\Support\Auth;
 use Illuminate\Validation\Rule;
@@ -32,6 +33,10 @@ class CreateOrderConfigRequest extends FleetbaseRequest
                 Rule::unique('order_configs', 'key')
                     ->where('company_uuid', request()->session()->get('company'))->whereNull('deleted_at'),
             ],
+            'adhoc_strategy'        => ['nullable', 'string', Rule::in(AdhocDispatch::names())],
+            'adhoc_offer_timeout'   => ['nullable', 'integer', 'min:' . AdhocDispatch::MIN_OFFER_TIMEOUT, 'max:' . AdhocDispatch::MAX_OFFER_TIMEOUT],
+            'customer_orders_adhoc' => ['nullable', 'boolean'],
+            'match_vehicle_type'    => ['nullable', 'boolean'],
         ];
     }
 }

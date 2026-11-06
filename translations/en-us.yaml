@@ -106,6 +106,7 @@ menu:
     payments: Payments
     notifications: Notifications
     routing: Routing
+    dispatch: Dispatch
     map: Map
     custom-fields: Custom Fields
     order-board: Order Board
@@ -1078,6 +1079,12 @@ order:
         add-waypoint: Add Waypoint
         add-waypoint-help-text: 'Use the `Add Waypoint` button to add more stops for this order. The Fleetbase routing engine will automatically optimize the route as each stop is added or removed.'
         adhoc-ping: Adhoc Ping Distance
+        adhoc-strategy: How to Offer It
+        adhoc-strategy-help-text: How this order is offered to drivers nearby. The default comes from the order config, then from Settings → Dispatch.
+        adhoc-strategy-default: Default
+        required-vehicle-type: Vehicle Type
+        required-vehicle-type-placeholder: Any vehicle type
+        required-vehicle-type-help-text: Only drivers whose vehicle is of this type are offered the order.
         adhoc-ping-help-text: This setting determines the adhoc distance to ping for this order, if unset it will fallback to the default setting.
         adhoc-ping-message: Distance must be in meters
         apply-service-rate: Apply service rate
@@ -1260,6 +1267,16 @@ order-config-manager:
         entities: Entities
     details:
         details: Details
+        adhoc-dispatch: Adhoc Dispatch
+        adhoc-strategy: How Adhoc Orders Are Offered
+        adhoc-strategy-help-text: How orders on this config without an assigned driver are offered to drivers nearby.
+        adhoc-offer-timeout: Offer Time (seconds)
+        adhoc-offer-timeout-help-text: How long each driver has to accept when orders are offered one driver at a time.
+        company-default: Company default
+        customer-orders-adhoc: Customers' Orders Go to Nearby Drivers
+        customer-orders-adhoc-help-text: Orders customers place on this config are offered to drivers nearby instead of waiting for dispatch.
+        match-vehicle-type: Match Customers' Orders by Vehicle Type
+        match-vehicle-type-help-text: Customers choose a fare, and their order only goes to drivers whose vehicle type matches it.
         name: Name
         description: Description
         tags: Tags
@@ -2811,6 +2828,16 @@ route-list:
     more-waypoints: more waypoints
 
 settings:
+    dispatch:
+        title: Fleet-Ops Dispatch
+        adhoc-orders: Adhoc Orders
+        intro: How orders without an assigned driver are offered to drivers nearby. An order config or a single order can choose differently.
+        strategy: How Orders Are Offered
+        offer-timeout: Offer Time (seconds)
+        offer-timeout-help-text: How long each driver has to accept before the order goes to the next driver.
+        ping-radius: Radius (meters)
+        ping-radius-help-text: How far from the pickup drivers are offered an order.
+        saved: Dispatch settings saved.
     telematics:
         telematics-settings: Telematics Settings
         intro: Choose how long your organization keeps device events and position history within the limits set by your system administrator.

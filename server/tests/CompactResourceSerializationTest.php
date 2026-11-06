@@ -118,6 +118,11 @@ class FleetOpsCompactResourceFixture implements ArrayAccess
         return array_key_exists($relationship, $this->loaded);
     }
 
+    public function toArrayForTest(): array
+    {
+        return $this->attributes;
+    }
+
     public function loadMissing(string|array $relationship): self
     {
         return $this;
@@ -2841,4 +2846,39 @@ test('tracking number resource publishes a scannable qr code content beside the 
         ->and(array_key_exists('qr_code_content', $withoutNumber))->toBeFalse()
         // Nor is there a tracking page to link to.
         ->and(array_key_exists('url', $withoutNumber))->toBeFalse();
+});
+
+test('the rider order resource adds the fare, rating, payment and how dispatch ended', function () {
+    $request = fleetopsCompactResourceRequest(false);
+    $rating  = fleetopsCompactResourceFixture(['stars' => 5, 'comment' => 'Kind']);
+    $order   = fleetopsCompactResourceFixture([
+        'orderConfig'    => null,
+        'payload'        => fleetopsCompactResourceFixture(['payment_method' => 'card']),
+        'trackingNumber' => null,
+        'comments'       => collect(),
+        'files'          => collect(),
+        'purchaseRate'   => null,
+        'driverRating'   => $rating,
+        'paid_at'        => '2026-11-06 10:00:00',
+        'type'           => 'ride',
+        'status'         => 'completed',
+        'meta'           => [],
+    ], [
+        'fare'            => ['final' => true, 'total' => 746],
+        'dispatchOutcome' => null,
+    ]);
+    $unrated = fleetopsCompactResourceFixture(array_merge($order->toArrayForTest(), ['driverRating' => null]), ['fare' => null, 'dispatchOutcome' => 'no_driver_found']);
+
+    $payload = (new Fleetbase\FleetOps\Http\Resources\v1\RiderOrder($order))->resolve($request);
+    $other   = (new Fleetbase\FleetOps\Http\Resources\v1\RiderOrder($unrated))->resolve($request);
+
+    expect($payload)->toMatchArray([
+        'id'               => 'fixture_public',
+        'fare'             => ['final' => true, 'total' => 746],
+        'rating'           => ['stars' => 5, 'comment' => 'Kind'],
+        'payment_method'   => 'card',
+        'paid_at'          => '2026-11-06 10:00:00',
+        'dispatch_outcome' => null,
+    ])
+        ->and($other)->toMatchArray(['fare' => null, 'rating' => null, 'dispatch_outcome' => 'no_driver_found']);
 });

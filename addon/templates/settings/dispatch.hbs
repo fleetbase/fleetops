@@ -1,0 +1,48 @@
+<Layout::Section::Header @title={{t "settings.dispatch.title"}}>
+    <Button
+        @type="primary"
+        @size="sm"
+        @icon="save"
+        @text={{t "common.save-changes"}}
+        @onClick={{perform this.saveSettings}}
+        @disabled={{this.saveSettings.isRunning}}
+        @isLoading={{or this.saveSettings.isRunning this.getSettings.isRunning}}
+    />
+</Layout::Section::Header>
+
+<Layout::Section::Body class="overflow-y-scroll-i h-full">
+    <div class="container mx-auto h-screen">
+        <div class="max-w-3xl my-10 mx-auto space-y-6">
+            <ContentPanel @title={{t "settings.dispatch.adhoc-orders"}} @open={{true}} @wrapperClass="bordered-classic">
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">{{t "settings.dispatch.intro"}}</p>
+                <InputGroup @name={{t "settings.dispatch.strategy"}} @helpText={{this.selectedStrategy.description}}>
+                    <Select
+                        @value={{this.adhocStrategy}}
+                        @options={{this.strategies}}
+                        @optionLabel="label"
+                        @optionValue="name"
+                        @onSelect={{fn (mut this.adhocStrategy)}}
+                        class="w-full"
+                        data-test-adhoc-strategy
+                    />
+                </InputGroup>
+                {{#if this.usesOfferTimeout}}
+                    <InputGroup
+                        @name={{t "settings.dispatch.offer-timeout"}}
+                        @type="number"
+                        @value={{this.adhocOfferTimeout}}
+                        @helpText={{t "settings.dispatch.offer-timeout-help-text"}}
+                        data-test-adhoc-offer-timeout
+                    />
+                {{/if}}
+                <InputGroup
+                    @name={{t "settings.dispatch.ping-radius"}}
+                    @type="number"
+                    @value={{this.adhocDistance}}
+                    @helpText={{t "settings.dispatch.ping-radius-help-text"}}
+                    data-test-adhoc-distance
+                />
+            </ContentPanel>
+        </div>
+    </div>
+</Layout::Section::Body>

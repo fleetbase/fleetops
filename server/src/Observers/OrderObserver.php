@@ -9,6 +9,8 @@ use Fleetbase\FleetOps\Models\TrackingNumber;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\LiveCacheService;
+use Fleetbase\FleetOps\Support\Rides\FinalFare;
+use Fleetbase\FleetOps\Support\Rides\RideUpdates;
 use Fleetbase\FleetOps\Support\TrackingPublisher;
 use Fleetbase\Support\ApiModelCache;
 use Illuminate\Support\Facades\Cache;
@@ -73,6 +75,15 @@ class OrderObserver
 
         // Public tracking channels follow status, assignment and ETA changes.
         app(TrackingPublisher::class)->orderChanged($order);
+
+        // A rider hears about each step of their ride. This reads the order's changes, so it
+        // comes before pricing, which saves the order again.
+        RideUpdates::statusChanged($order);
+
+        // A finished ride is priced from the actual trip.
+        if ($order->wasChanged('status')) {
+            FinalFare::settle($order);
+        }
     }
 
     /**

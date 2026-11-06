@@ -170,6 +170,16 @@ export default class TrackingPageComponent extends Component {
             return;
         }
 
+        // A rider's shared link opens their live view on this device first.
+        const share = this.urlSearchParams.get('share');
+        if (this.trackingInput && share) {
+            try {
+                yield this.fetch.post(`track/${encodeURIComponent(this.trackingInput)}/share${this.queryString()}`, { token: share }, REQUEST_OPTIONS);
+            } catch {
+                // An expired or broken link falls back to the public view.
+            }
+        }
+
         if (this.trackingInput) {
             yield this.lookup.perform(this.trackingInput, { quiet: true });
         } else {

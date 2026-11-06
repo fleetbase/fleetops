@@ -150,13 +150,13 @@ function fleetopsOrderStartBoot(): SQLiteConnection
     $schema = $connection->getSchemaBuilder();
     app()->instance('db.schema', $schema);
     $tables = [
-        'orders'              => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'order_config_uuid', 'tracking_number_uuid', 'driver_assigned_uuid', 'status', 'type', 'adhoc', 'dispatched', 'dispatched_at', 'started', 'started_at', 'scheduled_at', 'meta', 'distance', 'time', 'pod_required', 'pod_method', 'orchestrator_priority', 'adhoc_distance', 'notes', 'customer_uuid', 'customer_type', 'facilitator_uuid', 'facilitator_type', 'vehicle_assigned_uuid', 'route_uuid', 'purchase_rate_uuid', 'transaction_uuid', 'time_window_start', 'time_window_end', 'required_skills', '_key'],
+        'orders'              => ['uuid', 'public_id', 'internal_id', 'adhoc_strategy', 'required_vehicle_type', 'company_uuid', 'payload_uuid', 'order_config_uuid', 'tracking_number_uuid', 'driver_assigned_uuid', 'status', 'type', 'adhoc', 'dispatched', 'dispatched_at', 'started', 'started_at', 'scheduled_at', 'meta', 'distance', 'time', 'pod_required', 'pod_method', 'orchestrator_priority', 'adhoc_distance', 'notes', 'customer_uuid', 'customer_type', 'facilitator_uuid', 'facilitator_type', 'vehicle_assigned_uuid', 'route_uuid', 'purchase_rate_uuid', 'transaction_uuid', 'time_window_start', 'time_window_end', 'required_skills', '_key'],
         'payloads'            => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'return_uuid', 'current_waypoint_uuid', 'pickup_tracking_number_uuid', 'dropoff_tracking_number_uuid', 'meta', 'type', 'payment_method', 'cod_amount', 'cod_currency', '_key'],
         'places'              => ['uuid', 'public_id', 'company_uuid', 'name', 'street1', 'city', 'country', 'location', 'meta', 'street2', 'province', 'postal_code', 'phone', 'type', 'owner_uuid', 'owner_type', '_key', '_import_id'],
         'waypoints'           => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'order', 'type', '_key', '_import_id'],
         'drivers'             => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'status', 'online', 'location', 'current_job_uuid'],
         'users'               => ['uuid', 'public_id', 'company_uuid', 'name', 'status', 'type', 'email', 'phone', 'password', 'slug', 'username', 'meta', '_key'],
-        'order_configs'       => ['uuid', 'public_id', 'company_uuid', 'name', 'key', 'namespace', 'description', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', '_key'],
+        'order_configs'       => ['uuid', 'public_id', 'company_uuid', 'adhoc_strategy', 'adhoc_offer_timeout', 'customer_orders_adhoc', 'match_vehicle_type', 'name', 'key', 'namespace', 'description', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', '_key'],
         'tracking_numbers'    => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'region', 'location', 'status_uuid', 'owner_uuid', 'owner_type', 'qr_code', 'barcode', '_key'],
         'tracking_statuses'   => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'proof_uuid', 'status', 'details', 'location', 'code', 'complete', '_key'],
         'entities'            => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'destination_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'name', 'type', 'meta', 'internal_id', 'qr_code', 'barcode', 'photo_uuid', '_key', '_import_id'],
@@ -169,6 +169,7 @@ function fleetopsOrderStartBoot(): SQLiteConnection
         'vehicles'            => ['uuid', 'public_id', 'company_uuid', 'name', 'plate_number', 'location', 'online'],
         'contacts'            => ['uuid', 'public_id', 'company_uuid', 'name', 'type', 'email', 'phone'],
         'vendors'             => ['uuid', 'public_id', 'company_uuid', 'name', 'email', 'phone'],
+        'order_offers'        => ['uuid', 'company_uuid', 'order_uuid', 'driver_uuid', 'status', 'distance', 'expires_at', 'responded_at'],
     ];
     foreach ($tables as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
@@ -660,4 +661,161 @@ test('classic lifecycle activities record activity against payload entities', fu
 
     // The entity receives its own tracking status alongside the order
     expect($connection->table('tracking_statuses')->where('tracking_number_uuid', 'tn-entity-1')->count())->toBeGreaterThanOrEqual(1);
+});
+
+function fleetopsOrderStartRide(SQLiteConnection $connection, array $order = []): void
+{
+    $defaults = Fleetbase\FleetOps\Support\FleetOps::rideConfigDefaults();
+    $connection->table('order_configs')->insert([
+        'uuid'           => 'config-ride',
+        'company_uuid'   => 'company-1',
+        'key'            => 'ride',
+        'namespace'      => 'system:order-config:ride',
+        'flow'           => json_encode($defaults['flow']),
+        'meta'           => json_encode($defaults['meta']),
+        'adhoc_strategy' => $defaults['adhoc_strategy'],
+    ]);
+    fleetopsOrderStartSeedOrder($connection, array_merge(['order_config_uuid' => 'config-ride', 'type' => 'ride', 'adhoc' => 1, 'status' => 'dispatched', 'dispatched' => 1, 'dispatched_at' => '2026-11-06 09:00:00'], $order));
+    $connection->table('drivers')->where('uuid', 'driver-1')->update(['online' => 1]);
+    $connection->table('tracking_statuses')->insert(['uuid' => 'ts-dispatched', 'company_uuid' => 'company-1', 'tracking_number_uuid' => 'tn-1', 'code' => 'DISPATCHED', 'status' => 'Finding a driver']);
+    // Declining looks for the next driver, nearest first.
+    $connection->getPdo()->sqliteCreateFunction('st_distance_sphere', fn ($a, $b) => 100.0);
+    $connection->getPdo()->sqliteCreateFunction('ST_X', fn ($value) => 0.5);
+    $connection->getPdo()->sqliteCreateFunction('ST_Y', fn ($value) => 0.5);
+    $connection->table('users')->insert(['uuid' => 'user-2', 'company_uuid' => 'company-2', 'name' => 'Rival']);
+    $connection->table('drivers')->insert([
+        ['uuid' => 'driver-2', 'public_id' => 'driver_two', 'company_uuid' => 'company-1', 'user_uuid' => null, 'online' => 1],
+        ['uuid' => 'driver-3', 'public_id' => 'driver_rival', 'company_uuid' => 'company-2', 'user_uuid' => 'user-2', 'online' => 1],
+        ['uuid' => 'driver-4', 'public_id' => 'driver_sleepy', 'company_uuid' => 'company-1', 'user_uuid' => null, 'online' => 0],
+    ]);
+}
+
+function fleetopsOrderStartOffer(SQLiteConnection $connection, string $driverUuid, string $expiresAt = '2099-01-01 00:00:00'): void
+{
+    $connection->table('order_offers')->insert(['uuid' => 'offer-' . $driverUuid, 'company_uuid' => 'company-1', 'order_uuid' => 'order-1', 'driver_uuid' => $driverUuid, 'status' => 'pending', 'expires_at' => $expiresAt]);
+}
+
+test('accepting an adhoc ride refuses unknown, foreign, offline and impersonated drivers', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartRide($connection);
+    $controller = new OrderController();
+    $accept     = fn (string $driver) => $controller->startOrder('order_start', Request::create('/x', 'POST', ['assign' => $driver]));
+
+    expect($accept('driver_missing')->getStatusCode())->toBe(404)
+        ->and($accept('driver_rival')->getStatusCode())->toBe(404)
+        ->and($accept('driver_sleepy')->getStatusCode())->toBe(422);
+
+    // Signed in as Driver One, nobody accepts for someone else.
+    session(['user' => 'user-1']);
+    $impersonated = $accept('driver_two');
+    session(['user' => null]);
+
+    expect($impersonated->getStatusCode())->toBe(403)
+        ->and($connection->table('orders')->value('driver_assigned_uuid'))->toBeNull();
+});
+
+test('a ride with timed offers can only be accepted by the driver it is offered to', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartRide($connection);
+    fleetopsOrderStartOffer($connection, 'driver-1');
+    $controller = new OrderController();
+
+    $notOffered = $controller->startOrder('order_start', Request::create('/x', 'POST', ['assign' => 'driver_two']));
+    $offered    = $controller->startOrder('order_start', Request::create('/x', 'POST', ['assign' => 'driver_one']));
+
+    expect($notOffered->getStatusCode())->toBe(409)
+        ->and($notOffered->getData(true)['error'])->toContain('no longer offered')
+        ->and($connection->table('orders')->value('driver_assigned_uuid'))->toBe('driver-1')
+        ->and($connection->table('orders')->value('started'))->toBe(1)
+        ->and($connection->table('order_offers')->where('driver_uuid', 'driver-1')->value('status'))->toBe('accepted');
+});
+
+test('of two drivers accepting the same adhoc order only the first gets it', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartRide($connection);
+    $connection->table('order_configs')->where('uuid', 'config-ride')->update(['adhoc_strategy' => 'broadcast']);
+    // Someone else claimed it after this request loaded the order.
+    $connection->table('orders')->update(['driver_assigned_uuid' => 'driver-2']);
+
+    $order                       = Order::where('uuid', 'order-1')->first();
+    $order->driver_assigned_uuid = null;
+    $order->syncOriginal();
+    $refusal = (new class extends OrderController {
+        public function claim(Order $order, string $driver)
+        {
+            return $this->claimAdhocOrder($order, $driver);
+        }
+    })->claim($order, 'driver_one');
+
+    expect($refusal->getStatusCode())->toBe(409)
+        ->and($refusal->getData(true)['error'])->toContain('taken by another driver')
+        ->and($connection->table('orders')->value('driver_assigned_uuid'))->toBe('driver-2');
+});
+
+test('the driver already holding an adhoc order passes, and a canceled order refuses everyone', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartRide($connection, ['driver_assigned_uuid' => 'driver-1']);
+    $connection->table('order_configs')->where('uuid', 'config-ride')->update(['adhoc_strategy' => 'broadcast']);
+    $controller = new OrderController();
+
+    $held = $controller->startOrder('order_start', Request::create('/x', 'POST', ['assign' => 'driver_one']));
+    expect($connection->table('orders')->value('started'))->toBe(1);
+
+    $connection->table('orders')->update(['started' => 0, 'status' => 'canceled']);
+    $canceled = $controller->startOrder('order_start', Request::create('/x', 'POST', ['assign' => 'driver_one']));
+
+    expect($canceled->getStatusCode())->toBe(409)
+        ->and($canceled->getData(true)['error'])->toContain('canceled');
+});
+
+test('a driver declines the ride offered to them, signed in or named', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartRide($connection);
+    fleetopsOrderStartOffer($connection, 'driver-1');
+    $connection->table('order_offers')->insert(['uuid' => 'offer-2', 'company_uuid' => 'company-1', 'order_uuid' => 'order-1', 'driver_uuid' => 'driver-2', 'status' => 'declined', 'expires_at' => '2099-01-01 00:00:00']);
+    $controller = new OrderController();
+
+    $missing = $controller->declineOrder('order_missing', Request::create('/x', 'POST'));
+    $nobody  = $controller->declineOrder('order_start', Request::create('/x', 'POST'));
+    $rival   = $controller->declineOrder('order_start', Request::create('/x', 'POST', ['driver' => 'driver_rival']));
+    $named   = $controller->declineOrder('order_start', Request::create('/x', 'POST', ['driver' => 'driver_two']));
+
+    session(['user' => 'user-1']);
+    $declined = $controller->declineOrder('order_start', Request::create('/x', 'POST', ['driver' => 'driver_two']));
+    session(['user' => null]);
+
+    expect($missing->getStatusCode())->toBe(404)
+        ->and($nobody->getStatusCode())->toBe(404)
+        ->and($rival->getStatusCode())->toBe(404)
+        ->and($named->getStatusCode())->toBe(409)
+        ->and($declined->getData(true))->toBe(['status' => 'declined', 'order' => 'order_start'])
+        ->and($connection->table('order_offers')->where('uuid', 'offer-driver-1')->value('status'))->toBe('declined')
+        // Nobody else has a position, so the ride ends as no driver found.
+        ->and($connection->table('orders')->value('status'))->toBe('canceled');
+});
+
+test('a strict ride flow refuses skipped steps and uses the configured activity', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartRide($connection, ['status' => 'arrived', 'started' => 1, 'driver_assigned_uuid' => 'driver-1']);
+    $controller = new OrderController();
+
+    $skipped = $controller->updateActivity('order_start', Request::create('/x', 'POST', ['activity' => ['code' => 'completed']]));
+    $onBoard = $controller->updateActivity('order_start', Request::create('/x', 'POST', ['activity' => ['code' => 'in_progress', 'status' => 'Anything the client says']]));
+
+    expect($skipped->getStatusCode())->toBe(422)
+        ->and($connection->table('orders')->value('status'))->toBe('in_progress')
+        ->and($connection->table('tracking_statuses')->where('code', 'IN_PROGRESS')->value('status'))->toBe('Trip in progress');
+});
+
+test('canceling a ride frees its driver and withdraws the open offer', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartRide($connection, ['driver_assigned_uuid' => 'driver-1']);
+    fleetopsOrderStartOffer($connection, 'driver-2');
+    $connection->table('drivers')->where('uuid', 'driver-1')->update(['current_job_uuid' => 'order-1']);
+
+    Order::where('uuid', 'order-1')->first()->cancelWithReason('Rider changed their mind');
+
+    expect($connection->table('drivers')->where('uuid', 'driver-1')->value('current_job_uuid'))->toBeNull()
+        ->and($connection->table('order_offers')->value('status'))->toBe('withdrawn')
+        ->and($connection->table('orders')->value('status'))->toBe('canceled');
 });
