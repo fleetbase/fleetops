@@ -100,9 +100,8 @@ class FleetOpsConcreteHandleOrderDispatchedProbe extends HandleOrderDispatched
 {
     public ?Driver $assignedDriver         = null;
     public bool $throwAssignedNotification = false;
-    public bool $throwAdhocNotification    = false;
     public array $assignedNotifications    = [];
-    public array $adhocNotifications       = [];
+    public array $adhocDispatches          = [];
 
     public function getDispatchActivityForTest(Order $order): mixed
     {
@@ -119,16 +118,11 @@ class FleetOpsConcreteHandleOrderDispatchedProbe extends HandleOrderDispatched
         return $this->assignedDriver;
     }
 
-    protected function usesTimedOffers($order): bool
+    protected function dispatchAdhoc($order): mixed
     {
-        return false;
-    }
+        $this->adhocDispatches[] = $order;
 
-    protected function nearbyAvailableDrivers($pickup, int|float $distance, ?Order $order = null)
-    {
-        return collect([
-            new FleetOpsConcreteDriverForDispatch(),
-        ]);
+        return null;
     }
 
     protected function notifyAssignedDriver(Driver $driver, $order): void
@@ -139,16 +133,6 @@ class FleetOpsConcreteHandleOrderDispatchedProbe extends HandleOrderDispatched
 
         $this->assignedNotifications[] = $driver;
         parent::notifyAssignedDriver($driver, $order);
-    }
-
-    protected function notifyAdhocDriver(Driver $driver, $order): void
-    {
-        if ($this->throwAdhocNotification) {
-            throw new RuntimeException('adhoc notification failed');
-        }
-
-        $this->adhocNotifications[] = $driver;
-        parent::notifyAdhocDriver($driver, $order);
     }
 }
 
@@ -192,17 +176,15 @@ test('order dispatched listener swallows assigned driver notification failures',
         ->and($listener->assignedNotifications)->toBe([]);
 });
 
-test('order dispatched listener swallows adhoc driver notification failures', function () {
+test('order dispatched listener marks an adhoc order dispatched before its strategy offers it', function () {
     $listener                 = new FleetOpsConcreteHandleOrderDispatchedProbe();
     $order                    = fleetopsConcreteOrderForDispatch();
     $order->adhoc             = true;
     $order->hasDriverAssigned = false;
-    $order->pickupLocation    = new Fleetbase\LaravelMysqlSpatial\Types\Point(1.30, 103.80);
-
-    $listener->throwAdhocNotification = true;
 
     $listener->handle(new FleetOpsConcreteOrderDispatchedEvent($order));
 
     expect($order->dispatched)->toBeTrue()
-        ->and($listener->adhocNotifications)->toBe([]);
+        ->and($listener->adhocDispatches)->toBe([$order])
+        ->and($listener->assignedNotifications)->toBe([]);
 });

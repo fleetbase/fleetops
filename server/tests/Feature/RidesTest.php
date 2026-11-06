@@ -5,8 +5,10 @@ use Fleetbase\FleetOps\Jobs\ExpireOrderOffer;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderConfig;
-use Fleetbase\FleetOps\Models\OrderOffer;
 use Fleetbase\FleetOps\Notifications\OrderPing;
+use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocDispatch;
+use Fleetbase\FleetOps\Support\AdhocDispatch\BroadcastStrategy;
+use Fleetbase\FleetOps\Support\AdhocDispatch\SequentialStrategy;
 use Fleetbase\FleetOps\Support\DriverMatching;
 use Fleetbase\FleetOps\Support\FleetOps;
 use Fleetbase\FleetOps\Support\OrderOffers;
@@ -158,8 +160,8 @@ function rideOffersBoot(): SQLiteConnection
         'users'               => ['uuid', 'public_id', 'company_uuid', 'name', 'type', 'status', 'email', 'phone'],
         'drivers'             => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'status', 'online', 'location', 'current_job_uuid', 'meta'],
         'vehicles'            => ['uuid', 'public_id', 'company_uuid', 'type', 'plate_number', 'seating_capacity', 'vendor_uuid', 'photo_uuid', 'avatar_url', 'name', 'internal_id', 'location', 'online', 'speed', 'heading', 'altitude', 'year', 'make', 'model', 'class', 'color', 'call_sign', 'status', 'specs', 'vin_data', 'telematics', 'meta', 'slug', 'vin', 'trim', 'plate_number_type'],
-        'orders'              => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'dispatched_at', 'started_at', 'customer_uuid', 'customer_type', 'purchase_rate_uuid', 'transaction_uuid', 'order_config_uuid', 'payload_uuid', 'driver_assigned_uuid', 'status', 'type', 'adhoc', 'adhoc_distance', 'dispatched', 'started', 'meta'],
-        'order_configs'       => ['uuid', 'public_id', 'company_uuid', 'name', 'key', 'namespace', 'description', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', 'tags'],
+        'orders'              => ['uuid', 'public_id', 'company_uuid', 'adhoc_strategy', 'required_vehicle_type', 'tracking_number_uuid', 'dispatched_at', 'started_at', 'customer_uuid', 'customer_type', 'purchase_rate_uuid', 'transaction_uuid', 'order_config_uuid', 'payload_uuid', 'driver_assigned_uuid', 'status', 'type', 'adhoc', 'adhoc_distance', 'dispatched', 'started', 'meta'],
+        'order_configs'       => ['uuid', 'public_id', 'company_uuid', 'adhoc_strategy', 'adhoc_offer_timeout', 'customer_orders_adhoc', 'match_vehicle_type', 'name', 'key', 'namespace', 'description', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', 'tags'],
         'order_offers'        => ['uuid', '_key', 'company_uuid', 'order_uuid', 'driver_uuid', 'status', 'distance', 'expires_at', 'responded_at'],
         'payloads'            => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'current_waypoint_uuid', 'meta'],
         'places'              => ['uuid', 'public_id', 'company_uuid', 'name', 'location', 'meta', 'owner_uuid', 'owner_type'],
@@ -196,12 +198,13 @@ function rideOffersBoot(): SQLiteConnection
     session(['company' => 'company-1']);
     $connection->table('companies')->insert([['uuid' => 'company-1', 'public_id' => 'company_one', 'name' => 'Acme Cabs'], ['uuid' => 'company-2', 'public_id' => 'company_two', 'name' => 'Other Cabs']]);
     $connection->table('order_configs')->insert([
-        'uuid'         => 'config-ride',
-        'company_uuid' => 'company-1',
-        'key'          => 'ride',
-        'namespace'    => 'system:order-config:ride',
-        'flow'         => json_encode(FleetOps::rideConfigDefaults()['flow']),
-        'meta'         => json_encode(['offers' => ['enabled' => true, 'timeout' => 15]]),
+        'uuid'                => 'config-ride',
+        'company_uuid'        => 'company-1',
+        'key'                 => 'ride',
+        'namespace'           => 'system:order-config:ride',
+        'flow'                => json_encode(FleetOps::rideConfigDefaults()['flow']),
+        'adhoc_strategy'      => 'sequential',
+        'adhoc_offer_timeout' => 15,
     ]);
     $connection->table('places')->insert(['uuid' => 'place-pickup', 'company_uuid' => 'company-1', 'name' => 'Raffles Place', 'location' => rideOffersWkb(103.8511, 1.2841)]);
     $connection->table('payloads')->insert(['uuid' => 'payload-1', 'company_uuid' => 'company-1', 'pickup_uuid' => 'place-pickup']);
@@ -234,18 +237,18 @@ function rideOffersSeedDrivers(SQLiteConnection $connection): void
 function rideOffersOrder(SQLiteConnection $connection, array $attributes = []): RideOffersOrder
 {
     $connection->table('orders')->insert(array_merge([
-        'uuid'              => 'order-1',
-        'public_id'         => 'order_ride',
-        'company_uuid'      => 'company-1',
-        'order_config_uuid' => 'config-ride',
-        'payload_uuid'      => 'payload-1',
-        'status'            => 'dispatched',
-        'type'              => 'ride',
-        'adhoc'             => 1,
-        'adhoc_distance'    => 6000,
-        'dispatched'        => 1,
-        'started'           => 0,
-        'meta'              => json_encode(['vehicle_class' => 'economy']),
+        'uuid'                  => 'order-1',
+        'public_id'             => 'order_ride',
+        'company_uuid'          => 'company-1',
+        'order_config_uuid'     => 'config-ride',
+        'payload_uuid'          => 'payload-1',
+        'status'                => 'dispatched',
+        'type'                  => 'ride',
+        'adhoc'                 => 1,
+        'adhoc_distance'        => 6000,
+        'dispatched'            => 1,
+        'started'               => 0,
+        'required_vehicle_type' => 'economy',
     ], $attributes));
 
     return RideOffersOrder::where('uuid', $attributes['uuid'] ?? 'order-1')->first();
@@ -261,7 +264,7 @@ function rideOffersStatuses(SQLiteConnection $connection): array
     return $connection->table('order_offers')->orderBy('id')->get(['driver_uuid', 'status'])->map(fn ($row) => [$row->driver_uuid, $row->status])->all();
 }
 
-test('drivers are matched by company, free from other jobs and of the booked class', function () {
+test('drivers are matched by company, free from other jobs and of the vehicle type the order needs', function () {
     $connection = rideOffersBoot();
     $connection->table('users')->insert(['uuid' => 'user-moved', 'company_uuid' => 'company-1']);
     $connection->table('orders')->insert([
@@ -280,11 +283,11 @@ test('drivers are matched by company, free from other jobs and of the booked cla
     ]);
 
     $order = new Order();
-    $order->setRawAttributes(['company_uuid' => 'company-1', 'meta' => json_encode(['vehicle_class' => ' ECONOMY '])], true);
+    $order->setRawAttributes(['company_uuid' => 'company-1', 'required_vehicle_type' => ' ECONOMY '], true);
     $matched = DriverMatching::forOrder(Driver::query()->withoutGlobalScopes(), $order)->orderBy('id')->pluck('uuid')->all();
 
     $anyClass = new Order();
-    $anyClass->setRawAttributes(['company_uuid' => 'company-1', 'meta' => json_encode(['vehicle_class' => '  '])], true);
+    $anyClass->setRawAttributes(['company_uuid' => 'company-1', 'required_vehicle_type' => '  '], true);
     $everyClass = DriverMatching::forOrder(Driver::query()->withoutGlobalScopes(), $anyClass)->orderBy('id')->pluck('uuid')->all();
 
     expect($matched)->toBe(['free', 'via-user', 'finished', 'stale'])
@@ -293,17 +296,23 @@ test('drivers are matched by company, free from other jobs and of the booked cla
         ->and(DriverMatching::vehicleClass($order))->toBe('ECONOMY');
 });
 
-test('a ride is offered to the nearest free driver of its class first', function () {
+function sequential(): SequentialStrategy
+{
+    return new SequentialStrategy();
+}
+
+test('one at a time: the order goes to the nearest free driver of its type first', function () {
     $connection = rideOffersBoot();
     rideOffersSeedDrivers($connection);
     $order = rideOffersOrder($connection);
 
     Carbon::setTestNow('2026-11-06 09:00:00');
-    $offer = OrderOffers::start($order);
+    sequential()->dispatch($order);
     Carbon::setTestNow();
+    $offer = OrderOffers::pending($order);
 
-    expect($offer->driver_uuid)->toBe('amara')
-        ->and($offer->status)->toBe(OrderOffer::PENDING)
+    expect(sequential()->name())->toBe('sequential')
+        ->and($offer->driver_uuid)->toBe('amara')
         ->and($offer->distance)->toBeGreaterThan(500)->toBeLessThan(600)
         ->and($offer->expires_at->toDateTimeString())->toBe('2026-11-06 09:00:15')
         ->and(RideOffersRecorder::$notified)->toBe([['amara', OrderPing::class]])
@@ -311,37 +320,37 @@ test('a ride is offered to the nearest free driver of its class first', function
         ->and($offer->order->uuid)->toBe('order-1')
         ->and($offer->driver->uuid)->toBe('amara');
 
-    // Starting again keeps the open offer instead of offering it twice.
-    expect(OrderOffers::start($order)->uuid)->toBe($offer->uuid)
-        ->and(rideOffersStatuses($connection))->toBe([['amara', 'pending']]);
+    // Dispatching again keeps the open offer instead of offering it twice.
+    sequential()->dispatch($order);
+    expect(rideOffersStatuses($connection))->toBe([['amara', 'pending']]);
 });
 
-test('declining moves the ride to the next driver, and only the offered driver may accept', function () {
+test('one at a time: declining moves the order on, and only the offered driver may accept', function () {
     $connection = rideOffersBoot();
     rideOffersSeedDrivers($connection);
     $order = rideOffersOrder($connection);
-    OrderOffers::start($order);
+    sequential()->dispatch($order);
 
-    expect(OrderOffers::accept($order, rideOffersDriver('chen')))->toBeFalse()
-        ->and(OrderOffers::decline($order, rideOffersDriver('chen')))->toBeFalse()
-        ->and(OrderOffers::decline($order, rideOffersDriver('amara')))->toBeTrue()
+    expect(sequential()->accept($order, rideOffersDriver('chen')))->toBeFalse()
+        ->and(sequential()->decline($order, rideOffersDriver('chen')))->toBeFalse()
+        ->and(sequential()->decline($order, rideOffersDriver('amara')))->toBeTrue()
         ->and(OrderOffers::pending($order)->driver_uuid)->toBe('chen')
-        ->and(OrderOffers::accept($order, rideOffersDriver('amara')))->toBeFalse()
-        ->and(OrderOffers::accept($order, rideOffersDriver('chen')))->toBeTrue()
+        ->and(sequential()->accept($order, rideOffersDriver('amara')))->toBeFalse()
+        ->and(sequential()->accept($order, rideOffersDriver('chen')))->toBeTrue()
         ->and(rideOffersStatuses($connection))->toBe([['amara', 'declined'], ['chen', 'accepted']]);
 });
 
-test('an offer that ran out cannot be accepted and moves on once, however often it expires', function () {
+test('one at a time: an offer that ran out cannot be accepted and moves on once', function () {
     $connection = rideOffersBoot();
     rideOffersSeedDrivers($connection);
     $order = rideOffersOrder($connection);
-    $offer = OrderOffers::start($order);
+    sequential()->dispatch($order);
+    $offer = OrderOffers::pending($order);
 
-    // Not yet expired
-    expect(OrderOffers::expire($offer))->toBeFalse();
+    expect(sequential()->expire($offer))->toBeFalse();
 
     Carbon::setTestNow(now()->addSeconds(30));
-    $acceptedLate = OrderOffers::accept($order, rideOffersDriver('amara'));
+    $acceptedLate = sequential()->accept($order, rideOffersDriver('amara'));
     $first        = (new ExpireOrderOffer($offer->uuid))->handle();
     $again        = (new ExpireOrderOffer($offer->uuid))->handle();
     $missing      = (new ExpireOrderOffer('no-such-offer'))->handle();
@@ -354,13 +363,30 @@ test('an offer that ran out cannot be accepted and moves on once, however often 
         ->and(rideOffersStatuses($connection))->toBe([['amara', 'expired'], ['chen', 'pending']]);
 });
 
-test('when nobody is left the ride is canceled as no driver found', function () {
+test('one at a time: the scheduled check starts lost offers and moves stuck ones on', function () {
     $connection = rideOffersBoot();
     rideOffersSeedDrivers($connection);
     $order = rideOffersOrder($connection);
-    OrderOffers::start($order);
-    OrderOffers::decline($order, rideOffersDriver('amara'));
-    OrderOffers::decline($order, rideOffersDriver('chen'));
+
+    expect(sequential()->redispatch($order))->toBe(1)
+        ->and(sequential()->redispatch($order))->toBe(0);
+
+    Carbon::setTestNow(now()->addMinute());
+    expect(sequential()->redispatch($order))->toBe(1);
+    Carbon::setTestNow();
+
+    $connection->table('order_offers')->update(['status' => 'declined']);
+    expect(sequential()->redispatch($order))->toBe(0)
+        ->and(rideOffersStatuses($connection))->toBe([['amara', 'declined'], ['chen', 'declined']]);
+});
+
+test('one at a time: when nobody is left the order is canceled as no driver found', function () {
+    $connection = rideOffersBoot();
+    rideOffersSeedDrivers($connection);
+    $order = rideOffersOrder($connection);
+    sequential()->dispatch($order);
+    sequential()->decline($order, rideOffersDriver('amara'));
+    sequential()->decline($order, rideOffersDriver('chen'));
 
     $meta = json_decode($connection->table('orders')->where('uuid', 'order-1')->value('meta'), true);
 
@@ -369,16 +395,17 @@ test('when nobody is left the ride is canceled as no driver found', function () 
         ->and(OrderOffers::pending($order))->toBeNull();
 });
 
-test('a ride without a usable pickup finds no driver', function () {
+test('one at a time: an order without a usable pickup finds no driver', function () {
     $connection = rideOffersBoot();
     rideOffersSeedDrivers($connection);
     RideOffersOrder::$pickupPoint = null;
 
-    expect(OrderOffers::start(rideOffersOrder($connection)))->toBeNull()
-        ->and(RideOffersOrder::$canceled)->toHaveCount(1);
+    sequential()->dispatch(rideOffersOrder($connection));
+
+    expect(RideOffersOrder::$canceled)->toHaveCount(1);
 });
 
-test('started, assigned or finished rides are not offered again', function () {
+test('one at a time: started, assigned or finished orders are not offered again', function () {
     $connection = rideOffersBoot();
     rideOffersSeedDrivers($connection);
 
@@ -386,37 +413,133 @@ test('started, assigned or finished rides are not offered again', function () {
     $assigned = rideOffersOrder($connection, ['uuid' => 'o-assigned', 'driver_assigned_uuid' => 'amara']);
     $canceled = rideOffersOrder($connection, ['uuid' => 'o-canceled', 'status' => 'canceled']);
 
-    expect(OrderOffers::offerNext($started))->toBeNull()
-        ->and(OrderOffers::offerNext($assigned))->toBeNull()
-        ->and(OrderOffers::offerNext($canceled))->toBeNull()
+    expect(sequential()->offerNext($started))->toBeNull()
+        ->and(sequential()->offerNext($assigned))->toBeNull()
+        ->and(sequential()->offerNext($canceled))->toBeNull()
         ->and(rideOffersStatuses($connection))->toBe([])
         ->and(RideOffersOrder::$canceled)->toBe([]);
 });
 
-test('a failed push still leaves the offer open, and withdrawing closes it', function () {
+test('one at a time: a failed push still leaves the offer open', function () {
     $connection = rideOffersBoot();
     rideOffersSeedDrivers($connection);
     $order                        = rideOffersOrder($connection);
     RideOffersRecorder::$notified = ['throw'];
 
-    $offer = OrderOffers::start($order);
+    sequential()->dispatch($order);
 
-    expect($offer->status)->toBe(OrderOffer::PENDING)
-        ->and(app('log')->warnings)->toContain('Unable to send a ride offer')
-        ->and(OrderOffers::withdraw($order))->toBe(1)
-        ->and(OrderOffers::withdraw($order))->toBe(0)
-        ->and(rideOffersStatuses($connection))->toBe([['amara', 'withdrawn']]);
+    expect(OrderOffers::pending($order)->driver_uuid)->toBe('amara')
+        ->and(app('log')->warnings)->toContain('Unable to send an order offer');
 });
 
-test('offer settings come from the order config and are kept in range', function () {
-    $config = fn (array $meta) => new OrderConfig(['meta' => $meta]);
+test('at once: every nearby driver of the type is offered the order, and the first to accept gets it', function () {
+    $connection = rideOffersBoot();
+    rideOffersSeedDrivers($connection);
+    $order     = rideOffersOrder($connection, ['adhoc_strategy' => 'broadcast']);
+    $broadcast = new BroadcastStrategy();
 
-    expect($config([])->usesTimedOffers())->toBeFalse()
-        ->and($config([])->offerTimeout())->toBe(20)
-        ->and($config(['offers' => ['enabled' => true, 'timeout' => 3]])->usesTimedOffers())->toBeTrue()
-        ->and($config(['offers' => ['timeout' => 3]])->offerTimeout())->toBe(10)
-        ->and($config(['offers' => ['timeout' => 900]])->offerTimeout())->toBe(120)
-        ->and($config(['offers' => ['timeout' => 45]])->offerTimeout())->toBe(45);
+    $broadcast->dispatch($order);
+
+    expect($broadcast->name())->toBe('broadcast')
+        ->and(rideOffersStatuses($connection))->toBe([['amara', 'pending'], ['chen', 'pending']])
+        ->and(RideOffersRecorder::$notified)->toBe([['amara', OrderPing::class], ['chen', OrderPing::class]])
+        ->and($broadcast->accept($order, rideOffersDriver('ben')))->toBeTrue();
+
+    OrderOffers::claimed($order, rideOffersDriver('chen'));
+    expect(rideOffersStatuses($connection))->toBe([['amara', 'withdrawn'], ['chen', 'accepted']]);
+});
+
+test('at once: a driver who declines is not offered the order again', function () {
+    $connection = rideOffersBoot();
+    rideOffersSeedDrivers($connection);
+    $order     = rideOffersOrder($connection, ['adhoc_strategy' => 'broadcast', 'required_vehicle_type' => null]);
+    $broadcast = new BroadcastStrategy();
+    $broadcast->dispatch($order);
+
+    // Ben declines his offer; Far, never offered, declines from the list of nearby orders.
+    expect($broadcast->decline($order, rideOffersDriver('ben')))->toBeTrue()
+        ->and($broadcast->decline($order, rideOffersDriver('far')))->toBeTrue()
+        ->and($broadcast->decline($order, rideOffersDriver('far')))->toBeTrue();
+
+    Carbon::setTestNow('2026-11-06 10:00:00');
+    $offered = $broadcast->redispatch($order);
+    Carbon::setTestNow();
+
+    expect($offered)->toBe(2)
+        ->and(OrderOffers::declinedDrivers($order))->toBe(['ben', 'far'])
+        ->and($connection->table('order_offers')->where('status', 'pending')->orderBy('id')->pluck('driver_uuid')->all())->toBe(['amara', 'chen'])
+        ->and($connection->table('orders')->where('uuid', 'order-1')->value('dispatched_at'))->toBe('2026-11-06 10:00:00');
+});
+
+test('at once: no pickup means nobody to offer, and a failed push skips only that driver', function () {
+    $connection = rideOffersBoot();
+    rideOffersSeedDrivers($connection);
+    $broadcast = new BroadcastStrategy();
+
+    RideOffersOrder::$pickupPoint = null;
+    expect($broadcast->redispatch(rideOffersOrder($connection, ['uuid' => 'o-nowhere'])))->toBe(0);
+
+    RideOffersOrder::$pickupPoint = new Point(1.2841, 103.8511);
+    RideOffersRecorder::$notified = ['throw'];
+    expect($broadcast->redispatch(rideOffersOrder($connection)))->toBe(2);
+});
+
+test('which strategy an order uses: its own, its config\'s, its company\'s, then one at a time', function () {
+    $connection = rideOffersBoot();
+    $order      = rideOffersOrder($connection, ['adhoc_strategy' => 'broadcast']);
+    $fromConfig = rideOffersOrder($connection, ['uuid' => 'o-config']);
+    $configName = AdhocDispatch::nameFor($fromConfig);
+    $configWait = AdhocDispatch::offerTimeout($fromConfig);
+    $connection->table('order_configs')->update(['adhoc_strategy' => 'nonsense', 'adhoc_offer_timeout' => null]);
+    $connection->table('companies')->where('uuid', 'company-1')->update(['options' => json_encode(['fleetops' => ['adhoc_strategy' => 'broadcast', 'adhoc_offer_timeout' => 500]])]);
+    $fromCompany = RideOffersOrder::where('uuid', 'o-config')->first()->load('company');
+    $connection->table('companies')->update(['options' => null]);
+    $fallback = RideOffersOrder::where('uuid', 'o-config')->first();
+
+    expect(AdhocDispatch::nameFor($order))->toBe('broadcast')
+        ->and(AdhocDispatch::for($order))->toBeInstanceOf(BroadcastStrategy::class)
+        ->and($configName)->toBe('sequential')
+        ->and($configWait)->toBe(15)
+        ->and(AdhocDispatch::nameFor($fromCompany))->toBe('broadcast')
+        ->and(AdhocDispatch::offerTimeout($fromCompany))->toBe(120)
+        ->and(AdhocDispatch::nameFor($fallback))->toBe(AdhocDispatch::DEFAULT)
+        ->and(AdhocDispatch::offerTimeout($fallback))->toBe(20)
+        ->and(AdhocDispatch::DEFAULT)->toBe('sequential');
+
+    $connection->table('order_configs')->update(['adhoc_offer_timeout' => 2]);
+    expect(AdhocDispatch::offerTimeout(RideOffersOrder::where('uuid', 'o-config')->first()))->toBe(10);
+});
+
+test('more strategies can be registered by name', function () {
+    $nearestOnly = new class extends SequentialStrategy {
+        public function name(): string
+        {
+            return 'nearest-only';
+        }
+    };
+    AdhocDispatch::register('nearest-only', $nearestOnly::class);
+
+    expect(AdhocDispatch::names())->toContain('broadcast', 'sequential', 'nearest-only')
+        ->and(AdhocDispatch::has('nearest-only'))->toBeTrue()
+        ->and(AdhocDispatch::has(null))->toBeFalse()
+        ->and(fn () => AdhocDispatch::register('broken', stdClass::class))->toThrow(InvalidArgumentException::class);
+});
+
+test('offers record each driver once, and a decline from a driver who was never offered the order', function () {
+    $connection = rideOffersBoot();
+    rideOffersSeedDrivers($connection);
+    $order = rideOffersOrder($connection);
+    $amara = rideOffersDriver('amara');
+
+    $first = OrderOffers::record($order, $amara);
+    $again = OrderOffers::record($order, $amara);
+    OrderOffers::recordDecline($order, rideOffersDriver('ben'));
+
+    expect($again->uuid)->toBe($first->uuid)
+        ->and($first->expires_at)->toBeNull()
+        ->and(OrderOffers::offeredDrivers($order))->toBe(['amara', 'ben'])
+        ->and(OrderOffers::acceptPending($order, $amara))->toBeTrue()
+        ->and(OrderOffers::withdraw($order))->toBe(0);
 });
 
 test('the ride config is a strict flow with a no-show ending, offered one driver at a time', function () {
@@ -425,7 +548,9 @@ test('the ride config is a strict flow with a no-show ending, offered one driver
 
     expect($defaults['key'])->toBe('ride')
         ->and(array_keys($defaults['flow']))->toBe(['created', 'dispatched', 'started', 'arrived', 'in_progress', 'completed', 'no_show'])
-        ->and($config->usesTimedOffers())->toBeTrue()
+        ->and($config->adhoc_strategy)->toBe('sequential')
+        ->and($config->customer_orders_adhoc)->toBeTrue()
+        ->and($config->match_vehicle_type)->toBeTrue()
         ->and($config->hasStrictTransitions())->toBeTrue()
         ->and($config->canTransition('arrived', 'no_show'))->toBeTrue()
         ->and($config->canTransition('arrived', 'completed'))->toBeFalse()
@@ -481,85 +606,28 @@ test('the create ride config command makes the config once per company', functio
         ->and(json_decode($connection->table('order_configs')->where('key', 'ride')->value('meta'), true)['rider'])->toBe(['emergency_number' => '995', 'support_email' => 'help@cabs.test']);
 });
 
-test('the dispatch listener hands rides with timed offers to the offers', function () {
+test('a dispatched adhoc order is offered by its strategy, and a busy driver is left out', function () {
     $connection = rideOffersBoot();
     rideOffersSeedDrivers($connection);
-    $ride      = rideOffersOrder($connection);
-    $transport = new Order();
-    $transport->setRawAttributes(['uuid' => 'order-t', 'company_uuid' => 'company-1'], true);
-
-    $listener = new class extends Fleetbase\FleetOps\Listeners\HandleOrderDispatched {
-        public function call(string $method, ...$arguments): mixed
-        {
-            return $this->{$method}(...$arguments);
-        }
-    };
-
-    expect($listener->call('usesTimedOffers', $ride))->toBeTrue()
-        ->and($listener->call('usesTimedOffers', $transport))->toBeFalse()
-        ->and($listener->call('startOffers', $ride)->driver_uuid)->toBe('amara');
-
-    // Handling the dispatch of a ride offers it instead of pinging every driver.
-    $connection->table('order_offers')->delete();
-    $connection->table('orders')->where('uuid', 'order-1')->update(['tracking_number_uuid' => 'tn-1']);
+    rideOffersOrder($connection, ['tracking_number_uuid' => 'tn-1']);
     $connection->table('tracking_statuses')->insert(['uuid' => 'ts-1', 'tracking_number_uuid' => 'tn-1', 'code' => 'DISPATCHED']);
     $connection->table('tracking_numbers')->insert(['uuid' => 'tn-1', 'company_uuid' => 'company-1', 'tracking_number' => 'RIDE1', 'owner_uuid' => 'order-1']);
-    $listener->handle(new Fleetbase\FleetOps\Events\OrderDispatched(RideOffersOrder::where('uuid', 'order-1')->first()));
-    expect(rideOffersStatuses($connection))->toBe([['amara', 'pending']])
-        ->and(RideOffersRecorder::$notified)->toBe([['amara', OrderPing::class], ['amara', OrderPing::class]]);
+    $connection->table('orders')->insert(['uuid' => 'job-live', 'company_uuid' => 'company-1', 'status' => 'started']);
+    $connection->table('drivers')->where('uuid', 'amara')->update(['current_job_uuid' => 'job-live']);
+
+    (new Fleetbase\FleetOps\Listeners\HandleOrderDispatched())->handle(new Fleetbase\FleetOps\Events\OrderDispatched(RideOffersOrder::where('uuid', 'order-1')->first()));
+
+    expect(rideOffersStatuses($connection))->toBe([['chen', 'pending']])
+        ->and(RideOffersRecorder::$notified)->toBe([['chen', OrderPing::class]]);
 });
 
-test('the adhoc command moves stuck offers on and re-pings without dispatching again', function () {
+test('the scheduled adhoc command asks each order\'s strategy', function () {
     $connection = rideOffersBoot();
-    rideOffersSeedDrivers($connection);
+    $lookup     = new ReflectionMethod(Fleetbase\FleetOps\Console\Commands\DispatchAdhocOrders::class, 'strategyFor');
+    $command    = new Fleetbase\FleetOps\Console\Commands\DispatchAdhocOrders();
 
-    $command = new class extends Fleetbase\FleetOps\Console\Commands\DispatchAdhocOrders {
-        public array $lines = [];
-
-        public function info($string, $verbosity = null)
-        {
-            $this->lines[] = $string;
-        }
-
-        public function helper(string $method, ...$arguments): mixed
-        {
-            return $this->{$method}(...$arguments);
-        }
-    };
-
-    // No offer yet: the offers start.
-    $ride = rideOffersOrder($connection);
-    expect($command->helper('usesTimedOffers', $ride))->toBeTrue();
-    $command->helper('advanceOffers', $ride);
-    expect(rideOffersStatuses($connection))->toBe([['amara', 'pending']]);
-
-    // An open offer still in time is left alone.
-    $command->helper('advanceOffers', $ride);
-    expect(rideOffersStatuses($connection))->toBe([['amara', 'pending']]);
-
-    // An offer whose expiry job was lost is closed and the next driver gets the ride.
-    Carbon::setTestNow(now()->addMinute());
-    $command->helper('advanceOffers', $ride);
-    Carbon::setTestNow();
-    expect(rideOffersStatuses($connection))->toBe([['amara', 'expired'], ['chen', 'pending']])
-        ->and($command->lines)->toBe(['Started offers for order order_ride.', 'Moved order order_ride to the next driver.']);
-
-    // An order whose offers all ended is not started again.
-    $connection->table('order_offers')->update(['status' => 'declined']);
-    $command->helper('advanceOffers', $ride);
-    expect($connection->table('order_offers')->count())->toBe(2);
-
-    // A re-ping restarts the interval quietly.
-    Carbon::setTestNow('2026-11-06 10:00:00');
-    $command->helper('markPinged', $ride);
-    Carbon::setTestNow();
-    expect($connection->table('orders')->where('uuid', 'order-1')->value('dispatched_at'))->toBe('2026-11-06 10:00:00');
-
-    // Drivers matched for a re-ping leave out busy ones and other classes.
-    $connection->table('orders')->insert(['uuid' => 'job-live', 'company_uuid' => 'company-1', 'status' => 'started']);
-    $connection->table('drivers')->where('uuid', 'chen')->update(['current_job_uuid' => 'job-live']);
-    $matched = $command->helper('matchDrivers', Driver::query()->withoutGlobalScopes()->where('online', 1), $ride)->orderBy('id')->pluck('uuid')->all();
-    expect($matched)->toBe(['amara', 'far', 'rival']);
+    expect($lookup->invoke($command, rideOffersOrder($connection, ['adhoc_strategy' => 'broadcast'])))->toBeInstanceOf(BroadcastStrategy::class)
+        ->and($lookup->invoke($command, rideOffersOrder($connection, ['uuid' => 'o-2'])))->toBeInstanceOf(SequentialStrategy::class);
 });
 
 test('fares carry each class\'s seats and how soon its nearest free car could arrive', function () {

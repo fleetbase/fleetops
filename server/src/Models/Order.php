@@ -116,6 +116,8 @@ class Order extends Model
         'dispatched',
         'adhoc',
         'adhoc_distance',
+        'adhoc_strategy',
+        'required_vehicle_type',
         'started',
         'started_at',
         'pod_method',
@@ -1512,7 +1514,7 @@ class Order extends Model
         if ($this->driver_assigned_uuid) {
             Driver::withoutGlobalScopes()->where(['uuid' => $this->driver_assigned_uuid, 'current_job_uuid' => $this->uuid])->update(['current_job_uuid' => null]);
         }
-        if ($orderConfig->usesTimedOffers()) {
+        if ($this->adhoc) {
             OrderOffers::withdraw($this);
         }
 

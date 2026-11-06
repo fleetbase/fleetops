@@ -44,7 +44,7 @@ test('equipment preserves explicit non default status values', function () {
 });
 
 test('dispatch driver availability queries use available status', function () {
-    $listener = file_get_contents(dirname(__DIR__) . '/src/Listeners/HandleOrderDispatched.php');
+    $listener = file_get_contents(dirname(__DIR__) . '/src/Support/DriverMatching.php');
     $order    = file_get_contents(dirname(__DIR__) . '/src/Models/Order.php');
 
     expect($listener)

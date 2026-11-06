@@ -348,21 +348,11 @@ class FleetOpsDispatchAdhocOrdersCommandFake extends DispatchAdhocOrders
         return $this->orders;
     }
 
-    public function getNearbyDriversForOrder(Order $order, Point $pickup, int $distance, bool $testing = false): EloquentCollection
-    {
-        $this->messages[] = ['getNearbyDriversForOrder', $order->public_id, $distance, $testing];
+    public ?FleetOpsAdhocStrategyFake $strategy = null;
 
-        return $this->drivers;
-    }
-
-    protected function usesTimedOffers(Order $order): bool
+    protected function strategyFor(Order $order): Fleetbase\FleetOps\Contracts\AdhocDispatchStrategy
     {
-        return false;
-    }
-
-    protected function markPinged(Order $order): void
-    {
-        $order->dispatchedForPing = true;
+        return $this->strategy ??= new FleetOpsAdhocStrategyFake();
     }
 
     public function info($string, $verbosity = null)
@@ -399,13 +389,11 @@ class FleetOpsDispatchAdhocOrdersCommandFake extends DispatchAdhocOrders
 class FleetOpsDispatchAdhocOrdersQueryProbe extends DispatchAdhocOrders
 {
     public FleetOpsDispatchAdhocOrdersBuilderFake $orderQuery;
-    public FleetOpsDispatchAdhocOrdersBuilderFake $driverQuery;
 
     public function __construct(private array $testOptions)
     {
         parent::__construct();
         $this->orderQuery  = new FleetOpsDispatchAdhocOrdersBuilderFake();
-        $this->driverQuery = new FleetOpsDispatchAdhocOrdersBuilderFake();
     }
 
     public function option($key = null)
@@ -419,17 +407,38 @@ class FleetOpsDispatchAdhocOrdersQueryProbe extends DispatchAdhocOrders
 
         return $this->orderQuery;
     }
+}
 
-    protected function newDriverQuery()
+/** A dispatch strategy that offers each order to as many drivers as the test says. */
+class FleetOpsAdhocStrategyFake implements Fleetbase\FleetOps\Contracts\AdhocDispatchStrategy
+{
+    public array $offered      = [];
+    public array $redispatched = [];
+
+    public function name(): string
     {
-        return $this->driverQuery;
+        return 'fake';
     }
 
-    protected function matchDrivers($driverQuery, Order $order)
+    public function dispatch(Order $order): void
     {
-        $driverQuery->calls[] = ['matchDrivers', $order->company_uuid];
+    }
 
-        return $driverQuery;
+    public function redispatch(Order $order, bool $testing = false): int
+    {
+        $this->redispatched[] = [$order->public_id, $testing];
+
+        return $this->offered[$order->public_id] ?? 0;
+    }
+
+    public function accept(Order $order, Driver $driver): bool
+    {
+        return true;
+    }
+
+    public function decline(Order $order, Driver $driver): bool
+    {
+        return true;
     }
 }
 
@@ -2027,62 +2036,34 @@ test('dispatch adhoc command exits when no orders are dispatchable', function ()
         ->and($command->messages)->toContain(['info', 'No dispatchable orders found in the given timeframe.']);
 });
 
-test('dispatch adhoc command handles invalid pickups empty drivers and successful pings', function () {
+test('dispatch adhoc command offers each order again through its strategy', function () {
     Carbon::setTestNow(Carbon::parse('2026-05-06 07:08:09'));
 
-    $invalidOrder                 = new FleetOpsDispatchAdhocOrdersOrderFake();
-    $invalidOrder->public_id      = 'order_invalid';
-    $invalidOrder->dispatched_at  = '2026-05-06 06:00:00';
-    $invalidOrder->pickupLocation = null;
+    $quiet                = new FleetOpsDispatchAdhocOrdersOrderFake();
+    $quiet->public_id     = 'order_quiet';
+    $quiet->dispatched_at = '2026-05-06 06:00:00';
+    $busy                 = new FleetOpsDispatchAdhocOrdersOrderFake();
+    $busy->public_id      = 'order_busy';
+    $busy->dispatched_at  = '2026-05-06 06:10:00';
 
-    $emptyDriverOrder                 = new FleetOpsDispatchAdhocOrdersOrderFake();
-    $emptyDriverOrder->public_id      = 'order_empty';
-    $emptyDriverOrder->dispatched_at  = '2026-05-06 06:05:00';
-    $emptyDriverOrder->pickupLocation = new Point(1.3, 103.8);
-    $emptyDriverOrder->adhocDistance  = 1200;
-
-    $pingOrder                 = new FleetOpsDispatchAdhocOrdersOrderFake();
-    $pingOrder->public_id      = 'order_ping';
-    $pingOrder->dispatched_at  = '2026-05-06 06:10:00';
-    $pingOrder->pickupLocation = new Point(1.31, 103.81);
-    $pingOrder->adhocDistance  = 2400;
-
-    $driver            = new FleetOpsDispatchAdhocOrdersDriverFake();
-    $driver->public_id = 'driver_public';
-    $driver->name      = 'Jane Driver';
-
-    $command         = new class(['sandbox' => true, 'testing' => true, 'days' => 3], $pingOrder, $driver) extends FleetOpsDispatchAdhocOrdersCommandFake {
-        public function __construct(array $options, private Order $pingOrder, private Driver $driver)
-        {
-            parent::__construct($options);
-        }
-
-        public function getNearbyDriversForOrder(Order $order, Point $pickup, int $distance, bool $testing = false): EloquentCollection
-        {
-            parent::getNearbyDriversForOrder($order, $pickup, $distance, $testing);
-
-            return $order === $this->pingOrder ? new EloquentCollection([$this->driver]) : new EloquentCollection();
-        }
-    };
-    $command->orders = new EloquentCollection([$invalidOrder, $emptyDriverOrder, $pingOrder]);
+    $command                    = new FleetOpsDispatchAdhocOrdersCommandFake(['sandbox' => true, 'testing' => true, 'days' => 3]);
+    $command->orders            = new EloquentCollection([$quiet, $busy]);
+    $command->strategy          = new FleetOpsAdhocStrategyFake();
+    $command->strategy->offered = ['order_busy' => 2];
 
     $command->handle();
 
     expect($command->messages)->toContain(['info', 'Running in sandbox mode.'])
-        ->and($command->messages)->toContain(['alert', '3 orders found for ad-hoc dispatch. Current Time: 2026-05-06 07:08:09'])
-        ->and($command->messages)->toContain(['error', 'Invalid pickup location for order order_invalid'])
-        ->and($command->messages)->toContain(['warn', 'No available drivers found for order order_empty'])
-        ->and($command->messages)->toContain(['line', 'Checking order order_ping for nearby drivers within 2400 meters.'])
-        ->and($command->messages)->toContain(['info', 'Order order_ping dispatched successfully to 1 nearby drivers.'])
-        ->and($command->messages)->toContain(['info', 'Pinging driver Jane Driver (driver_public) ...'])
-        ->and($pingOrder->dispatchedForPing)->toBeTrue()
-        ->and($driver->notifications)->toBe([OrderPing::class])
+        ->and($command->messages)->toContain(['alert', '2 orders found for ad-hoc dispatch. Current Time: 2026-05-06 07:08:09'])
+        ->and($command->messages)->toContain(['line', 'No new offer for order order_quiet (fake).'])
+        ->and($command->messages)->toContain(['info', 'Order order_busy offered to 2 driver(s) (fake).'])
+        ->and($command->strategy->redispatched)->toBe([['order_quiet', true], ['order_busy', true]])
         ->and($command->tables)->toHaveCount(1);
 
     Carbon::setTestNow();
 });
 
-test('dispatch adhoc command builds dispatchable order and nearby driver queries', function () {
+test('dispatch adhoc command builds the dispatchable order query', function () {
     Carbon::setTestNow(Carbon::parse('2026-05-06 07:08:09'));
 
     $command = new FleetOpsDispatchAdhocOrdersQueryProbe([
@@ -2098,25 +2079,6 @@ test('dispatch adhoc command builds dispatchable order and nearby driver queries
         ->and($command->orderQuery->calls)->toContain(['whereHas', 'company'])
         ->and($command->orderQuery->calls)->toContain(['whereHas', 'payload'])
         ->and($command->orderQuery->calls)->toContain(['with', ['company', 'payload']]);
-
-    $order = new Order();
-    $order->setRawAttributes(['company_uuid' => 'company-uuid']);
-    $point = new Point(1.3, 103.8);
-
-    expect($command->getNearbyDriversForOrder($order, $point, 500, true))->toBe($command->driverQuery->results)
-        ->and($command->driverQuery->calls)->toContain(['where', [['online' => 1]]])
-        ->and($command->driverQuery->calls)->toContain(['whereNull', 'deleted_at'])
-        ->and($command->driverQuery->calls)->not->toContain(['whereNotNull', 'location']);
-
-    $command = new FleetOpsDispatchAdhocOrdersQueryProbe([
-        'sandbox' => false,
-    ]);
-
-    $command->getNearbyDriversForOrder($order, $point, 750, false);
-
-    expect($command->driverQuery->calls)->toContain(['whereNotNull', 'location'])
-        ->and($command->driverQuery->calls)->toContain(['distanceSphere', 'location', $point, 750])
-        ->and($command->driverQuery->calls)->toContain(['distanceSphereValue', 'location', $point]);
 
     Carbon::setTestNow();
 });

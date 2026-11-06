@@ -3,7 +3,7 @@
 namespace Fleetbase\FleetOps\Jobs;
 
 use Fleetbase\FleetOps\Models\OrderOffer;
-use Fleetbase\FleetOps\Support\OrderOffers;
+use Fleetbase\FleetOps\Support\AdhocDispatch\SequentialStrategy;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -29,6 +29,6 @@ class ExpireOrderOffer implements ShouldQueue
     {
         $offer = OrderOffer::where('uuid', $this->offerUuid)->first();
 
-        return $offer ? OrderOffers::expire($offer) : false;
+        return $offer ? app(SequentialStrategy::class)->expire($offer) : false;
     }
 }

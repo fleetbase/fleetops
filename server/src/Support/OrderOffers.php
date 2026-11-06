@@ -2,39 +2,39 @@
 
 namespace Fleetbase\FleetOps\Support;
 
-use Fleetbase\FleetOps\Jobs\ExpireOrderOffer;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderOffer;
-use Fleetbase\FleetOps\Notifications\OrderPing;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Carbon;
 
 /**
- * Timed offers: one driver at a time, nearest first. An offer moves on when the driver
- * declines or it runs out, and the order is canceled with "No driver found" when nobody is left.
+ * The record of who an adhoc order was offered to and how each driver answered, shared by every
+ * adhoc dispatch strategy.
  *
- * Every change of an offer's status is a conditional update, so of two callers closing the
- * same offer (a decline racing its timeout, say) only one moves the order on.
+ * Every change of an offer's status is a conditional update, so of two callers closing the same
+ * offer (a decline racing its timeout, say) only one of them changes it.
  */
 class OrderOffers
 {
     public const NO_DRIVER_FOUND = 'No driver found';
 
     /**
-     * Offer a newly dispatched order to its first driver.
+     * Offer the order to the driver, or keep the offer they already have open.
      */
-    public static function start(Order $order): ?OrderOffer
+    public static function record(Order $order, Driver $driver, ?Carbon $expiresAt = null): OrderOffer
     {
-        if (OrderOffer::where('order_uuid', $order->uuid)->exists()) {
-            return static::pending($order);
-        }
-
-        return static::offerNext($order);
+        return OrderOffer::firstOrCreate(
+            ['order_uuid' => $order->uuid, 'driver_uuid' => $driver->uuid, 'status' => OrderOffer::PENDING],
+            [
+                'company_uuid' => $order->company_uuid,
+                'distance'     => isset($driver->distance) ? (int) round((float) $driver->distance) : null,
+                'expires_at'   => $expiresAt,
+            ]
+        );
     }
 
     /**
-     * The order's open offer, if any.
+     * The order's newest open offer, if any.
      */
     public static function pending(Order $order): ?OrderOffer
     {
@@ -42,121 +42,81 @@ class OrderOffers
     }
 
     /**
-     * Accept the driver's open offer. False when it isn't theirs or has run out.
+     * Drivers the order was offered to, whatever they answered.
      */
-    public static function accept(Order $order, Driver $driver): bool
+    public static function offeredDrivers(Order $order): array
+    {
+        return OrderOffer::where('order_uuid', $order->uuid)->pluck('driver_uuid')->all();
+    }
+
+    /**
+     * Drivers who turned the order down.
+     */
+    public static function declinedDrivers(Order $order): array
+    {
+        return OrderOffer::where('order_uuid', $order->uuid)->where('status', OrderOffer::DECLINED)->pluck('driver_uuid')->all();
+    }
+
+    /**
+     * Accept the driver's open offer, if it hasn't run out. False when they have none.
+     */
+    public static function acceptPending(Order $order, Driver $driver): bool
     {
         return OrderOffer::where('order_uuid', $order->uuid)
             ->where('driver_uuid', $driver->uuid)
             ->where('status', OrderOffer::PENDING)
-            ->where('expires_at', '>', now())
+            ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->update(['status' => OrderOffer::ACCEPTED, 'responded_at' => now()]) > 0;
     }
 
     /**
-     * The driver turns the offer down, so the next driver gets it. False when they had no open offer.
+     * Turn down the driver's open offer. False when they have none.
      */
-    public static function decline(Order $order, Driver $driver): bool
+    public static function declinePending(Order $order, Driver $driver): bool
     {
-        $declined = OrderOffer::where('order_uuid', $order->uuid)
+        return OrderOffer::where('order_uuid', $order->uuid)
             ->where('driver_uuid', $driver->uuid)
             ->where('status', OrderOffer::PENDING)
             ->update(['status' => OrderOffer::DECLINED, 'responded_at' => now()]) > 0;
-
-        if ($declined) {
-            static::offerNext($order);
-        }
-
-        return $declined;
     }
 
     /**
-     * Close an offer that has run out and offer the order to the next driver.
+     * Record that the driver doesn't want the order, offered to them or not, so it isn't offered to them again.
      */
-    public static function expire(OrderOffer $offer): bool
+    public static function recordDecline(Order $order, Driver $driver): void
     {
-        $expired = OrderOffer::where('uuid', $offer->uuid)
-            ->where('status', OrderOffer::PENDING)
-            ->where('expires_at', '<=', now())
-            ->update(['status' => OrderOffer::EXPIRED, 'responded_at' => now()]) > 0;
-
-        if ($expired && ($order = Order::withoutGlobalScopes()->where('uuid', $offer->order_uuid)->first())) {
-            static::offerNext($order);
+        if (!static::declinePending($order, $driver) && !in_array($driver->uuid, static::declinedDrivers($order), true)) {
+            OrderOffer::create([
+                'company_uuid' => $order->company_uuid,
+                'order_uuid'   => $order->uuid,
+                'driver_uuid'  => $driver->uuid,
+                'status'       => OrderOffer::DECLINED,
+                'responded_at' => now(),
+            ]);
         }
-
-        return $expired;
     }
 
     /**
-     * Close the order's open offer without moving on, for an order that was canceled or assigned.
+     * The driver got the order: their offer is accepted and everyone else's is withdrawn.
+     */
+    public static function claimed(Order $order, Driver $driver): void
+    {
+        OrderOffer::where('order_uuid', $order->uuid)
+            ->where('driver_uuid', $driver->uuid)
+            ->where('status', OrderOffer::PENDING)
+            ->update(['status' => OrderOffer::ACCEPTED, 'responded_at' => now()]);
+
+        static::withdraw($order);
+    }
+
+    /**
+     * Close the order's open offers, for an order that was taken or canceled.
      */
     public static function withdraw(Order $order): int
     {
         return OrderOffer::where('order_uuid', $order->uuid)
             ->where('status', OrderOffer::PENDING)
             ->update(['status' => OrderOffer::WITHDRAWN, 'responded_at' => now()]);
-    }
-
-    /**
-     * Offer the order to the nearest driver who hasn't had it yet.
-     */
-    public static function offerNext(Order $order): ?OrderOffer
-    {
-        $order->refresh();
-        if ($order->started || $order->driver_assigned_uuid || in_array($order->status, ['completed', 'canceled'], true)) {
-            return null;
-        }
-
-        $pickup = $order->getPickupLocation();
-        $driver = Utils::isPoint($pickup) ? static::candidates($order, $pickup)->first() : null;
-        if (!$driver) {
-            static::noDriverFound($order);
-
-            return null;
-        }
-
-        $timeout = $order->config()->offerTimeout();
-        $offer   = OrderOffer::create([
-            'company_uuid' => $order->company_uuid,
-            'order_uuid'   => $order->uuid,
-            'driver_uuid'  => $driver->uuid,
-            'status'       => OrderOffer::PENDING,
-            'distance'     => isset($driver->distance) ? (int) round((float) $driver->distance) : null,
-            'expires_at'   => now()->addSeconds($timeout),
-        ]);
-
-        try {
-            $driver->notify(new OrderPing($order, $offer->distance));
-        } catch (\Throwable $exception) {
-            Log::warning('Unable to send a ride offer', ['order' => $order->public_id, 'error' => $exception->getMessage()]);
-        }
-
-        ExpireOrderOffer::dispatch($offer->uuid)->delay(now()->addSeconds($timeout + 1));
-
-        return $offer;
-    }
-
-    /**
-     * Online, free drivers of the order's company and class within the order's radius who
-     * haven't been offered it, nearest first.
-     */
-    public static function candidates(Order $order, $pickup): Builder
-    {
-        $offered = OrderOffer::where('order_uuid', $order->uuid)->pluck('driver_uuid')->all();
-        $query   = Driver::query()
-            ->withoutGlobalScopes()
-            ->where(['status' => 'available', 'online' => 1])
-            ->whereNull('deleted_at')
-            ->whereNotIn('uuid', $offered)
-            ->whereNotNull('location')
-            ->whereRaw('ST_Y(location) BETWEEN -90 AND 90 AND ST_X(location) BETWEEN -180 AND 180 AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)')
-            ->distanceSphere('location', $pickup, $order->getAdhocPingDistance())
-            ->distanceSphereValue('location', $pickup)
-            ->orderBy('distance');
-
-        NavigatorReview::excludeFrom($query);
-
-        return DriverMatching::forOrder($query, $order);
     }
 
     /**

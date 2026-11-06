@@ -19,7 +19,6 @@ use Fleetbase\FleetOps\Listeners\HandleUserRemovedFromCompany;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\TrackingStatus;
-use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
@@ -217,8 +216,7 @@ class FleetOpsHandleOrderDispatchedProbe extends HandleOrderDispatched
     public Illuminate\Support\Collection $nearbyDrivers;
     public array $failures              = [];
     public array $assignedNotifications = [];
-    public array $adhocNotifications    = [];
-    public array $nearbyQueries         = [];
+    public array $adhocDispatches       = [];
 
     public function __construct()
     {
@@ -244,21 +242,11 @@ class FleetOpsHandleOrderDispatchedProbe extends HandleOrderDispatched
         return $order->dispatchActivity;
     }
 
-    protected function usesTimedOffers($order): bool
+    protected function dispatchAdhoc($order): mixed
     {
-        return false;
-    }
+        $this->adhocDispatches[] = $order->public_id;
 
-    protected function nearbyAvailableDrivers($pickup, int|float $distance, ?Order $order = null)
-    {
-        $this->nearbyQueries[] = [(string) $pickup, $distance];
-
-        return $this->nearbyDrivers;
-    }
-
-    protected function notifyAdhocDriver(Driver $driver, $order): void
-    {
-        $this->adhocNotifications[] = [$driver->public_id, $driver->distance, $order->driver_assigned_uuid];
+        return null;
     }
 
     protected function findAssignedDriver($order): ?Driver
@@ -543,40 +531,17 @@ test('order dispatched listener skips duplicate dispatch activity and fails when
         ]);
 });
 
-test('order dispatched listener pings nearby adhoc drivers and ignores invalid pickup points', function () {
-    $listener                = new FleetOpsHandleOrderDispatchedProbe();
-    $listener->nearbyDrivers = collect([
-        fleetOpsDispatchListenerDriver('nearby_one', 100.5),
-        fleetOpsDispatchListenerDriver('nearby_two', 250.25),
-    ]);
-    $order                   = fleetOpsDispatchListenerOrder([
+test('order dispatched listener hands adhoc orders to their dispatch strategy', function () {
+    $listener = new FleetOpsHandleOrderDispatchedProbe();
+    $order    = fleetOpsDispatchListenerOrder([
         'adhoc'             => true,
         'hasDriverAssigned' => false,
-        'pickupLocation'    => new Point(1.30, 103.80),
-        'adhocDistance'     => 2400,
     ]);
+    $order->public_id = 'order_adhoc';
 
     $listener->handle(new FleetOpsOrderDispatchedEventFake($order));
 
-    expect($order->calls)->toContain(['load', ['company']])
-        ->and($order->calls)->toContain(['getPickupLocation'])
-        ->and($order->calls)->toContain(['getAdhocDistance'])
-        ->and($listener->nearbyQueries)->toBe([[(string) $order->pickupLocation, 2400]])
-        ->and($listener->adhocNotifications)->toBe([
-            ['nearby_one', 100.5, 'driver-uuid'],
-            ['nearby_two', 250.25, 'driver-uuid'],
-        ])
-        ->and($listener->assignedNotifications)->toBe([]);
-
-    $invalidPickup        = fleetOpsDispatchListenerOrder([
-        'adhoc'             => true,
-        'hasDriverAssigned' => false,
-        'pickupLocation'    => null,
-    ]);
-    $invalidPickupListener = new FleetOpsHandleOrderDispatchedProbe();
-
-    $invalidPickupListener->handle(new FleetOpsOrderDispatchedEventFake($invalidPickup));
-
-    expect($invalidPickupListener->nearbyQueries)->toBe([])
-        ->and($invalidPickupListener->adhocNotifications)->toBe([]);
+    expect($listener->adhocDispatches)->toBe(['order_adhoc'])
+        ->and($listener->assignedNotifications)->toBe([])
+        ->and($listener->failures)->toBe([]);
 });

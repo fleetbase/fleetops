@@ -68,6 +68,10 @@ class OrderConfig extends Model
         'flow',
         'entities',
         'meta',
+        'adhoc_strategy',
+        'adhoc_offer_timeout',
+        'customer_orders_adhoc',
+        'match_vehicle_type',
     ];
 
     /**
@@ -76,10 +80,13 @@ class OrderConfig extends Model
      * @var array
      */
     protected $casts = [
-        'tags'     => Json::class,
-        'flow'     => Json::class,
-        'entities' => OrderConfigEntities::class,
-        'meta'     => Json::class,
+        'tags'                  => Json::class,
+        'flow'                  => Json::class,
+        'entities'              => OrderConfigEntities::class,
+        'meta'                  => Json::class,
+        'adhoc_offer_timeout'   => 'integer',
+        'customer_orders_adhoc' => 'boolean',
+        'match_vehicle_type'    => 'boolean',
     ];
 
     /**
@@ -440,23 +447,6 @@ class OrderConfig extends Model
         $dispatch = data_get($this->lifecycle(), 'dispatch', true);
 
         return !in_array($dispatch, [false, 'false', 0, '0'], true);
-    }
-
-    /**
-     * Whether orders using this config are offered to one driver at a time (`meta.offers.enabled`)
-     * rather than pinged to every nearby driver at once.
-     */
-    public function usesTimedOffers(): bool
-    {
-        return (bool) data_get($this->meta, 'offers.enabled', false);
-    }
-
-    /**
-     * Seconds a driver has to accept an offer (`meta.offers.timeout`), from 10 to 120, default 20.
-     */
-    public function offerTimeout(): int
-    {
-        return max(10, min(120, (int) data_get($this->meta, 'offers.timeout', 20)));
     }
 
     /**

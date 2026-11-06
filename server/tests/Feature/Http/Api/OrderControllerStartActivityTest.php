@@ -150,13 +150,13 @@ function fleetopsOrderStartBoot(): SQLiteConnection
     $schema = $connection->getSchemaBuilder();
     app()->instance('db.schema', $schema);
     $tables = [
-        'orders'              => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'order_config_uuid', 'tracking_number_uuid', 'driver_assigned_uuid', 'status', 'type', 'adhoc', 'dispatched', 'dispatched_at', 'started', 'started_at', 'scheduled_at', 'meta', 'distance', 'time', 'pod_required', 'pod_method', 'orchestrator_priority', 'adhoc_distance', 'notes', 'customer_uuid', 'customer_type', 'facilitator_uuid', 'facilitator_type', 'vehicle_assigned_uuid', 'route_uuid', 'purchase_rate_uuid', 'transaction_uuid', 'time_window_start', 'time_window_end', 'required_skills', '_key'],
+        'orders'              => ['uuid', 'public_id', 'internal_id', 'adhoc_strategy', 'required_vehicle_type', 'company_uuid', 'payload_uuid', 'order_config_uuid', 'tracking_number_uuid', 'driver_assigned_uuid', 'status', 'type', 'adhoc', 'dispatched', 'dispatched_at', 'started', 'started_at', 'scheduled_at', 'meta', 'distance', 'time', 'pod_required', 'pod_method', 'orchestrator_priority', 'adhoc_distance', 'notes', 'customer_uuid', 'customer_type', 'facilitator_uuid', 'facilitator_type', 'vehicle_assigned_uuid', 'route_uuid', 'purchase_rate_uuid', 'transaction_uuid', 'time_window_start', 'time_window_end', 'required_skills', '_key'],
         'payloads'            => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'return_uuid', 'current_waypoint_uuid', 'pickup_tracking_number_uuid', 'dropoff_tracking_number_uuid', 'meta', 'type', 'payment_method', 'cod_amount', 'cod_currency', '_key'],
         'places'              => ['uuid', 'public_id', 'company_uuid', 'name', 'street1', 'city', 'country', 'location', 'meta', 'street2', 'province', 'postal_code', 'phone', 'type', 'owner_uuid', 'owner_type', '_key', '_import_id'],
         'waypoints'           => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'order', 'type', '_key', '_import_id'],
         'drivers'             => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'status', 'online', 'location', 'current_job_uuid'],
         'users'               => ['uuid', 'public_id', 'company_uuid', 'name', 'status', 'type', 'email', 'phone', 'password', 'slug', 'username', 'meta', '_key'],
-        'order_configs'       => ['uuid', 'public_id', 'company_uuid', 'name', 'key', 'namespace', 'description', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', '_key'],
+        'order_configs'       => ['uuid', 'public_id', 'company_uuid', 'adhoc_strategy', 'adhoc_offer_timeout', 'customer_orders_adhoc', 'match_vehicle_type', 'name', 'key', 'namespace', 'description', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', '_key'],
         'tracking_numbers'    => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'region', 'location', 'status_uuid', 'owner_uuid', 'owner_type', 'qr_code', 'barcode', '_key'],
         'tracking_statuses'   => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'proof_uuid', 'status', 'details', 'location', 'code', 'complete', '_key'],
         'entities'            => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'destination_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'name', 'type', 'meta', 'internal_id', 'qr_code', 'barcode', 'photo_uuid', '_key', '_import_id'],
@@ -667,12 +667,13 @@ function fleetopsOrderStartRide(SQLiteConnection $connection, array $order = [])
 {
     $defaults = Fleetbase\FleetOps\Support\FleetOps::rideConfigDefaults();
     $connection->table('order_configs')->insert([
-        'uuid'         => 'config-ride',
-        'company_uuid' => 'company-1',
-        'key'          => 'ride',
-        'namespace'    => 'system:order-config:ride',
-        'flow'         => json_encode($defaults['flow']),
-        'meta'         => json_encode($defaults['meta']),
+        'uuid'           => 'config-ride',
+        'company_uuid'   => 'company-1',
+        'key'            => 'ride',
+        'namespace'      => 'system:order-config:ride',
+        'flow'           => json_encode($defaults['flow']),
+        'meta'           => json_encode($defaults['meta']),
+        'adhoc_strategy' => $defaults['adhoc_strategy'],
     ]);
     fleetopsOrderStartSeedOrder($connection, array_merge(['order_config_uuid' => 'config-ride', 'type' => 'ride', 'adhoc' => 1, 'status' => 'dispatched', 'dispatched' => 1, 'dispatched_at' => '2026-11-06 09:00:00'], $order));
     $connection->table('drivers')->where('uuid', 'driver-1')->update(['online' => 1]);
@@ -732,7 +733,7 @@ test('a ride with timed offers can only be accepted by the driver it is offered 
 test('of two drivers accepting the same adhoc order only the first gets it', function () {
     $connection = fleetopsOrderStartBoot();
     fleetopsOrderStartRide($connection);
-    $connection->table('order_configs')->where('uuid', 'config-ride')->update(['meta' => json_encode([])]);
+    $connection->table('order_configs')->where('uuid', 'config-ride')->update(['adhoc_strategy' => 'broadcast']);
     // Someone else claimed it after this request loaded the order.
     $connection->table('orders')->update(['driver_assigned_uuid' => 'driver-2']);
 
@@ -754,7 +755,7 @@ test('of two drivers accepting the same adhoc order only the first gets it', fun
 test('the driver already holding an adhoc order passes, and a canceled order refuses everyone', function () {
     $connection = fleetopsOrderStartBoot();
     fleetopsOrderStartRide($connection, ['driver_assigned_uuid' => 'driver-1']);
-    $connection->table('order_configs')->where('uuid', 'config-ride')->update(['meta' => json_encode([])]);
+    $connection->table('order_configs')->where('uuid', 'config-ride')->update(['adhoc_strategy' => 'broadcast']);
     $controller = new OrderController();
 
     $held = $controller->startOrder('order_start', Request::create('/x', 'POST', ['assign' => 'driver_one']));

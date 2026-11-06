@@ -23,20 +23,24 @@ class OrderConfig extends FleetbaseResource
     public function toArray($request): array
     {
         return [
-            'id'           => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
-            'uuid'         => $this->when(Http::isInternalRequest(), $this->uuid),
-            'public_id'    => $this->when(Http::isInternalRequest(), $this->public_id),
-            'company_uuid' => $this->when(Http::isInternalRequest(), $this->company_uuid),
-            'key'          => $this->key,
-            'name'         => $this->name,
-            'namespace'    => $this->namespace,
-            'description'  => $this->description,
-            'tags'         => $this->tags,
-            'status'       => $this->status,
-            'version'      => $this->version,
-            'flow'         => $this->projectFlow(),
-            'created_at'   => $this->created_at,
-            'updated_at'   => $this->updated_at,
+            'id'                    => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
+            'uuid'                  => $this->when(Http::isInternalRequest(), $this->uuid),
+            'public_id'             => $this->when(Http::isInternalRequest(), $this->public_id),
+            'company_uuid'          => $this->when(Http::isInternalRequest(), $this->company_uuid),
+            'key'                   => $this->key,
+            'name'                  => $this->name,
+            'namespace'             => $this->namespace,
+            'description'           => $this->description,
+            'tags'                  => $this->tags,
+            'status'                => $this->status,
+            'version'               => $this->version,
+            'flow'                  => $this->projectFlow(),
+            'adhoc_strategy'        => $this->adhoc_strategy,
+            'adhoc_offer_timeout'   => $this->adhoc_offer_timeout,
+            'customer_orders_adhoc' => (bool) $this->customer_orders_adhoc,
+            'match_vehicle_type'    => (bool) $this->match_vehicle_type,
+            'created_at'            => $this->created_at,
+            'updated_at'            => $this->updated_at,
         ];
     }
 

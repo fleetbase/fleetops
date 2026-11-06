@@ -63,7 +63,7 @@ class CustomerController extends Controller
     /**
      * Order meta the server sets and a rider may not send.
      */
-    protected const RESERVED_ORDER_META = ['vehicle_class', 'service_name', 'dispatch_outcome', 'fare', 'rating', 'chat_channel', 'paid_at'];
+    protected const RESERVED_ORDER_META = ['service_name', 'dispatch_outcome', 'fare', 'rating', 'chat_channel', 'paid_at'];
 
     /**
      * Wrong guesses a single code tolerates before it locks itself (core's check()).
@@ -842,20 +842,21 @@ class CustomerController extends Controller
             return response()->apiError('This fare has expired. Please get a new one.', 422);
         }
 
-        // A ride is priced and matched by the class the rider picked, so it needs a fare.
-        $isRide = $orderConfig->usesTimedOffers();
-        if ($isRide && !$serviceQuote instanceof ServiceQuote) {
+        // A config that matches customer orders by vehicle type needs a fare, which says the type.
+        $byVehicleType = (bool) $orderConfig->match_vehicle_type;
+        if ($byVehicleType && !$serviceQuote instanceof ServiceQuote) {
             return response()->apiError('Choose a ride option first.', 422);
         }
-        if ($isRide && $this->hasUnpaidRide($customer)) {
+        if ($orderConfig->key === 'ride' && $this->hasUnpaidRide($customer)) {
             return response()->apiError('Pay for your last trip before you book another.', 402);
         }
 
-        // Keys the server sets can't come from the rider.
-        $meta = Arr::except((array) $request->input('meta', []), static::RESERVED_ORDER_META);
-        if ($isRide) {
-            $meta['vehicle_class'] = $serviceQuote->serviceRate?->service_type;
-            $meta['service_name']  = $serviceQuote->serviceRate?->service_name;
+        // Keys the server sets can't come from the customer.
+        $meta        = Arr::except((array) $request->input('meta', []), static::RESERVED_ORDER_META);
+        $vehicleType = null;
+        if ($byVehicleType) {
+            $vehicleType          = $serviceQuote->serviceRate?->service_type;
+            $meta['service_name'] = $serviceQuote->serviceRate?->service_name;
         }
 
         // Build the Payload (matching the operator OrderController convention).
@@ -879,18 +880,19 @@ class CustomerController extends Controller
         }
 
         $order = $this->createOrderRecord([
-            'company_uuid'      => $sessionCompany,
-            'customer_uuid'     => $customer->uuid,
-            'customer_type'     => $this->getModelClassName('contact'),
-            'payload_uuid'      => $payloadUuid,
-            'order_config_uuid' => $orderConfig->uuid,
-            'type'              => $orderConfig->key,
-            'status'            => 'created',
-            'scheduled_at'      => $request->input('scheduled_at'),
-            'notes'             => $request->input('notes'),
-            'internal_id'       => $request->input('internal_id'),
-            'adhoc'             => $isRide,
-            'meta'              => $meta,
+            'company_uuid'          => $sessionCompany,
+            'customer_uuid'         => $customer->uuid,
+            'customer_type'         => $this->getModelClassName('contact'),
+            'payload_uuid'          => $payloadUuid,
+            'order_config_uuid'     => $orderConfig->uuid,
+            'type'                  => $orderConfig->key,
+            'status'                => 'created',
+            'scheduled_at'          => $request->input('scheduled_at'),
+            'notes'                 => $request->input('notes'),
+            'internal_id'           => $request->input('internal_id'),
+            'adhoc'                 => (bool) $orderConfig->customer_orders_adhoc,
+            'required_vehicle_type' => $vehicleType,
+            'meta'                  => $meta,
         ]);
 
         // If the customer picked a ServiceQuote up front, consume it now to

@@ -2,12 +2,14 @@
 
 namespace Fleetbase\FleetOps\Support;
 
+use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Filters shared by every query that finds drivers for an order: the order's own company,
- * drivers not already on a job, and the vehicle class a rider booked.
+ * drivers not already on a job, and the vehicle type the order needs.
  */
 class DriverMatching
 {
@@ -15,6 +17,30 @@ class DriverMatching
      * A driver whose current job has one of these statuses is free again.
      */
     public const FREE_JOB_STATUSES = ['completed', 'canceled', 'no_show'];
+
+    /**
+     * Available, online drivers who could take the order, with their `distance` from the pickup in
+     * metres. Within the order's ping radius, unless testing, which skips the position checks.
+     */
+    public static function nearby(Order $order, Point $pickup, bool $testing = false): Builder
+    {
+        $query = Driver::query()
+            ->withoutGlobalScopes()
+            ->where(['status' => 'available', 'online' => 1])
+            ->whereNull('deleted_at');
+
+        if (!$testing) {
+            $query->whereNotNull('location')
+                ->whereRaw('ST_Y(location) BETWEEN -90 AND 90 AND ST_X(location) BETWEEN -180 AND 180 AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)')
+                ->distanceSphere('location', $pickup, $order->getAdhocPingDistance())
+                ->distanceSphereValue('location', $pickup);
+        }
+
+        // An app store reviewer's driver is never offered a real order.
+        NavigatorReview::excludeFrom($query);
+
+        return static::forOrder($query, $order);
+    }
 
     /**
      * Apply every filter for the order.
@@ -71,11 +97,11 @@ class DriverMatching
     }
 
     /**
-     * The vehicle class booked for the order, if any.
+     * The vehicle type the order needs, if any (`required_vehicle_type`).
      */
     public static function vehicleClass(Order $order): ?string
     {
-        $class = data_get($order->meta, 'vehicle_class');
+        $class = $order->required_vehicle_type;
 
         return is_string($class) && trim($class) !== '' ? trim($class) : null;
     }

@@ -144,8 +144,8 @@ class FleetOps
      * Creates or retrieves the ride config for a company: a rider's trip from request to drop-off.
      *
      * The driver accepting starts the order ("on the way"), then arrives, starts the trip and
-     * completes it, or records a no-show. Transitions are strict, and the order is offered to
-     * one driver at a time.
+     * completes it, or records a no-show. Transitions are strict. Riders' orders are adhoc,
+     * priced and matched by vehicle class, and offered to one driver at a time.
      */
     public static function createRideConfig(Company $company): OrderConfig
     {
@@ -192,8 +192,13 @@ class FleetOps
             'status'       => 'private',
             'version'      => '0.0.1',
             'tags'         => ['ride', 'passenger'],
-            'entities'     => [],
-            'meta'         => [
+            // Riders' orders go to nearby drivers of the class they booked, one driver at a time.
+            'customer_orders_adhoc' => true,
+            'match_vehicle_type'    => true,
+            'adhoc_strategy'        => 'sequential',
+            'adhoc_offer_timeout'   => 20,
+            'entities'              => [],
+            'meta'                  => [
                 'lifecycle' => [
                     'initial'            => 'created',
                     'completed'          => 'completed',
@@ -201,7 +206,6 @@ class FleetOps
                     'terminal'           => ['no_show'],
                     'strict_transitions' => true,
                 ],
-                'offers' => ['enabled' => true, 'timeout' => 20],
             ],
             'flow' => [
                 'created'     => $activity('created', 'Ride requested', 'The rider requested a ride.', ['dispatched']),

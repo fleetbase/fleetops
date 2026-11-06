@@ -25,6 +25,7 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocDispatch;
 use Fleetbase\FleetOps\Support\OrderEdit;
 use Fleetbase\FleetOps\Support\OrderOffers;
 use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
@@ -717,7 +718,7 @@ class OrderController extends Controller
     {
         return $request->only([
             'internal_id', 'payload', 'service_quote', 'purchase_rate',
-            'adhoc', 'adhoc_distance', 'pod_method', 'pod_required',
+            'adhoc', 'adhoc_distance', 'adhoc_strategy', 'required_vehicle_type', 'pod_method', 'pod_required',
             'scheduled_at', 'status', 'meta', 'notes',
             // Orchestrator constraints
             'time_window_start', 'time_window_end',
@@ -728,7 +729,7 @@ class OrderController extends Controller
     protected function orderUpdateInputFromRequest(Request $request): array
     {
         return $request->only([
-            'internal_id', 'payload', 'adhoc', 'adhoc_distance',
+            'internal_id', 'payload', 'adhoc', 'adhoc_distance', 'adhoc_strategy', 'required_vehicle_type',
             'pod_method', 'pod_required', 'scheduled_at', 'meta', 'type', 'status', 'notes',
             // Orchestrator constraints
             'time_window_start', 'time_window_end',
@@ -1229,8 +1230,9 @@ class OrderController extends Controller
             return response()->apiError('Go online to accept orders.', 422);
         }
 
-        $orderConfig = $order->config();
-        if ($orderConfig->usesTimedOffers() && !OrderOffers::accept($order, $driver)) {
+        // The order's dispatch strategy decides who may accept it, for example only the driver
+        // with the open offer.
+        if (!AdhocDispatch::for($order)->accept($order, $driver)) {
             return response()->apiError('This order is no longer offered to you.', 409);
         }
 
@@ -1249,11 +1251,15 @@ class OrderController extends Controller
         $order->driver_assigned_uuid = null;
         $order->assignDriver($driver, true);
 
+        // Everyone else's offer is withdrawn.
+        OrderOffers::claimed($order, $driver);
+
         return null;
     }
 
     /**
-     * Turn down an order offered to the driver, so it goes to the next driver.
+     * Turn down an adhoc order. It isn't offered to the driver again, and with one-at-a-time
+     * offers it goes to the next driver.
      */
     public function declineOrder(string $id, Request $request)
     {
@@ -1273,7 +1279,7 @@ class OrderController extends Controller
             return response()->apiError('Driver not found.', 404);
         }
 
-        if (!OrderOffers::decline($order, $driver)) {
+        if (!$order->adhoc || $order->driver_assigned_uuid || !AdhocDispatch::for($order)->decline($order, $driver)) {
             return response()->apiError('This order is not offered to you.', 409);
         }
 

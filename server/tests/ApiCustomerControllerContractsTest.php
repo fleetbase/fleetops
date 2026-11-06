@@ -1616,8 +1616,8 @@ test('an order that does not exist is not found for a rider', function () {
     expect($controller->orderDriver('order_missing')->getStatusCode())->toBe(404);
 });
 
-test('a ride needs a fare, is adhoc, and its class comes from the fare, not the rider', function () {
-    $ride                    = new OrderConfig(['key' => 'ride', 'meta' => ['offers' => ['enabled' => true]]]);
+test('a ride needs a fare, is adhoc, and its vehicle type comes from the fare, not the rider', function () {
+    $ride                    = new OrderConfig(['key' => 'ride', 'customer_orders_adhoc' => true, 'match_vehicle_type' => true]);
     $ride->uuid              = 'config-ride';
     $noFare                  = fleetopsApiCustomerController();
     $noFare->orderConfig     = $ride;
@@ -1633,7 +1633,7 @@ test('a ride needs a fare, is adhoc, and its class comes from the fare, not the 
     $booked->createOrder(new FleetOpsApiCustomerOrderRequest([
         'service_quote' => 'quote_1',
         'pickup'        => ['name' => 'A'],
-        'meta'          => ['payment' => 'cash', 'vehicle_class' => 'xl', 'fare' => ['total' => 1], 'dispatch_outcome' => 'x'],
+        'meta'          => ['payment' => 'cash', 'service_name' => 'Limo', 'fare' => ['total' => 1], 'dispatch_outcome' => 'x'],
     ]));
 
     $owing              = fleetopsApiCustomerController();
@@ -1647,7 +1647,8 @@ test('a ride needs a fare, is adhoc, and its class comes from the fare, not the 
         ->and($blocked->getStatusCode())->toBe(402)
         ->and($owing->createdOrders)->toBe([])
         ->and($booked->createdOrders[0]['adhoc'])->toBeTrue()
-        ->and($booked->createdOrders[0]['meta'])->toBe(['payment' => 'cash', 'vehicle_class' => 'economy', 'service_name' => 'Economy']);
+        ->and($booked->createdOrders[0]['required_vehicle_type'])->toBe('economy')
+        ->and($booked->createdOrders[0]['meta'])->toBe(['payment' => 'cash', 'service_name' => 'Economy']);
 });
 
 test('a ride that ended in a no-show can no longer be canceled', function () {
