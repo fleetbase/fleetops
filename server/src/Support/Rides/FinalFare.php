@@ -15,8 +15,8 @@ use Illuminate\Support\Str;
 /**
  * Prices a finished ride from what actually happened: the distance the car's positions cover
  * from the start of the trip, and the time since it started, put through the same service rate
- * the rider booked. The result is stored on the order (`meta.fare`) for the receipt, and bought
- * as the order's price, which gives Ledger a new invoice for the final amount.
+ * the rider booked. The result is bought as the order's price, a quote that keeps the distance,
+ * time and lines, which gives Ledger a new invoice for the final amount. `Order::fare()` reads it.
  */
 class FinalFare
 {
@@ -25,7 +25,7 @@ class FinalFare
      */
     public static function settle(Order $order): ?array
     {
-        if (!RideUpdates::isRide($order) || $order->status !== 'completed' || data_get($order->meta, 'fare.final')) {
+        if (!RideUpdates::isRide($order) || $order->status !== 'completed' || $order->fare_finalized_at) {
             return null;
         }
 
@@ -56,8 +56,8 @@ class FinalFare
             ])->all(),
         ];
 
-        // The fare goes on the order first, so Ledger sees a final fare when the new price arrives.
-        $order->updateMeta('fare', $fare);
+        // The order is marked first, so Ledger sees a final fare when the new price arrives.
+        $order->forceFill(['fare_finalized_at' => now()])->saveQuietly();
         $order->purchaseServiceQuote(static::quote($order, $rate, $fare, $lines));
 
         return $fare;
@@ -125,7 +125,8 @@ class FinalFare
             'service_rate_uuid' => $rate->uuid,
             'amount'            => $fare['total'],
             'currency'          => $fare['currency'],
-            'meta'              => ['final' => true, 'order' => $order->public_id, 'distance_m' => $fare['distance_m'], 'duration_s' => $fare['duration_s']],
+            'distance'          => $fare['distance_m'],
+            'time'              => $fare['duration_s'],
         ]);
 
         foreach ($fare['lines'] as $line) {

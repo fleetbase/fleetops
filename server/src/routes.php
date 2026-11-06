@@ -847,6 +847,9 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                         $router->get('notification-registry', 'SettingController@getNotificationRegistry');
                                         $router->get('notification-settings', 'SettingController@getNotificationSettings');
                                         $router->post('notification-settings', 'SettingController@saveNotificationSettings');
+                                        $router->get('adhoc-dispatch-settings', 'SettingController@getAdhocDispatchSettings');
+                                        $router->post('adhoc-dispatch-settings', 'SettingController@saveAdhocDispatchSettings');
+                                        $router->get('adhoc-dispatch-strategies', 'SettingController@getAdhocDispatchStrategies');
                                         $router->get('routing-settings', 'SettingController@getRoutingSettings');
                                         $router->post('routing-settings', 'SettingController@saveRoutingSettings');
                                         $router->get('tracking-settings', 'SettingController@getTrackingSettings');

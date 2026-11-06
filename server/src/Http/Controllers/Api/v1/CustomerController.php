@@ -9,8 +9,8 @@ use Fleetbase\FleetOps\Http\Requests\CreateCustomerRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateContactRequest;
 use Fleetbase\FleetOps\Http\Requests\VerifyCreateCustomerRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\Customer as CustomerResource;
-use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
+use Fleetbase\FleetOps\Http\Resources\v1\RiderOrder as RiderOrderResource;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderConfig;
@@ -33,7 +33,6 @@ use Fleetbase\Models\UserDevice;
 use Fleetbase\Models\VerificationCode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
@@ -59,11 +58,6 @@ class CustomerController extends Controller
      * Relations a rider's order is returned with.
      */
     protected const RIDER_ORDER_RELATIONS = ['payload', 'payload.pickup', 'payload.dropoff'];
-
-    /**
-     * Order meta the server sets and a rider may not send.
-     */
-    protected const RESERVED_ORDER_META = ['service_name', 'dispatch_outcome', 'fare', 'rating', 'chat_channel', 'paid_at'];
 
     /**
      * Wrong guesses a single code tolerates before it locks itself (core's check()).
@@ -851,22 +845,18 @@ class CustomerController extends Controller
             return response()->apiError('Pay for your last trip before you book another.', 402);
         }
 
-        // Keys the server sets can't come from the customer.
-        $meta        = Arr::except((array) $request->input('meta', []), static::RESERVED_ORDER_META);
-        $vehicleType = null;
-        if ($byVehicleType) {
-            $vehicleType          = $serviceQuote->serviceRate?->service_type;
-            $meta['service_name'] = $serviceQuote->serviceRate?->service_name;
-        }
+        $vehicleType = $byVehicleType ? $serviceQuote->serviceRate?->service_type : null;
 
         // Build the Payload (matching the operator OrderController convention).
         // - `payload` may be an array of {pickup, dropoff, return, waypoints, entities}
         // - `payload` may be a string public_id referencing an existing Payload
         // - Or top-level pickup/dropoff/return/waypoints/entities are accepted
         $payloadUuid = null;
+        $builtHere   = false;
         if ($request->isArray('payload')) {
             $payloadInput = (array) $request->input('payload');
             $payloadUuid  = $this->buildPayloadFromInput($payloadInput, $sessionCompany)->uuid;
+            $builtHere    = true;
         } elseif ($request->isString('payload')) {
             $payloadUuid = $this->getUuid('payloads', [
                 'public_id'    => $request->input('payload'),
@@ -876,7 +866,14 @@ class CustomerController extends Controller
             $payloadInput = $request->only(['pickup', 'dropoff', 'return', 'waypoints', 'entities']);
             if (array_filter($payloadInput, fn ($v) => $v !== null && $v !== '' && $v !== [])) {
                 $payloadUuid = $this->buildPayloadFromInput($payloadInput, $sessionCompany)->uuid;
+                $builtHere   = true;
             }
+        }
+
+        // How the customer will pay, kept on the payload this order was given.
+        $paymentMethod = $request->input('payment_method');
+        if ($builtHere && in_array($paymentMethod, ['cash', 'card'], true)) {
+            $this->setPayloadPaymentMethod($payloadUuid, $paymentMethod);
         }
 
         $order = $this->createOrderRecord([
@@ -892,7 +889,7 @@ class CustomerController extends Controller
             'internal_id'           => $request->input('internal_id'),
             'adhoc'                 => (bool) $orderConfig->customer_orders_adhoc,
             'required_vehicle_type' => $vehicleType,
-            'meta'                  => $meta,
+            'meta'                  => (array) $request->input('meta', []),
         ]);
 
         // If the customer picked a ServiceQuote up front, consume it now to
@@ -1181,7 +1178,7 @@ class CustomerController extends Controller
         }
 
         return response()->json([
-            'driver'  => ['name' => $driver->name, 'photo_url' => $driver->photo_url, 'location' => $driver->location, 'rating' => DriverRatings::average($driver)],
+            'driver'  => ['name' => $driver->name, 'photo_url' => $driver->photo_url, 'location' => $driver->location, 'rating' => $driver->rating_average !== null ? (float) $driver->rating_average : null],
             'vehicle' => $vehicle ? [
                 'make'         => $vehicle->make,
                 'model'        => $vehicle->model,
@@ -1389,6 +1386,11 @@ class CustomerController extends Controller
         return null;
     }
 
+    protected function setPayloadPaymentMethod(string $payloadUuid, string $paymentMethod): void
+    {
+        Payload::where('uuid', $payloadUuid)->update(['payment_method' => $paymentMethod]);
+    }
+
     protected function trackingPageUrl(string $number, ?string $companyUuid): string
     {
         return TrackingCode::pageUrl($number, $companyUuid);
@@ -1405,8 +1407,8 @@ class CustomerController extends Controller
     }
 
     /**
-     * Whether one of the rider's recent card trips has a final fare that Ledger hasn't marked
-     * paid (`meta.paid_at`). Cash is collected by the driver, so it never blocks a booking.
+     * Whether one of the rider's recent card trips has a final fare and isn't paid (`paid_at`,
+     * set by the billing package). Cash is collected by the driver, so it never blocks a booking.
      */
     protected function hasUnpaidRide(Contact $customer): bool
     {
@@ -1414,11 +1416,11 @@ class CustomerController extends Controller
             ->where('customer_uuid', $customer->uuid)
             ->where('type', 'ride')
             ->where('status', 'completed')
+            ->whereNotNull('fare_finalized_at')
+            ->whereNull('paid_at')
             ->whereNull('deleted_at')
-            ->latest()
-            ->limit(20)
-            ->get(['uuid', 'meta'])
-            ->contains(fn (Order $order) => data_get($order->meta, 'payment') === 'card' && data_get($order->meta, 'fare.final') && !data_get($order->meta, 'paid_at'));
+            ->whereHas('payload', fn ($payload) => $payload->where('payment_method', 'card'))
+            ->exists();
     }
 
     /**
@@ -1806,12 +1808,12 @@ class CustomerController extends Controller
 
     protected function orderResource(Order $order): mixed
     {
-        return new OrderResource($order);
+        return new RiderOrderResource($order);
     }
 
     protected function orderResourceCollection(mixed $results): mixed
     {
-        return OrderResource::collection($results);
+        return RiderOrderResource::collection($results);
     }
 
     protected function placeResourceCollection(mixed $results): mixed

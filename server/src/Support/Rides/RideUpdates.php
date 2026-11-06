@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Support\Rides;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Notifications\RideUpdate;
+use Fleetbase\FleetOps\Support\OrderOffers;
 use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -28,7 +29,7 @@ class RideUpdates
             return false;
         }
 
-        $kind = $order->status === 'canceled' && data_get($order->meta, 'dispatch_outcome') === 'no_driver_found' ? 'no_driver_found' : (string) $order->status;
+        $kind = OrderOffers::outcome($order) === OrderOffers::NO_DRIVER_FOUND_OUTCOME ? 'no_driver_found' : (string) $order->status;
 
         return RideUpdate::knows($kind) && static::send($order, $kind);
     }

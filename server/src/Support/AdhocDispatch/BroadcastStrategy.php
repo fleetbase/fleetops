@@ -23,6 +23,16 @@ class BroadcastStrategy implements AdhocDispatchStrategy
         return AdhocDispatch::BROADCAST;
     }
 
+    public function label(): string
+    {
+        return 'Everyone nearby at once';
+    }
+
+    public function description(): string
+    {
+        return 'Every nearby driver is offered the order at the same time, and the first to accept gets it.';
+    }
+
     public function listsOpenly(): bool
     {
         return true;

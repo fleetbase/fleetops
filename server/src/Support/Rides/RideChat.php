@@ -30,8 +30,7 @@ class RideChat
         }
 
         return static::asUser($riderUser, function () use ($order, $riderUser, $driverUser) {
-            $channelUuid = data_get($order->meta, 'chat_channel');
-            $channel     = $channelUuid ? ChatChannel::where('uuid', $channelUuid)->first() : null;
+            $channel = $order->chat_channel_uuid ? ChatChannel::where('uuid', $order->chat_channel_uuid)->first() : null;
             if (!$channel) {
                 // Creating the channel adds its creator, the rider, as a participant.
                 $channel = ChatChannel::create([
@@ -40,7 +39,7 @@ class RideChat
                     'name'            => 'Ride ' . $order->public_id,
                     'meta'            => ['order_public_id' => $order->public_id, 'kind' => 'group'],
                 ]);
-                $order->updateMeta('chat_channel', $channel->uuid);
+                $order->forceFill(['chat_channel_uuid' => $channel->uuid])->saveQuietly();
             }
 
             static::participant($channel, $riderUser, 'customer');

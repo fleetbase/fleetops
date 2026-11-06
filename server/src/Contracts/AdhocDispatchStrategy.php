@@ -21,6 +21,16 @@ interface AdhocDispatchStrategy
     public function name(): string;
 
     /**
+     * A short name for people choosing a strategy, for example "One driver at a time".
+     */
+    public function label(): string;
+
+    /**
+     * One sentence on how orders are offered.
+     */
+    public function description(): string;
+
+    /**
      * Whether a driver nearby sees the order in their list without holding an offer for it.
      * True for everyone-at-once offering, false when it goes to one driver at a time. A driver
      * who declined never sees it, and one holding an open offer always does.

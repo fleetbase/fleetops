@@ -420,6 +420,16 @@ class FleetOpsAdhocStrategyFake implements Fleetbase\FleetOps\Contracts\AdhocDis
         return 'fake';
     }
 
+    public function label(): string
+    {
+        return 'Fake';
+    }
+
+    public function description(): string
+    {
+        return 'Offers to as many drivers as the test says.';
+    }
+
     public function listsOpenly(): bool
     {
         return false;

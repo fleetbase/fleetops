@@ -495,10 +495,10 @@ class ServiceQuoteController extends Controller
         DriverMatching::forVehicleClass($drivers, $class);
         $nearest = $drivers->first();
 
-        $quote->setMeta([
+        $quote->availability = [
             'seats'      => $seats ? (int) $seats : null,
             'pickup_eta' => $nearest ? (int) round(60 + (float) $nearest->distance / self::PICKUP_SPEED) : null,
-        ]);
+        ];
     }
 
     protected function preliminaryDataFromRequest(Request $request): array

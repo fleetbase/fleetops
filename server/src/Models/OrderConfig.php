@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\OrderConfigEntities;
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocDispatch;
 use Fleetbase\FleetOps\Support\FleetOps;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\Model;
@@ -129,6 +130,22 @@ class OrderConfig extends Model
             $model->status    = 'private';
             $model->key       = Str::slug($model->name);
         });
+
+        static::saving(fn ($model) => $model->normalizeAdhocSettings());
+    }
+
+    /**
+     * Drop a strategy that isn't registered, and keep the offer timeout within its limits.
+     */
+    public function normalizeAdhocSettings(): void
+    {
+        if ($this->adhoc_strategy !== null && !AdhocDispatch::has($this->adhoc_strategy)) {
+            $this->adhoc_strategy = null;
+        }
+
+        if ($this->adhoc_offer_timeout !== null) {
+            $this->adhoc_offer_timeout = max(AdhocDispatch::MIN_OFFER_TIMEOUT, min(AdhocDispatch::MAX_OFFER_TIMEOUT, (int) $this->adhoc_offer_timeout));
+        }
     }
 
     /**

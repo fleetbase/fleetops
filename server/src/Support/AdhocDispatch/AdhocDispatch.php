@@ -96,6 +96,20 @@ class AdhocDispatch
     }
 
     /**
+     * Every registered strategy, for people choosing one.
+     *
+     * @return array<int, array{name: string, label: string, description: string}>
+     */
+    public static function describe(): array
+    {
+        return array_map(function (string $name) {
+            $strategy = static::strategy($name);
+
+            return ['name' => $name, 'label' => $strategy->label(), 'description' => $strategy->description()];
+        }, static::names());
+    }
+
+    /**
      * Strategies whose orders drivers see without holding an offer.
      */
     public static function openlyListed(): array

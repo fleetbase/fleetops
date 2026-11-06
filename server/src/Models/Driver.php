@@ -99,6 +99,8 @@ class Driver extends Model
         'vehicle_uuid',
         'vendor_uuid',
         'current_job_uuid',
+        'rating_average',
+        'rating_count',
         'auth_token',
         'signup_token_used',
         'avatar_url',
@@ -157,6 +159,8 @@ class Driver extends Model
         'location'        => Point::class,
         'online'          => 'boolean',
         'meta'            => Json::class,
+        'rating_average'  => 'float',
+        'rating_count'    => 'integer',
         'license_expiry'  => 'date',
         // Orchestrator
         'skills'          => Json::class,

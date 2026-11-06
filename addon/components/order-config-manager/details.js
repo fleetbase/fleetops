@@ -16,6 +16,13 @@ export default class OrderConfigManagerDetailsComponent extends Component {
     @service notifications;
     @service intl;
     @service store;
+    @service fetch;
+
+    /**
+     * The adhoc dispatch strategies the server offers.
+     * @tracked
+     */
+    @tracked strategies = [];
 
     /**
      * Tracked property for the configuration being managed.
@@ -32,10 +39,35 @@ export default class OrderConfigManagerDetailsComponent extends Component {
     constructor(owner, { config, configManagerContext }) {
         super(...arguments);
         this.config = config;
+        this.loadStrategies.perform();
 
         configManagerContext.on('onConfigChanged', (newConfig) => {
             this.changeConfig(newConfig);
         });
+    }
+
+    /**
+     * The strategy choices, with the company default first. An empty name stands for no strategy of the config's own.
+     */
+    get strategyOptions() {
+        return [{ name: '', label: this.intl.t('order-config-manager.details.company-default') }, ...this.strategies];
+    }
+
+    get adhocStrategy() {
+        return this.config?.adhoc_strategy ?? '';
+    }
+
+    @action setAdhocStrategy(name) {
+        this.config.adhoc_strategy = name || null;
+    }
+
+    @task *loadStrategies() {
+        try {
+            const { strategies } = yield this.fetch.get('fleet-ops/settings/adhoc-dispatch-strategies');
+            this.strategies = strategies ?? [];
+        } catch {
+            this.strategies = [];
+        }
     }
 
     /**

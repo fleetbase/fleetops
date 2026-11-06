@@ -331,7 +331,13 @@ class FleetOpsApiCustomerControllerProbe extends CustomerController
         return $this->orderConfig;
     }
 
-    public bool $unpaidRide = false;
+    public bool $unpaidRide      = false;
+    public array $paymentMethods = [];
+
+    protected function setPayloadPaymentMethod(string $payloadUuid, string $paymentMethod): void
+    {
+        $this->paymentMethods[] = [$payloadUuid, $paymentMethod];
+    }
 
     protected function hasUnpaidRide(Contact $customer): bool
     {
@@ -1631,10 +1637,13 @@ test('a ride needs a fare, is adhoc, and its vehicle type comes from the fare, n
 
     $refused = $noFare->createOrder(new FleetOpsApiCustomerOrderRequest(['pickup' => ['name' => 'A']]));
     $booked->createOrder(new FleetOpsApiCustomerOrderRequest([
-        'service_quote' => 'quote_1',
-        'pickup'        => ['name' => 'A'],
-        'meta'          => ['payment' => 'cash', 'service_name' => 'Limo', 'fare' => ['total' => 1], 'dispatch_outcome' => 'x'],
+        'service_quote'  => 'quote_1',
+        'pickup'         => ['name' => 'A'],
+        'payment_method' => 'card',
+        'meta'           => ['note' => 'Blue door'],
     ]));
+    $byName = fleetopsApiCustomerController();
+    $byName->createOrder(new FleetOpsApiCustomerOrderRequest(['payload' => 'payload_public', 'payment_method' => 'card']));
 
     $owing              = fleetopsApiCustomerController();
     $owing->orderConfig = $ride;
@@ -1648,7 +1657,10 @@ test('a ride needs a fare, is adhoc, and its vehicle type comes from the fare, n
         ->and($owing->createdOrders)->toBe([])
         ->and($booked->createdOrders[0]['adhoc'])->toBeTrue()
         ->and($booked->createdOrders[0]['required_vehicle_type'])->toBe('economy')
-        ->and($booked->createdOrders[0]['meta'])->toBe(['payment' => 'cash', 'service_name' => 'Economy']);
+        ->and($booked->createdOrders[0]['meta'])->toBe(['note' => 'Blue door'])
+        ->and($booked->paymentMethods)->toBe([['payload-built-uuid', 'card']])
+        // An existing payload named by id keeps its own payment method.
+        ->and($byName->paymentMethods)->toBe([]);
 });
 
 test('a ride that ended in a no-show can no longer be canceled', function () {

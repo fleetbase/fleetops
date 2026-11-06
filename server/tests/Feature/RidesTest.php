@@ -27,9 +27,15 @@ if (!function_exists('Fleetbase\Observers\event')) {
     eval('namespace Fleetbase\Observers; function event($event = null, $payload = []) { return []; }');
 }
 
+if (!function_exists('Fleetbase\FleetOps\Support\event')) {
+    eval('namespace Fleetbase\FleetOps\Support; function event($event = null) { if (\RideOffersRecorder::$failEvents) { throw new \RuntimeException(\'socket down\'); } \RideOffersRecorder::$events[] = $event; return $event; }');
+}
+
 class RideOffersRecorder
 {
-    public static array $notified = [];
+    public static array $notified  = [];
+    public static array $events    = [];
+    public static bool $failEvents = false;
 }
 
 /** An order whose cancellation is recorded rather than run, and whose pickup is set directly. */
@@ -158,12 +164,12 @@ function rideOffersBoot(): SQLiteConnection
     $tables = [
         'companies'           => ['uuid', 'public_id', 'name', 'options'],
         'users'               => ['uuid', 'public_id', 'company_uuid', 'name', 'type', 'status', 'email', 'phone'],
-        'drivers'             => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'status', 'online', 'location', 'current_job_uuid', 'meta'],
+        'drivers'             => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'status', 'online', 'location', 'current_job_uuid', 'meta', 'rating_average', 'rating_count'],
         'vehicles'            => ['uuid', 'public_id', 'company_uuid', 'type', 'plate_number', 'seating_capacity', 'vendor_uuid', 'photo_uuid', 'avatar_url', 'name', 'internal_id', 'location', 'online', 'speed', 'heading', 'altitude', 'year', 'make', 'model', 'class', 'color', 'call_sign', 'status', 'specs', 'vin_data', 'telematics', 'meta', 'slug', 'vin', 'trim', 'plate_number_type'],
-        'orders'              => ['uuid', 'public_id', 'company_uuid', 'adhoc_strategy', 'required_vehicle_type', 'tracking_number_uuid', 'dispatched_at', 'started_at', 'customer_uuid', 'customer_type', 'purchase_rate_uuid', 'transaction_uuid', 'order_config_uuid', 'payload_uuid', 'driver_assigned_uuid', 'status', 'type', 'adhoc', 'adhoc_distance', 'dispatched', 'started', 'meta'],
+        'orders'              => ['uuid', 'public_id', 'company_uuid', 'adhoc_strategy', 'required_vehicle_type', 'chat_channel_uuid', 'fare_finalized_at', 'paid_at', 'tracking_number_uuid', 'dispatched_at', 'started_at', 'customer_uuid', 'customer_type', 'purchase_rate_uuid', 'transaction_uuid', 'order_config_uuid', 'payload_uuid', 'driver_assigned_uuid', 'status', 'type', 'adhoc', 'adhoc_distance', 'dispatched', 'started', 'meta'],
         'order_configs'       => ['uuid', 'public_id', 'company_uuid', 'adhoc_strategy', 'adhoc_offer_timeout', 'customer_orders_adhoc', 'match_vehicle_type', 'name', 'key', 'namespace', 'description', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', 'tags'],
         'order_offers'        => ['uuid', '_key', 'company_uuid', 'order_uuid', 'driver_uuid', 'status', 'distance', 'expires_at', 'responded_at'],
-        'payloads'            => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'current_waypoint_uuid', 'meta'],
+        'payloads'            => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'current_waypoint_uuid', 'meta', 'payment_method'],
         'places'              => ['uuid', 'public_id', 'company_uuid', 'name', 'location', 'meta', 'owner_uuid', 'owner_type'],
         'waypoints'           => ['uuid', 'payload_uuid', 'place_uuid', 'order'],
         'entities'            => ['uuid', 'payload_uuid', 'name'],
@@ -180,7 +186,8 @@ function rideOffersBoot(): SQLiteConnection
         'chat_receipts'       => ['uuid', 'public_id', 'company_uuid', 'chat_message_uuid', 'participant_uuid', 'read_at'],
         'positions'           => ['uuid', '_key', 'public_id', 'company_uuid', 'order_uuid', 'subject_uuid', 'subject_type', 'coordinates', 'heading', 'speed'],
         'service_rates'       => ['uuid', 'public_id', 'company_uuid', 'service_name', 'service_type', 'base_fee', 'per_meter_flat_rate_fee', 'per_meter_unit', 'rate_calculation_method', 'algorithm', 'currency', 'has_cod_fee', 'has_peak_hours_fee'],
-        'service_quotes'      => ['uuid', '_key', 'public_id', 'company_uuid', 'request_id', 'service_rate_uuid', 'payload_uuid', 'amount', 'currency', 'meta', 'expired_at'],
+        'driver_ratings'      => ['uuid', '_key', 'company_uuid', 'order_uuid', 'driver_uuid', 'customer_uuid', 'customer_type', 'stars', 'comment'],
+        'service_quotes'      => ['uuid', '_key', 'distance', 'time', 'public_id', 'company_uuid', 'request_id', 'service_rate_uuid', 'payload_uuid', 'amount', 'currency', 'meta', 'expired_at'],
         'service_quote_items' => ['uuid', '_key', 'public_id', 'service_quote_uuid', 'amount', 'currency', 'details', 'code'],
         'purchase_rates'      => ['uuid', '_key', 'public_id', 'company_uuid', 'customer_uuid', 'customer_type', 'service_quote_uuid', 'transaction_uuid', 'payload_uuid', 'status', 'meta'],
     ];
@@ -388,11 +395,21 @@ test('one at a time: when nobody is left the order is canceled as no driver foun
     sequential()->decline($order, rideOffersDriver('amara'));
     sequential()->decline($order, rideOffersDriver('chen'));
 
-    $meta = json_decode($connection->table('orders')->where('uuid', 'order-1')->value('meta'), true);
+    // The cancel itself is recorded by the test order; mark it canceled as the real one would.
+    $connection->table('orders')->where('uuid', 'order-1')->update(['status' => 'canceled']);
+    $canceled = RideOffersOrder::where('uuid', 'order-1')->first();
 
     expect(RideOffersOrder::$canceled)->toBe([['order-1', OrderOffers::NO_DRIVER_FOUND]])
-        ->and($meta['dispatch_outcome'])->toBe('no_driver_found')
+        ->and(OrderOffers::outcome($canceled))->toBe(OrderOffers::NO_DRIVER_FOUND_OUTCOME)
         ->and(OrderOffers::pending($order))->toBeNull();
+
+    // Canceled while an offer was open, it wasn't for want of a driver.
+    $connection->table('order_offers')->where('driver_uuid', 'chen')->update(['status' => 'withdrawn']);
+    $notAdhoc = new Order();
+    $notAdhoc->setRawAttributes(['uuid' => 'order-1', 'status' => 'canceled', 'adhoc' => 0], true);
+    expect(OrderOffers::outcome(RideOffersOrder::where('uuid', 'order-1')->first()))->toBeNull()
+        ->and(OrderOffers::outcome($notAdhoc))->toBeNull()
+        ->and(OrderOffers::outcome($order))->toBeNull();
 });
 
 test('one at a time: an order without a usable pickup finds no driver', function () {
@@ -665,8 +682,8 @@ test('fares carry each class\'s seats and how soon its nearest free car could ar
     $asked    = Illuminate\Http\Request::create('/', 'GET', ['availability' => 1]);
     $notAsked = Illuminate\Http\Request::create('/', 'GET');
 
-    expect($economy->meta)->toBe(['seats' => 5, 'pickup_eta' => 138])
-        ->and($limo->meta)->toBe(['seats' => null, 'pickup_eta' => null])
+    expect($economy->availability)->toBe(['seats' => 5, 'pickup_eta' => 138])
+        ->and($limo->availability)->toBe(['seats' => null, 'pickup_eta' => null])
         ->and($controller->helper('availabilityPoint', $asked, ['latitude' => 1.28, 'longitude' => 103.85]))->toBeInstanceOf(Point::class)
         ->and($controller->helper('availabilityPoint', $asked, 'place_pickup'))->toBeNull()
         ->and($controller->helper('availabilityPoint', $notAsked, ['latitude' => 1.28, 'longitude' => 103.85]))->toBeNull();
@@ -675,7 +692,7 @@ test('fares carry each class\'s seats and how soon its nearest free car could ar
     $plain = $quote('economy');
     $controller->from(null);
     $controller->helper('serviceQuoteResourceCollection', [$plain]);
-    expect($plain->meta)->toBeNull();
+    expect($plain->availability)->toBeNull();
 });
 
 /** A finished ride by rider Sam with driver Chen, from Raffles Place to Bugis. */
@@ -722,7 +739,7 @@ test('the ride chat opens once a driver accepts, with just the rider and driver 
         ->and($again->uuid)->toBe($channel->uuid)
         ->and($connection->table('chat_channels')->count())->toBe(1)
         ->and($connection->table('chat_participants')->orderBy('id')->pluck('user_uuid')->all())->toBe(['user-sam', 'user-chen'])
-        ->and(json_decode($connection->table('orders')->value('meta'), true)['chat_channel'])->toBe($channel->uuid);
+        ->and($connection->table('orders')->where('uuid', 'order-1')->value('chat_channel_uuid'))->toBe($channel->uuid);
 
     $sent = Fleetbase\FleetOps\Support\Rides\RideChat::send($channel, 'user-sam', 'By the lobby');
     $chen = $connection->table('chat_participants')->where('user_uuid', 'user-chen')->value('uuid');
@@ -736,24 +753,35 @@ test('the ride chat opens once a driver accepts, with just the rider and driver 
 test('a rider rates their driver once, and the driver keeps an average', function () {
     $connection = rideOffersBoot();
     $order      = ridesSeedTrip($connection);
-    rideOffersOrder($connection, ['uuid' => 'order-old', 'public_id' => 'order_old', 'status' => 'completed', 'driver_assigned_uuid' => 'chen', 'meta' => json_encode(['rating' => ['stars' => 4]])]);
+    $connection->table('driver_ratings')->insert(['uuid' => 'r-old', 'order_uuid' => 'order-old', 'driver_uuid' => 'chen', 'stars' => 4]);
 
     $first  = Fleetbase\FleetOps\Support\Rides\DriverRatings::rate($order, 9, ' Great ');
     $second = Fleetbase\FleetOps\Support\Rides\DriverRatings::rate(RideOffersOrder::where('uuid', 'order-1')->first(), 1);
     $driver = rideOffersDriver('chen');
+    $rating = Fleetbase\FleetOps\Models\DriverRating::where('order_uuid', 'order-1')->first();
 
     expect($first)->toBeTrue()
         ->and($second)->toBeFalse()
-        ->and(json_decode($connection->table('orders')->where('uuid', 'order-1')->value('meta'), true)['rating'])->toMatchArray(['stars' => 5, 'comment' => 'Great'])
-        ->and($driver->meta['rating'])->toBe(['average' => 4.5, 'count' => 2])
-        ->and(Fleetbase\FleetOps\Support\Rides\DriverRatings::average($driver))->toBe(4.5)
-        ->and(Fleetbase\FleetOps\Support\Rides\DriverRatings::average(rideOffersDriver('amara')))->toBeNull()
-        ->and(Fleetbase\FleetOps\Support\Rides\DriverRatings::average(null))->toBeNull()
-        ->and(Fleetbase\FleetOps\Support\Rides\DriverRatings::summary(rideOffersDriver('amara')))->toBe(['average' => null, 'count' => 0]);
+        ->and([$rating->stars, $rating->comment, $rating->customer_uuid])->toBe([5, 'Great', 'contact-sam'])
+        ->and($rating->order->uuid)->toBe('order-1')
+        ->and($rating->driver->uuid)->toBe('chen')
+        ->and($order->driverRating->stars)->toBe(5)
+        ->and([$driver->rating_average, $driver->rating_count])->toBe([4.5, 2]);
 
-    // A ride whose driver record is gone still keeps its rating.
-    $orphan = rideOffersOrder($connection, ['uuid' => 'order-orphan', 'public_id' => 'order_orphan', 'driver_assigned_uuid' => 'gone']);
-    expect(Fleetbase\FleetOps\Support\Rides\DriverRatings::rate($orphan, 3))->toBeTrue();
+    // A driver whose ratings were all removed has no average.
+    $connection->table('driver_ratings')->update(['deleted_at' => now()]);
+    Fleetbase\FleetOps\Support\Rides\DriverRatings::refresh('chen');
+    expect([rideOffersDriver('chen')->rating_average, rideOffersDriver('chen')->rating_count])->toBe([null, 0]);
+});
+
+test('two ratings racing for one order keep the first', function () {
+    $connection = rideOffersBoot();
+    $order      = ridesSeedTrip($connection);
+    // The other request's rating lands between the check and the insert; the unique index refuses this one.
+    $connection->statement("CREATE TRIGGER rating_race BEFORE INSERT ON driver_ratings BEGIN SELECT RAISE(ABORT, 'UNIQUE constraint failed: driver_ratings.order_uuid'); END");
+
+    expect(Fleetbase\FleetOps\Support\Rides\DriverRatings::rate($order, 5))->toBeFalse()
+        ->and(rideOffersDriver('chen')->rating_count)->toBeNull();
 });
 
 test('a share link opens only its rider\'s view of its order, until it expires', function () {
@@ -821,7 +849,7 @@ test('each step of a ride reaches the rider, and the car about to arrive is told
         ->and($updates::statusChanged($notRide))->toBeFalse()
         ->and(RideOffersRecorder::$notified)->toBe([['contact-sam', Fleetbase\FleetOps\Notifications\RideUpdate::class]]);
 
-    $order->meta   = ['dispatch_outcome' => 'no_driver_found'];
+    $connection->table('order_offers')->insert(['uuid' => 'f-out', 'order_uuid' => 'order-1', 'driver_uuid' => 'amara', 'status' => 'expired']);
     $order->status = 'canceled';
     $order->save();
     $updates::statusChanged($order);
@@ -878,7 +906,8 @@ test('a finished ride is priced from the distance its car covered and the trip t
         ->and($fare['estimate'])->toBe(533)
         ->and($fare['total'])->toBeGreaterThan(740)->toBeLessThan(750)
         ->and(array_column($fare['lines'], 'label'))->toBe(['Base fare', 'Distance and time'])
-        ->and(json_decode($connection->table('orders')->where('uuid', 'order-1')->value('meta'), true)['fare']['total'])->toBe($fare['total'])
+        ->and($connection->table('orders')->where('uuid', 'order-1')->value('fare_finalized_at'))->not->toBeNull()
+        ->and(RideOffersOrder::where('uuid', 'order-1')->first()->fare())->toMatchArray(['final' => true, 'total' => $fare['total'], 'currency' => 'USD', 'estimate' => 533, 'distance' => $fare['distance_m'], 'time' => 600, 'service' => 'Economy'])
         ->and($connection->table('service_quotes')->where('uuid', '!=', 'quote-booked')->value('amount'))->toBe((string) $fare['total'])
         ->and($connection->table('service_quote_items')->count())->toBe(2)
         ->and($connection->table('orders')->value('purchase_rate_uuid'))->not->toBe('purchase-booked');
@@ -1058,17 +1087,21 @@ test('a rider with another company keeps their user when one account is deleted'
 
 test('an unpaid card trip blocks the next booking, and cash never does', function () {
     $connection = rideOffersBoot();
-    ridesSeedTrip($connection, ['meta' => json_encode(['payment' => 'card', 'fare' => ['final' => true]])]);
+    ridesSeedTrip($connection, ['fare_finalized_at' => '2026-11-06 09:15:00']);
+    $connection->table('payloads')->update(['payment_method' => 'card']);
     $controller = new RidesCustomerController();
     $sam        = Fleetbase\FleetOps\Models\Contact::where('uuid', 'contact-sam')->first();
 
     $unpaid = $controller->helper('hasUnpaidRide', $sam);
-    $connection->table('orders')->update(['meta' => json_encode(['payment' => 'card', 'fare' => ['final' => true], 'paid_at' => '2026-11-06'])]);
-    $paid = $controller->helper('hasUnpaidRide', $sam);
-    $connection->table('orders')->update(['meta' => json_encode(['payment' => 'cash', 'fare' => ['final' => true]])]);
+    $order  = RideOffersOrder::where('uuid', 'order-1')->first();
+    $marked = [$order->markPaid(), $order->markPaid()];
+    $paid   = $controller->helper('hasUnpaidRide', $sam);
+    $connection->table('orders')->update(['paid_at' => null]);
+    $connection->table('payloads')->update(['payment_method' => 'cash']);
     $cash = $controller->helper('hasUnpaidRide', $sam);
 
-    expect([$unpaid, $paid, $cash])->toBe([true, false, false]);
+    expect([$unpaid, $paid, $cash])->toBe([true, false, false])
+        ->and($marked)->toBe([true, false]);
 });
 
 test('when a ride is completed the rider is told and the ride is priced', function () {
@@ -1080,7 +1113,7 @@ test('when a ride is completed the rider is told and the ride is priced', functi
     $order->save();
     (new Fleetbase\FleetOps\Observers\OrderObserver())->updated($order);
 
-    expect(json_decode($connection->table('orders')->value('meta'), true)['fare']['final'])->toBeTrue()
+    expect($connection->table('orders')->value('fare_finalized_at'))->not->toBeNull()
         ->and(RideOffersRecorder::$notified)->toBe([['contact-sam', Fleetbase\FleetOps\Notifications\RideUpdate::class]]);
 });
 
@@ -1137,4 +1170,61 @@ test('only a strategy that lists openly shows orders without an offer, and a dri
         ->and($ask('driver_rival'))->toBeNull()
         ->and($ask('1.28,103.85'))->toBeNull()
         ->and($ask(null))->toBeNull();
+});
+
+test('drivers hear when their offer closes, and a broadcast failure is only logged', function () {
+    $connection = rideOffersBoot();
+    rideOffersSeedDrivers($connection);
+    $order                      = rideOffersOrder($connection);
+    RideOffersRecorder::$events = [];
+
+    sequential()->dispatch($order);
+    $offer = OrderOffers::pending($order);
+    Carbon::setTestNow(now()->addMinute());
+    sequential()->expire($offer);
+    Carbon::setTestNow();
+    OrderOffers::withdraw($order);
+    $closed = array_values(array_filter(RideOffersRecorder::$events, fn ($event) => $event instanceof Fleetbase\FleetOps\Events\OrderOfferClosed));
+
+    expect(array_map(fn ($event) => $event->data, $closed))->toBe([['id' => 'order_ride', 'status' => 'expired'], ['id' => 'order_ride', 'status' => 'withdrawn']])
+        ->and($closed[0]->broadcastAs())->toBe('order.offer_closed')
+        ->and(array_map(fn ($channel) => $channel->name, $closed[0]->broadcastOn()))->toBe(['driver.driver_amara', 'driver.amara'])
+        ->and($closed[1]->broadcastWith())->toMatchArray(['event' => 'order.offer_closed', 'data' => ['id' => 'order_ride', 'status' => 'withdrawn']]);
+
+    RideOffersRecorder::$failEvents = true;
+    OrderOffers::announceClosed($order, ['chen'], 'withdrawn');
+    RideOffersRecorder::$failEvents = false;
+    expect(app('log')->warnings)->toContain('Unable to broadcast order.offer_closed');
+});
+
+test('an order config drops an unknown strategy and keeps its offer time in range', function () {
+    $connection = rideOffersBoot();
+    $config     = OrderConfig::where('uuid', 'config-ride')->first();
+
+    $config->forceFill(['adhoc_strategy' => 'lottery', 'adhoc_offer_timeout' => 900])->save();
+    expect($connection->table('order_configs')->value('adhoc_strategy'))->toBeNull()
+        ->and((int) $connection->table('order_configs')->value('adhoc_offer_timeout'))->toBe(120);
+
+    $config->forceFill(['adhoc_strategy' => 'broadcast', 'adhoc_offer_timeout' => null])->save();
+    expect($connection->table('order_configs')->value('adhoc_strategy'))->toBe('broadcast')
+        ->and($connection->table('order_configs')->value('adhoc_offer_timeout'))->toBeNull();
+});
+
+test('strategies describe themselves for people choosing one', function () {
+    expect(AdhocDispatch::describe())->toContain(
+        ['name' => 'broadcast', 'label' => 'Everyone nearby at once', 'description' => (new BroadcastStrategy())->description()],
+        ['name' => 'sequential', 'label' => 'One driver at a time', 'description' => (new SequentialStrategy())->description()],
+    );
+});
+
+test('a rider order keeps how it will be paid on its payload, and tells how dispatch ended', function () {
+    $connection = rideOffersBoot();
+    $order      = ridesSeedTrip($connection, ['status' => 'canceled']);
+    $connection->table('order_offers')->insert(['uuid' => 'f-x', 'order_uuid' => 'order-1', 'driver_uuid' => 'amara', 'status' => 'declined']);
+
+    (new RidesCustomerController())->helper('setPayloadPaymentMethod', 'payload-1', 'card');
+
+    expect($connection->table('payloads')->where('uuid', 'payload-1')->value('payment_method'))->toBe('card')
+        ->and($order->dispatchOutcome())->toBe('no_driver_found')
+        ->and($order->chatChannel)->toBeNull();
 });

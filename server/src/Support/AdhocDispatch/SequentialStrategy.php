@@ -25,6 +25,16 @@ class SequentialStrategy implements AdhocDispatchStrategy
         return AdhocDispatch::SEQUENTIAL;
     }
 
+    public function label(): string
+    {
+        return 'One driver at a time';
+    }
+
+    public function description(): string
+    {
+        return 'The nearest driver is offered the order for a set time, then the next, until one accepts.';
+    }
+
     public function listsOpenly(): bool
     {
         return false;
@@ -81,6 +91,7 @@ class SequentialStrategy implements AdhocDispatchStrategy
             ->update(['status' => OrderOffer::EXPIRED, 'responded_at' => now()]) > 0;
 
         if ($expired && ($order = Order::withoutGlobalScopes()->where('uuid', $offer->order_uuid)->first())) {
+            OrderOffers::announceClosed($order, [$offer->driver_uuid], OrderOffer::EXPIRED);
             $this->offerNext($order);
         }
 

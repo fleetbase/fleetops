@@ -2,10 +2,12 @@
 
 namespace Fleetbase\FleetOps\Support;
 
+use Fleetbase\FleetOps\Events\OrderOfferClosed;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderOffer;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 
 /**
  * The record of who an adhoc order was offered to and how each driver answered, shared by every
@@ -17,6 +19,11 @@ use Illuminate\Support\Carbon;
 class OrderOffers
 {
     public const NO_DRIVER_FOUND = 'No driver found';
+
+    /**
+     * What `outcome()` calls an order canceled because nobody took it.
+     */
+    public const NO_DRIVER_FOUND_OUTCOME = 'no_driver_found';
 
     /**
      * Offer the order to the driver, or keep the offer they already have open.
@@ -114,9 +121,32 @@ class OrderOffers
      */
     public static function withdraw(Order $order): int
     {
-        return OrderOffer::where('order_uuid', $order->uuid)
+        $open      = OrderOffer::where('order_uuid', $order->uuid)->where('status', OrderOffer::PENDING)->pluck('driver_uuid')->all();
+        $withdrawn = OrderOffer::where('order_uuid', $order->uuid)
             ->where('status', OrderOffer::PENDING)
             ->update(['status' => OrderOffer::WITHDRAWN, 'responded_at' => now()]);
+
+        if ($withdrawn) {
+            static::announceClosed($order, $open, OrderOffer::WITHDRAWN);
+        }
+
+        return $withdrawn;
+    }
+
+    /**
+     * Tell each driver their offer for the order closed, so their app takes it off screen.
+     */
+    public static function announceClosed(Order $order, array $driverUuids, string $status): void
+    {
+        $publicIds = Driver::withoutGlobalScopes()->whereIn('uuid', $driverUuids)->pluck('public_id', 'uuid');
+
+        foreach ($driverUuids as $driverUuid) {
+            try {
+                event(new OrderOfferClosed($order->public_id, $status, $publicIds[$driverUuid] ?? null, $driverUuid));
+            } catch (\Throwable $exception) {
+                Log::warning('Unable to broadcast order.offer_closed', ['order' => $order->public_id, 'error' => $exception->getMessage()]);
+            }
+        }
     }
 
     /**
@@ -124,7 +154,22 @@ class OrderOffers
      */
     public static function noDriverFound(Order $order): void
     {
-        $order->updateMeta('dispatch_outcome', 'no_driver_found');
         $order->cancelWithReason(self::NO_DRIVER_FOUND);
+    }
+
+    /**
+     * How offering a canceled adhoc order ended: `no_driver_found` when every driver it was
+     * offered to declined or let the offer run out. Null otherwise, including when someone
+     * canceled it while an offer was still open, which withdraws that offer.
+     */
+    public static function outcome(Order $order): ?string
+    {
+        if ($order->status !== 'canceled' || !$order->adhoc) {
+            return null;
+        }
+
+        $statuses = OrderOffer::where('order_uuid', $order->uuid)->pluck('status')->unique()->values()->all();
+
+        return $statuses !== [] && array_diff($statuses, [OrderOffer::DECLINED, OrderOffer::EXPIRED]) === [] ? self::NO_DRIVER_FOUND_OUTCOME : null;
     }
 }
