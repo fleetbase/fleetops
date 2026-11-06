@@ -196,7 +196,8 @@ test('context builder resolves driver origins stops and warnings', function () {
         ->and($context->stops)->toHaveCount(2)
         ->and($context->remainingStops)->toHaveCount(2)
         ->and($context->activeStop)->not->toBeNull()
-        ->and($context->warnings)->toContain('stale_driver_location');
+        ->and($context->warnings)->toContain('stale_driver_location')
+        ->and($context->driverLocationAgeSeconds)->toBeInt()->toBeGreaterThanOrEqual(3600);
 });
 
 test('context builder falls back to payload origin without a driver', function () {

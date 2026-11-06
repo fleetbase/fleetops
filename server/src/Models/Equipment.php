@@ -297,7 +297,7 @@ class Equipment extends Model
     public function getAgeInDaysAttribute(): ?int
     {
         if ($this->purchased_at) {
-            return $this->purchased_at->diffInDays(now());
+            return (int) $this->purchased_at->diffInDays(now(), true);
         }
 
         return null;
@@ -314,7 +314,7 @@ class Equipment extends Model
 
         $meta             = $this->meta ?? [];
         $depreciationRate = $meta['depreciation_rate'] ?? 0.1; // 10% per year default
-        $yearsOld         = $this->purchased_at->diffInYears(now());
+        $yearsOld         = (int) $this->purchased_at->diffInYears(now(), true);
 
         $depreciatedAmount = $this->purchase_price * ($depreciationRate * $yearsOld);
         $currentValue      = $this->purchase_price - $depreciatedAmount;
@@ -460,7 +460,7 @@ class Equipment extends Model
                 ->first();
 
             $lastMaintenanceDate      = $lastMaintenance?->completed_at ?? $this->purchased_at;
-            $daysSinceLastMaintenance = $lastMaintenanceDate->diffInDays(now());
+            $daysSinceLastMaintenance = (int) $lastMaintenanceDate->diffInDays(now(), true);
 
             return $daysSinceLastMaintenance >= $maintenanceIntervalDays;
         }
@@ -534,7 +534,7 @@ class Equipment extends Model
 
         // Estimate based on purchase price with inflation
         if ($this->purchase_price && $this->purchased_at) {
-            $yearsOld      = $this->purchased_at->diffInYears(now());
+            $yearsOld      = (int) $this->purchased_at->diffInYears(now(), true);
             $inflationRate = $meta['inflation_rate'] ?? 0.03; // 3% default
 
             return $this->purchase_price * pow(1 + $inflationRate, $yearsOld);
