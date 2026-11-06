@@ -26,6 +26,7 @@ use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocDispatch;
+use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocOfferListing;
 use Fleetbase\FleetOps\Support\OrderEdit;
 use Fleetbase\FleetOps\Support\OrderOffers;
 use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
@@ -772,7 +773,15 @@ class OrderController extends Controller
     {
         set_time_limit(180);
 
-        $results = Order::queryWithRequest($request, function (&$query, $request) {
+        // A driver listing orders near them sees only the adhoc orders they could take. That
+        // depends on live offers, so the list isn't cached.
+        $offerDriver = $this->nearbyDriverUuid($request);
+
+        $results = Order::queryWithRequest($request, function (&$query, $request) use ($offerDriver) {
+            if ($offerDriver) {
+                AdhocOfferListing::apply($query, $offerDriver, Company::currentSession());
+            }
+
             $query->with(['trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'customer', 'facilitator']);
             $query->where('company_uuid', session('company'));
             $query->whereNotNull('payload_uuid');
@@ -945,7 +954,11 @@ class OrderController extends Controller
                     }
                 }
             }
-        });
+        }, (bool) $offerDriver);
+
+        if ($offerDriver) {
+            AdhocOfferListing::attach($results, $offerDriver);
+        }
 
         return OrderResource::collection($results);
     }
@@ -1284,6 +1297,19 @@ class OrderController extends Controller
         }
 
         return response()->json(['status' => 'declined', 'order' => $order->public_id]);
+    }
+
+    /**
+     * The driver whose surroundings are asked for with `nearby=driver_…`, if they belong to this company.
+     */
+    protected function nearbyDriverUuid(Request $request): ?string
+    {
+        $nearby = $request->input('nearby');
+        if (!is_string($nearby) || !Str::startsWith($nearby, 'driver_')) {
+            return null;
+        }
+
+        return Driver::withoutGlobalScopes()->where('public_id', $nearby)->where('company_uuid', session('company'))->whereNull('deleted_at')->value('uuid');
     }
 
     protected function findAdhocDriver(string $publicId): ?Driver

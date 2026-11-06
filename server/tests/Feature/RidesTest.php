@@ -1083,3 +1083,58 @@ test('when a ride is completed the rider is told and the ride is priced', functi
     expect(json_decode($connection->table('orders')->value('meta'), true)['fare']['final'])->toBeTrue()
         ->and(RideOffersRecorder::$notified)->toBe([['contact-sam', Fleetbase\FleetOps\Notifications\RideUpdate::class]]);
 });
+
+test('a driver listing nearby orders sees only the adhoc orders they could take', function () {
+    $connection = rideOffersBoot();
+    rideOffersSeedDrivers($connection);
+    $connection->table('orders')->insert([
+        ['uuid' => 'o-held', 'public_id' => 'order_held', 'company_uuid' => 'company-1', 'adhoc' => 1, 'order_config_uuid' => 'config-ride', 'adhoc_strategy' => null],
+        ['uuid' => 'o-other', 'public_id' => 'order_other', 'company_uuid' => 'company-1', 'adhoc' => 1, 'order_config_uuid' => 'config-ride', 'adhoc_strategy' => null],
+        ['uuid' => 'o-lapsed', 'public_id' => 'order_lapsed', 'company_uuid' => 'company-1', 'adhoc' => 1, 'order_config_uuid' => null, 'adhoc_strategy' => 'sequential'],
+        ['uuid' => 'o-open', 'public_id' => 'order_open', 'company_uuid' => 'company-1', 'adhoc' => 1, 'order_config_uuid' => null, 'adhoc_strategy' => 'broadcast'],
+        ['uuid' => 'o-refused', 'public_id' => 'order_refused', 'company_uuid' => 'company-1', 'adhoc' => 1, 'order_config_uuid' => null, 'adhoc_strategy' => 'broadcast'],
+        ['uuid' => 'o-default', 'public_id' => 'order_default', 'company_uuid' => 'company-1', 'adhoc' => 1, 'order_config_uuid' => null, 'adhoc_strategy' => null],
+        ['uuid' => 'o-planned', 'public_id' => 'order_planned', 'company_uuid' => 'company-1', 'adhoc' => 0, 'order_config_uuid' => null, 'adhoc_strategy' => null],
+    ]);
+    $connection->table('orders')->insert(['uuid' => 'o-taken', 'public_id' => 'order_taken', 'company_uuid' => 'company-1', 'adhoc' => 1, 'driver_assigned_uuid' => 'chen']);
+    $connection->table('order_offers')->insert([
+        ['uuid' => 'f1', 'order_uuid' => 'o-held', 'driver_uuid' => 'amara', 'status' => 'pending', 'expires_at' => '2099-01-01 00:00:00'],
+        ['uuid' => 'f2', 'order_uuid' => 'o-other', 'driver_uuid' => 'chen', 'status' => 'pending', 'expires_at' => '2099-01-01 00:00:00'],
+        ['uuid' => 'f3', 'order_uuid' => 'o-lapsed', 'driver_uuid' => 'amara', 'status' => 'pending', 'expires_at' => '2020-01-01 00:00:00'],
+        ['uuid' => 'f4', 'order_uuid' => 'o-refused', 'driver_uuid' => 'amara', 'status' => 'declined', 'expires_at' => null],
+    ]);
+    $company = Fleetbase\Models\Company::where('uuid', 'company-1')->first();
+    $listed  = fn ($company) => Fleetbase\FleetOps\Support\AdhocDispatch\AdhocOfferListing::apply(Order::query()->withoutGlobalScopes(), 'amara', $company)->orderBy('id')->pluck('public_id')->all();
+
+    // One at a time by default: Amara sees her own open offer, the open order she didn't decline,
+    // planned orders, and an order someone already took.
+    expect($listed($company))->toBe(['order_held', 'order_open', 'order_planned', 'order_taken']);
+
+    // With the company defaulting to everyone at once, unset orders show too.
+    $connection->table('companies')->where('uuid', 'company-1')->update(['options' => json_encode(['fleetops' => ['adhoc_strategy' => 'broadcast']])]);
+    $company = Fleetbase\Models\Company::where('uuid', 'company-1')->first();
+    expect($listed($company))->toBe(['order_held', 'order_open', 'order_default', 'order_planned', 'order_taken']);
+
+    // Each order carries Amara's open offer, or none.
+    $orders = Order::withoutGlobalScopes()->whereIn('uuid', ['o-held', 'o-open'])->orderBy('id')->get();
+    Fleetbase\FleetOps\Support\AdhocDispatch\AdhocOfferListing::attach($orders, 'amara');
+    expect($orders[0]->adhocOffer->uuid)->toBe('f1')
+        ->and($orders[1]->adhocOffer)->toBeNull()
+        ->and(Fleetbase\FleetOps\Support\AdhocDispatch\AdhocOfferListing::present($orders[0]->adhocOffer))->toBe(['status' => 'pending', 'expires_at' => '2099-01-01T00:00:00.000000Z'])
+        ->and(Fleetbase\FleetOps\Support\AdhocDispatch\AdhocOfferListing::present(null))->toBeNull();
+});
+
+test('only a strategy that lists openly shows orders without an offer, and a driver is found by public id', function () {
+    rideOffersBoot();
+    rideOffersSeedDrivers(Illuminate\Support\Facades\DB::connection());
+    $helper = new ReflectionMethod(Fleetbase\FleetOps\Http\Controllers\Api\v1\OrderController::class, 'nearbyDriverUuid');
+    $ask    = fn ($nearby) => $helper->invoke(new Fleetbase\FleetOps\Http\Controllers\Api\v1\OrderController(), Illuminate\Http\Request::create('/', 'GET', ['nearby' => $nearby]));
+
+    expect(AdhocDispatch::openlyListed())->toBe(['broadcast'])
+        ->and((new BroadcastStrategy())->listsOpenly())->toBeTrue()
+        ->and((new SequentialStrategy())->listsOpenly())->toBeFalse()
+        ->and($ask('driver_amara'))->toBe('amara')
+        ->and($ask('driver_rival'))->toBeNull()
+        ->and($ask('1.28,103.85'))->toBeNull()
+        ->and($ask(null))->toBeNull();
+});

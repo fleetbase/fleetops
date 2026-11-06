@@ -21,6 +21,13 @@ interface AdhocDispatchStrategy
     public function name(): string;
 
     /**
+     * Whether a driver nearby sees the order in their list without holding an offer for it.
+     * True for everyone-at-once offering, false when it goes to one driver at a time. A driver
+     * who declined never sees it, and one holding an open offer always does.
+     */
+    public function listsOpenly(): bool;
+
+    /**
      * The order was just dispatched: offer it to drivers.
      */
     public function dispatch(Order $order): void;

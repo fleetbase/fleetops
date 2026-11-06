@@ -25,6 +25,11 @@ class SequentialStrategy implements AdhocDispatchStrategy
         return AdhocDispatch::SEQUENTIAL;
     }
 
+    public function listsOpenly(): bool
+    {
+        return false;
+    }
+
     public function dispatch(Order $order): void
     {
         if (!OrderOffer::where('order_uuid', $order->uuid)->exists()) {

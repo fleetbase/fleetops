@@ -23,6 +23,11 @@ class BroadcastStrategy implements AdhocDispatchStrategy
         return AdhocDispatch::BROADCAST;
     }
 
+    public function listsOpenly(): bool
+    {
+        return true;
+    }
+
     public function dispatch(Order $order): void
     {
         $this->offer($order);

@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
 use Fleetbase\FleetOps\Models\Contact as ContactModel;
+use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocOfferListing;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\Comment;
 use Fleetbase\Http\Resources\File;
@@ -90,6 +91,8 @@ class Order extends FleetbaseResource
             'adhoc_distance'                       => (int) $this->getAdhocDistance(),
             'adhoc_strategy'                       => $this->adhoc_strategy,
             'required_vehicle_type'                => $this->required_vehicle_type,
+            // The asking driver's open offer, when they listed orders near them.
+            'adhoc_offer'                          => $this->when($this->resource->relationLoaded('adhocOffer'), fn () => AdhocOfferListing::present($this->adhocOffer)),
             'distance'                             => (int) $this->distance,
             'time'                                 => (int) $this->time,
             'transaction_amount'                   => $this->transaction_amount,

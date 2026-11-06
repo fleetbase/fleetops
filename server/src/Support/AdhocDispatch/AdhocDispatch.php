@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Support\AdhocDispatch;
 
 use Fleetbase\FleetOps\Contracts\AdhocDispatchStrategy;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\Models\Company;
 
 /**
  * The registry of adhoc dispatch strategies, and which one an order uses.
@@ -62,24 +63,44 @@ class AdhocDispatch
      */
     public static function nameFor(Order $order): string
     {
-        $candidates = [
-            $order->adhoc_strategy,
-            $order->config()?->adhoc_strategy,
-            data_get($order, 'company.options.fleetops.adhoc_strategy'),
-        ];
-
-        foreach ($candidates as $name) {
+        foreach ([$order->adhoc_strategy, $order->config()?->adhoc_strategy] as $name) {
             if (static::has($name)) {
                 return $name;
             }
         }
 
-        return self::DEFAULT;
+        return static::companyDefault($order->company);
+    }
+
+    /**
+     * The company's default strategy (`fleetops.adhoc_strategy`), or the default when it has none.
+     */
+    public static function companyDefault(?Company $company): string
+    {
+        $name = $company?->getOption('fleetops.adhoc_strategy');
+
+        return static::has($name) ? $name : self::DEFAULT;
     }
 
     public static function for(Order $order): AdhocDispatchStrategy
     {
-        return app(static::$strategies[static::nameFor($order)]);
+        return static::strategy(static::nameFor($order));
+    }
+
+    /**
+     * The registered strategy of that name.
+     */
+    public static function strategy(string $name): AdhocDispatchStrategy
+    {
+        return app(static::$strategies[$name]);
+    }
+
+    /**
+     * Strategies whose orders drivers see without holding an offer.
+     */
+    public static function openlyListed(): array
+    {
+        return array_values(array_filter(static::names(), fn (string $name) => static::strategy($name)->listsOpenly()));
     }
 
     /**
@@ -87,7 +108,7 @@ class AdhocDispatch
      */
     public static function offerTimeout(Order $order): int
     {
-        $timeout = $order->config()?->adhoc_offer_timeout ?? data_get($order, 'company.options.fleetops.adhoc_offer_timeout') ?? self::OFFER_TIMEOUT;
+        $timeout = $order->config()?->adhoc_offer_timeout ?? $order->company?->getOption('fleetops.adhoc_offer_timeout') ?? self::OFFER_TIMEOUT;
 
         return max(self::MIN_OFFER_TIMEOUT, min(self::MAX_OFFER_TIMEOUT, (int) $timeout));
     }

@@ -420,6 +420,11 @@ class FleetOpsAdhocStrategyFake implements Fleetbase\FleetOps\Contracts\AdhocDis
         return 'fake';
     }
 
+    public function listsOpenly(): bool
+    {
+        return false;
+    }
+
     public function dispatch(Order $order): void
     {
     }
