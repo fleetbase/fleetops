@@ -251,8 +251,8 @@ export default class OrderConfigManagerComponent extends Component {
             orderConfig.unloadRecord();
             this.notifications.success(this.intl.t('order-config-manager.create-success-message'));
             this.loadOrderConfigs.perform({
-                onAfter: () => {
-                    const created = this.configs.find((config) => config.id === order_config?.id || config.public_id === order_config?.public_id);
+                onAfter: (configs = []) => {
+                    const created = configs.find((config) => config.id === order_config?.uuid || config.public_id === order_config?.public_id);
                     if (created) {
                         this.selectConfig(created);
                     }
