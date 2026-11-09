@@ -6,7 +6,7 @@ use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasUuid;
 
 /**
- * A rider's stars, from 1 to 5, for the driver of a finished order. One per order.
+ * A customer's stars, from 1 to 5, for the driver of a finished order. One per order.
  */
 class DriverRating extends Model
 {

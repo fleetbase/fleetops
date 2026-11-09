@@ -9,8 +9,8 @@ use Fleetbase\FleetOps\Models\TrackingNumber;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\LiveCacheService;
-use Fleetbase\FleetOps\Support\Rides\FinalFare;
-use Fleetbase\FleetOps\Support\Rides\RideUpdates;
+use Fleetbase\FleetOps\Support\OrderConfig\OrderConfigTriggers;
+use Fleetbase\FleetOps\Support\OrderRepricing;
 use Fleetbase\FleetOps\Support\TrackingPublisher;
 use Fleetbase\Support\ApiModelCache;
 use Illuminate\Support\Facades\Cache;
@@ -34,6 +34,8 @@ class OrderObserver
     public function created(Order $order)
     {
         $this->invalidateCache($order);
+
+        OrderConfigTriggers::fire($order, OrderConfigTriggers::ORDER_CREATED);
     }
 
     /**
@@ -76,13 +78,36 @@ class OrderObserver
         // Public tracking channels follow status, assignment and ETA changes.
         app(TrackingPublisher::class)->orderChanged($order);
 
-        // A rider hears about each step of their ride. This reads the order's changes, so it
-        // comes before pricing, which saves the order again.
-        RideUpdates::statusChanged($order);
-
-        // A finished ride is priced from the actual trip.
         if ($order->wasChanged('status')) {
-            FinalFare::settle($order);
+            // A completed order is priced again from what actually happened, when its config's
+            // pricing policy asks for it. This comes first, so triggers see the final price.
+            OrderRepricing::settle($order);
+
+            $this->runStatusTriggers($order);
+        }
+    }
+
+    /**
+     * Run the config's triggers for the order's new status: the actions of the activity it
+     * reached, then `order.completed` or `order.canceled` when it reached one of those.
+     */
+    protected function runStatusTriggers(Order $order): void
+    {
+        $config = $order->currentConfig();
+        if (!$config) {
+            return;
+        }
+
+        $completed = $config->getCompletedActivity()?->code;
+        $canceled  = $config->getCanceledActivity()?->code;
+        $activity  = $config->getActivityByCode((string) $order->status);
+
+        OrderConfigTriggers::activity($order, $activity);
+
+        if ($order->status === $completed) {
+            OrderConfigTriggers::fire($order, OrderConfigTriggers::ORDER_COMPLETED);
+        } elseif ($order->status === $canceled) {
+            OrderConfigTriggers::fire($order, OrderConfigTriggers::ORDER_CANCELED);
         }
     }
 

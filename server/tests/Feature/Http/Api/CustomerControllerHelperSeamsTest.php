@@ -890,7 +890,7 @@ test('rider place search and geocoding reach the place search service', function
     $search     = new ReflectionMethod(CustomerController::class, 'runPlaceSearch');
     $geocode    = new ReflectionMethod(CustomerController::class, 'geocodePlaces');
     $resource   = new ReflectionMethod(CustomerController::class, 'placeResource');
-    $owned      = new ReflectionMethod(CustomerController::class, 'riderPlaceQuery');
+    $owned      = new ReflectionMethod(CustomerController::class, 'customerPlaceQuery');
     $customer   = new Contact();
     $customer->setRawAttributes(['uuid' => 'rider-1'], true);
 

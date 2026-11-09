@@ -4,19 +4,22 @@ namespace Fleetbase\FleetOps\Support;
 
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Filters shared by every query that finds drivers for an order: the order's own company,
- * drivers not already on a job, and the vehicle type the order needs.
+ * Filters shared by every query that finds drivers for an order: the order's own company, the
+ * vehicle type the order needs, and, when the order's config asks for it, drivers not already
+ * on an order.
  */
 class DriverMatching
 {
     /**
-     * A driver whose current job has one of these statuses is free again.
+     * A driver whose current job has one of these statuses is free again, along with the
+     * terminal statuses of the company's order configs.
      */
-    public const FREE_JOB_STATUSES = ['completed', 'canceled', 'no_show'];
+    public const FREE_JOB_STATUSES = ['completed', 'canceled'];
 
     /**
      * Available, online drivers who could take the order, with their `distance` from the pickup in
@@ -48,7 +51,10 @@ class DriverMatching
     public static function forOrder(Builder $query, Order $order): Builder
     {
         static::inCompany($query, $order->company_uuid);
-        static::notBusy($query);
+
+        if ($order->currentConfig()?->policy('dispatch.matching.exclude_busy_drivers')) {
+            static::notBusy($query, $order->company_uuid);
+        }
 
         return static::forVehicleClass($query, static::vehicleClass($order));
     }
@@ -68,20 +74,37 @@ class DriverMatching
      * Drivers with no current job, or whose current job has finished. A job left behind by an
      * order that ended without clearing it doesn't keep the driver busy.
      */
-    public static function notBusy(Builder $query): Builder
+    public static function notBusy(Builder $query, ?string $companyUuid = null): Builder
     {
-        $drivers = $query->getModel()->getTable();
+        $drivers      = $query->getModel()->getTable();
+        $freeStatuses = static::freeJobStatuses($companyUuid);
 
-        return $query->where(function ($query) use ($drivers) {
+        return $query->where(function ($query) use ($drivers, $freeStatuses) {
             $query->whereNull($drivers . '.current_job_uuid')
-                ->orWhereNotExists(function ($jobs) use ($drivers) {
+                ->orWhereNotExists(function ($jobs) use ($drivers, $freeStatuses) {
                     $jobs->selectRaw('1')
                         ->from('orders')
                         ->whereColumn('orders.uuid', $drivers . '.current_job_uuid')
                         ->whereNull('orders.deleted_at')
-                        ->whereNotIn('orders.status', self::FREE_JOB_STATUSES);
+                        ->whereNotIn('orders.status', $freeStatuses);
                 });
         });
+    }
+
+    /**
+     * The statuses at which an order no longer keeps its driver busy: completed, canceled, and
+     * every terminal activity of the company's order configs.
+     */
+    public static function freeJobStatuses(?string $companyUuid): array
+    {
+        $statuses = self::FREE_JOB_STATUSES;
+        if ($companyUuid) {
+            foreach (OrderConfig::where('company_uuid', $companyUuid)->get() as $config) {
+                $statuses = array_merge($statuses, $config->getTerminalActivityCodes());
+            }
+        }
+
+        return array_values(array_unique(array_filter($statuses, 'is_string')));
     }
 
     /**

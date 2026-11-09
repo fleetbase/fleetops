@@ -9,8 +9,8 @@ use Fleetbase\FleetOps\Http\Requests\CreateCustomerRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateContactRequest;
 use Fleetbase\FleetOps\Http\Requests\VerifyCreateCustomerRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\Customer as CustomerResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
-use Fleetbase\FleetOps\Http\Resources\v1\RiderOrder as RiderOrderResource;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderConfig;
@@ -18,9 +18,10 @@ use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Support\CustomerAuth;
+use Fleetbase\FleetOps\Support\DriverRatings;
+use Fleetbase\FleetOps\Support\OrderChat;
+use Fleetbase\FleetOps\Support\OrderCustomFields;
 use Fleetbase\FleetOps\Support\PlaceSearch;
-use Fleetbase\FleetOps\Support\Rides\DriverRatings;
-use Fleetbase\FleetOps\Support\Rides\RideChat;
 use Fleetbase\FleetOps\Support\TrackingCode;
 use Fleetbase\FleetOps\Support\TrackingPage\TrackingShare;
 use Fleetbase\FleetOps\Support\TrackingScope;
@@ -55,9 +56,9 @@ class CustomerController extends Controller
     public const DEACTIVATED_LOGIN_MESSAGE = 'This customer login has been deactivated.';
 
     /**
-     * Relations a rider's order is returned with.
+     * Relations a customer's order is returned with.
      */
-    protected const RIDER_ORDER_RELATIONS = ['payload', 'payload.pickup', 'payload.dropoff'];
+    protected const CUSTOMER_ORDER_RELATIONS = ['payload', 'payload.pickup', 'payload.dropoff', 'transaction', 'driverRating'];
 
     /**
      * Wrong guesses a single code tolerates before it locks itself (core's check()).
@@ -194,7 +195,7 @@ class CustomerController extends Controller
                 'email'        => $isEmail ? $identity : $request->input('email'),
                 'phone'        => $isEmail ? static::phone($request->input('phone')) : $identity,
             ]);
-            // Phone riders sign in with a code, so they may have no password at all.
+            // Customers who sign in by phone use a code, so they may have no password at all.
             if ($request->filled('password')) {
                 $user->password = $request->input('password');
             }
@@ -449,7 +450,7 @@ class CustomerController extends Controller
 
     /**
      * Send a code to a phone number without revealing whether it has an account. An
-     * existing rider gets a login code and a new one gets a signup code; both answer the
+     * existing customer gets a login code and a new one gets a signup code; both answer the
      * same way. {@see verifyCode} tells them apart once the code is proven.
      */
     public function requestCode(Request $request)
@@ -697,8 +698,9 @@ class CustomerController extends Controller
     }
 
     /**
-     * Delete the rider's account: sign them out everywhere, delete their saved places and remove
-     * their name and contact details. Their past trips stay on the operator's books without them.
+     * Delete the customer's account: sign them out everywhere, delete their saved places and
+     * remove their name and contact details. Their past orders stay on the operator's books
+     * without them.
      */
     public function deleteMe()
     {
@@ -707,8 +709,8 @@ class CustomerController extends Controller
             return response()->apiError('Not authenticated.', 401);
         }
 
-        if ($this->hasActiveRide($customer)) {
-            return response()->apiError('Finish or cancel your ride before deleting your account.', 422);
+        if ($this->hasOrdersInProgress($customer)) {
+            return response()->apiError('You have orders in progress. Wait for them to finish, or cancel them, before deleting your account.', 422);
         }
 
         $user = $customer->user_uuid ? $this->findUserByUuid($customer->user_uuid) : null;
@@ -831,18 +833,34 @@ class CustomerController extends Controller
             return response()->apiError('No order config available for this company.', 422);
         }
 
-        $serviceQuote = $this->resolveServiceQuote($request);
-        if ($serviceQuote instanceof ServiceQuote && ($serviceQuote->company_uuid !== $sessionCompany || $serviceQuote->expired_at?->isPast())) {
-            return response()->apiError('This fare has expired. Please get a new one.', 422);
+        if (!$this->customersMayOrder($orderConfig)) {
+            return response()->apiError('Customers cannot place this type of order.', 422);
         }
 
-        // A config that matches customer orders by vehicle type needs a fare, which says the type.
-        $byVehicleType = (bool) $orderConfig->match_vehicle_type;
-        if ($byVehicleType && !$serviceQuote instanceof ServiceQuote) {
-            return response()->apiError('Choose a ride option first.', 422);
+        $serviceQuote = $this->resolveServiceQuote($request);
+        if ($serviceQuote instanceof ServiceQuote && ($serviceQuote->company_uuid !== $sessionCompany || $serviceQuote->expired_at?->isPast())) {
+            return response()->apiError('This quote has expired. Please get a new one.', 422);
         }
-        if ($orderConfig->key === 'ride' && $this->hasUnpaidRide($customer)) {
-            return response()->apiError('Pay for your last trip before you book another.', 402);
+
+        // Matching drivers by vehicle type needs a quote, whose service says the type.
+        $byVehicleType = (bool) $orderConfig->policy('dispatch.matching.vehicle_type');
+        if (($byVehicleType || $orderConfig->policy('customer.ordering.require_quote')) && !$serviceQuote instanceof ServiceQuote) {
+            return response()->apiError('Choose a service quote for this order first.', 422);
+        }
+
+        $paymentMethod  = $request->input('payment_method');
+        $paymentMethods = array_values((array) $orderConfig->policy('customer.ordering.payment_methods', []));
+        if ($paymentMethod !== null && $paymentMethods !== [] && !in_array($paymentMethod, $paymentMethods, true)) {
+            return response()->apiError('Choose a payment method: ' . implode(', ', $paymentMethods) . '.', 422);
+        }
+
+        if ($this->hasUnsettledOrder($customer, $orderConfig)) {
+            return response()->apiError('Settle your previous order before placing another.', 402);
+        }
+
+        $customFieldErrors = OrderCustomFields::validate($orderConfig, (array) $request->input('custom_fields', []));
+        if ($customFieldErrors) {
+            return response()->apiError($customFieldErrors, 422);
         }
 
         $vehicleType = $byVehicleType ? $serviceQuote->serviceRate?->service_type : null;
@@ -871,8 +889,7 @@ class CustomerController extends Controller
         }
 
         // How the customer will pay, kept on the payload this order was given.
-        $paymentMethod = $request->input('payment_method');
-        if ($builtHere && in_array($paymentMethod, ['cash', 'card'], true)) {
+        if ($builtHere && is_string($paymentMethod) && in_array($paymentMethod, $paymentMethods, true)) {
             $this->setPayloadPaymentMethod($payloadUuid, $paymentMethod);
         }
 
@@ -883,11 +900,11 @@ class CustomerController extends Controller
             'payload_uuid'          => $payloadUuid,
             'order_config_uuid'     => $orderConfig->uuid,
             'type'                  => $orderConfig->key,
-            'status'                => 'created',
+            'status'                => $orderConfig->getInitialStatusCode(),
             'scheduled_at'          => $request->input('scheduled_at'),
             'notes'                 => $request->input('notes'),
             'internal_id'           => $request->input('internal_id'),
-            'adhoc'                 => (bool) $orderConfig->customer_orders_adhoc,
+            'adhoc'                 => (bool) $orderConfig->policy('dispatch.adhoc.customer_orders'),
             'required_vehicle_type' => $vehicleType,
             'meta'                  => (array) $request->input('meta', []),
         ]);
@@ -899,7 +916,9 @@ class CustomerController extends Controller
             $order->purchaseServiceQuote($serviceQuote);
         }
 
-        return $this->orderResource($order->fresh(['payload', 'payload.pickup', 'payload.dropoff', 'payload.entities']));
+        OrderCustomFields::apply($order, (array) $request->input('custom_fields', []));
+
+        return $this->orderResource($order->fresh([...static::CUSTOMER_ORDER_RELATIONS, 'payload.entities']));
     }
 
     /**
@@ -964,8 +983,8 @@ class CustomerController extends Controller
     }
 
     /**
-     * Search this rider's saved places and the geocoder. Other riders' places are never
-     * returned, and neither are unowned rows, which hold addresses from other riders' trips.
+     * Search this customer's saved places and the geocoder. Other customers' places are never
+     * returned, and neither are unowned rows, which hold addresses from other customers' orders.
      */
     public function searchPlaces(Request $request)
     {
@@ -974,7 +993,7 @@ class CustomerController extends Controller
             return response()->apiError('Not authenticated.', 401);
         }
 
-        return $this->placeResourceCollection($this->runPlaceSearch($this->riderPlaceQuery($customer), (string) $request->input('query', ''), [
+        return $this->placeResourceCollection($this->runPlaceSearch($this->customerPlaceQuery($customer), (string) $request->input('query', ''), [
             'limit'          => min((int) $request->input('limit', 10), 50),
             'geo'            => true,
             'latitude'       => $request->input('latitude', false),
@@ -1004,7 +1023,7 @@ class CustomerController extends Controller
     }
 
     /**
-     * Save a place for the authenticated rider.
+     * Save a place for the authenticated customer.
      */
     public function savePlace(Request $request)
     {
@@ -1029,7 +1048,7 @@ class CustomerController extends Controller
     }
 
     /**
-     * Update one of the authenticated rider's saved places.
+     * Update one of the authenticated customer's saved places.
      */
     public function updatePlace(string $id, Request $request)
     {
@@ -1053,7 +1072,7 @@ class CustomerController extends Controller
     }
 
     /**
-     * Delete one of the authenticated rider's saved places.
+     * Delete one of the authenticated customer's saved places.
      */
     public function deletePlace(string $id)
     {
@@ -1068,7 +1087,7 @@ class CustomerController extends Controller
     }
 
     /**
-     * Send a code to the number a rider wants to change to, so {@see updateMe} can prove
+     * Send a code to the number a customer wants to change to, so {@see updateMe} can prove
      * they hold it.
      */
     public function requestPhoneChangeCode(Request $request)
@@ -1111,7 +1130,7 @@ class CustomerController extends Controller
     }
 
     /**
-     * Request a driver for one of the authenticated rider's orders.
+     * Request a driver for one of the authenticated customer's orders.
      */
     public function dispatchOrder(string $id)
     {
@@ -1123,7 +1142,7 @@ class CustomerController extends Controller
         if ($order->dispatched) {
             return response()->apiError('Order has already been dispatched.', 422);
         }
-        if ($order->status !== 'created') {
+        if ($this->orderHasEnded($order) || $order->status !== $order->config()->getInitialStatusCode() || !$order->config()->allowsDispatch()) {
             return response()->apiError('This order can no longer be dispatched.', 422);
         }
         if (!$order->hasDriverAssigned && !$order->adhoc) {
@@ -1133,11 +1152,11 @@ class CustomerController extends Controller
         $order->dispatch();
         $order->insertDispatchActivity();
 
-        return $this->orderResource($order->fresh(static::RIDER_ORDER_RELATIONS));
+        return $this->orderResource($order->fresh(static::CUSTOMER_ORDER_RELATIONS));
     }
 
     /**
-     * Cancel one of the authenticated rider's orders.
+     * Cancel one of the authenticated customer's orders, when its config lets customers cancel.
      */
     public function cancelOrder(string $id, Request $request)
     {
@@ -1146,7 +1165,7 @@ class CustomerController extends Controller
             return response()->apiError('Order not found.', 404);
         }
 
-        if (in_array($order->status, ['completed', 'canceled'], true) || $order->config()->isTerminalActivityCode($order->status)) {
+        if (!$this->customerMayCancel($order)) {
             return response()->apiError('This order can no longer be canceled.', 422);
         }
 
@@ -1157,12 +1176,12 @@ class CustomerController extends Controller
             $order->cancel();
         }
 
-        return $this->orderResource($order->fresh(static::RIDER_ORDER_RELATIONS));
+        return $this->orderResource($order->fresh(static::CUSTOMER_ORDER_RELATIONS));
     }
 
     /**
-     * The driver and car a rider needs to find their ride. The driver's contact details stay
-     * out, because riders and drivers don't share phone numbers.
+     * The driver and vehicle of one of the customer's orders, so the customer can recognise them.
+     * The driver's contact details stay out: customers and drivers don't share phone numbers.
      */
     public function orderDriver(string $id)
     {
@@ -1189,7 +1208,7 @@ class CustomerController extends Controller
     }
 
     /**
-     * Live tracking data for one of the authenticated rider's orders.
+     * Live tracking data for one of the authenticated customer's orders.
      */
     public function orderTracker(string $id, Request $request)
     {
@@ -1206,7 +1225,7 @@ class CustomerController extends Controller
     }
 
     /**
-     * ETA for one of the authenticated rider's orders.
+     * ETA for one of the authenticated customer's orders.
      */
     public function orderEta(string $id, Request $request)
     {
@@ -1223,8 +1242,8 @@ class CustomerController extends Controller
     }
 
     /**
-     * The chat with the driver of one of the rider's rides, oldest message first. Empty until a
-     * driver accepts.
+     * The chat with the driver of one of the customer's orders, oldest message first. Empty until
+     * a driver is assigned. Needs the config's `customer.interactions.chat` policy.
      */
     public function orderMessages(string $id)
     {
@@ -1232,14 +1251,17 @@ class CustomerController extends Controller
         if (!$order) {
             return response()->apiError('Order not found.', 404);
         }
+        if (!$order->config()->policy('customer.interactions.chat')) {
+            return response()->apiError('Messaging the driver is not available for this order.', 403);
+        }
 
-        $channel = $this->rideChannel($order);
+        $channel = $this->orderChannel($order);
 
-        return response()->json($channel ? RideChat::messages($channel, $this->currentCustomer()->user_uuid)->all() : []);
+        return response()->json($channel ? OrderChat::messages($channel, $this->currentCustomer()->user_uuid)->all() : []);
     }
 
     /**
-     * Send the driver a message. The rider always writes as themselves.
+     * Send the driver a message. The customer always writes as themselves.
      */
     public function sendOrderMessage(string $id, Request $request)
     {
@@ -1248,27 +1270,31 @@ class CustomerController extends Controller
             return response()->apiError('Order not found.', 404);
         }
 
+        if (!$order->config()->policy('customer.interactions.chat')) {
+            return response()->apiError('Messaging the driver is not available for this order.', 403);
+        }
+
         $text = trim((string) $request->input('text'));
         if ($text === '' || mb_strlen($text) > 2000) {
             return response()->apiError('Write a message of up to 2000 characters.', 422);
         }
-        if ($this->rideHasEnded($order)) {
-            return response()->apiError('This ride has ended.', 422);
-        }
 
-        $channel = $this->rideChannel($order);
+        $channel = $this->orderChannel($order);
+        if ($this->chatIsClosed($order, $channel)) {
+            return response()->apiError('This conversation has ended.', 422);
+        }
         if (!$channel) {
-            return response()->apiError('You can message your driver once they accept.', 422);
+            return response()->apiError('You can message the driver once one is assigned.', 422);
         }
 
-        $riderUser = $this->currentCustomer()->user_uuid;
-        $message   = RideChat::send($channel, $riderUser, $text);
+        $customerUser = $this->currentCustomer()->user_uuid;
+        $message      = OrderChat::send($channel, $customerUser, $text);
 
-        return response()->json(RideChat::messages($channel, $riderUser)->firstWhere('id', $message->public_id ?? $message->uuid), 201);
+        return response()->json(OrderChat::messages($channel, $customerUser)->firstWhere('id', $message->public_id ?? $message->uuid), 201);
     }
 
     /**
-     * Rate the driver of a finished ride, once.
+     * Rate the driver of a completed order, once. Needs the config's `customer.interactions.rating` policy.
      */
     public function rateOrder(string $id, Request $request)
     {
@@ -1277,24 +1303,29 @@ class CustomerController extends Controller
             return response()->apiError('Order not found.', 404);
         }
 
+        if (!$order->config()->policy('customer.interactions.rating')) {
+            return response()->apiError('Rating the driver is not available for this order.', 403);
+        }
+
         $stars = $request->input('stars');
         if (!is_numeric($stars) || (int) $stars != $stars || $stars < 1 || $stars > 5) {
             return response()->apiError('Rate from 1 to 5 stars.', 422);
         }
-        if ($order->status !== 'completed' || !$order->driver_assigned_uuid) {
-            return response()->apiError('Only a finished ride can be rated.', 422);
+        if ($order->status !== $order->config()->getCompletedActivity()?->code || !$order->driver_assigned_uuid) {
+            return response()->apiError('Only a completed order can be rated.', 422);
         }
 
         $comment = $request->input('comment');
         if (!DriverRatings::rate($order, (int) $stars, is_string($comment) ? Str::limit($comment, 1000, '') : null)) {
-            return response()->apiError('You already rated this ride.', 409);
+            return response()->apiError('You already rated this order.', 409);
         }
 
         return response()->json(['status' => 'rated']);
     }
 
     /**
-     * A link the rider can send to someone they trust to follow the ride live, without a code.
+     * A link the customer can send to someone they trust to follow the order live, without a
+     * code. Needs the config's `customer.interactions.share_tracking` policy.
      */
     public function shareOrder(string $id)
     {
@@ -1303,9 +1334,13 @@ class CustomerController extends Controller
             return response()->apiError('Order not found.', 404);
         }
 
+        if (!$order->config()->policy('customer.interactions.share_tracking')) {
+            return response()->apiError('Sharing tracking is not available for this order.', 403);
+        }
+
         $number = data_get($order, 'trackingNumber.tracking_number');
-        if (!$number || $this->rideHasEnded($order)) {
-            return response()->apiError('This ride can no longer be shared.', 422);
+        if (!$number || $this->orderHasEnded($order)) {
+            return response()->apiError('This order can no longer be shared.', 422);
         }
 
         $scope     = TrackingScope::forCustomer($order, $this->currentCustomer());
@@ -1315,20 +1350,6 @@ class CustomerController extends Controller
         return response()->json([
             'url'        => $url . (str_contains($url, '?') ? '&' : '?') . 'share=' . TrackingShare::token($scope->order_uuid, $scope->customer_uuid, $expiresAt),
             'expires_at' => $expiresAt->toISOString(),
-        ]);
-    }
-
-    /**
-     * What the rider app shows from the operator's ride settings: the emergency number and support contacts.
-     */
-    public function rideSettings()
-    {
-        $config = OrderConfig::where('company_uuid', $this->sessionCompany())->where('key', 'ride')->first();
-        $rider  = (array) data_get($config?->meta, 'rider', []);
-
-        return response()->json([
-            'emergency_number' => $rider['emergency_number'] ?? null,
-            'support'          => ['phone' => $rider['support_phone'] ?? null, 'email' => $rider['support_email'] ?? null],
         ]);
     }
 
@@ -1366,7 +1387,7 @@ class CustomerController extends Controller
      * ============================================================ */
 
     /**
-     * Why a rider can't change to this phone number, or null if they can. A number is only
+     * Why a customer can't change to this phone number, or null if they can. A number is only
      * accepted with a code sent to it, and never if another account holds it.
      */
     protected function refusePhoneChange(Contact $customer, string $phone, mixed $code): ?JsonResponse
@@ -1396,60 +1417,110 @@ class CustomerController extends Controller
         return TrackingCode::pageUrl($number, $companyUuid);
     }
 
-    protected function rideChannel(Order $order): mixed
+    protected function orderChannel(Order $order): mixed
     {
-        return RideChat::channel($order);
+        return OrderChat::open($order);
     }
 
-    protected function rideHasEnded(Order $order): bool
+    protected function chatIsClosed(Order $order, mixed $channel): bool
+    {
+        return OrderChat::isClosed($order, $channel ?: null);
+    }
+
+    protected function orderHasEnded(Order $order): bool
     {
         return in_array($order->status, ['completed', 'canceled'], true) || (bool) $order->config()?->isTerminalActivityCode($order->status);
     }
 
     /**
-     * Whether one of the rider's recent card trips has a final fare and isn't paid (`paid_at`,
-     * set by the billing package). Cash is collected by the driver, so it never blocks a booking.
+     * Whether customers may place orders of the config: every config, unless the company chose
+     * which configs customers may use (`fleet-ops.customer-enabled-order-configs`).
      */
-    protected function hasUnpaidRide(Contact $customer): bool
+    protected function customersMayOrder(OrderConfig $orderConfig): bool
     {
+        $enabled = array_filter((array) $this->lookupCompanySetting('fleet-ops.customer-enabled-order-configs', []));
+
+        return $enabled === [] || in_array($orderConfig->uuid, $enabled, true) || in_array($orderConfig->public_id, $enabled, true);
+    }
+
+    protected function lookupCompanySetting(string $key, mixed $default = null): mixed
+    {
+        return \Fleetbase\Models\Setting::lookupFromCompany($key, $default);
+    }
+
+    /**
+     * Whether the customer may still cancel the order: their config lets customers cancel, the
+     * order hasn't finished, and it hasn't reached the config's `allowed_until` activity.
+     */
+    protected function customerMayCancel(Order $order): bool
+    {
+        if ($this->orderHasEnded($order)) {
+            return false;
+        }
+
+        $config = $order->config();
+        if (!$config->policy('customer.cancellation.enabled', true)) {
+            return false;
+        }
+
+        $until = $config->policy('customer.cancellation.allowed_until');
+        $limit = is_string($until) && $until !== '' ? $config->getActivityByCode($until) : null;
+
+        return !$limit || ($order->status !== $limit->code && !$order->hasCompletedActivity($limit));
+    }
+
+    /**
+     * Whether an earlier order of the config, paid by one of the methods its
+     * `customer.ordering.require_settlement` policy names, is completed but its transaction
+     * isn't paid. Methods the policy leaves out (cash collected by the driver, say) never block.
+     */
+    protected function hasUnsettledOrder(Contact $customer, OrderConfig $orderConfig): bool
+    {
+        $methods = array_values(array_filter((array) $orderConfig->policy('customer.ordering.require_settlement', []), 'is_string'));
+        if ($methods === []) {
+            return false;
+        }
+
         return Order::withoutGlobalScopes()
             ->where('customer_uuid', $customer->uuid)
-            ->where('type', 'ride')
-            ->where('status', 'completed')
-            ->whereNotNull('fare_finalized_at')
-            ->whereNull('paid_at')
+            ->where('order_config_uuid', $orderConfig->uuid)
+            ->where('status', $orderConfig->getCompletedActivity()?->code ?? 'completed')
             ->whereNull('deleted_at')
-            ->whereHas('payload', fn ($payload) => $payload->where('payment_method', 'card'))
+            ->whereHas('payload', fn ($payload) => $payload->whereIn('payment_method', $methods))
+            ->whereHas('transaction', fn ($transaction) => $transaction->where('amount', '>', 0)->whereNotIn('settlement_status', ['paid', 'refunded', 'partially_refunded']))
             ->exists();
     }
 
     /**
-     * Whether the rider has a ride that was sent to drivers and hasn't ended.
+     * Whether the customer has an order that was sent to drivers and hasn't finished, by the
+     * order's own config.
      */
-    protected function hasActiveRide(Contact $customer): bool
+    protected function hasOrdersInProgress(Contact $customer): bool
     {
         return Order::withoutGlobalScopes()
+            ->with('orderConfig')
             ->where('customer_uuid', $customer->uuid)
             ->where('dispatched', 1)
             ->whereNull('deleted_at')
-            ->whereNotIn('status', ['completed', 'canceled', 'no_show'])
-            ->exists();
+            ->whereNotIn('status', ['completed', 'canceled'])
+            ->get()
+            ->contains(fn (Order $order) => !$this->orderHasEnded($order));
     }
 
     /**
-     * Remove what identifies the rider, then delete their records. A user who is only this
-     * company's rider goes too; one with other roles or companies keeps their account.
+     * Remove what identifies the customer, then delete their records. A user who is only this
+     * company's customer goes too; one with other roles or companies keeps their account.
      */
     protected function eraseCustomer(Contact $customer, ?User $user): void
     {
         Place::where('owner_uuid', $customer->uuid)->delete();
 
-        $customer->forceFill(['name' => 'Deleted rider', 'email' => null, 'phone' => null, 'photo_uuid' => null, 'meta' => []])->saveQuietly();
+        $customer->forceFill(['name' => 'Deleted customer', 'email' => null, 'phone' => null, 'photo_uuid' => null, 'meta' => []])->saveQuietly();
         $customer->delete();
 
         $otherContacts = $user ? Contact::withoutGlobalScopes()->where('user_uuid', $user->uuid)->where('uuid', '!=', $customer->uuid)->exists() : true;
         if ($user && $user->type === 'customer' && !$otherContacts) {
-            $user->forceFill(['name' => 'Deleted rider', 'email' => 'deleted-' . $user->uuid . '@deleted.invalid', 'phone' => null])->saveQuietly();
+            $user->forceFill(['name' => 'Deleted customer', 'email' => 'deleted-' . $user->uuid . '@deleted.invalid', 'phone' => null])->saveQuietly();
             $user->delete();
         }
     }
@@ -1808,12 +1879,19 @@ class CustomerController extends Controller
 
     protected function orderResource(Order $order): mixed
     {
-        return new RiderOrderResource($order);
+        $order->loadMissing(static::CUSTOMER_ORDER_RELATIONS);
+
+        return new OrderResource($order);
     }
 
     protected function orderResourceCollection(mixed $results): mixed
     {
-        return RiderOrderResource::collection($results);
+        if ($results instanceof \Illuminate\Support\Collection || $results instanceof \Illuminate\Contracts\Pagination\Paginator) {
+            collect($results instanceof \Illuminate\Contracts\Pagination\Paginator ? $results->items() : $results)
+                ->each(fn ($order) => $order instanceof Order ? $order->loadMissing(static::CUSTOMER_ORDER_RELATIONS) : null);
+        }
+
+        return OrderResource::collection($results);
     }
 
     protected function placeResourceCollection(mixed $results): mixed
@@ -1826,7 +1904,7 @@ class CustomerController extends Controller
         return new PlaceResource($place);
     }
 
-    protected function riderPlaceQuery(Contact $customer): mixed
+    protected function customerPlaceQuery(Contact $customer): mixed
     {
         return Place::where('company_uuid', $this->sessionCompany())
             ->where('owner_uuid', $customer->uuid)

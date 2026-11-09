@@ -2848,7 +2848,7 @@ test('tracking number resource publishes a scannable qr code content beside the 
         ->and(array_key_exists('url', $withoutNumber))->toBeFalse();
 });
 
-test('the rider order resource adds the fare, rating, payment and how dispatch ended', function () {
+test('the order resource adds the driver rating, payment status and how adhoc dispatch ended when they apply', function () {
     $request = fleetopsCompactResourceRequest(false);
     $rating  = fleetopsCompactResourceFixture(['stars' => 5, 'comment' => 'Kind']);
     $order   = fleetopsCompactResourceFixture([
@@ -2859,26 +2859,32 @@ test('the rider order resource adds the fare, rating, payment and how dispatch e
         'files'          => collect(),
         'purchaseRate'   => null,
         'driverRating'   => $rating,
-        'paid_at'        => '2026-11-06 10:00:00',
-        'type'           => 'ride',
+        'transaction'    => fleetopsCompactResourceFixture(['settlement_status' => 'paid']),
+        'adhoc'          => true,
+        'type'           => 'transport',
         'status'         => 'completed',
         'meta'           => [],
     ], [
-        'fare'            => ['final' => true, 'total' => 746],
+        'driverRating'    => $rating,
+        'transaction'     => true,
         'dispatchOutcome' => null,
     ]);
-    $unrated = fleetopsCompactResourceFixture(array_merge($order->toArrayForTest(), ['driverRating' => null]), ['fare' => null, 'dispatchOutcome' => 'no_driver_found']);
+    $unrated = fleetopsCompactResourceFixture(array_merge($order->toArrayForTest(), ['driverRating' => null]), ['driverRating' => null, 'dispatchOutcome' => 'no_driver_found']);
+    $plain   = fleetopsCompactResourceFixture(array_merge($order->toArrayForTest(), ['adhoc' => false]), ['dispatchOutcome' => null]);
 
-    $payload = (new Fleetbase\FleetOps\Http\Resources\v1\RiderOrder($order))->resolve($request);
-    $other   = (new Fleetbase\FleetOps\Http\Resources\v1\RiderOrder($unrated))->resolve($request);
+    $payload = (new Fleetbase\FleetOps\Http\Resources\v1\Order($order))->resolve($request);
+    $other   = (new Fleetbase\FleetOps\Http\Resources\v1\Order($unrated))->resolve($request);
+    $neither = (new Fleetbase\FleetOps\Http\Resources\v1\Order($plain))->resolve($request);
 
     expect($payload)->toMatchArray([
         'id'               => 'fixture_public',
-        'fare'             => ['final' => true, 'total' => 746],
-        'rating'           => ['stars' => 5, 'comment' => 'Kind'],
-        'payment_method'   => 'card',
-        'paid_at'          => '2026-11-06 10:00:00',
+        'driver_rating'    => ['stars' => 5, 'comment' => 'Kind'],
+        'payment_status'   => 'paid',
         'dispatch_outcome' => null,
     ])
-        ->and($other)->toMatchArray(['fare' => null, 'rating' => null, 'dispatch_outcome' => 'no_driver_found']);
+        ->and($payload)->not->toHaveKeys(['fare', 'paid_at'])
+        ->and($other)->toMatchArray(['driver_rating' => null, 'dispatch_outcome' => 'no_driver_found'])
+        ->and($other)->not->toHaveKey('payment_status')
+        // Orders that weren't adhoc, and relations that weren't loaded, add nothing.
+        ->and($neither)->not->toHaveKeys(['dispatch_outcome', 'driver_rating', 'payment_status']);
 });

@@ -1,5 +1,18 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
     <div class="modal-body-container">
+        {{#if @options.templates.length}}
+            <InputGroup @name={{t "order-config-manager.template"}} @helpText={{t "order-config-manager.template-help-text"}}>
+                <Select
+                    @value={{@options.template}}
+                    @options={{@options.templateOptions}}
+                    @optionLabel="name"
+                    @optionValue="key"
+                    @onSelect={{@options.selectTemplate}}
+                    class="w-full"
+                    data-test-order-config-template
+                />
+            </InputGroup>
+        {{/if}}
         <InputGroup @name={{t "modals.new-order-config.name"}} @value={{@options.orderConfig.name}} />
         <InputGroup @name={{t "modals.new-order-config.description"}} @value={{@options.orderConfig.description}} />
         <InputGroup @name={{t "modals.new-order-config.tags"}}>

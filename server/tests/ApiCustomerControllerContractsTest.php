@@ -79,7 +79,7 @@ class FleetOpsApiCustomerControllerProbe extends CustomerController
     public array $uuidLookups                                         = [];
     public array $devices                                             = [];
 
-    protected function riderPlaceQuery(Contact $customer): mixed
+    protected function customerPlaceQuery(Contact $customer): mixed
     {
         return null;
     }
@@ -331,17 +331,24 @@ class FleetOpsApiCustomerControllerProbe extends CustomerController
         return $this->orderConfig;
     }
 
-    public bool $unpaidRide      = false;
-    public array $paymentMethods = [];
+    public bool $unsettledOrder      = false;
+    public array $paymentMethods     = [];
 
     protected function setPayloadPaymentMethod(string $payloadUuid, string $paymentMethod): void
     {
         $this->paymentMethods[] = [$payloadUuid, $paymentMethod];
     }
 
-    protected function hasUnpaidRide(Contact $customer): bool
+    public array $enabledOrderConfigs = [];
+
+    protected function hasUnsettledOrder(Contact $customer, OrderConfig $orderConfig): bool
     {
-        return $this->unpaidRide;
+        return $this->unsettledOrder && (bool) $orderConfig->policy('customer.ordering.require_settlement');
+    }
+
+    protected function lookupCompanySetting(string $key, mixed $default = null): mixed
+    {
+        return $key === 'fleet-ops.customer-enabled-order-configs' ? $this->enabledOrderConfigs : $default;
     }
 
     protected function getUuid(array|string $table, array $where, array $options = []): mixed
@@ -1238,7 +1245,7 @@ test('api customer controller refuses the verification bypass for an identity th
     config(['fleetops.customers.verification_bypass_code' => null, 'fleetops.customers.review_accounts' => []]);
 });
 
-function fleetopsRiderOrderFor(FleetOpsApiCustomerControllerProbe $controller, array $attributes = []): Order
+function fleetopsCustomerOrderFor(FleetOpsApiCustomerControllerProbe $controller, array $attributes = []): Order
 {
     $order = $controller->order;
     $order->setRawAttributes(array_merge($order->getAttributes(), $attributes), true);
@@ -1266,7 +1273,7 @@ test('request code refuses a missing or email identity', function () {
         ->and($controller->requestCode(Request::create('/', 'POST', ['phone' => 'a@b.test']))->getStatusCode())->toBe(400);
 });
 
-test('verify code tells a new rider apart only after the code is proven', function () {
+test('verify code tells a new customer apart only after the code is proven', function () {
     $controller                   = fleetopsApiCustomerController();
     $controller->verificationUser = null;
     $request                      = fn () => Request::create('/', 'POST', ['identity' => '+15550001111', 'code' => '123456']);
@@ -1279,7 +1286,7 @@ test('verify code tells a new rider apart only after the code is proven', functi
     expect(fleetopsApiCustomerJson($controller->verifyCode($request())))->toBe(['error' => 'Invalid verification code.']);
 });
 
-test('a rider cannot change phone without a code for that number', function () {
+test('a customer cannot change phone without a code for that number', function () {
     $controller                     = fleetopsApiCustomerController();
     $controller->activeUser         = null;
     $before                         = $controller->currentCustomer->phone;
@@ -1294,7 +1301,7 @@ test('a rider cannot change phone without a code for that number', function () {
         ->and($controller->currentCustomer->phone)->toBe($before);
 });
 
-test('a rider cannot take a phone number held by another account', function () {
+test('a customer cannot take a phone number held by another account', function () {
     $controller                   = fleetopsApiCustomerController();
     $controller->activeUser       = fleetopsApiCustomerUser();
     $controller->activeUser->uuid = 'someone-else';
@@ -1316,9 +1323,9 @@ test('a phone change code does not reveal whether a number has an account', func
         ->and($free->smsVerifications[0][1] ?? null)->toBe('fleetops_customer_phone_change');
 });
 
-test('rider order actions treat another rider as not found', function () {
+test('customer order actions treat another customer as not found', function () {
     $controller = fleetopsApiCustomerController();
-    fleetopsRiderOrderFor($controller, ['customer_uuid' => 'someone-else', 'status' => 'created']);
+    fleetopsCustomerOrderFor($controller, ['customer_uuid' => 'someone-else', 'status' => 'created']);
     $request = Request::create('/', 'POST');
 
     expect($controller->dispatchOrder('order_1')->getStatusCode())->toBe(404)
@@ -1328,15 +1335,15 @@ test('rider order actions treat another rider as not found', function () {
         ->and($controller->orderEta('order_1', $request)->getStatusCode())->toBe(404);
 });
 
-test('a finished order cannot be canceled or dispatched by its rider', function (string $status) {
+test('a finished order cannot be canceled or dispatched by its customer', function (string $status) {
     $controller = fleetopsApiCustomerController();
-    fleetopsRiderOrderFor($controller, ['customer_uuid' => $controller->currentCustomer->uuid, 'status' => $status]);
+    fleetopsCustomerOrderFor($controller, ['customer_uuid' => $controller->currentCustomer->uuid, 'status' => $status]);
 
     expect($controller->cancelOrder('order_1', Request::create('/', 'POST'))->getStatusCode())->toBe(422)
         ->and($controller->dispatchOrder('order_1')->getStatusCode())->toBe(422);
 })->with(['completed', 'canceled']);
 
-test('rider place routes only touch places the rider owns', function () {
+test('customer place routes only touch places the customer owns', function () {
     $controller        = fleetopsApiCustomerController();
     $controller->place = new Place();
     $controller->place->setRawAttributes(['uuid' => 'p', 'owner_uuid' => 'someone-else'], true);
@@ -1367,7 +1374,7 @@ test('signup password is optional', function () {
     expect($source)->toContain("'password' => 'nullable|string|min:8'");
 });
 
-test('an expired fare or another company\'s fare is refused when booking', function (array $attributes) {
+test('an expired quote or another company\'s quote is refused when ordering', function (array $attributes) {
     $controller = fleetopsApiCustomerController();
     $controller->serviceQuote->setRawAttributes($attributes, true);
 
@@ -1388,7 +1395,7 @@ test('a customer token gets the narrow customer socket principal', function () {
         ->and(Fleetbase\FleetOps\Support\SocketChannels::customerPrincipal(Request::create('/'), null))->toBeNull();
 });
 
-class FleetOpsRiderOrderFake extends FleetOpsApiCustomerOrderFake
+class FleetOpsCustomerOwnOrderFake extends FleetOpsApiCustomerOrderFake
 {
     public array $faked       = [];
     public array $calls       = [];
@@ -1439,7 +1446,7 @@ class FleetOpsRiderOrderFake extends FleetOpsApiCustomerOrderFake
     }
 }
 
-class FleetOpsRiderTrackerFake extends Fleetbase\FleetOps\Support\OrderTracker
+class FleetOpsCustomerTrackerFake extends Fleetbase\FleetOps\Support\OrderTracker
 {
     public function __construct(private bool $fails = false)
     {
@@ -1465,7 +1472,7 @@ class FleetOpsRiderTrackerFake extends Fleetbase\FleetOps\Support\OrderTracker
     }
 }
 
-class FleetOpsRiderPlaceFake extends Place
+class FleetOpsCustomerSavedPlaceFake extends Place
 {
     public array $updates = [];
     public bool $deleted  = false;
@@ -1485,18 +1492,18 @@ class FleetOpsRiderPlaceFake extends Place
     }
 }
 
-function fleetopsRiderController(array $order = [], array $faked = []): FleetOpsApiCustomerControllerProbe
+function fleetopsCustomerOrderController(array $order = [], array $faked = []): FleetOpsApiCustomerControllerProbe
 {
     $controller = fleetopsApiCustomerController();
-    $rider      = new FleetOpsRiderOrderFake();
-    $rider->setRawAttributes(array_merge(['uuid' => 'order-uuid', 'customer_uuid' => $controller->currentCustomer->uuid, 'status' => 'created'], $order), true);
-    $rider->faked      = array_merge(['dispatched' => false, 'hasDriverAssigned' => false, 'adhoc' => true, 'driverAssigned' => null, 'vehicleAssigned' => null], $faked);
-    $controller->order = $rider;
+    $owned      = new FleetOpsCustomerOwnOrderFake();
+    $owned->setRawAttributes(array_merge(['uuid' => 'order-uuid', 'customer_uuid' => $controller->currentCustomer->uuid, 'status' => 'created'], $order), true);
+    $owned->faked      = array_merge(['dispatched' => false, 'hasDriverAssigned' => false, 'adhoc' => true, 'driverAssigned' => null, 'vehicleAssigned' => null], $faked);
+    $controller->order = $owned;
 
     return $controller;
 }
 
-test('every rider route answers 401 without a signed-in rider', function () {
+test('every customer route answers 401 without a signed-in customer', function () {
     $controller                  = fleetopsApiCustomerController();
     $controller->currentCustomer = null;
     $request                     = Request::create('/', 'GET');
@@ -1510,7 +1517,7 @@ test('every rider route answers 401 without a signed-in rider', function () {
         ->and($controller->cancelOrder('order_1', $request)->getStatusCode())->toBe(404);
 });
 
-test('rider place search only asks for the rider and caps the limit', function () {
+test('customer place search only asks for the customer and caps the limit', function () {
     $controller = fleetopsApiCustomerController();
 
     $controller->searchPlaces(Request::create('/', 'GET', ['query' => 'home', 'limit' => 500, 'latitude' => 1.2, 'longitude' => 103.8]));
@@ -1520,9 +1527,9 @@ test('rider place search only asks for the rider and caps the limit', function (
         ->and($controller->placeQueries[0][2])->toMatchArray(['limit' => 50, 'geo' => true, 'latitude' => 1.2, 'longitude' => 103.8]);
 });
 
-test('a rider saves, edits and deletes their own place', function () {
+test('a customer saves, edits and deletes their own place', function () {
     $controller                 = fleetopsApiCustomerController();
-    $controller->place          = new FleetOpsRiderPlaceFake();
+    $controller->place          = new FleetOpsCustomerSavedPlaceFake();
     $controller->place->setRawAttributes(['uuid' => 'place-uuid', 'owner_uuid' => $controller->currentCustomer->uuid], true);
 
     $saved = $controller->savePlace(Request::create('/', 'POST', ['name' => 'Home', 'latitude' => 1.28, 'longitude' => 103.85, 'street1' => '1 Raffles Place', 'owner_uuid' => 'someone-else']));
@@ -1567,34 +1574,34 @@ test('a phone change code covers missing input, unknown users and send failures'
         ->and($down->requestPhoneChangeCode($request())->getStatusCode())->toBeGreaterThanOrEqual(400);
 });
 
-test('a rider dispatches their own order only when it can go out', function () {
-    $ready = fleetopsRiderController();
+test('a customer dispatches their own order only when it can go out', function () {
+    $ready = fleetopsCustomerOrderController();
     $ready->dispatchOrder('order_1');
 
     expect($ready->order->calls)->toBe(['dispatch', 'activity'])
-        ->and(fleetopsRiderController([], ['dispatched' => true])->dispatchOrder('order_1')->getStatusCode())->toBe(422)
-        ->and(fleetopsRiderController(['status' => 'started'])->dispatchOrder('order_1')->getStatusCode())->toBe(422)
-        ->and(fleetopsRiderController([], ['adhoc' => false])->dispatchOrder('order_1')->getStatusCode())->toBe(422);
+        ->and(fleetopsCustomerOrderController([], ['dispatched' => true])->dispatchOrder('order_1')->getStatusCode())->toBe(422)
+        ->and(fleetopsCustomerOrderController(['status' => 'started'])->dispatchOrder('order_1')->getStatusCode())->toBe(422)
+        ->and(fleetopsCustomerOrderController([], ['adhoc' => false])->dispatchOrder('order_1')->getStatusCode())->toBe(422);
 });
 
-test('a rider cancels their own order, with or without a reason', function () {
-    $plain = fleetopsRiderController();
+test('a customer cancels their own order, with or without a reason', function () {
+    $plain = fleetopsCustomerOrderController();
     $plain->cancelOrder('order_1', Request::create('/', 'POST', ['reason' => '   ']));
 
-    $reason = fleetopsRiderController();
+    $reason = fleetopsCustomerOrderController();
     $reason->cancelOrder('order_1', Request::create('/', 'POST', ['reason' => ' Changed my mind ']));
 
     expect($plain->order->calls)->toBe(['cancel'])
         ->and($reason->order->calls)->toBe([['reason', 'Changed my mind']]);
 });
 
-test('a rider sees the driver and car but no contact details', function () {
+test('a customer sees the driver and vehicle but no contact details', function () {
     $driver  = (object) ['name' => 'Dee Driver', 'photo_url' => 'photo', 'location' => 'here', 'phone' => '+15550009999', 'email' => 'd@example.test', 'vehicle' => null];
     $vehicle = (object) ['make' => 'Toyota', 'model' => 'Prius', 'color' => 'Blue', 'plate_number' => 'SGX1'];
 
-    $none    = fleetopsApiCustomerJson(fleetopsRiderController()->orderDriver('order_1'));
-    $noCar   = fleetopsApiCustomerJson(fleetopsRiderController([], ['driverAssigned' => $driver])->orderDriver('order_1'));
-    $withCar = fleetopsApiCustomerJson(fleetopsRiderController([], ['driverAssigned' => $driver, 'vehicleAssigned' => $vehicle])->orderDriver('order_1'));
+    $none    = fleetopsApiCustomerJson(fleetopsCustomerOrderController()->orderDriver('order_1'));
+    $noCar   = fleetopsApiCustomerJson(fleetopsCustomerOrderController([], ['driverAssigned' => $driver])->orderDriver('order_1'));
+    $withCar = fleetopsApiCustomerJson(fleetopsCustomerOrderController([], ['driverAssigned' => $driver, 'vehicleAssigned' => $vehicle])->orderDriver('order_1'));
 
     expect($none)->toBe(['driver' => null, 'vehicle' => null])
         ->and($noCar['vehicle'])->toBeNull()
@@ -1602,11 +1609,11 @@ test('a rider sees the driver and car but no contact details', function () {
         ->and($withCar['vehicle'])->toBe(['make' => 'Toyota', 'model' => 'Prius', 'color' => 'Blue', 'plate_number' => 'SGX1']);
 });
 
-test('rider tracking answers, and says so when tracking is down', function () {
-    $working                     = fleetopsRiderController();
-    $working->order->trackerFake = new FleetOpsRiderTrackerFake();
-    $broken                      = fleetopsRiderController();
-    $broken->order->trackerFake  = new FleetOpsRiderTrackerFake(true);
+test('customer tracking answers, and says so when tracking is down', function () {
+    $working                     = fleetopsCustomerOrderController();
+    $working->order->trackerFake = new FleetOpsCustomerTrackerFake();
+    $broken                      = fleetopsCustomerOrderController();
+    $broken->order->trackerFake  = new FleetOpsCustomerTrackerFake(true);
     $request                     = Request::create('/', 'GET');
 
     expect(fleetopsApiCustomerJson($working->orderTracker('order_1', $request)))->toBe(['answer' => 'tracker'])
@@ -1615,27 +1622,30 @@ test('rider tracking answers, and says so when tracking is down', function () {
         ->and($broken->orderEta('order_1', $request)->getStatusCode())->toBe(503);
 });
 
-test('an order that does not exist is not found for a rider', function () {
+test('an order that does not exist is not found for a customer', function () {
     $controller                 = fleetopsApiCustomerController();
     $controller->findOrderFails = true;
 
     expect($controller->orderDriver('order_missing')->getStatusCode())->toBe(404);
 });
 
-test('a ride needs a fare, is adhoc, and its vehicle type comes from the fare, not the rider', function () {
-    $ride                    = new OrderConfig(['key' => 'ride', 'customer_orders_adhoc' => true, 'match_vehicle_type' => true]);
-    $ride->uuid              = 'config-ride';
-    $noFare                  = fleetopsApiCustomerController();
-    $noFare->orderConfig     = $ride;
-    $noFare->serviceQuote    = null;
-    $booked                  = fleetopsApiCustomerController();
-    $booked->orderConfig     = $ride;
-    $rate                    = new Fleetbase\FleetOps\Models\ServiceRate();
+test('a config matching drivers by vehicle type needs a quote, makes customer orders adhoc, and takes the vehicle type from the quote', function () {
+    $onDemand = new OrderConfig(['key' => 'on-demand', 'policies' => [
+        'dispatch' => ['adhoc' => ['customer_orders' => true], 'matching' => ['vehicle_type' => true]],
+        'customer' => ['ordering' => ['payment_methods' => ['cash', 'card'], 'require_settlement' => ['card']]],
+    ]]);
+    $onDemand->uuid           = 'config-on-demand';
+    $noQuote                  = fleetopsApiCustomerController();
+    $noQuote->orderConfig     = $onDemand;
+    $noQuote->serviceQuote    = null;
+    $booked                   = fleetopsApiCustomerController();
+    $booked->orderConfig      = $onDemand;
+    $rate                     = new Fleetbase\FleetOps\Models\ServiceRate();
     $rate->setRawAttributes(['service_type' => 'economy', 'service_name' => 'Economy'], true);
     $booked->serviceQuote->setRawAttributes(['company_uuid' => 'company-uuid'], true);
     $booked->serviceQuote->setRelation('serviceRate', $rate);
 
-    $refused = $noFare->createOrder(new FleetOpsApiCustomerOrderRequest(['pickup' => ['name' => 'A']]));
+    $refused = $noQuote->createOrder(new FleetOpsApiCustomerOrderRequest(['pickup' => ['name' => 'A']]));
     $booked->createOrder(new FleetOpsApiCustomerOrderRequest([
         'service_quote'  => 'quote_1',
         'pickup'         => ['name' => 'A'],
@@ -1645,14 +1655,14 @@ test('a ride needs a fare, is adhoc, and its vehicle type comes from the fare, n
     $byName = fleetopsApiCustomerController();
     $byName->createOrder(new FleetOpsApiCustomerOrderRequest(['payload' => 'payload_public', 'payment_method' => 'card']));
 
-    $owing              = fleetopsApiCustomerController();
-    $owing->orderConfig = $ride;
-    $owing->unpaidRide  = true;
+    $owing                  = fleetopsApiCustomerController();
+    $owing->orderConfig     = $onDemand;
+    $owing->unsettledOrder  = true;
     $owing->serviceQuote->setRawAttributes(['company_uuid' => 'company-uuid'], true);
     $blocked = $owing->createOrder(new FleetOpsApiCustomerOrderRequest(['service_quote' => 'quote_1']));
 
     expect($refused->getStatusCode())->toBe(422)
-        ->and(fleetopsApiCustomerJson($refused))->toBe(['error' => 'Choose a ride option first.'])
+        ->and(fleetopsApiCustomerJson($refused))->toBe(['error' => 'Choose a service quote for this order first.'])
         ->and($blocked->getStatusCode())->toBe(402)
         ->and($owing->createdOrders)->toBe([])
         ->and($booked->createdOrders[0]['adhoc'])->toBeTrue()
@@ -1663,20 +1673,20 @@ test('a ride needs a fare, is adhoc, and its vehicle type comes from the fare, n
         ->and($byName->paymentMethods)->toBe([]);
 });
 
-test('a ride that ended in a no-show can no longer be canceled', function () {
-    $controller = fleetopsRiderController(['status' => 'no_show'], ['config' => new OrderConfig(Fleetbase\FleetOps\Support\FleetOps::rideConfigDefaults())]);
+test('an order that reached one of its config\'s terminal activities can no longer be canceled', function () {
+    $controller = fleetopsCustomerOrderController(['status' => 'no_show'], ['config' => new OrderConfig(Fleetbase\FleetOps\Support\OrderConfig\OrderConfigTemplates::attributes('passenger'))]);
 
     expect($controller->cancelOrder('order_1', Request::create('/', 'POST'))->getStatusCode())->toBe(422)
         ->and($controller->order->calls)->toBe([]);
 });
 
-test('a shared ride links to the public tracking page', function () {
+test('a shared order links to the public tracking page', function () {
     config()->set('fleetbase.console.host', 'https://console.test');
     $url = fleetopsApiCustomerWithEnvironment('production', function () {
         $method = new ReflectionMethod(CustomerController::class, 'trackingPageUrl');
 
-        return $method->invoke(new CustomerController(), 'RIDE1', null);
+        return $method->invoke(new CustomerController(), 'TRK1', null);
     });
 
-    expect($url)->toContain('track/RIDE1');
+    expect($url)->toContain('track/TRK1');
 });

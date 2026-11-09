@@ -156,7 +156,7 @@ function fleetopsOrderStartBoot(): SQLiteConnection
         'waypoints'           => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'order', 'type', '_key', '_import_id'],
         'drivers'             => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'status', 'online', 'location', 'current_job_uuid'],
         'users'               => ['uuid', 'public_id', 'company_uuid', 'name', 'status', 'type', 'email', 'phone', 'password', 'slug', 'username', 'meta', '_key'],
-        'order_configs'       => ['uuid', 'public_id', 'company_uuid', 'adhoc_strategy', 'adhoc_offer_timeout', 'customer_orders_adhoc', 'match_vehicle_type', 'name', 'key', 'namespace', 'description', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', '_key'],
+        'order_configs'       => ['uuid', 'public_id', 'company_uuid', 'policies', 'triggers', 'name', 'key', 'namespace', 'description', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', '_key'],
         'tracking_numbers'    => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'region', 'location', 'status_uuid', 'owner_uuid', 'owner_type', 'qr_code', 'barcode', '_key'],
         'tracking_statuses'   => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'proof_uuid', 'status', 'details', 'location', 'code', 'complete', '_key'],
         'entities'            => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'destination_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'name', 'type', 'meta', 'internal_id', 'qr_code', 'barcode', 'photo_uuid', '_key', '_import_id'],
@@ -663,19 +663,21 @@ test('classic lifecycle activities record activity against payload entities', fu
     expect($connection->table('tracking_statuses')->where('tracking_number_uuid', 'tn-entity-1')->count())->toBeGreaterThanOrEqual(1);
 });
 
+/** An adhoc order on a config made from the passenger template: offered one driver at a time, with strict transitions. */
 function fleetopsOrderStartRide(SQLiteConnection $connection, array $order = []): void
 {
-    $defaults = Fleetbase\FleetOps\Support\FleetOps::rideConfigDefaults();
+    $defaults = Fleetbase\FleetOps\Support\OrderConfig\OrderConfigTemplates::attributes('passenger');
+    // Triggers would queue pushes; these tests are about accepting and declining.
     $connection->table('order_configs')->insert([
-        'uuid'           => 'config-ride',
-        'company_uuid'   => 'company-1',
-        'key'            => 'ride',
-        'namespace'      => 'system:order-config:ride',
-        'flow'           => json_encode($defaults['flow']),
-        'meta'           => json_encode($defaults['meta']),
-        'adhoc_strategy' => $defaults['adhoc_strategy'],
+        'uuid'         => 'config-ride',
+        'company_uuid' => 'company-1',
+        'key'          => 'passenger',
+        'namespace'    => 'system:order-config:passenger',
+        'flow'         => json_encode(array_map(fn ($activity) => array_replace($activity, ['actions' => []]), $defaults['flow'])),
+        'meta'         => json_encode($defaults['meta']),
+        'policies'     => json_encode($defaults['policies']),
     ]);
-    fleetopsOrderStartSeedOrder($connection, array_merge(['order_config_uuid' => 'config-ride', 'type' => 'ride', 'adhoc' => 1, 'status' => 'dispatched', 'dispatched' => 1, 'dispatched_at' => '2026-11-06 09:00:00'], $order));
+    fleetopsOrderStartSeedOrder($connection, array_merge(['order_config_uuid' => 'config-ride', 'type' => 'passenger', 'adhoc' => 1, 'status' => 'dispatched', 'dispatched' => 1, 'dispatched_at' => '2026-11-06 09:00:00'], $order));
     $connection->table('drivers')->where('uuid', 'driver-1')->update(['online' => 1]);
     $connection->table('tracking_statuses')->insert(['uuid' => 'ts-dispatched', 'company_uuid' => 'company-1', 'tracking_number_uuid' => 'tn-1', 'code' => 'DISPATCHED', 'status' => 'Finding a driver']);
     // Declining looks for the next driver, nearest first.
@@ -733,7 +735,7 @@ test('a ride with timed offers can only be accepted by the driver it is offered 
 test('of two drivers accepting the same adhoc order only the first gets it', function () {
     $connection = fleetopsOrderStartBoot();
     fleetopsOrderStartRide($connection);
-    $connection->table('order_configs')->where('uuid', 'config-ride')->update(['adhoc_strategy' => 'broadcast']);
+    $connection->table('order_configs')->where('uuid', 'config-ride')->update(['policies' => json_encode(['dispatch' => ['adhoc' => ['strategy' => 'broadcast']]])]);
     // Someone else claimed it after this request loaded the order.
     $connection->table('orders')->update(['driver_assigned_uuid' => 'driver-2']);
 
@@ -755,7 +757,7 @@ test('of two drivers accepting the same adhoc order only the first gets it', fun
 test('the driver already holding an adhoc order passes, and a canceled order refuses everyone', function () {
     $connection = fleetopsOrderStartBoot();
     fleetopsOrderStartRide($connection, ['driver_assigned_uuid' => 'driver-1']);
-    $connection->table('order_configs')->where('uuid', 'config-ride')->update(['adhoc_strategy' => 'broadcast']);
+    $connection->table('order_configs')->where('uuid', 'config-ride')->update(['policies' => json_encode(['dispatch' => ['adhoc' => ['strategy' => 'broadcast']]])]);
     $controller = new OrderController();
 
     $held = $controller->startOrder('order_start', Request::create('/x', 'POST', ['assign' => 'driver_one']));

@@ -960,23 +960,14 @@ class OrderController extends FleetOpsController
         $activity    = $request->inputArray('activity');
         $activity    = new Activity($activity, $order->getConfigFlow());
 
-        // Configs with strict transitions only accept a configured child of the current
-        // activity, and the server-side activity definition replaces the client payload.
+        // The order's config decides whether the update is allowed. Operators may still correct a
+        // finished order, so a terminal status alone doesn't refuse it here.
         $orderConfig = $order->config();
-        if ($orderConfig && $orderConfig->hasStrictTransitions()) {
-            $targetCode = $activity->get('code');
-            $configured = $targetCode ? $orderConfig->getActivityByCode($targetCode) : null;
-            if (!$configured || !$orderConfig->canTransition($order->status, $targetCode)) {
-                return response()->error('This activity is not a permitted next step for the order.', 422);
+        if ($orderConfig) {
+            [$activity, $refusal] = $orderConfig->authorizeTransition($order, $activity, $proof, $bypassProof, true);
+            if ($refusal) {
+                return response()->error($refusal, 422);
             }
-
-            $activity = $configured;
-        }
-
-        $requiresProof = Utils::isActivity($activity)
-            && ($activity->get('require_pod') || ($activity->completesOrder() && $order->pod_required));
-        if ($requiresProof && !$proof && !$bypassProof) {
-            return response()->error('Proof of delivery is required for this activity or must be explicitly bypassed.', 422);
         }
 
         // Handle pickup/dropoff order activity update as normal

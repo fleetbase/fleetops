@@ -1259,24 +1259,47 @@ order-config-manager:
     uninstall-order-config: Uninstall Configuration
     uninstall-order-config-success-message: Extension {extensionName} uninstalled.
     select-order-config-to-start: Select or create an order config to start.
+    template: Start From
+    template-help-text: A ready-made configuration for one kind of operation, with its flow, policies and triggers. Change anything once it is created.
+    blank-template: Blank configuration
     tabs:
         details: Details
         custom-fields: Custom Fields
         activity-flow: Activity Flow
         lifecycle: Lifecycle
         entities: Entities
+        policies: Policies
+        triggers: Triggers
+    policies:
+        description: Policies decide how orders of this configuration behave. A setting you leave at its default follows Fleet-Ops' default or your company's dispatch settings.
+        default: Default
+        add-value: Add a value
+        use-default: Use the default
+    triggers:
+        title: Triggers
+        description: What this configuration does when something happens to its orders, such as notifying the customer when the driver arrives.
+        when: When
+        do: Do
+        add: Add Trigger
+        remove: Remove trigger
+        empty: No triggers yet.
+        conditions: This trigger runs only when its {count, plural, one {condition passes} other {# conditions pass}}.
+        reaches-activity: 'The order reaches: {activity}'
+        approaching-target: Approaching
+        approaching-distance: Within (meters)
+        pickup: Pickup
+        dropoff: Drop-off
+        events:
+            order:
+                created: The order is created
+                completed: The order is completed
+                canceled: The order is canceled
+            dispatch:
+                offer_exhausted: No driver accepted the offer
+            driver:
+                approaching: The driver is approaching
     details:
         details: Details
-        adhoc-dispatch: Adhoc Dispatch
-        adhoc-strategy: How Adhoc Orders Are Offered
-        adhoc-strategy-help-text: How orders on this config without an assigned driver are offered to drivers nearby.
-        adhoc-offer-timeout: Offer Time (seconds)
-        adhoc-offer-timeout-help-text: How long each driver has to accept when orders are offered one driver at a time.
-        company-default: Company default
-        customer-orders-adhoc: Customers' Orders Go to Nearby Drivers
-        customer-orders-adhoc-help-text: Orders customers place on this config are offered to drivers nearby instead of waiting for dispatch.
-        match-vehicle-type: Match Customers' Orders by Vehicle Type
-        match-vehicle-type-help-text: Customers choose a fare, and their order only goes to drivers whose vehicle type matches it.
         name: Name
         description: Description
         tags: Tags

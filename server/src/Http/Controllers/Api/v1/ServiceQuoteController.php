@@ -347,7 +347,7 @@ class ServiceQuoteController extends Controller
 
     protected function createPlaceFromMixed(mixed $value): Place
     {
-        // A preview must not leave a place behind for every fare a rider checks.
+        // A preview must not leave a place behind for every price a customer checks.
         return Place::createFromMixed($value, [], !$this->previewOnly);
     }
 
@@ -454,7 +454,7 @@ class ServiceQuoteController extends Controller
     }
 
     /**
-     * Where a rider asked to be picked up, when they asked how soon a car could come (`availability`).
+     * Where the request asked how soon a vehicle could come (`availability`).
      */
     protected ?SpatialPoint $availabilityFrom = null;
 
@@ -467,20 +467,22 @@ class ServiceQuoteController extends Controller
     }
 
     /**
-     * Average speed in metres per second used to turn the nearest car's distance into a pickup ETA.
+     * Average speed in metres per second used to turn the nearest vehicle's distance into a pickup
+     * ETA, unless `fleetops.availability.pickup_speed` sets another.
      */
     public const PICKUP_SPEED = 7.0;
 
     /**
-     * Add the class's seats and how soon its nearest free car could reach the pickup, in seconds.
-     * Both are null when the company has no such car; the ETA is a straight-line estimate.
+     * Add the most seats a vehicle of the quote's service type has, and how soon its nearest free
+     * driver could reach the pickup, in seconds. Both are null when the company has no such
+     * vehicle; the ETA is a straight-line estimate.
      */
     protected function addAvailability(ServiceQuote $quote, SpatialPoint $pickup): void
     {
         $class   = data_get($quote, 'serviceRate.service_type');
         $company = $quote->company_uuid;
 
-        $seats = $class ? Vehicle::where('company_uuid', $company)->whereRaw('LOWER(type) = ?', [strtolower($class)])->max('seating_capacity') : null;
+        $seatingCapacity = $class ? Vehicle::where('company_uuid', $company)->whereRaw('LOWER(type) = ?', [strtolower($class)])->max('seating_capacity') : null;
 
         $drivers = Driver::query()
             ->withoutGlobalScopes()
@@ -491,13 +493,15 @@ class ServiceQuoteController extends Controller
             ->distanceSphereValue('location', $pickup)
             ->orderBy('distance');
         DriverMatching::inCompany($drivers, $company);
-        DriverMatching::notBusy($drivers);
+        DriverMatching::notBusy($drivers, $company);
         DriverMatching::forVehicleClass($drivers, $class);
         $nearest = $drivers->first();
 
+        $speed = (float) config('fleetops.availability.pickup_speed', self::PICKUP_SPEED) ?: self::PICKUP_SPEED;
+
         $quote->availability = [
-            'seats'      => $seats ? (int) $seats : null,
-            'pickup_eta' => $nearest ? (int) round(60 + (float) $nearest->distance / self::PICKUP_SPEED) : null,
+            'seating_capacity' => $seatingCapacity ? (int) $seatingCapacity : null,
+            'pickup_eta'       => $nearest ? (int) round(60 + (float) $nearest->distance / $speed) : null,
         ];
     }
 

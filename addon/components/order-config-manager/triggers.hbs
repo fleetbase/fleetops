@@ -1,0 +1,98 @@
+<div class="px-6 py-2 space-y-4">
+    <ContentPanel @title={{t "order-config-manager.triggers.title"}} @open={{true}} @wrapperClass="bordered-classic">
+        <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">{{t "order-config-manager.triggers.description"}}</p>
+
+        {{#if this.loadCapabilities.isRunning}}
+            <div class="flex items-center justify-center py-6"><Spinner /></div>
+        {{else}}
+            <div class="space-y-3">
+                {{#each this.editableRows as |row|}}
+                    <div class="rounded-md border border-gray-200 dark:border-gray-700 p-3 space-y-2" data-test-trigger-row>
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-2 items-end">
+                            <InputGroup @name={{t "order-config-manager.triggers.when"}} @wrapperClass="mb-0 lg:col-span-5">
+                                <Select
+                                    @value={{row.on}}
+                                    @options={{this.eventOptions}}
+                                    @optionLabel="label"
+                                    @optionValue="value"
+                                    @onSelect={{fn this.setRowField row.id "on"}}
+                                    @disabled={{not this.canEdit}}
+                                    class="w-full"
+                                />
+                            </InputGroup>
+                            <InputGroup @name={{t "order-config-manager.triggers.do"}} @wrapperClass="mb-0 lg:col-span-5">
+                                <Select
+                                    @value={{row.action}}
+                                    @options={{this.actionOptions}}
+                                    @optionLabel="label"
+                                    @optionValue="value"
+                                    @onSelect={{fn this.setRowField row.id "action"}}
+                                    @disabled={{not this.canEdit}}
+                                    class="w-full"
+                                />
+                            </InputGroup>
+                            <div class="flex items-center justify-end lg:col-span-2">
+                                {{#if this.canEdit}}
+                                    <Button @type="danger" @size="sm" @icon="trash" @helpText={{t "order-config-manager.triggers.remove"}} @onClick={{fn this.removeRow row.id}} />
+                                {{/if}}
+                            </div>
+                        </div>
+
+                        {{#if row.isApproaching}}
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                                <InputGroup @name={{t "order-config-manager.triggers.approaching-target"}} @wrapperClass="mb-0">
+                                    <select class="form-select w-full" disabled={{not this.canEdit}} {{on "change" (fn this.setOption row.id "target")}}>
+                                        <option value="pickup" selected={{not (eq row.options.target "dropoff")}}>{{t "order-config-manager.triggers.pickup"}}</option>
+                                        <option value="dropoff" selected={{eq row.options.target "dropoff"}}>{{t "order-config-manager.triggers.dropoff"}}</option>
+                                    </select>
+                                </InputGroup>
+                                <InputGroup @name={{t "order-config-manager.triggers.approaching-distance"}} @wrapperClass="mb-0">
+                                    <Input
+                                        @type="number"
+                                        @value={{row.options.distance}}
+                                        class="form-input w-full"
+                                        placeholder="500"
+                                        disabled={{not this.canEdit}}
+                                        {{on "input" (fn this.setOption row.id "distance")}}
+                                    />
+                                </InputGroup>
+                            </div>
+                        {{/if}}
+
+                        {{#if row.parameters.length}}
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                                {{#each row.parameters as |parameter|}}
+                                    <InputGroup @name={{parameter.label}} @helpText={{parameter.description}} @wrapperClass="mb-0">
+                                        <Input @value={{parameter.value}} class="form-input w-full" disabled={{not this.canEdit}} {{on "input" (fn this.setParam row.id parameter.name)}} />
+                                    </InputGroup>
+                                {{/each}}
+                            </div>
+                        {{/if}}
+
+                        {{#if row.conditionCount}}
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{t "order-config-manager.triggers.conditions" count=row.conditionCount}}</p>
+                        {{/if}}
+                    </div>
+                {{else}}
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{t "order-config-manager.triggers.empty"}}</p>
+                {{/each}}
+            </div>
+
+            {{#if this.canEdit}}
+                <div class="flex flex-row items-center space-x-2 pt-4">
+                    <Button @icon="plus" @text={{t "order-config-manager.triggers.add"}} @onClick={{this.addRow}} data-test-trigger-add />
+                    <Button
+                        @type="primary"
+                        @icon="save"
+                        @text={{t "common.save-changes"}}
+                        @onClick={{perform this.save}}
+                        @isLoading={{this.save.isRunning}}
+                        @disabled={{not this.isDirty}}
+                        @permission="fleet-ops update order-config"
+                        data-test-triggers-save
+                    />
+                </div>
+            {{/if}}
+        {{/if}}
+    </ContentPanel>
+</div>

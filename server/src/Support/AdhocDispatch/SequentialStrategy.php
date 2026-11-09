@@ -15,8 +15,8 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Offer the order to one driver at a time, nearest first, for the offer timeout. The next driver
- * gets it when one declines or the time runs out, and the order is canceled as "No driver found"
- * when nobody is left. Only the driver with the open offer may accept.
+ * gets it when one declines or the time runs out. When nobody is left, the order's config decides
+ * what happens (see `OrderOffers::exhausted()`). Only the driver with the open offer may accept.
  */
 class SequentialStrategy implements AdhocDispatchStrategy
 {
@@ -113,7 +113,7 @@ class SequentialStrategy implements AdhocDispatchStrategy
             ? DriverMatching::nearby($order, $pickup)->whereNotIn('uuid', OrderOffers::offeredDrivers($order))->orderBy('distance')->first()
             : null;
         if (!$driver) {
-            OrderOffers::noDriverFound($order);
+            OrderOffers::exhausted($order);
 
             return null;
         }

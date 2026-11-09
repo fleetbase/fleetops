@@ -16,6 +16,8 @@ import OrderConfigManagerCustomFieldsComponent from './order-config-manager/cust
 import OrderConfigManagerActivityFlowComponent from './order-config-manager/activity-flow';
 import OrderConfigManagerLifecycleComponent from './order-config-manager/lifecycle';
 import OrderConfigManagerEntitiesComponent from './order-config-manager/entities';
+import OrderConfigManagerPoliciesComponent from './order-config-manager/policies';
+import OrderConfigManagerTriggersComponent from './order-config-manager/triggers';
 import findActiveTab from '../utils/find-active-tab';
 
 const configManagerContext = EmberObject.extend(Evented);
@@ -24,6 +26,7 @@ export default class OrderConfigManagerComponent extends Component {
     @service('universe/menu-service') menuService;
     @service notifications;
     @service modalsManager;
+    @service fetch;
     @service store;
     @service intl;
     @tracked configs = [];
@@ -47,6 +50,8 @@ export default class OrderConfigManagerComponent extends Component {
             this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.custom-fields'), null, { icon: 'rectangle-list', component: OrderConfigManagerCustomFieldsComponent }),
             this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.activity-flow'), null, { icon: 'diagram-project', component: OrderConfigManagerActivityFlowComponent }),
             this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.lifecycle'), null, { icon: 'arrows-spin', component: OrderConfigManagerLifecycleComponent }),
+            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.policies'), null, { icon: 'sliders', component: OrderConfigManagerPoliciesComponent }),
+            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.triggers'), null, { icon: 'bolt', component: OrderConfigManagerTriggersComponent }),
             this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.entities'), null, { icon: 'boxes-packing', component: OrderConfigManagerEntitiesComponent }),
         ];
 
@@ -161,12 +166,23 @@ export default class OrderConfigManagerComponent extends Component {
      * for the confirm action. The confirm action includes validation and saving of the
      * new order configuration, along with success and warning notifications.
      */
-    @action createNewOrderConfig() {
+    @action async createNewOrderConfig() {
         const orderConfig = this.store.createRecord('order-config', {
             tags: [],
         });
+        const templates = await this.loadTemplates();
 
         this.modalsManager.show('modals/new-order-config', {
+            templates,
+            templateOptions: [{ key: null, name: this.intl.t('order-config-manager.blank-template') }, ...templates],
+            template: null,
+            selectTemplate: (key) => {
+                this.modalsManager.setOption('template', key);
+                const template = templates.find((item) => item.key === key);
+                if (template && !orderConfig.description) {
+                    orderConfig.set('description', template.description);
+                }
+            },
             title: this.intl.t('order-config-manager.create-new-title'),
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
@@ -185,6 +201,11 @@ export default class OrderConfigManagerComponent extends Component {
                 }
 
                 modal.startLoading();
+                const template = this.modalsManager.getOption('template');
+                if (template) {
+                    return this.createFromTemplate(template, orderConfig, modal);
+                }
+
                 orderConfig.set('key', dasherize(orderConfig.name));
                 orderConfig
                     .save()
@@ -207,6 +228,41 @@ export default class OrderConfigManagerComponent extends Component {
                 modal.done();
             },
         });
+    }
+
+    /**
+     * The order config templates the server offers, or none when they can't be loaded.
+     */
+    async loadTemplates() {
+        try {
+            const { templates } = await this.fetch.get('order-configs/capabilities');
+            return templates ?? [];
+        } catch {
+            return [];
+        }
+    }
+
+    /**
+     * Create the config from a template under the name entered, then select it.
+     */
+    async createFromTemplate(template, orderConfig, modal) {
+        try {
+            const { order_config } = await this.fetch.post('order-configs/from-template', { template, name: orderConfig.name });
+            orderConfig.unloadRecord();
+            this.notifications.success(this.intl.t('order-config-manager.create-success-message'));
+            this.loadOrderConfigs.perform({
+                onAfter: () => {
+                    const created = this.configs.find((config) => config.id === order_config?.id || config.public_id === order_config?.public_id);
+                    if (created) {
+                        this.selectConfig(created);
+                    }
+                },
+            });
+            modal.done();
+        } catch (error) {
+            modal.stopLoading();
+            this.notifications.serverError(error);
+        }
     }
 
     /**

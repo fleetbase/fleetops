@@ -93,6 +93,11 @@ class Order extends FleetbaseResource
             'required_vehicle_type'                => $this->required_vehicle_type,
             // The asking driver's open offer, when they listed orders near them.
             'adhoc_offer'                          => $this->when($this->resource->relationLoaded('adhocOffer'), fn () => AdhocOfferListing::present($this->adhocOffer)),
+            // How offering an adhoc order ended, e.g. `no_driver_found`; null while it is open or taken.
+            'dispatch_outcome'                     => $this->when((bool) data_get($this, 'adhoc', false), fn () => $this->resource->dispatchOutcome()),
+            'driver_rating'                        => $this->when($this->resource->relationLoaded('driverRating'), fn () => $this->driverRating ? ['stars' => $this->driverRating->stars, 'comment' => $this->driverRating->comment] : null),
+            // Whether the order's transaction is paid (core's settlement status), when it was loaded.
+            'payment_status'                       => $this->when($this->resource->relationLoaded('transaction'), fn () => $this->transaction?->settlement_status),
             'distance'                             => (int) $this->distance,
             'time'                                 => (int) $this->time,
             'transaction_amount'                   => $this->transaction_amount,

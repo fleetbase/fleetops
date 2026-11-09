@@ -23,9 +23,10 @@ class AdhocOfferListing
         $names    = AdhocDispatch::names();
         $open     = AdhocDispatch::openlyListed();
         $inNames  = implode(', ', array_fill(0, count($names), '?'));
-        $strategy = "CASE WHEN {$orders}.adhoc_strategy IN ({$inNames}) THEN {$orders}.adhoc_strategy"
-            . " WHEN (SELECT oc.adhoc_strategy FROM order_configs oc WHERE oc.uuid = {$orders}.order_config_uuid) IN ({$inNames})"
-            . " THEN (SELECT oc.adhoc_strategy FROM order_configs oc WHERE oc.uuid = {$orders}.order_config_uuid) ELSE ? END";
+        // The config's strategy is its `dispatch.adhoc` policy, in the `policies` JSON.
+        $configStrategy = "(SELECT oc.policies->>'$.dispatch.adhoc.strategy' FROM order_configs oc WHERE oc.uuid = {$orders}.order_config_uuid)";
+        $strategy       = "CASE WHEN {$orders}.adhoc_strategy IN ({$inNames}) THEN {$orders}.adhoc_strategy"
+            . " WHEN {$configStrategy} IN ({$inNames}) THEN {$configStrategy} ELSE ? END";
         $bindings = [...$names, ...$names, AdhocDispatch::companyDefault($company)];
 
         return $query->where(function ($query) use ($orders, $driverUuid, $open, $strategy, $bindings) {

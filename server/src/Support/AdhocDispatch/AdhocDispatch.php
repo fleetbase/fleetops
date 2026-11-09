@@ -58,12 +58,12 @@ class AdhocDispatch
     }
 
     /**
-     * The strategy name for the order: its own, its config's, its company's, or the default.
-     * A name that isn't registered is skipped.
+     * The strategy name for the order: its own, its config's `dispatch.adhoc` policy, its
+     * company's, or the default. A name that isn't registered is skipped.
      */
     public static function nameFor(Order $order): string
     {
-        foreach ([$order->adhoc_strategy, $order->config()?->adhoc_strategy] as $name) {
+        foreach ([$order->adhoc_strategy, $order->currentConfig()?->policy('dispatch.adhoc.strategy')] as $name) {
             if (static::has($name)) {
                 return $name;
             }
@@ -118,11 +118,12 @@ class AdhocDispatch
     }
 
     /**
-     * Seconds a driver has to accept a one-at-a-time offer: the config's, the company's, or the default.
+     * Seconds a driver has to accept a one-at-a-time offer: the config's `dispatch.adhoc`
+     * policy, the company's, or the default.
      */
     public static function offerTimeout(Order $order): int
     {
-        $timeout = $order->config()?->adhoc_offer_timeout ?? $order->company?->getOption('fleetops.adhoc_offer_timeout') ?? self::OFFER_TIMEOUT;
+        $timeout = $order->currentConfig()?->policy('dispatch.adhoc.offer_timeout') ?? $order->company?->getOption('fleetops.adhoc_offer_timeout') ?? self::OFFER_TIMEOUT;
 
         return max(self::MIN_OFFER_TIMEOUT, min(self::MAX_OFFER_TIMEOUT, (int) $timeout));
     }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Fleetbase\FleetOps\Support\Rides;
+namespace Fleetbase\FleetOps\Support;
 
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\DriverRating;

@@ -58,7 +58,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
     public $commands = [
         \Fleetbase\FleetOps\Console\Commands\DispatchAdhocOrders::class,
         \Fleetbase\FleetOps\Console\Commands\DispatchOrders::class,
-        \Fleetbase\FleetOps\Console\Commands\CreateRideConfig::class,
+        \Fleetbase\FleetOps\Console\Commands\CreateOrderConfig::class,
         \Fleetbase\FleetOps\Console\Commands\TrackOrderDistanceAndTime::class,
         \Fleetbase\FleetOps\Console\Commands\FixDriverCompanies::class,
         \Fleetbase\FleetOps\Console\Commands\FixCustomerCompanies::class,

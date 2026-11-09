@@ -214,7 +214,7 @@ class SocketChannels
 
     /**
      * Drivers: a driver only themselves. Never a customer, because the driver's location events
-     * carry their phone number; riders follow the car through their order instead.
+     * carry their phone number; customers follow the driver through their order instead.
      */
     public static function narrowDriver(SocketPrincipal $principal, Model $driver): bool
     {

@@ -120,8 +120,6 @@ class Order extends Model
         'adhoc_strategy',
         'required_vehicle_type',
         'chat_channel_uuid',
-        'fare_finalized_at',
-        'paid_at',
         'started',
         'started_at',
         'pod_method',
@@ -257,8 +255,6 @@ class Order extends Model
         'pod_required'      => 'boolean',
         'scheduled_at'      => 'datetime',
         'dispatched_at'     => 'datetime',
-        'fare_finalized_at' => 'datetime',
-        'paid_at'           => 'datetime',
         'started_at'        => 'datetime',
         // Orchestrator
         'required_skills'       => Json::class,
@@ -514,7 +510,7 @@ class Order extends Model
     }
 
     /**
-     * The rider's rating of the driver, once the order is finished and rated.
+     * The customer's rating of the driver, once the order is finished and rated.
      */
     public function driverRating(): HasOne
     {
@@ -539,40 +535,11 @@ class Order extends Model
     }
 
     /**
-     * Record that the order has been paid. Called by the billing package (Ledger).
+     * The custom fields of the order's config. Values are stored on the order.
      */
-    public function markPaid(?Carbon $at = null): bool
+    public function customFields(): HasMany
     {
-        if ($this->paid_at) {
-            return false;
-        }
-
-        return $this->forceFill(['paid_at' => $at ?? Carbon::now()])->saveQuietly();
-    }
-
-    /**
-     * The order's fare: the price it was bought at, with its lines, and the first price it was
-     * booked at as the estimate. `final` once the price was set from the actual trip.
-     */
-    public function fare(): ?array
-    {
-        $quote = data_get($this, 'purchaseRate.serviceQuote');
-        if (!$quote instanceof ServiceQuote) {
-            return null;
-        }
-
-        $first = PurchaseRate::where('payload_uuid', $this->payload_uuid)->whereNotNull('payload_uuid')->oldest()->first()?->serviceQuote;
-
-        return [
-            'final'    => (bool) $this->fare_finalized_at,
-            'total'    => (int) $quote->amount,
-            'currency' => $quote->currency,
-            'estimate' => $first ? (int) $first->amount : null,
-            'distance' => $quote->distance,
-            'time'     => $quote->time,
-            'service'  => data_get($quote, 'serviceRate.service_name'),
-            'lines'    => $quote->items()->get()->map(fn ($item) => ['label' => (string) ($item->details ?? $item->code), 'amount' => (int) $item->amount])->all(),
-        ];
+        return $this->hasMany(\Fleetbase\Models\CustomField::class, 'subject_uuid', 'order_config_uuid')->orderBy('order');
     }
 
     /**
@@ -2086,7 +2053,9 @@ class Order extends Model
      */
     public function getAdhocPingDistance(): int
     {
-        return (int) Utils::get($this, 'adhoc_distance', Utils::get($this, 'company.options.fleetops.adhoc_distance', 6000));
+        $radius = $this->adhoc_distance ?? $this->currentConfig()?->policy('dispatch.adhoc.radius');
+
+        return (int) ($radius ?? Utils::get($this, 'company.options.fleetops.adhoc_distance', 6000));
     }
 
     /**
@@ -2153,6 +2122,21 @@ class Order extends Model
         }
 
         return null;
+    }
+
+    /**
+     * The order's own config, reusing the one already loaded on the order, for reading its
+     * policies and triggers often without loading it each time. Null for an order without a
+     * config of its own, which has no policies or triggers; `config()` falls back to the
+     * company's default config instead.
+     */
+    public function currentConfig(): ?OrderConfig
+    {
+        if ($this->relationLoaded('orderConfig') && $this->orderConfig instanceof OrderConfig && $this->orderConfig->uuid === $this->order_config_uuid) {
+            return $this->orderConfig->setOrderContext($this);
+        }
+
+        return $this->order_config_uuid ? $this->config() : null;
     }
 
     /**

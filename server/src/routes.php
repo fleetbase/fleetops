@@ -136,7 +136,6 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                     $router->post('orders/{id}/messages', 'CustomerController@sendOrderMessage')->middleware('throttle:30,1');
                     $router->post('orders/{id}/rating', 'CustomerController@rateOrder');
                     $router->post('orders/{id}/share', 'CustomerController@shareOrder');
-                    $router->get('ride-settings', 'CustomerController@rideSettings');
                     $router->delete('me', 'CustomerController@deleteMe');
                 });
             });
@@ -592,7 +591,13 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                             }
                         );
-                        $router->fleetbaseRoutes('order-configs');
+                        $router->fleetbaseRoutes(
+                            'order-configs',
+                            function ($router, $controller) {
+                                $router->get('capabilities', $controller('capabilities'));
+                                $router->post('from-template', $controller('createFromTemplate'));
+                            }
+                        );
                         $router->fleetbaseRoutes('payloads');
                         $router->fleetbaseRoutes(
                             'places',

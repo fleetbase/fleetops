@@ -64,10 +64,10 @@ class ServiceQuote extends Model
      * The attributes that are mass assignable.
      */
     /**
-     * Seats and pickup ETA for the quote's vehicle type, when the request asked for availability.
-     * Not stored.
+     * Seating capacity and pickup ETA for the quote's service type, when the request asked for
+     * availability. Not stored.
      *
-     * @var array{seats: ?int, pickup_eta: ?int}|null
+     * @var array{seating_capacity: ?int, pickup_eta: ?int}|null
      */
     public ?array $availability = null;
 

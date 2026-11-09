@@ -35,13 +35,31 @@ class OrderConfig extends FleetbaseResource
             'status'                => $this->status,
             'version'               => $this->version,
             'flow'                  => $this->projectFlow(),
-            'adhoc_strategy'        => $this->adhoc_strategy,
-            'adhoc_offer_timeout'   => $this->adhoc_offer_timeout,
-            'customer_orders_adhoc' => (bool) $this->customer_orders_adhoc,
-            'match_vehicle_type'    => (bool) $this->match_vehicle_type,
+            // Every policy setting, defaults filled in: what a customer app needs to know about
+            // ordering, cancelling, payment methods and the like for this order type.
+            'policies'              => $this->resource->resolvedPolicies(),
+            'triggers'              => $this->when(Http::isInternalRequest(), $this->triggers ?? []),
+            'custom_fields'         => $this->when($this->resource->relationLoaded('customFields'), fn () => $this->projectCustomFields()),
             'created_at'            => $this->created_at,
             'updated_at'            => $this->updated_at,
         ];
+    }
+
+    /**
+     * The custom fields orders of the config carry, with what a form needs to ask for them.
+     */
+    protected function projectCustomFields(): array
+    {
+        return $this->resource->customFields->map(fn ($field) => [
+            'name'          => $field->name,
+            'label'         => $field->label,
+            'type'          => $field->type,
+            'component'     => $field->component,
+            'options'       => $field->options,
+            'required'      => (bool) $field->required,
+            'default_value' => $field->default_value,
+            'help_text'     => $field->help_text,
+        ])->values()->all();
     }
 
     /**

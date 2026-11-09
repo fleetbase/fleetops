@@ -32,7 +32,7 @@ class ServiceQuote extends FleetbaseResource
             'amount'            => $this->amount,
             'currency'          => $this->currency,
             'meta'              => data_get($this, 'meta', Utils::createObject()),
-            'seats'             => $this->when($this->resource->availability !== null, fn () => $this->resource->availability['seats']),
+            'seating_capacity'  => $this->when($this->resource->availability !== null, fn () => $this->resource->availability['seating_capacity']),
             'pickup_eta'        => $this->when($this->resource->availability !== null, fn () => $this->resource->availability['pickup_eta']),
             'updated_at'        => $this->updated_at,
             'created_at'        => $this->created_at,

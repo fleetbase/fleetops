@@ -154,8 +154,8 @@ class TrackingController extends Controller
     }
 
     /**
-     * Open a link a rider shared: a valid token gives this device the rider's live view, as a
-     * verified code would.
+     * Open a link a customer shared: a valid token gives this device the customer's live view,
+     * as a verified code would.
      */
     public function redeemShare(Request $request, string $number): JsonResponse
     {

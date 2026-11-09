@@ -6,9 +6,9 @@ use Fleetbase\FleetOps\Support\TrackingScope;
 use Illuminate\Support\Carbon;
 
 /**
- * A link a rider sends to someone they trust, so they can follow the trip live without a code.
- * The token is `{expiry}.{signature}`, signed with the app key over the order, the rider and the
- * expiry, so it only opens that rider's view of that order, and only until it expires.
+ * A link a customer sends to someone they trust, so they can follow the order live without a
+ * code. The token is `{expiry}.{signature}`, signed with the app key over the order, the customer
+ * and the expiry, so it only opens that customer's view of that order, and only until it expires.
  */
 class TrackingShare
 {

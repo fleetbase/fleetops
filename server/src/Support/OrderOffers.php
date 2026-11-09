@@ -6,6 +6,8 @@ use Fleetbase\FleetOps\Events\OrderOfferClosed;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderOffer;
+use Fleetbase\FleetOps\Support\OrderConfig\OrderConfigTriggers;
+use Fleetbase\FleetOps\Support\OrderConfig\Policies\AdhocDispatchPolicy;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -150,21 +152,43 @@ class OrderOffers
     }
 
     /**
-     * Nobody is left to offer the order to, so cancel it and say why.
+     * Nobody is left to offer the order to. The config's `dispatch.offer_exhausted` triggers run,
+     * and the order is canceled as "No driver found" when its `dispatch.adhoc` policy says so.
+     * Otherwise it stays open for the operator to assign, and later runs that find nobody again
+     * do nothing more.
      */
-    public static function noDriverFound(Order $order): void
+    public static function exhausted(Order $order): void
     {
-        $order->cancelWithReason(self::NO_DRIVER_FOUND);
+        // An order kept open is offered again on each scheduled run; its config hears that
+        // nobody accepted only the first time.
+        if ($order->getMeta('dispatch_outcome') === self::NO_DRIVER_FOUND_OUTCOME) {
+            return;
+        }
+
+        $order->updateMeta('dispatch_outcome', self::NO_DRIVER_FOUND_OUTCOME);
+        OrderConfigTriggers::fire($order, OrderConfigTriggers::DISPATCH_OFFER_EXHAUSTED);
+
+        if ($order->currentConfig()?->policy('dispatch.adhoc.on_exhausted') === AdhocDispatchPolicy::CANCEL) {
+            $order->cancelWithReason(self::NO_DRIVER_FOUND);
+        }
     }
 
     /**
-     * How offering a canceled adhoc order ended: `no_driver_found` when every driver it was
-     * offered to declined or let the offer run out. Null otherwise, including when someone
-     * canceled it while an offer was still open, which withdraws that offer.
+     * How offering an adhoc order ended: `no_driver_found` when every driver it was offered to
+     * declined or let the offer run out and no driver has been assigned since. Null otherwise,
+     * including when someone canceled it while an offer was still open, which withdraws that offer.
      */
     public static function outcome(Order $order): ?string
     {
-        if ($order->status !== 'canceled' || !$order->adhoc) {
+        if (!$order->adhoc || $order->driver_assigned_uuid) {
+            return null;
+        }
+
+        if ($order->getMeta('dispatch_outcome') === self::NO_DRIVER_FOUND_OUTCOME) {
+            return self::NO_DRIVER_FOUND_OUTCOME;
+        }
+
+        if ($order->status !== 'canceled') {
             return null;
         }
 

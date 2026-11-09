@@ -125,7 +125,7 @@ class Activity extends FlowResource
             foreach ($activities as $childActivityCode) {
                 $childActivity = $this->flow->getActivity($childActivityCode);
                 // if waypoint context skip `created` - `started` - `dispatched`
-                if ($waypointContext && in_array($childActivity->code, ['created', 'started', 'dispatched'])) {
+                if ($childActivity && $waypointContext && in_array($childActivity->code, ['created', 'started', 'dispatched'])) {
                     return $childActivity->getChildActivities($context);
                 }
 

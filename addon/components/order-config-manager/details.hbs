@@ -23,49 +23,6 @@
         <InputGroup @name={{t "order-config-manager.details.version"}} @value={{@config.version}} @disabled={{true}} />
     </ContentPanel>
 
-    <ContentPanel @title={{t "order-config-manager.details.adhoc-dispatch"}} @open={{true}} @wrapperClass="bordered-classic">
-        {{#let (cannot "fleet-ops update order-config") as |disabled|}}
-            <InputGroup @name={{t "order-config-manager.details.adhoc-strategy"}} @helpText={{t "order-config-manager.details.adhoc-strategy-help-text"}}>
-                <Select
-                    @value={{this.adhocStrategy}}
-                    @options={{this.strategyOptions}}
-                    @optionLabel="label"
-                    @optionValue="name"
-                    @onSelect={{this.setAdhocStrategy}}
-                    @disabled={{disabled}}
-                    class="w-full"
-                    data-test-config-adhoc-strategy
-                />
-            </InputGroup>
-            <InputGroup
-                @name={{t "order-config-manager.details.adhoc-offer-timeout"}}
-                @type="number"
-                @value={{@config.adhoc_offer_timeout}}
-                @placeholder={{t "order-config-manager.details.company-default"}}
-                @helpText={{t "order-config-manager.details.adhoc-offer-timeout-help-text"}}
-                @disabled={{disabled}}
-                data-test-config-adhoc-offer-timeout
-            />
-            <InputGroup @name={{t "order-config-manager.details.customer-orders-adhoc"}} @helpText={{t "order-config-manager.details.customer-orders-adhoc-help-text"}}>
-                <Toggle @isToggled={{@config.customer_orders_adhoc}} @onToggle={{fn (mut @config.customer_orders_adhoc)}} @disabled={{disabled}} data-test-config-customer-orders-adhoc />
-            </InputGroup>
-            <InputGroup @name={{t "order-config-manager.details.match-vehicle-type"}} @helpText={{t "order-config-manager.details.match-vehicle-type-help-text"}}>
-                <Toggle @isToggled={{@config.match_vehicle_type}} @onToggle={{fn (mut @config.match_vehicle_type)}} @disabled={{disabled}} data-test-config-match-vehicle-type />
-            </InputGroup>
-            {{#if @config.core_service}}
-                <Button
-                    @type="primary"
-                    @icon="save"
-                    @text={{t "common.save-changes"}}
-                    @onClick={{perform this.save}}
-                    @isLoading={{this.save.isRunning}}
-                    @disabled={{not @config.hasDirtyAttributes}}
-                    @permission="fleet-ops update order-config"
-                />
-            {{/if}}
-        {{/let}}
-    </ContentPanel>
-
     {{#unless @config.core_service}}
         <ContentPanel @title={{t "order-config-manager.details.controls"}} @open={{true}}>
             <div class="flex flex-row items-center py-2 space-x-4">

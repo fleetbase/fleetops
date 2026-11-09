@@ -170,7 +170,7 @@ export default class TrackingPageComponent extends Component {
             return;
         }
 
-        // A rider's shared link opens their live view on this device first.
+        // A customer's shared link opens their live view on this device first.
         const share = this.urlSearchParams.get('share');
         if (this.trackingInput && share) {
             try {

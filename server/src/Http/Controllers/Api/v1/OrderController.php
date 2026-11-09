@@ -27,6 +27,7 @@ use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocDispatch;
 use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocOfferListing;
+use Fleetbase\FleetOps\Support\OrderCustomFields;
 use Fleetbase\FleetOps\Support\OrderEdit;
 use Fleetbase\FleetOps\Support\OrderOffers;
 use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
@@ -355,9 +356,14 @@ class OrderController extends Controller
             }
         }
 
-        // if no status is set its default to `created`
+        // if no status is set it starts at the config's initial activity, `created` by default
         if (!isset($input['status'])) {
-            $input['status'] = 'created';
+            $input['status'] = $orderConfig->getInitialStatusCode();
+        }
+
+        $customFieldErrors = OrderCustomFields::validate($orderConfig, (array) $request->input('custom_fields', []));
+        if ($customFieldErrors) {
+            return response()->apiError($customFieldErrors, 422);
         }
 
         // if adhoc set convert to sql ready boolean value 1 or 0
@@ -377,6 +383,7 @@ class OrderController extends Controller
 
         // create the order
         $order = $this->createOrder($input);
+        OrderCustomFields::apply($order, (array) $request->input('custom_fields', []));
 
         // if it's integrated vendor order apply to meta
         if ($integratedVendorOrder) {
@@ -389,8 +396,8 @@ class OrderController extends Controller
         // load required relations
         $order->load(['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate.serviceQuote.items', 'customer', 'facilitator']);
 
-        // Determine if order should be dispatched on creation
-        $shouldDispatch = $request->boolean('dispatch') && $integratedVendorOrder === null;
+        // Determine if order should be dispatched on creation, unless its config turns dispatch off
+        $shouldDispatch = $request->boolean('dispatch') && $integratedVendorOrder === null && $orderConfig->allowsDispatch();
 
         $this->dispatchFinalizeApiOrderCreation(
             $order->uuid,
@@ -1070,6 +1077,10 @@ class OrderController extends Controller
             return $this->apiError('Order has already been dispatched!');
         }
 
+        if ($order->currentConfig()?->allowsDispatch() === false) {
+            return $this->apiError('Orders of this type are not dispatched.');
+        }
+
         $order->dispatch();
         $order->insertDispatchActivity();
 
@@ -1408,16 +1419,15 @@ class OrderController extends Controller
             $activity = new Activity($activity, $order->getConfigFlow());
         }
 
-        // Configs with strict transitions only accept a configured child of the current
-        // activity, and the server's activity definition replaces the one sent.
-        if ($orderConfig && $orderConfig->hasStrictTransitions() && !($activity->is('dispatched') && $skipDispatch)) {
-            $targetCode = $activity->get('code');
-            $configured = $targetCode ? $orderConfig->getActivityByCode($targetCode) : null;
-            if (!$configured || !$orderConfig->canTransition($order->status, $targetCode)) {
-                return response()->apiError('This activity is not a permitted next step for the order.', 422);
+        // The order's config decides whether the update is allowed: a finished order, a step the
+        // config's strict transitions don't permit, dispatch on a config that turns it off, or a
+        // step that needs proof of delivery without it. With strict transitions the server's
+        // activity definition replaces the one sent.
+        if ($orderConfig && !($activity->is('dispatched') && $skipDispatch)) {
+            [$activity, $refusal] = $orderConfig->authorizeTransition($order, $activity, $proof);
+            if ($refusal) {
+                return response()->apiError($refusal, 422);
             }
-
-            $activity = $configured;
         }
 
         // if we're going to skip the dispatch get the next activity status and flow and continue
