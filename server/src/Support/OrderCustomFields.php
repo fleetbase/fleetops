@@ -54,16 +54,22 @@ class OrderCustomFields
             return 0;
         }
 
-        $stored = 0;
+        // The same path the console saves custom field values through, with each value's type.
+        $rows = [];
         foreach ($order->customFields()->get() as $field) {
             $value = static::valueFor($field, $values);
             if ($value !== null) {
-                $order->setCustomFieldValue($field, $value);
-                $stored++;
+                $rows[] = ['custom_field_uuid' => $field->uuid, 'value' => $value, 'value_type' => $field->type ?: 'text'];
             }
         }
 
-        return $stored;
+        if ($rows === []) {
+            return 0;
+        }
+
+        $result = $order->syncCustomFieldValues($rows);
+
+        return (int) ($result['created'] ?? 0) + (int) ($result['updated'] ?? 0);
     }
 
     /**
