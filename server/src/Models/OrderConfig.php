@@ -5,7 +5,9 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\OrderConfigEntities;
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocDispatch;
 use Fleetbase\FleetOps\Support\FleetOps;
+use Fleetbase\FleetOps\Support\OrderConfig\OrderConfigPolicies;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\Model;
 use Fleetbase\Support\Auth;
@@ -68,6 +70,8 @@ class OrderConfig extends Model
         'flow',
         'entities',
         'meta',
+        'policies',
+        'triggers',
     ];
 
     /**
@@ -80,6 +84,8 @@ class OrderConfig extends Model
         'flow'     => Json::class,
         'entities' => OrderConfigEntities::class,
         'meta'     => Json::class,
+        'policies' => Json::class,
+        'triggers' => Json::class,
     ];
 
     /**
@@ -122,6 +128,52 @@ class OrderConfig extends Model
             $model->status    = 'private';
             $model->key       = Str::slug($model->name);
         });
+
+        static::saving(fn ($model) => $model->normalizePolicies());
+    }
+
+    /**
+     * Keep stored policies valid: drop an adhoc strategy that isn't registered, and keep the
+     * offer timeout within its limits.
+     */
+    public function normalizePolicies(): void
+    {
+        if (!is_array($this->policies)) {
+            return;
+        }
+
+        $policies = $this->policies;
+
+        $strategy = data_get($policies, 'dispatch.adhoc.strategy');
+        if ($strategy !== null && !AdhocDispatch::has($strategy)) {
+            data_set($policies, 'dispatch.adhoc.strategy', null);
+        }
+
+        $timeout = data_get($policies, 'dispatch.adhoc.offer_timeout');
+        if ($timeout !== null && $timeout !== '') {
+            data_set($policies, 'dispatch.adhoc.offer_timeout', max(AdhocDispatch::MIN_OFFER_TIMEOUT, min(AdhocDispatch::MAX_OFFER_TIMEOUT, (int) $timeout)));
+        }
+
+        $this->policies = $policies;
+    }
+
+    /**
+     * Every policy setting, with each one the config doesn't set taken from its default.
+     */
+    public function resolvedPolicies(): array
+    {
+        return OrderConfigPolicies::resolve(is_array($this->policies) ? $this->policies : []);
+    }
+
+    /**
+     * One policy setting, in dot notation (`dispatch.adhoc.strategy`), or a whole policy
+     * (`dispatch.adhoc`). The registered default applies when the config doesn't set it.
+     */
+    public function policy(string $key, mixed $default = null): mixed
+    {
+        $value = data_get($this->resolvedPolicies(), $key);
+
+        return $value ?? $default;
     }
 
     /**
@@ -497,6 +549,47 @@ class OrderConfig extends Model
         }
 
         return $from->children()->contains(fn ($activity) => $activity->code === $toCode);
+    }
+
+    /**
+     * Check an activity update against what the config declares, for every path that moves an
+     * order (console, API, driver app). Returns the activity to apply, which is the config's own
+     * definition when transitions are strict, and the reason the update is refused, or null.
+     *
+     * - a finished order takes no more activities, unless `$fromTerminal` (operator corrections)
+     * - strict transitions only allow a configured child of the current activity
+     * - a config whose lifecycle turns dispatch off refuses `dispatched`
+     * - an activity that needs proof of delivery (`require_pod`, or completing an order that
+     *   requires proof) needs proof, unless `$bypassProof`
+     *
+     * @return array{0: Activity, 1: ?string}
+     */
+    public function authorizeTransition(Order $order, Activity $activity, mixed $proof = null, bool $bypassProof = false, bool $fromTerminal = false): array
+    {
+        if (!$fromTerminal && $this->isTerminalActivityCode($order->status)) {
+            return [$activity, 'This order has already finished.'];
+        }
+
+        if ($this->hasStrictTransitions()) {
+            $targetCode = $activity->get('code');
+            $configured = $targetCode ? $this->getActivityByCode($targetCode) : null;
+            if (!$configured || !$this->canTransition($order->status, $targetCode)) {
+                return [$activity, 'This activity is not a permitted next step for the order.'];
+            }
+
+            $activity = $configured;
+        }
+
+        if ($activity->is('dispatched') && !$this->allowsDispatch()) {
+            return [$activity, 'Orders of this type are not dispatched.'];
+        }
+
+        $requiresProof = $activity->get('require_pod') || ($activity->completesOrder() && $order->pod_required);
+        if ($requiresProof && !$proof && !$bypassProof) {
+            return [$activity, 'Proof of delivery is required for this activity or must be explicitly bypassed.'];
+        }
+
+        return [$activity, null];
     }
 
     /**

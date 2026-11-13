@@ -69,11 +69,17 @@ class OrderConfigController extends Controller
 
     protected function orderConfigCollection($results)
     {
+        collect($results instanceof \Illuminate\Contracts\Pagination\Paginator ? $results->items() : $results)
+            ->each(fn ($orderConfig) => $orderConfig instanceof OrderConfig ? $orderConfig->loadMissing('customFields') : null);
+
         return OrderConfigResource::collection($results);
     }
 
     protected function orderConfigResource(OrderConfig $orderConfig)
     {
+        // Customer apps read the config's custom fields to ask for them when ordering.
+        $orderConfig->loadMissing('customFields');
+
         return new OrderConfigResource($orderConfig);
     }
 

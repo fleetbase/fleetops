@@ -90,7 +90,7 @@ class FleetOpsInternalTrailerSpreadsheetProbe extends InternalTrailerController
 
 class FleetOpsTrailerExportRequestFake extends ExportRequest
 {
-    public function array($key = null, $default = [])
+    public function inputArray($key = null, $default = [])
     {
         return (array) $this->input($key, $default);
     }

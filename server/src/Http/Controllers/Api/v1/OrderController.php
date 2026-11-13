@@ -25,7 +25,11 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocDispatch;
+use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocOfferListing;
+use Fleetbase\FleetOps\Support\OrderCustomFields;
 use Fleetbase\FleetOps\Support\OrderEdit;
+use Fleetbase\FleetOps\Support\OrderOffers;
 use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
 use Fleetbase\FleetOps\Support\TrackingCode;
 use Fleetbase\FleetOps\Support\Utils;
@@ -34,6 +38,7 @@ use Fleetbase\Http\Resources\Comment as CommentResource;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Setting;
+use Fleetbase\Models\User;
 use Fleetbase\Support\Auth;
 use Fleetbase\Support\TemplateString;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -351,9 +356,14 @@ class OrderController extends Controller
             }
         }
 
-        // if no status is set its default to `created`
+        // if no status is set it starts at the config's initial activity, `created` by default
         if (!isset($input['status'])) {
-            $input['status'] = 'created';
+            $input['status'] = $orderConfig->getInitialStatusCode();
+        }
+
+        $customFieldErrors = OrderCustomFields::validate($orderConfig, (array) $request->input('custom_fields', []));
+        if ($customFieldErrors) {
+            return response()->apiError($customFieldErrors, 422);
         }
 
         // if adhoc set convert to sql ready boolean value 1 or 0
@@ -373,6 +383,7 @@ class OrderController extends Controller
 
         // create the order
         $order = $this->createOrder($input);
+        OrderCustomFields::apply($order, (array) $request->input('custom_fields', []));
 
         // if it's integrated vendor order apply to meta
         if ($integratedVendorOrder) {
@@ -385,8 +396,8 @@ class OrderController extends Controller
         // load required relations
         $order->load(['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate.serviceQuote.items', 'customer', 'facilitator']);
 
-        // Determine if order should be dispatched on creation
-        $shouldDispatch = $request->boolean('dispatch') && $integratedVendorOrder === null;
+        // Determine if order should be dispatched on creation, unless its config turns dispatch off
+        $shouldDispatch = $request->boolean('dispatch') && $integratedVendorOrder === null && $orderConfig->allowsDispatch();
 
         $this->dispatchFinalizeApiOrderCreation(
             $order->uuid,
@@ -715,7 +726,7 @@ class OrderController extends Controller
     {
         return $request->only([
             'internal_id', 'payload', 'service_quote', 'purchase_rate',
-            'adhoc', 'adhoc_distance', 'pod_method', 'pod_required',
+            'adhoc', 'adhoc_distance', 'adhoc_strategy', 'required_vehicle_type', 'pod_method', 'pod_required',
             'scheduled_at', 'status', 'meta', 'notes',
             // Orchestrator constraints
             'time_window_start', 'time_window_end',
@@ -726,7 +737,7 @@ class OrderController extends Controller
     protected function orderUpdateInputFromRequest(Request $request): array
     {
         return $request->only([
-            'internal_id', 'payload', 'adhoc', 'adhoc_distance',
+            'internal_id', 'payload', 'adhoc', 'adhoc_distance', 'adhoc_strategy', 'required_vehicle_type',
             'pod_method', 'pod_required', 'scheduled_at', 'meta', 'type', 'status', 'notes',
             // Orchestrator constraints
             'time_window_start', 'time_window_end',
@@ -769,7 +780,15 @@ class OrderController extends Controller
     {
         set_time_limit(180);
 
-        $results = Order::queryWithRequest($request, function (&$query, $request) {
+        // A driver listing orders near them sees only the adhoc orders they could take. That
+        // depends on live offers, so the list isn't cached.
+        $offerDriver = $this->nearbyDriverUuid($request);
+
+        $results = Order::queryWithRequest($request, function (&$query, $request) use ($offerDriver) {
+            if ($offerDriver) {
+                AdhocOfferListing::apply($query, $offerDriver, Company::currentSession());
+            }
+
             $query->with(['trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'customer', 'facilitator']);
             $query->where('company_uuid', session('company'));
             $query->whereNotNull('payload_uuid');
@@ -942,7 +961,11 @@ class OrderController extends Controller
                     }
                 }
             }
-        });
+        }, (bool) $offerDriver);
+
+        if ($offerDriver) {
+            AdhocOfferListing::attach($results, $offerDriver);
+        }
 
         return OrderResource::collection($results);
     }
@@ -1054,6 +1077,10 @@ class OrderController extends Controller
             return $this->apiError('Order has already been dispatched!');
         }
 
+        if ($order->currentConfig()?->allowsDispatch() === false) {
+            return $this->apiError('Orders of this type are not dispatched.');
+        }
+
         $order->dispatch();
         $order->insertDispatchActivity();
 
@@ -1131,9 +1158,16 @@ class OrderController extends Controller
             return response()->apiError('Order has already started.');
         }
 
-        // if the order is adhoc and the parameter of `assign` is set with a valid driver id, assign the driver and continue
+        if ($order->status === 'canceled') {
+            return response()->apiError('This order was canceled.', 409);
+        }
+
+        // An adhoc order goes to the first driver who claims it; everyone after is refused.
         if ($order->adhoc && $assignAdhocDriver && Str::startsWith($assignAdhocDriver, 'driver_')) {
-            $order->assignDriver($assignAdhocDriver, true);
+            $refusal = $this->claimAdhocOrder($order, $assignAdhocDriver);
+            if ($refusal) {
+                return $refusal;
+            }
         }
 
         /** @var \Fleetbase\Models\Driver */
@@ -1192,6 +1226,131 @@ class OrderController extends Controller
 
         // update activity
         return $this->updateActivity($order, $updateActivityRequest);
+    }
+
+    /**
+     * Claim an adhoc order for a driver of its company who is online. The claim is one
+     * conditional update, so of two drivers accepting at once only one gets the order. Returns
+     * the refusal, or null once the driver holds the order.
+     */
+    protected function claimAdhocOrder(Order $order, string $driverId): mixed
+    {
+        $driver = $this->findAdhocDriver($driverId);
+        if (!$driver || !$this->driverServesCompany($driver, $order->company_uuid)) {
+            return response()->apiError('Driver not found.', 404);
+        }
+
+        // A driver signed in to the app may only accept for themselves.
+        $signedIn = $this->signedInDriver($order->company_uuid);
+        if ($signedIn && $signedIn->uuid !== $driver->uuid) {
+            return response()->apiError('You can only accept orders for yourself.', 403);
+        }
+
+        if ($order->driver_assigned_uuid === $driver->uuid) {
+            return null;
+        }
+
+        if (!$driver->online) {
+            return response()->apiError('Go online to accept orders.', 422);
+        }
+
+        // The order's dispatch strategy decides who may accept it, for example only the driver
+        // with the open offer.
+        if (!AdhocDispatch::for($order)->accept($order, $driver)) {
+            return response()->apiError('This order is no longer offered to you.', 409);
+        }
+
+        $claimed = Order::withoutGlobalScopes()
+            ->where('uuid', $order->uuid)
+            ->whereNull('driver_assigned_uuid')
+            ->where('status', '!=', 'canceled')
+            ->where(fn ($query) => $query->whereNull('started')->orWhere('started', 0))
+            ->update(['driver_assigned_uuid' => $driver->uuid]);
+
+        if (!$claimed) {
+            return response()->apiError('This order was taken by another driver.', 409);
+        }
+
+        // The claim saved the driver directly; assigning again runs the order observer for it.
+        $order->driver_assigned_uuid = null;
+        $order->assignDriver($driver, true);
+
+        // Everyone else's offer is withdrawn.
+        OrderOffers::claimed($order, $driver);
+
+        return null;
+    }
+
+    /**
+     * Turn down an adhoc order. It isn't offered to the driver again, and with one-at-a-time
+     * offers it goes to the next driver.
+     */
+    public function declineOrder(string $id, Request $request)
+    {
+        try {
+            $order = $this->findOrder($id);
+        } catch (ModelNotFoundException $exception) {
+            return response()->apiError('Order resource not found.', 404);
+        }
+
+        $driver = $this->signedInDriver($order->company_uuid);
+        $named  = $request->input('driver');
+        if (!$driver && is_string($named) && Str::startsWith($named, 'driver_')) {
+            $driver = $this->findAdhocDriver($named);
+            $driver = $driver && $this->driverServesCompany($driver, $order->company_uuid) ? $driver : null;
+        }
+        if (!$driver) {
+            return response()->apiError('Driver not found.', 404);
+        }
+
+        if (!$order->adhoc || $order->driver_assigned_uuid || !AdhocDispatch::for($order)->decline($order, $driver)) {
+            return response()->apiError('This order is not offered to you.', 409);
+        }
+
+        return response()->json(['status' => 'declined', 'order' => $order->public_id]);
+    }
+
+    /**
+     * The driver whose surroundings are asked for with `nearby=driver_…`, if they belong to this company.
+     */
+    protected function nearbyDriverUuid(Request $request): ?string
+    {
+        $nearby = $request->input('nearby');
+        if (!is_string($nearby) || !Str::startsWith($nearby, 'driver_')) {
+            return null;
+        }
+
+        return Driver::withoutGlobalScopes()->where('public_id', $nearby)->where('company_uuid', session('company'))->whereNull('deleted_at')->value('uuid');
+    }
+
+    protected function findAdhocDriver(string $publicId): ?Driver
+    {
+        return Driver::withoutGlobalScopes()->where('public_id', $publicId)->whereNull('deleted_at')->first();
+    }
+
+    /**
+     * Whether the driver works for the company, directly or through their user.
+     */
+    protected function driverServesCompany(Driver $driver, ?string $companyUuid): bool
+    {
+        if ($driver->company_uuid === $companyUuid) {
+            return true;
+        }
+
+        return $driver->user_uuid && User::where('uuid', $driver->user_uuid)->value('company_uuid') === $companyUuid;
+    }
+
+    /**
+     * The driver profile of the user whose token signed this request, if they drive for the company.
+     */
+    protected function signedInDriver(?string $companyUuid): ?Driver
+    {
+        $userUuid = session('user');
+        if (!$userUuid) {
+            return null;
+        }
+
+        return Driver::withoutGlobalScopes()->where('user_uuid', $userUuid)->where('company_uuid', $companyUuid)->whereNull('deleted_at')->first();
     }
 
     /**
@@ -1255,9 +1414,20 @@ class OrderController extends Controller
 
         // Get the order config
         $orderConfig = $order->config();
-        $activity    = $request->array('activity');
+        $activity    = $request->inputArray('activity');
         if (!Utils::isActivity($activity)) {
             $activity = new Activity($activity, $order->getConfigFlow());
+        }
+
+        // The order's config decides whether the update is allowed: a finished order, a step the
+        // config's strict transitions don't permit, dispatch on a config that turns it off, or a
+        // step that needs proof of delivery without it. With strict transitions the server's
+        // activity definition replaces the one sent.
+        if ($orderConfig && !($activity->is('dispatched') && $skipDispatch)) {
+            [$activity, $refusal] = $orderConfig->authorizeTransition($order, $activity, $proof);
+            if ($refusal) {
+                return response()->apiError($refusal, 422);
+            }
         }
 
         // if we're going to skip the dispatch get the next activity status and flow and continue

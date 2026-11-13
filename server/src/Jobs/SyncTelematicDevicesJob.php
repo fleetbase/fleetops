@@ -125,7 +125,7 @@ class SyncTelematicDevicesJob implements ShouldQueue
                 &$inventoryFetched, &$inventoryLinked, &$inventorySkipped,
                 &$totalEnrichment, &$totalEnrichmentCompleted, &$totalEnrichmentFailures
             ): void {
-                if (!$force && $itemsSinceCheckpoint < 25 && $lastCheckpointAt->diffInSeconds(now(), true) < 5) {
+                if (!$force && $itemsSinceCheckpoint < 25 && (int) $lastCheckpointAt->diffInSeconds(now(), true) < 5) {
                     return;
                 }
                 $this->telematic->status = 'synchronizing';

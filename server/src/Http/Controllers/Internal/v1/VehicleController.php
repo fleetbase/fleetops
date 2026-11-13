@@ -56,7 +56,7 @@ class VehicleController extends FleetOpsController
             $this->syncDriverAssignment($vehicle, $this->driverIdentifierFromRequest($request));
         }
 
-        $customFieldValues = $request->array('vehicle.custom_field_values');
+        $customFieldValues = $request->inputArray('vehicle.custom_field_values');
         if ($customFieldValues) {
             $vehicle->syncCustomFieldValues($customFieldValues);
         }
@@ -472,7 +472,7 @@ class VehicleController extends FleetOpsController
     public static function export(ExportRequest $request)
     {
         $format       = $request->input('format', 'xlsx');
-        $selections   = $request->array('selections');
+        $selections   = $request->inputArray('selections');
         $fileName     = trim(Str::slug('vehicles-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return Excel::download(new VehicleExport($selections), $fileName);

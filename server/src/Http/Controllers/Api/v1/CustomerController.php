@@ -18,6 +18,13 @@ use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Support\CustomerAuth;
+use Fleetbase\FleetOps\Support\DriverRatings;
+use Fleetbase\FleetOps\Support\OrderChat;
+use Fleetbase\FleetOps\Support\OrderCustomFields;
+use Fleetbase\FleetOps\Support\PlaceSearch;
+use Fleetbase\FleetOps\Support\TrackingCode;
+use Fleetbase\FleetOps\Support\TrackingPage\TrackingShare;
+use Fleetbase\FleetOps\Support\TrackingScope;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
@@ -47,6 +54,11 @@ class CustomerController extends Controller
     use \Fleetbase\FleetOps\Http\Controllers\Concerns\ResolvesReviewAccountBypass;
 
     public const DEACTIVATED_LOGIN_MESSAGE = 'This customer login has been deactivated.';
+
+    /**
+     * Relations a customer's order is returned with.
+     */
+    protected const CUSTOMER_ORDER_RELATIONS = ['payload', 'payload.pickup', 'payload.dropoff', 'transaction', 'driverRating'];
 
     /**
      * Wrong guesses a single code tolerates before it locks itself (core's check()).
@@ -183,7 +195,10 @@ class CustomerController extends Controller
                 'email'        => $isEmail ? $identity : $request->input('email'),
                 'phone'        => $isEmail ? static::phone($request->input('phone')) : $identity,
             ]);
-            $user->password = $request->input('password');
+            // Customers who sign in by phone use a code, so they may have no password at all.
+            if ($request->filled('password')) {
+                $user->password = $request->input('password');
+            }
             $user->save();
             $user->setUserType('customer');
         } else {
@@ -200,7 +215,9 @@ class CustomerController extends Controller
                     $update['email'] = $request->input('email');
                 }
                 $user->fill($update);
-                $user->password = $request->input('password'); // mutator hashes
+                if ($request->filled('password')) {
+                    $user->password = $request->input('password'); // mutator hashes
+                }
                 $user->save();
                 if (!$user->type) {
                     $user->setUserType('customer');
@@ -432,6 +449,28 @@ class CustomerController extends Controller
     }
 
     /**
+     * Send a code to a phone number without revealing whether it has an account. An
+     * existing customer gets a login code and a new one gets a signup code; both answer the
+     * same way. {@see verifyCode} tells them apart once the code is proven.
+     */
+    public function requestCode(Request $request)
+    {
+        $phone = $request->input('phone') ?? $request->input('identity');
+        if (!$phone || $this->isEmail($phone)) {
+            return response()->apiError('A phone number is required.', 400);
+        }
+
+        $phone = static::phone($phone);
+        $input = ['phone' => $phone, 'identity' => $phone, 'mode' => 'sms'];
+
+        $response = $this->findActiveUserByIdentity($phone, 'phone')
+            ? $this->loginWithPhone(Request::create('', 'POST', $input))
+            : $this->requestCreationCode(VerifyCreateCustomerRequest::create('', 'POST', $input));
+
+        return $response->getStatusCode() === 200 ? response()->json(['status' => 'ok']) : $response;
+    }
+
+    /**
      * Verify the SMS/email code from {@see loginWithPhone} and issue a token.
      */
     public function verifyCode(Request $request)
@@ -446,7 +485,17 @@ class CustomerController extends Controller
 
         $user = $this->findUserForVerification($identity);
         if (!$user) {
-            return response()->apiError('Unable to verify code.');
+            // A proven signup code from requestCode(). It stays live for create(), which uses it up.
+            $signupCode = $this->verificationCodeMatches([
+                'code'           => $code,
+                'for'            => 'fleetops_create_customer',
+                'meta->identity' => $identity,
+            ]);
+            if ($signupCode || $this->verificationBypassMatches($identity, $code)) {
+                return response()->json(['status' => 'new_customer']);
+            }
+
+            return response()->apiError('Invalid verification code.');
         }
 
         if ($user->status === 'inactive') {
@@ -598,6 +647,12 @@ class CustomerController extends Controller
         $input = $request->only(['name', 'title', 'email', 'phone', 'meta']);
         if (isset($input['phone'])) {
             $input['phone'] = static::phone($input['phone']);
+            if ($input['phone'] !== $customer->phone) {
+                $refusal = $this->refusePhoneChange($customer, $input['phone'], $request->input('phone_code'));
+                if ($refusal) {
+                    return $refusal;
+                }
+            }
         }
 
         // Photo handling.
@@ -640,6 +695,31 @@ class CustomerController extends Controller
         }
 
         return $this->customerResource($customer->fresh());
+    }
+
+    /**
+     * Delete the customer's account: sign them out everywhere, delete their saved places and
+     * remove their name and contact details. Their past orders stay on the operator's books
+     * without them.
+     */
+    public function deleteMe()
+    {
+        $customer = $this->currentCustomer();
+        if (!$customer) {
+            return response()->apiError('Not authenticated.', 401);
+        }
+
+        if ($this->hasOrdersInProgress($customer)) {
+            return response()->apiError('You have orders in progress. Wait for them to finish, or cancel them, before deleting your account.', 422);
+        }
+
+        $user = $customer->user_uuid ? $this->findUserByUuid($customer->user_uuid) : null;
+        if ($user) {
+            $this->deleteUserTokens($user);
+        }
+        $this->eraseCustomer($customer, $user);
+
+        return response()->json(['status' => 'deleted']);
     }
 
     /**
@@ -753,14 +833,48 @@ class CustomerController extends Controller
             return response()->apiError('No order config available for this company.', 422);
         }
 
+        if (!$this->customersMayOrder($orderConfig)) {
+            return response()->apiError('Customers cannot place this type of order.', 422);
+        }
+
+        $serviceQuote = $this->resolveServiceQuote($request);
+        if ($serviceQuote instanceof ServiceQuote && ($serviceQuote->company_uuid !== $sessionCompany || $serviceQuote->expired_at?->isPast())) {
+            return response()->apiError('This quote has expired. Please get a new one.', 422);
+        }
+
+        // Matching drivers by vehicle type needs a quote, whose service says the type.
+        $byVehicleType = (bool) $orderConfig->policy('dispatch.matching.vehicle_type');
+        if (($byVehicleType || $orderConfig->policy('customer.ordering.require_quote')) && !$serviceQuote instanceof ServiceQuote) {
+            return response()->apiError('Choose a service quote for this order first.', 422);
+        }
+
+        $paymentMethod  = $request->input('payment_method');
+        $paymentMethods = array_values((array) $orderConfig->policy('customer.ordering.payment_methods', []));
+        if ($paymentMethod !== null && $paymentMethods !== [] && !in_array($paymentMethod, $paymentMethods, true)) {
+            return response()->apiError('Choose a payment method: ' . implode(', ', $paymentMethods) . '.', 422);
+        }
+
+        if ($this->hasUnsettledOrder($customer, $orderConfig)) {
+            return response()->apiError('Settle your previous order before placing another.', 402);
+        }
+
+        $customFieldErrors = OrderCustomFields::validate($orderConfig, (array) $request->input('custom_fields', []));
+        if ($customFieldErrors) {
+            return response()->apiError($customFieldErrors, 422);
+        }
+
+        $vehicleType = $byVehicleType ? $serviceQuote->serviceRate?->service_type : null;
+
         // Build the Payload (matching the operator OrderController convention).
         // - `payload` may be an array of {pickup, dropoff, return, waypoints, entities}
         // - `payload` may be a string public_id referencing an existing Payload
         // - Or top-level pickup/dropoff/return/waypoints/entities are accepted
         $payloadUuid = null;
+        $builtHere   = false;
         if ($request->isArray('payload')) {
             $payloadInput = (array) $request->input('payload');
             $payloadUuid  = $this->buildPayloadFromInput($payloadInput, $sessionCompany)->uuid;
+            $builtHere    = true;
         } elseif ($request->isString('payload')) {
             $payloadUuid = $this->getUuid('payloads', [
                 'public_id'    => $request->input('payload'),
@@ -770,32 +884,41 @@ class CustomerController extends Controller
             $payloadInput = $request->only(['pickup', 'dropoff', 'return', 'waypoints', 'entities']);
             if (array_filter($payloadInput, fn ($v) => $v !== null && $v !== '' && $v !== [])) {
                 $payloadUuid = $this->buildPayloadFromInput($payloadInput, $sessionCompany)->uuid;
+                $builtHere   = true;
             }
         }
 
+        // How the customer will pay, kept on the payload this order was given.
+        if ($builtHere && is_string($paymentMethod) && in_array($paymentMethod, $paymentMethods, true)) {
+            $this->setPayloadPaymentMethod($payloadUuid, $paymentMethod);
+        }
+
         $order = $this->createOrderRecord([
-            'company_uuid'      => $sessionCompany,
-            'customer_uuid'     => $customer->uuid,
-            'customer_type'     => $this->getModelClassName('contact'),
-            'payload_uuid'      => $payloadUuid,
-            'order_config_uuid' => $orderConfig->uuid,
-            'type'              => $orderConfig->key,
-            'status'            => 'created',
-            'scheduled_at'      => $request->input('scheduled_at'),
-            'notes'             => $request->input('notes'),
-            'internal_id'       => $request->input('internal_id'),
-            'meta'              => (array) $request->input('meta', []),
+            'company_uuid'          => $sessionCompany,
+            'customer_uuid'         => $customer->uuid,
+            'customer_type'         => $this->getModelClassName('contact'),
+            'payload_uuid'          => $payloadUuid,
+            'order_config_uuid'     => $orderConfig->uuid,
+            'type'                  => $orderConfig->key,
+            'status'                => $orderConfig->getInitialStatusCode(),
+            'scheduled_at'          => $request->input('scheduled_at'),
+            'notes'                 => $request->input('notes'),
+            'internal_id'           => $request->input('internal_id'),
+            'adhoc'                 => (bool) $orderConfig->policy('dispatch.adhoc.customer_orders'),
+            'required_vehicle_type' => $vehicleType,
+            'meta'                  => (array) $request->input('meta', []),
         ]);
 
         // If the customer picked a ServiceQuote up front, consume it now to
         // lock the pricing onto the order's PurchaseRate (mirrors how
         // OrderController::create handles `service_quote`).
-        $serviceQuote = $this->resolveServiceQuote($request);
         if ($serviceQuote instanceof ServiceQuote) {
             $order->purchaseServiceQuote($serviceQuote);
         }
 
-        return $this->orderResource($order->fresh(['payload', 'payload.pickup', 'payload.dropoff', 'payload.entities']));
+        OrderCustomFields::apply($order, (array) $request->input('custom_fields', []));
+
+        return $this->orderResource($order->fresh([...static::CUSTOMER_ORDER_RELATIONS, 'payload.entities']));
     }
 
     /**
@@ -860,6 +983,377 @@ class CustomerController extends Controller
     }
 
     /**
+     * Search this customer's saved places and the geocoder. Other customers' places are never
+     * returned, and neither are unowned rows, which hold addresses from other customers' orders.
+     */
+    public function searchPlaces(Request $request)
+    {
+        $customer = $this->currentCustomer();
+        if (!$customer) {
+            return response()->apiError('Not authenticated.', 401);
+        }
+
+        return $this->placeResourceCollection($this->runPlaceSearch($this->customerPlaceQuery($customer), (string) $request->input('query', ''), [
+            'limit'          => min((int) $request->input('limit', 10), 50),
+            'geo'            => true,
+            'latitude'       => $request->input('latitude', false),
+            'longitude'      => $request->input('longitude', false),
+            'no_query_order' => 'name_desc',
+        ]));
+    }
+
+    /**
+     * Look up an address or coordinates. Nothing is stored.
+     */
+    public function geocode(Request $request)
+    {
+        $customer = $this->currentCustomer();
+        if (!$customer) {
+            return response()->apiError('Not authenticated.', 401);
+        }
+
+        $query     = trim((string) $request->input('query', ''));
+        $latitude  = $request->input('latitude');
+        $longitude = $request->input('longitude');
+        if ($query === '' && (!is_numeric($latitude) || !is_numeric($longitude))) {
+            return response()->apiError('A query or coordinates are required.', 400);
+        }
+
+        return $this->placeResourceCollection($this->geocodePlaces($query, $latitude, $longitude));
+    }
+
+    /**
+     * Save a place for the authenticated customer.
+     */
+    public function savePlace(Request $request)
+    {
+        $customer = $this->currentCustomer();
+        if (!$customer) {
+            return response()->apiError('Not authenticated.', 401);
+        }
+
+        $location = $this->savedPlaceLocation($request);
+        if (!$location || !trim((string) $request->input('name'))) {
+            return response()->apiError('A name, latitude and longitude are required.', 422);
+        }
+
+        $place = $this->createPlace(array_merge($this->savedPlaceAttributes($request), [
+            'company_uuid' => $this->sessionCompany(),
+            'owner_uuid'   => $customer->uuid,
+            'owner_type'   => get_class($customer),
+            'location'     => $location,
+        ]));
+
+        return $this->placeResource($place);
+    }
+
+    /**
+     * Update one of the authenticated customer's saved places.
+     */
+    public function updatePlace(string $id, Request $request)
+    {
+        $place = $this->ownedPlace($id);
+        if (!$place) {
+            return response()->apiError('Place not found.', 404);
+        }
+
+        $attributes = $this->savedPlaceAttributes($request);
+        if ($request->hasAny(['latitude', 'longitude'])) {
+            $location = $this->savedPlaceLocation($request);
+            if (!$location) {
+                return response()->apiError('A latitude and longitude are required.', 422);
+            }
+            $attributes['location'] = $location;
+        }
+
+        $place->update($attributes);
+
+        return $this->placeResource($place);
+    }
+
+    /**
+     * Delete one of the authenticated customer's saved places.
+     */
+    public function deletePlace(string $id)
+    {
+        $place = $this->ownedPlace($id);
+        if (!$place) {
+            return response()->apiError('Place not found.', 404);
+        }
+
+        $place->delete();
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    /**
+     * Send a code to the number a customer wants to change to, so {@see updateMe} can prove
+     * they hold it.
+     */
+    public function requestPhoneChangeCode(Request $request)
+    {
+        $customer = $this->currentCustomer();
+        if (!$customer) {
+            return response()->apiError('Not authenticated.', 401);
+        }
+        if (!$request->filled('phone') || !$customer->user_uuid) {
+            return response()->apiError('A phone number is required.', 400);
+        }
+
+        $phone = static::phone($request->input('phone'));
+
+        // Answer the same for a number another account holds, so this can't discover accounts.
+        // updateMe() refuses the change if it is ever attempted.
+        if ($this->findActiveUserByIdentity($phone, 'phone')) {
+            return response()->json(['status' => 'ok']);
+        }
+
+        $subject = $this->findUserByUuid($customer->user_uuid);
+        if (!$subject) {
+            return response()->apiError('Unable to send verification code.');
+        }
+
+        try {
+            $this->generateSmsVerification($subject, 'fleetops_customer_phone_change', [
+                'phone'           => $phone,
+                'hashed'          => true,
+                'messageCallback' => fn ($verification) => 'Your ' . config('app.name') . ' verification code is ' . $verification->code,
+                'meta'            => ['identity' => $phone],
+            ]);
+        } catch (SmsBlockedException $e) {
+            return static::smsBlockedResponse($e);
+        } catch (\Throwable $e) {
+            return static::sendFailureResponse($e, 'Unable to send verification code.');
+        }
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    /**
+     * Request a driver for one of the authenticated customer's orders.
+     */
+    public function dispatchOrder(string $id)
+    {
+        $order = $this->ownedOrder($id);
+        if (!$order) {
+            return response()->apiError('Order not found.', 404);
+        }
+
+        if ($order->dispatched) {
+            return response()->apiError('Order has already been dispatched.', 422);
+        }
+        if ($this->orderHasEnded($order) || $order->status !== $order->config()->getInitialStatusCode() || !$order->config()->allowsDispatch()) {
+            return response()->apiError('This order can no longer be dispatched.', 422);
+        }
+        if (!$order->hasDriverAssigned && !$order->adhoc) {
+            return response()->apiError('No driver is available for this order.', 422);
+        }
+
+        $order->dispatch();
+        $order->insertDispatchActivity();
+
+        return $this->orderResource($order->fresh(static::CUSTOMER_ORDER_RELATIONS));
+    }
+
+    /**
+     * Cancel one of the authenticated customer's orders, when its config lets customers cancel.
+     */
+    public function cancelOrder(string $id, Request $request)
+    {
+        $order = $this->ownedOrder($id);
+        if (!$order) {
+            return response()->apiError('Order not found.', 404);
+        }
+
+        if (!$this->customerMayCancel($order)) {
+            return response()->apiError('This order can no longer be canceled.', 422);
+        }
+
+        $reason = $request->input('reason');
+        if (is_string($reason) && trim($reason) !== '') {
+            $order->cancelWithReason(Str::limit(trim($reason), 1000, ''));
+        } else {
+            $order->cancel();
+        }
+
+        return $this->orderResource($order->fresh(static::CUSTOMER_ORDER_RELATIONS));
+    }
+
+    /**
+     * The driver and vehicle of one of the customer's orders, so the customer can recognise them.
+     * The driver's contact details stay out: customers and drivers don't share phone numbers.
+     */
+    public function orderDriver(string $id)
+    {
+        $order = $this->ownedOrder($id);
+        if (!$order) {
+            return response()->apiError('Order not found.', 404);
+        }
+
+        $driver  = $order->driverAssigned;
+        $vehicle = $order->vehicleAssigned ?? $driver?->vehicle;
+        if (!$driver) {
+            return response()->json(['driver' => null, 'vehicle' => null]);
+        }
+
+        return response()->json([
+            'driver'  => ['name' => $driver->name, 'photo_url' => $driver->photo_url, 'location' => $driver->location, 'rating' => $driver->rating_average !== null ? (float) $driver->rating_average : null],
+            'vehicle' => $vehicle ? [
+                'make'         => $vehicle->make,
+                'model'        => $vehicle->model,
+                'color'        => $vehicle->color ?? null,
+                'plate_number' => $vehicle->plate_number,
+            ] : null,
+        ]);
+    }
+
+    /**
+     * Live tracking data for one of the authenticated customer's orders.
+     */
+    public function orderTracker(string $id, Request $request)
+    {
+        $order = $this->ownedOrder($id);
+        if (!$order) {
+            return response()->apiError('Order not found.', 404);
+        }
+
+        try {
+            return response()->json($order->tracker()->toArray($request->only(['provider', 'fallbacks', 'traffic_enabled'])));
+        } catch (\Throwable) {
+            return response()->apiError('Unable to track this order.', 503);
+        }
+    }
+
+    /**
+     * ETA for one of the authenticated customer's orders.
+     */
+    public function orderEta(string $id, Request $request)
+    {
+        $order = $this->ownedOrder($id);
+        if (!$order) {
+            return response()->apiError('Order not found.', 404);
+        }
+
+        try {
+            return response()->json($order->tracker()->eta($request->only(['provider', 'fallbacks', 'traffic_enabled'])));
+        } catch (\Throwable) {
+            return response()->apiError('Unable to track this order.', 503);
+        }
+    }
+
+    /**
+     * The chat with the driver of one of the customer's orders, oldest message first. Empty until
+     * a driver is assigned. Needs the config's `customer.interactions.chat` policy.
+     */
+    public function orderMessages(string $id)
+    {
+        $order = $this->ownedOrder($id);
+        if (!$order) {
+            return response()->apiError('Order not found.', 404);
+        }
+        if (!$order->config()->policy('customer.interactions.chat')) {
+            return response()->apiError('Messaging the driver is not available for this order.', 403);
+        }
+
+        $channel = $this->orderChannel($order);
+
+        return response()->json($channel ? OrderChat::messages($channel, $this->currentCustomer()->user_uuid)->all() : []);
+    }
+
+    /**
+     * Send the driver a message. The customer always writes as themselves.
+     */
+    public function sendOrderMessage(string $id, Request $request)
+    {
+        $order = $this->ownedOrder($id);
+        if (!$order) {
+            return response()->apiError('Order not found.', 404);
+        }
+
+        if (!$order->config()->policy('customer.interactions.chat')) {
+            return response()->apiError('Messaging the driver is not available for this order.', 403);
+        }
+
+        $text = trim((string) $request->input('text'));
+        if ($text === '' || mb_strlen($text) > 2000) {
+            return response()->apiError('Write a message of up to 2000 characters.', 422);
+        }
+
+        $channel = $this->orderChannel($order);
+        if ($this->chatIsClosed($order, $channel)) {
+            return response()->apiError('This conversation has ended.', 422);
+        }
+        if (!$channel) {
+            return response()->apiError('You can message the driver once one is assigned.', 422);
+        }
+
+        $customerUser = $this->currentCustomer()->user_uuid;
+        $message      = OrderChat::send($channel, $customerUser, $text);
+
+        return response()->json(OrderChat::messages($channel, $customerUser)->firstWhere('id', $message->public_id ?? $message->uuid), 201);
+    }
+
+    /**
+     * Rate the driver of a completed order, once. Needs the config's `customer.interactions.rating` policy.
+     */
+    public function rateOrder(string $id, Request $request)
+    {
+        $order = $this->ownedOrder($id);
+        if (!$order) {
+            return response()->apiError('Order not found.', 404);
+        }
+
+        if (!$order->config()->policy('customer.interactions.rating')) {
+            return response()->apiError('Rating the driver is not available for this order.', 403);
+        }
+
+        $stars = $request->input('stars');
+        if (!is_numeric($stars) || (int) $stars != $stars || $stars < 1 || $stars > 5) {
+            return response()->apiError('Rate from 1 to 5 stars.', 422);
+        }
+        if ($order->status !== $order->config()->getCompletedActivity()?->code || !$order->driver_assigned_uuid) {
+            return response()->apiError('Only a completed order can be rated.', 422);
+        }
+
+        $comment = $request->input('comment');
+        if (!DriverRatings::rate($order, (int) $stars, is_string($comment) ? Str::limit($comment, 1000, '') : null)) {
+            return response()->apiError('You already rated this order.', 409);
+        }
+
+        return response()->json(['status' => 'rated']);
+    }
+
+    /**
+     * A link the customer can send to someone they trust to follow the order live, without a
+     * code. Needs the config's `customer.interactions.share_tracking` policy.
+     */
+    public function shareOrder(string $id)
+    {
+        $order = $this->ownedOrder($id);
+        if (!$order) {
+            return response()->apiError('Order not found.', 404);
+        }
+
+        if (!$order->config()->policy('customer.interactions.share_tracking')) {
+            return response()->apiError('Sharing tracking is not available for this order.', 403);
+        }
+
+        $number = data_get($order, 'trackingNumber.tracking_number');
+        if (!$number || $this->orderHasEnded($order)) {
+            return response()->apiError('This order can no longer be shared.', 422);
+        }
+
+        $scope     = TrackingScope::forCustomer($order, $this->currentCustomer());
+        $expiresAt = now()->addHours(TrackingShare::HOURS);
+        $url       = $this->trackingPageUrl($number, $order->company_uuid);
+
+        return response()->json([
+            'url'        => $url . (str_contains($url, '?') ? '&' : '?') . 'share=' . TrackingShare::token($scope->order_uuid, $scope->customer_uuid, $expiresAt),
+            'expires_at' => $expiresAt->toISOString(),
+        ]);
+    }
+
+    /**
      * Register a push-notification device for the authenticated customer's user.
      */
     public function registerDevice(Request $request)
@@ -891,6 +1385,183 @@ class CustomerController extends Controller
     /* ============================================================
      | Helpers
      * ============================================================ */
+
+    /**
+     * Why a customer can't change to this phone number, or null if they can. A number is only
+     * accepted with a code sent to it, and never if another account holds it.
+     */
+    protected function refusePhoneChange(Contact $customer, string $phone, mixed $code): ?JsonResponse
+    {
+        $holder = $this->findActiveUserByIdentity($phone, 'phone');
+        $proven = $code && $customer->user_uuid && $this->verificationCodeExists([
+            'subject_uuid'   => $customer->user_uuid,
+            'code'           => $code,
+            'for'            => 'fleetops_customer_phone_change',
+            'meta->identity' => $phone,
+        ]);
+
+        if (!$proven || ($holder && $holder->uuid !== $customer->user_uuid)) {
+            return response()->apiError('Changing your phone number needs a valid verification code.', 422);
+        }
+
+        return null;
+    }
+
+    protected function setPayloadPaymentMethod(string $payloadUuid, string $paymentMethod): void
+    {
+        Payload::where('uuid', $payloadUuid)->update(['payment_method' => $paymentMethod]);
+    }
+
+    protected function trackingPageUrl(string $number, ?string $companyUuid): string
+    {
+        return TrackingCode::pageUrl($number, $companyUuid);
+    }
+
+    protected function orderChannel(Order $order): mixed
+    {
+        return OrderChat::open($order);
+    }
+
+    protected function chatIsClosed(Order $order, mixed $channel): bool
+    {
+        return OrderChat::isClosed($order, $channel ?: null);
+    }
+
+    protected function orderHasEnded(Order $order): bool
+    {
+        return in_array($order->status, ['completed', 'canceled'], true) || (bool) $order->config()?->isTerminalActivityCode($order->status);
+    }
+
+    /**
+     * Whether customers may place orders of the config: every config, unless the company chose
+     * which configs customers may use (`fleet-ops.customer-enabled-order-configs`).
+     */
+    protected function customersMayOrder(OrderConfig $orderConfig): bool
+    {
+        $enabled = array_filter((array) $this->lookupCompanySetting('fleet-ops.customer-enabled-order-configs', []));
+
+        return $enabled === [] || in_array($orderConfig->uuid, $enabled, true) || in_array($orderConfig->public_id, $enabled, true);
+    }
+
+    protected function lookupCompanySetting(string $key, mixed $default = null): mixed
+    {
+        return \Fleetbase\Models\Setting::lookupFromCompany($key, $default);
+    }
+
+    /**
+     * Whether the customer may still cancel the order: their config lets customers cancel, the
+     * order hasn't finished, and it hasn't reached the config's `allowed_until` activity.
+     */
+    protected function customerMayCancel(Order $order): bool
+    {
+        if ($this->orderHasEnded($order)) {
+            return false;
+        }
+
+        $config = $order->config();
+        if (!$config->policy('customer.cancellation.enabled', true)) {
+            return false;
+        }
+
+        $until = $config->policy('customer.cancellation.allowed_until');
+        $limit = is_string($until) && $until !== '' ? $config->getActivityByCode($until) : null;
+
+        return !$limit || ($order->status !== $limit->code && !$order->hasCompletedActivity($limit));
+    }
+
+    /**
+     * Whether an earlier order of the config, paid by one of the methods its
+     * `customer.ordering.require_settlement` policy names, is completed but its transaction
+     * isn't paid. Methods the policy leaves out (cash collected by the driver, say) never block.
+     */
+    protected function hasUnsettledOrder(Contact $customer, OrderConfig $orderConfig): bool
+    {
+        $methods = array_values(array_filter((array) $orderConfig->policy('customer.ordering.require_settlement', []), 'is_string'));
+        if ($methods === []) {
+            return false;
+        }
+
+        return Order::withoutGlobalScopes()
+            ->where('customer_uuid', $customer->uuid)
+            ->where('order_config_uuid', $orderConfig->uuid)
+            ->where('status', $orderConfig->getCompletedActivity()?->code ?? 'completed')
+            ->whereNull('deleted_at')
+            ->whereHas('payload', fn ($payload) => $payload->whereIn('payment_method', $methods))
+            ->whereHas('transaction', fn ($transaction) => $transaction->where('amount', '>', 0)->whereNotIn('settlement_status', ['paid', 'refunded', 'partially_refunded']))
+            ->exists();
+    }
+
+    /**
+     * Whether the customer has an order that was sent to drivers and hasn't finished, by the
+     * order's own config.
+     */
+    protected function hasOrdersInProgress(Contact $customer): bool
+    {
+        return Order::withoutGlobalScopes()
+            ->with('orderConfig')
+            ->where('customer_uuid', $customer->uuid)
+            ->where('dispatched', 1)
+            ->whereNull('deleted_at')
+            ->whereNotIn('status', ['completed', 'canceled'])
+            ->get()
+            ->contains(fn (Order $order) => !$this->orderHasEnded($order));
+    }
+
+    /**
+     * Remove what identifies the customer, then delete their records. A user who is only this
+     * company's customer goes too; one with other roles or companies keeps their account.
+     */
+    protected function eraseCustomer(Contact $customer, ?User $user): void
+    {
+        Place::where('owner_uuid', $customer->uuid)->delete();
+
+        $customer->forceFill(['name' => 'Deleted customer', 'email' => null, 'phone' => null, 'photo_uuid' => null, 'meta' => []])->saveQuietly();
+        $customer->delete();
+
+        $otherContacts = $user ? Contact::withoutGlobalScopes()->where('user_uuid', $user->uuid)->where('uuid', '!=', $customer->uuid)->exists() : true;
+        if ($user && $user->type === 'customer' && !$otherContacts) {
+            $user->forceFill(['name' => 'Deleted customer', 'email' => 'deleted-' . $user->uuid . '@deleted.invalid', 'phone' => null])->saveQuietly();
+            $user->delete();
+        }
+    }
+
+    protected function ownedOrder(string $id): ?Order
+    {
+        $customer = $this->currentCustomer();
+
+        try {
+            $order = $this->findOrderOrFail($id);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+            return null;
+        }
+
+        return $customer && $order->customer_uuid === $customer->uuid ? $order : null;
+    }
+
+    protected function ownedPlace(string $id): ?Place
+    {
+        $customer = $this->currentCustomer();
+        $place    = $customer ? $this->findPlaceByPublicId($id, (string) $this->sessionCompany()) : null;
+
+        return $place && $place->owner_uuid === $customer->uuid ? $place : null;
+    }
+
+    protected function savedPlaceAttributes(Request $request): array
+    {
+        return $request->only(['name', 'street1', 'street2', 'city', 'province', 'postal_code', 'neighborhood', 'district', 'building', 'country', 'phone', 'meta']);
+    }
+
+    protected function savedPlaceLocation(Request $request): ?SpatialPoint
+    {
+        $latitude  = $request->input('latitude');
+        $longitude = $request->input('longitude');
+
+        if (!is_numeric($latitude) || !is_numeric($longitude) || abs($latitude) > 90 || abs($longitude) > 180) {
+            return null;
+        }
+
+        return new SpatialPoint((float) $latitude, (float) $longitude);
+    }
 
     protected function isEmail(?string $identity): bool
     {
@@ -1031,6 +1702,23 @@ class CustomerController extends Controller
     protected function verificationCodeExists(array $attributes): bool
     {
         return $this->findVerificationCode($attributes) !== null;
+    }
+
+    /**
+     * Whether the submitted code verifies, leaving it live. A wrong guess still counts
+     * against it.
+     */
+    protected function verificationCodeMatches(array $attributes): bool
+    {
+        $code = (string) ($attributes['code'] ?? '');
+
+        foreach ($this->liveVerificationCodes($attributes) as $verificationCode) {
+            if ($verificationCode->check($code, static::CODE_CHECK_ATTEMPTS) === VerificationCode::CHECK_VALID) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -1191,17 +1879,46 @@ class CustomerController extends Controller
 
     protected function orderResource(Order $order): mixed
     {
+        $order->loadMissing(static::CUSTOMER_ORDER_RELATIONS);
+
         return new OrderResource($order);
     }
 
     protected function orderResourceCollection(mixed $results): mixed
     {
+        if ($results instanceof \Illuminate\Support\Collection || $results instanceof \Illuminate\Contracts\Pagination\Paginator) {
+            collect($results instanceof \Illuminate\Contracts\Pagination\Paginator ? $results->items() : $results)
+                ->each(fn ($order) => $order instanceof Order ? $order->loadMissing(static::CUSTOMER_ORDER_RELATIONS) : null);
+        }
+
         return OrderResource::collection($results);
     }
 
     protected function placeResourceCollection(mixed $results): mixed
     {
         return PlaceResource::collection($results);
+    }
+
+    protected function placeResource(Place $place): mixed
+    {
+        return new PlaceResource($place);
+    }
+
+    protected function customerPlaceQuery(Contact $customer): mixed
+    {
+        return Place::where('company_uuid', $this->sessionCompany())
+            ->where('owner_uuid', $customer->uuid)
+            ->whereNull('deleted_at');
+    }
+
+    protected function runPlaceSearch(mixed $query, string $searchQuery, array $options): mixed
+    {
+        return PlaceSearch::search($query, $searchQuery, $options);
+    }
+
+    protected function geocodePlaces(string $query, mixed $latitude, mixed $longitude): mixed
+    {
+        return PlaceSearch::geocode($query, $latitude, $longitude);
     }
 
     /**

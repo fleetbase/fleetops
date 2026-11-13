@@ -48,6 +48,13 @@ return new class extends Migration {
 
             $table->index(['company_uuid', 'sensor_type']);
         });
+
+        // Blueprint::float() defaulted to total and places before Laravel 11, so set them in SQL.
+        if (Schema::getConnection()->getDriverName() === 'mysql') {
+            Schema::getConnection()->statement(
+                'ALTER TABLE `sensors` MODIFY COLUMN `min_threshold` DOUBLE(8,2) NULL, MODIFY COLUMN `max_threshold` DOUBLE(8,2) NULL'
+            );
+        }
     }
 
     /**

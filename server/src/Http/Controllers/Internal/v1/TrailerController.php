@@ -50,7 +50,7 @@ class TrailerController extends FleetOpsController
      */
     public function afterSave(Request $request, Trailer $trailer): void
     {
-        $values = $request->array('trailer.custom_field_values');
+        $values = $request->inputArray('trailer.custom_field_values');
 
         if ($values) {
             $trailer->syncCustomFieldValues($values);
@@ -313,7 +313,7 @@ class TrailerController extends FleetOpsController
     {
         $format = $request->input('format', 'xlsx');
 
-        return $this->downloadExport(new TrailerExport($request->array('selections')), Str::slug('trailers-' . date('Y-m-d-H:i')) . '.' . $format);
+        return $this->downloadExport(new TrailerExport($request->inputArray('selections')), Str::slug('trailers-' . date('Y-m-d-H:i')) . '.' . $format);
     }
 
     public function import(ImportRequest $request)

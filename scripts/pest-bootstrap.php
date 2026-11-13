@@ -300,8 +300,8 @@ if (!class_exists('Illuminate\Validation\ValidationException')) {
 }
 
 if (class_exists('Illuminate\Http\Request') && method_exists('Illuminate\Http\Request', 'macro')) {
-    if (!method_exists('Illuminate\Http\Request', 'array')) {
-        Illuminate\Http\Request::macro('array', function (string $key, array $default = []): array {
+    if (!method_exists('Illuminate\Http\Request', 'inputArray')) {
+        Illuminate\Http\Request::macro('inputArray', function (string $key, array $default = []): array {
             $value = $this->input($key, $default);
 
             return is_array($value) ? $value : $default;
@@ -416,6 +416,36 @@ if (!class_exists('Fleetbase\Ai\Support\AiQueryRegistry')) {
 
 if (!class_exists('Fleetbase\Ai\Support\AiRelativeDateResolver') && class_exists('Illuminate\Support\Carbon')) {
     eval('namespace Fleetbase\Ai\Support; class AiRelativeDateResolver { public function __construct($parser = null) {} public function resolveDateTime(string $prompt, ?string $timezone = null): ?\Illuminate\Support\Carbon { if (preg_match("/(\d+)\s+days?\s+from\s+now/i", $prompt, $matches)) { return \Illuminate\Support\Carbon::now($timezone)->addDays((int) $matches[1]); } return null; } public function resolveWindow(string $prompt, ?string $timezone = null): ?array { $timezone = $timezone ?: date_default_timezone_get(); $now = \Illuminate\Support\Carbon::now($timezone); if (str_contains(strtolower($prompt), "last week")) { $start = $now->copy()->subWeek()->startOfWeek(); $end = $now->copy()->subWeek()->endOfWeek(); return ["label" => "last week", "timezone" => $timezone, "start" => $start, "end" => $end]; } if (str_contains(strtolower($prompt), "yesterday")) { $start = $now->copy()->subDay()->startOfDay(); $end = $now->copy()->subDay()->endOfDay(); return ["label" => "yesterday", "timezone" => $timezone, "start" => $start, "end" => $end]; } return null; } }');
+}
+
+// cknow/laravel-money 8 finds its ISO currency table through config, which this harness never loads.
+if (class_exists(Cknow\Money\Money::class)) {
+    Cknow\Money\Money::setCurrencies(new Money\Currencies\ISOCurrencies());
+}
+
+/**
+ * Laravel 12's loadMissing() always starts a query, even when every relation is set, so a
+ * model test without a connection needs a resolver to reach that point.
+ */
+function fleetopsTestConnectionResolver(): void
+{
+    Illuminate\Database\Eloquent\Model::setConnectionResolver(new class implements Illuminate\Database\ConnectionResolverInterface {
+        private ?Illuminate\Database\Connection $connection = null;
+
+        public function connection($name = null)
+        {
+            return $this->connection ??= new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+        }
+
+        public function getDefaultConnection()
+        {
+            return 'sqlite';
+        }
+
+        public function setDefaultConnection($name)
+        {
+        }
+    });
 }
 
 set_error_handler(function (int $severity, string $message): bool {

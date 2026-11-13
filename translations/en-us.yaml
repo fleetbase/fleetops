@@ -106,6 +106,7 @@ menu:
     payments: Payments
     notifications: Notifications
     routing: Routing
+    dispatch: Dispatch
     map: Map
     custom-fields: Custom Fields
     order-board: Order Board
@@ -1078,6 +1079,12 @@ order:
         add-waypoint: Add Waypoint
         add-waypoint-help-text: 'Use the `Add Waypoint` button to add more stops for this order. The Fleetbase routing engine will automatically optimize the route as each stop is added or removed.'
         adhoc-ping: Adhoc Ping Distance
+        adhoc-strategy: How to Offer It
+        adhoc-strategy-help-text: How this order is offered to drivers nearby. The default comes from the order config, then from Settings → Dispatch.
+        adhoc-strategy-default: Default
+        required-vehicle-type: Vehicle Type
+        required-vehicle-type-placeholder: Any vehicle type
+        required-vehicle-type-help-text: Only drivers whose vehicle is of this type are offered the order.
         adhoc-ping-help-text: This setting determines the adhoc distance to ping for this order, if unset it will fallback to the default setting.
         adhoc-ping-message: Distance must be in meters
         apply-service-rate: Apply service rate
@@ -1252,12 +1259,45 @@ order-config-manager:
     uninstall-order-config: Uninstall Configuration
     uninstall-order-config-success-message: Extension {extensionName} uninstalled.
     select-order-config-to-start: Select or create an order config to start.
+    template: Start From
+    template-help-text: A ready-made configuration for one kind of operation, with its flow, policies and triggers. Change anything once it is created.
+    blank-template: Blank configuration
     tabs:
         details: Details
         custom-fields: Custom Fields
         activity-flow: Activity Flow
         lifecycle: Lifecycle
         entities: Entities
+        policies: Policies
+        triggers: Triggers
+    policies:
+        description: Policies decide how orders of this configuration behave. A setting you leave at its default follows Fleet-Ops' default or your company's dispatch settings.
+        default: Default
+        add-value: Add a value
+        use-default: Use the default
+    triggers:
+        title: Triggers
+        description: What this configuration does when something happens to its orders, such as notifying the customer when the driver arrives.
+        when: When
+        do: Do
+        add: Add Trigger
+        remove: Remove trigger
+        empty: No triggers yet.
+        conditions: This trigger runs only when its {count, plural, one {condition passes} other {# conditions pass}}.
+        reaches-activity: 'The order reaches: {activity}'
+        approaching-target: Approaching
+        approaching-distance: Within (meters)
+        pickup: Pickup
+        dropoff: Drop-off
+        events:
+            order:
+                created: The order is created
+                completed: The order is completed
+                canceled: The order is canceled
+            dispatch:
+                offer_exhausted: No driver accepted the offer
+            driver:
+                approaching: The driver is approaching
     details:
         details: Details
         name: Name
@@ -2811,6 +2851,16 @@ route-list:
     more-waypoints: more waypoints
 
 settings:
+    dispatch:
+        title: Fleet-Ops Dispatch
+        adhoc-orders: Adhoc Orders
+        intro: How orders without an assigned driver are offered to drivers nearby. An order config or a single order can choose differently.
+        strategy: How Orders Are Offered
+        offer-timeout: Offer Time (seconds)
+        offer-timeout-help-text: How long each driver has to accept before the order goes to the next driver.
+        ping-radius: Radius (meters)
+        ping-radius-help-text: How far from the pickup drivers are offered an order.
+        saved: Dispatch settings saved.
     telematics:
         telematics-settings: Telematics Settings
         intro: Choose how long your organization keeps device events and position history within the limits set by your system administrator.

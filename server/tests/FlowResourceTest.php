@@ -144,9 +144,12 @@ test('flow conditions evaluate comparison operators and reject unknown operators
         ->and((new Condition(['field' => 'status', 'operator' => 'notEqual', 'value' => 'completed']))->eval($order))->toBeTrue()
         ->and((new Condition(['field' => 'priority', 'operator' => 'greaterThan', 'value' => 2]))->eval($order))->toBeTrue()
         ->and((new Condition(['field' => 'priority', 'operator' => 'lessThanOrEqual', 'value' => 3]))->eval($order))->toBeTrue()
-        ->and((new Condition(['field' => 'notes', 'operator' => 'contains', 'value' => 'deliver fragile parcel today']))->eval($order))->toBeTrue()
-        ->and((new Condition(['field' => 'notes', 'operator' => 'beginsWith', 'value' => 'deliver fragile parcel']))->eval($order))->toBeTrue()
-        ->and((new Condition(['field' => 'notes', 'operator' => 'endsWith', 'value' => 'today deliver fragile parcel']))->eval($order))->toBeTrue();
+        // The field holds the value: notes contain, begin with or end with it.
+        ->and((new Condition(['field' => 'notes', 'operator' => 'contains', 'value' => 'Fragile']))->eval($order))->toBeTrue()
+        ->and((new Condition(['field' => 'notes', 'operator' => 'contains', 'value' => 'deliver fragile parcel today']))->eval($order))->toBeFalse()
+        ->and((new Condition(['field' => 'notes', 'operator' => 'beginsWith', 'value' => 'deliver']))->eval($order))->toBeTrue()
+        ->and((new Condition(['field' => 'notes', 'operator' => 'beginsWith', 'value' => 'parcel']))->eval($order))->toBeFalse()
+        ->and((new Condition(['field' => 'notes', 'operator' => 'endsWith', 'value' => 'parcel']))->eval($order))->toBeTrue();
 
     expect(fn () => (new Condition(['field' => 'status', 'operator' => 'between', 'value' => []]))->eval($order))
         ->toThrow(Exception::class, 'Unknown operator: between');
@@ -154,12 +157,22 @@ test('flow conditions evaluate comparison operators and reject unknown operators
     // Remaining operator arms: existence, array membership, boolean logic
     // and the strict lower-than comparison
     expect((new Condition(['field' => 'status', 'operator' => 'exists', 'value' => null]))->eval($order))->toBeTrue()
-        ->and((new Condition(['field' => 'status', 'operator' => 'in', 'value' => ['ready']]))->eval($order))->toBeFalse()
+        ->and((new Condition(['field' => 'status', 'operator' => 'in', 'value' => ['ready', 'held']]))->eval($order))->toBeTrue()
+        ->and((new Condition(['field' => 'status', 'operator' => 'in', 'value' => 'held, ready']))->eval($order))->toBeTrue()
         ->and((new Condition(['field' => 'status', 'operator' => 'notIn', 'value' => ['ready']]))->eval($order))->toBeFalse()
+        ->and((new Condition(['field' => 'status', 'operator' => 'notIn', 'value' => ['held']]))->eval($order))->toBeTrue()
+        ->and((new Condition(['field' => 'missing_field', 'operator' => 'exists', 'value' => null]))->eval($order))->toBeFalse()
+        ->and((new Condition(['field' => 'missing_field', 'operator' => 'notEqual', 'value' => 'anything']))->eval($order))->toBeTrue()
         ->and((new Condition(['field' => 'status', 'operator' => 'and', 'value' => true]))->eval($order))->toBeTrue()
         ->and((new Condition(['field' => 'status', 'operator' => 'or', 'value' => false]))->eval($order))->toBeTrue()
         ->and((new Condition(['field' => 'status', 'operator' => 'not', 'value' => null]))->eval($order))->toBeFalse()
         ->and((new Condition(['field' => 'priority', 'operator' => 'lessThan', 'value' => 9]))->eval($order))->toBeTrue();
+
+    // `has` and `doesntHave` look for the value in a field that is a list.
+    $tagged = flowTestOrder(['tags' => ['Fragile', 'express']]);
+    expect((new Condition(['field' => 'tags', 'operator' => 'has', 'value' => 'fragile']))->eval($tagged))->toBeTrue()
+        ->and((new Condition(['field' => 'tags', 'operator' => 'doesntHave', 'value' => 'oversize']))->eval($tagged))->toBeTrue()
+        ->and((new Condition(['field' => 'tags', 'operator' => 'has', 'value' => 'oversize']))->eval($tagged))->toBeFalse();
 });
 
 test('flow logic combines conditions with and or not and if semantics', function () {

@@ -177,7 +177,7 @@ class RadarAgenda
                 'key'           => $item['key'],
                 'driver'        => $item['subject'],
                 'rule'          => $item['rule'],
-                'shift'         => ($item['window'] ?? []) + ['uuid' => $item['source']['uuid'] ?? null, 'public_id' => $item['source']['public_id'] ?? null, 'minutes_left' => $end ? max(0, $now->diffInMinutes($end, false)) : null],
+                'shift'         => ($item['window'] ?? []) + ['uuid' => $item['source']['uuid'] ?? null, 'public_id' => $item['source']['public_id'] ?? null, 'minutes_left' => $end ? max(0, (int) $now->diffInMinutes($end, false)) : null],
                 'orders'        => array_map(fn ($order) => $order + ['finishes_after_shift' => self::finishesAfter($order, $end)], $driverOrders),
                 'active_orders' => (int) ($item['source']['active_orders'] ?? count($driverOrders)),
                 'suggested'     => $suggested,
@@ -276,7 +276,7 @@ class RadarAgenda
         if ($lane === RadarRules::LANE_ANYTIME) {
             $lane = self::LANE_BY_CATEGORY[$item['category'] ?? ''] ?? RadarRules::LANE_MAINTENANCE;
         }
-        $hours = max(1, $start->diffInHours($end));
+        $hours = max(1, (int) $start->diffInHours($end, true));
 
         return [
             'kind'      => 'item',
@@ -290,7 +290,7 @@ class RadarAgenda
             'meta_line' => $item['meta_line'] ?? null,
             'lane'      => $lane,
             'at'        => $at?->toIso8601String(),
-            'label'     => $at ? $at->format($start->diffInHours($end) > 24 ? 'D H:i' : 'H:i') : null,
+            'label'     => $at ? $at->format((int) $start->diffInHours($end, true) > 24 ? 'D H:i' : 'H:i') : null,
             'planned'   => $planned,
             'pct'       => $at ? self::pct($at, $start, $hours) : null,
             'state'     => $item['state'] ?? null,
@@ -308,7 +308,7 @@ class RadarAgenda
             return null;
         }
 
-        $hours    = max(1, $start->diffInHours($end));
+        $hours    = max(1, (int) $start->diffInHours($end, true));
         $gaps     = $byDriver[$driver['uuid'] ?? ''] ?? [];
         $handover = null;
         $worst    = null;
@@ -334,7 +334,7 @@ class RadarAgenda
             'end_at'        => $to->toIso8601String(),
             'label'         => $from->format('H:i') . '–' . $to->format('H:i'),
             'pct'           => self::pct($from->max($start), $start, $hours),
-            'width_pct'     => max(1.0, round(($from->max($start)->diffInMinutes($to->min($end)) / 60) / $hours * 100, 2)),
+            'width_pct'     => max(1.0, round(((int) $from->max($start)->diffInMinutes($to->min($end), true) / 60) / $hours * 100, 2)),
             'lane'          => RadarRules::LANE_SHIFTS,
             'severity'      => $worst,
             'gap_keys'      => array_column($gaps, 'key'),
@@ -365,7 +365,7 @@ class RadarAgenda
 
     protected static function pct(Carbon $at, Carbon $start, int $hours): float
     {
-        return round(max(0, min(100, $start->diffInMinutes($at, false) / 60 / $hours * 100)), 2);
+        return round(max(0, min(100, (int) $start->diffInMinutes($at, false) / 60 / $hours * 100)), 2);
     }
 
     protected static function severityRank(?string $severity): int

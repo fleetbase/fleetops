@@ -477,7 +477,7 @@ class RadarRules
             $source   = ['type' => 'shift', 'uuid' => $shift['uuid'] ?? null, 'public_id' => $shift['public_id'] ?? null, 'driver_uuid' => $driver['uuid'] ?? null];
             $record   = self::record('management.drivers.index.details', $driver['public_id'] ?? null);
 
-            $minutesLate = $start->diffInMinutes($now, false);
+            $minutesLate = (int) $start->diffInMinutes($now, false);
             if (empty($shift['driver_online']) && in_array($status, self::SHIFT_NOT_STARTED_STATUSES, true) && $minutesLate >= self::LATE_START_MINUTES) {
                 $items[] = self::item('shift_late_start', $driver, sprintf('%s scheduled %s, not online', $name, $start->format('H:i')), [
                     'severity'  => $minutesLate >= self::LATE_START_CRITICAL ? self::SEVERITY_CRITICAL : self::SEVERITY_WARNING,
@@ -492,7 +492,7 @@ class RadarRules
             if (empty($shift['driver_vehicle_uuid'])) {
                 $items[] = self::item('shift_no_vehicle', $driver, sprintf('%s on shift since %s, no vehicle assigned', $name, $start->format('H:i')), [
                     'severity'  => self::SEVERITY_WARNING,
-                    'meta_line' => self::minutesWords($start->diffInMinutes($now)) . ' on shift',
+                    'meta_line' => self::minutesWords((int) $start->diffInMinutes($now, true)) . ' on shift',
                     'window'    => $window,
                     'record'    => $record,
                     'source'    => $source,
@@ -501,7 +501,7 @@ class RadarRules
             }
 
             $activeOrders  = (int) ($shift['active_orders'] ?? 0);
-            $minutesToEnd  = $now->diffInMinutes($end, false);
+            $minutesToEnd  = (int) $now->diffInMinutes($end, false);
             if ($activeOrders > 0 && $minutesToEnd <= self::HANDOVER_MINUTES) {
                 $items[] = self::item('shift_handover', $driver, sprintf('%s shift ends in %s, %d active order%s still assigned', $name, self::minutesWords($minutesToEnd), $activeOrders, $activeOrders === 1 ? '' : 's'), [
                     'severity'  => self::SEVERITY_WARNING,
@@ -1146,16 +1146,16 @@ class RadarRules
 
     public static function overdueWords(Carbon $due, Carbon $now): string
     {
-        $minutes = $due->diffInMinutes($now);
+        $minutes = (int) $due->diffInMinutes($now, true);
         if ($minutes < 60) {
             return max(1, $minutes) . 'm overdue';
         }
-        $hours = $due->diffInHours($now);
+        $hours = (int) $due->diffInHours($now, true);
         if ($hours < 24) {
             return $hours . 'h overdue';
         }
 
-        return $due->diffInDays($now) . 'd overdue';
+        return (int) $due->diffInDays($now, true) . 'd overdue';
     }
 
     public static function dueInWords(Carbon $due, Carbon $now): string
@@ -1167,7 +1167,7 @@ class RadarRules
             return 'tomorrow';
         }
 
-        $days = $now->copy()->startOfDay()->diffInDays($due->copy()->startOfDay());
+        $days = (int) $now->copy()->startOfDay()->diffInDays($due->copy()->startOfDay(), true);
         if ($days <= self::DUE_SOON_DAYS) {
             return sprintf('in %d day%s', $days, $days === 1 ? '' : 's');
         }
@@ -1180,7 +1180,7 @@ class RadarRules
      */
     public static function agoWords(Carbon $then, Carbon $now): string
     {
-        $minutes = max(0, $then->diffInMinutes($now, false));
+        $minutes = max(0, (int) $then->diffInMinutes($now, false));
         if ($minutes < 60) {
             return max(1, $minutes) . 'm ago';
         }

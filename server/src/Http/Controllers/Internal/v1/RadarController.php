@@ -861,7 +861,7 @@ class RadarController extends Controller
             if (!$until || $until->lte($this->now())) {
                 return null;
             }
-            $minutes = (int) ceil($this->now()->diffInMinutes($until));
+            $minutes = (int) $this->now()->diffInMinutes($until, true);
 
             return $minutes >= 1 && $minutes <= $max ? $minutes : null;
         }

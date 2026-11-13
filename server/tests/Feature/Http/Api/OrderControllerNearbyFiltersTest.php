@@ -135,7 +135,7 @@ function fleetopsOrderNearbyBoot(): SQLiteConnection
 
     $schema = $connection->getSchemaBuilder();
     $tables = [
-        'orders'             => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'driver_assigned_uuid', 'customer_uuid', 'customer_type', 'facilitator_uuid', 'facilitator_type', 'tracking_number_uuid', 'status', 'pod_required', 'dispatched', 'scheduled_at', 'type'],
+        'orders'             => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'order_config_uuid', 'adhoc', 'adhoc_strategy', 'payload_uuid', 'driver_assigned_uuid', 'customer_uuid', 'customer_type', 'facilitator_uuid', 'facilitator_type', 'tracking_number_uuid', 'status', 'pod_required', 'dispatched', 'scheduled_at', 'type'],
         'payloads'           => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'return_uuid', 'current_waypoint_uuid', 'type'],
         'places'             => ['uuid', 'public_id', 'company_uuid', 'name', 'street1', 'city', 'country', 'location', 'meta'],
         'waypoints'          => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid'],
@@ -146,6 +146,8 @@ function fleetopsOrderNearbyBoot(): SQLiteConnection
         'vendors'            => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'name'],
         'integrated_vendors' => ['uuid', 'public_id', 'company_uuid', 'provider'],
         'companies'          => ['uuid', 'public_id', 'name', 'options'],
+        'order_configs'      => ['uuid', 'company_uuid', 'adhoc_strategy'],
+        'order_offers'       => ['uuid', 'order_uuid', 'driver_uuid', 'status', 'expires_at'],
         'tracking_numbers'   => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'owner_uuid', 'owner_type', 'status_uuid', '_key'],
         'tracking_statuses'  => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'code', 'status', 'details'],
         'directives'         => ['uuid', 'company_uuid', 'permission_uuid', 'subject_type', 'subject_uuid', 'key', 'rules'],

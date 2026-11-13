@@ -1,0 +1,81 @@
+<div class="px-6 py-2 space-y-4">
+    <p class="text-sm text-gray-600 dark:text-gray-300">{{t "order-config-manager.policies.description"}}</p>
+
+    {{#if this.loadPolicies.isRunning}}
+        <div class="flex items-center justify-center py-6"><Spinner /></div>
+    {{/if}}
+
+    {{#each this.rows as |policy|}}
+        <ContentPanel @title={{policy.label}} @open={{true}} @wrapperClass="bordered-classic" data-test-policy={{policy.key}}>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">{{policy.description}}</p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-6">
+                {{#each policy.settings as |setting|}}
+                    <InputGroup @name={{setting.label}} data-test-policy-setting="{{policy.key}}.{{setting.name}}">
+                        {{#if (eq setting.type "boolean")}}
+                            <Toggle @isToggled={{setting.value}} @onToggle={{fn this.setValue policy.key setting.name}} @disabled={{not this.canEdit}} />
+                        {{else if (eq setting.type "choice")}}
+                            <Select
+                                @value={{setting.value}}
+                                @options={{setting.options}}
+                                @optionLabel="label"
+                                @optionValue="value"
+                                @onSelect={{fn this.setValue policy.key setting.name}}
+                                @disabled={{not this.canEdit}}
+                                class="w-full"
+                            />
+                        {{else if (eq setting.type "number")}}
+                            <Input
+                                @type="number"
+                                @value={{setting.value}}
+                                class="form-input w-full"
+                                placeholder={{t "order-config-manager.policies.default"}}
+                                disabled={{not this.canEdit}}
+                                {{on "input" (fn this.setNumber policy.key setting.name)}}
+                            />
+                        {{else if (eq setting.type "list")}}
+                            <TagInput
+                                class="form-input {{unless this.canEdit 'disabled'}}"
+                                @placeholder={{t "order-config-manager.policies.add-value"}}
+                                @tags={{setting.value}}
+                                @addTag={{fn this.addListItem policy.key setting}}
+                                @removeTagAtIndex={{fn this.removeListItem policy.key setting}}
+                                @readOnly={{not this.canEdit}}
+                                as |item|
+                            >
+                                {{item}}
+                            </TagInput>
+                        {{else}}
+                            <Input
+                                @value={{setting.value}}
+                                class="form-input w-full"
+                                placeholder={{t "order-config-manager.policies.default"}}
+                                disabled={{not this.canEdit}}
+                                {{on "input" (fn this.setText policy.key setting.name)}}
+                            />
+                        {{/if}}
+                        {{#if (and setting.isSet this.canEdit)}}
+                            <button type="button" class="mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline" {{on "click" (fn this.reset policy.key setting.name)}}>
+                                {{t "order-config-manager.policies.use-default"}}
+                            </button>
+                        {{/if}}
+                    </InputGroup>
+                {{/each}}
+            </div>
+        </ContentPanel>
+    {{/each}}
+
+    {{#if this.canEdit}}
+        <div class="flex flex-row items-center py-2">
+            <Button
+                @type="primary"
+                @icon="save"
+                @text={{t "common.save-changes"}}
+                @onClick={{perform this.save}}
+                @isLoading={{this.save.isRunning}}
+                @disabled={{not this.isDirty}}
+                @permission="fleet-ops update order-config"
+                data-test-policies-save
+            />
+        </div>
+    {{/if}}
+</div>

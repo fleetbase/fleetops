@@ -27,7 +27,7 @@ class FuelReportController extends FleetOpsController
      *
      * Reads the custom field values from the payload the base controller already extracted
      * rather than from the raw request: Ember Data sends the resource under a camelCase root
-     * (`fuelReport`), so `$request->array('fuel_report.custom_field_values')` was always empty and no
+     * (`fuelReport`), so `$request->inputArray('fuel_report.custom_field_values')` was always empty and no
      * custom field value was ever persisted for this resource.
      */
     public function afterSave(Request $request, FuelReport $fuelReport, array $input = [])
@@ -46,7 +46,7 @@ class FuelReportController extends FleetOpsController
     public function export(ExportRequest $request)
     {
         $format       = $request->input('format', 'xlsx');
-        $selections   = $request->array('selections');
+        $selections   = $request->inputArray('selections');
         $fileName     = trim(Str::slug('fuel_report-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return $this->downloadExport(new FuelReportExport($selections), $fileName);

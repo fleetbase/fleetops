@@ -77,7 +77,7 @@ class ContactController extends FleetOpsController
             $this->sendCustomerPortalWelcomeEmail($contact);
         }
 
-        $customFieldValues = $request->array('contact.custom_field_values');
+        $customFieldValues = $request->inputArray('contact.custom_field_values');
         if ($customFieldValues) {
             $contact->syncCustomFieldValues($customFieldValues);
         }
@@ -175,7 +175,7 @@ class ContactController extends FleetOpsController
     public static function export(ExportRequest $request)
     {
         $format       = $request->input('format', 'xlsx');
-        $selections   = $request->array('selections');
+        $selections   = $request->inputArray('selections');
         $fileName     = trim(Str::slug('contacts-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return Excel::download(new ContactExport($selections), $fileName);

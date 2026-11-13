@@ -2,6 +2,7 @@
 
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Database\ConnectionResolver;
@@ -59,7 +60,8 @@ function fleetopsOrderPurchaseBoot(): SQLiteConnection
         'service_quotes'    => ['uuid', 'public_id', 'request_id', 'company_uuid', 'payload_uuid', 'service_rate_uuid', 'amount', 'currency', 'meta', 'expired_at', '_key'],
         'transactions'      => ['uuid', 'public_id', 'company_uuid', 'customer_uuid', 'customer_type', 'subject_uuid', 'subject_type', 'context_uuid', 'context_type', 'gateway_transaction_id', 'gateway', 'amount', 'currency', 'description', 'type', 'direction', 'status', 'settlement_status', 'voided_at', 'meta', '_key'],
         'companies'         => ['uuid', 'public_id', 'name', 'currency', 'country'],
-        'drivers'           => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'status', 'online', 'location'],
+        'drivers'           => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'status', 'online', 'location', 'current_job_uuid', 'vehicle_uuid'],
+        'order_configs'     => ['uuid', 'public_id', 'company_uuid', 'key', 'name', 'flow', 'meta', 'policies', 'triggers'],
         'users'             => ['uuid', 'public_id', 'company_uuid', 'name'],
         'company_users'     => ['uuid', 'company_uuid', 'user_uuid'],
         'payloads'          => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'current_waypoint_uuid', 'meta'],
@@ -174,6 +176,11 @@ test('closest drivers resolve through the spatial company chain', function () {
     $connection->table('users')->insert(['uuid' => 'user-1', 'company_uuid' => 'company-1']);
     $connection->table('company_users')->insert(['uuid' => 'cu-1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1']);
     $connection->table('drivers')->insert(['uuid' => 'driver-1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1', 'status' => 'available', 'online' => 1, 'location' => 'POINT(1 1)']);
+    // On another company's books: never offered this one. Busy with an order still under way:
+    // offered unless the order's config excludes busy drivers.
+    $connection->table('drivers')->insert(['uuid' => 'driver-other', 'company_uuid' => 'company-2', 'status' => 'available', 'online' => 1, 'location' => 'POINT(1 1)']);
+    $connection->table('drivers')->insert(['uuid' => 'driver-busy', 'company_uuid' => 'company-1', 'status' => 'available', 'online' => 1, 'location' => 'POINT(1 1)', 'current_job_uuid' => 'order-busy']);
+    $connection->table('orders')->insert(['uuid' => 'order-busy', 'company_uuid' => 'company-1', 'status' => 'started']);
 
     $order  = fleetopsOrderPurchaseOrder();
     $pickup = new Place();
@@ -183,6 +190,13 @@ test('closest drivers resolve through the spatial company chain', function () {
     $payload->setRelation('pickup', $pickup);
     $payload->setRelation('waypoints', collect());
     $order->setRelation('payload', $payload);
+
+    expect($order->findClosestDrivers())->toHaveCount(2);
+
+    $config = new OrderConfig();
+    $config->setRawAttributes(['uuid' => 'config-1', 'company_uuid' => 'company-1', 'policies' => json_encode(['dispatch' => ['matching' => ['exclude_busy_drivers' => true]]])], true);
+    $order->order_config_uuid = 'config-1';
+    $order->setRelation('orderConfig', $config);
 
     expect($order->findClosestDrivers())->toHaveCount(1);
 });
