@@ -1065,6 +1065,27 @@ test('api order controller reports missing and invalid dispatch tracking branche
 
     expect($controller->dispatchOrder('order-public'))->toBe(['apiError' => 'Order has already been dispatched!', 'status' => 400]);
 
+    // An order whose config turns dispatch off is refused, and not dispatched.
+    $withConfig = function (array $lifecycle) {
+        $config = new OrderConfig();
+        $config->setRawAttributes(['uuid' => 'config-uuid', 'key' => 'pickup', 'meta' => json_encode(['lifecycle' => $lifecycle])], true);
+        $order                    = new FleetOpsApiOrderCrudFake();
+        $order->order_config_uuid = 'config-uuid';
+        $order->setRelation('orderConfig', $config);
+        $controller        = new FleetOpsApiOrderCrudControllerProbe();
+        $controller->order = $order;
+
+        return [$controller->dispatchOrder('order-public'), $order];
+    };
+    [$refused, $kept]     = $withConfig(['dispatch' => false]);
+    [$allowed, $sent]     = $withConfig(['dispatch' => true]);
+
+    expect($refused)->toBe(['apiError' => 'Orders of this type are not dispatched.', 'status' => 400])
+        ->and($kept->dispatchedForTest)->toBeFalse()
+        ->and($kept->dispatchActivityInserted)->toBeFalse()
+        ->and($allowed)->toBe(['resource' => 'order', 'order' => $sent])
+        ->and($sent->dispatchedForTest)->toBeTrue();
+
     $order                            = new FleetOpsApiOrderCrudFake();
     $order->trackerFake->throwOnTrack = true;
 
