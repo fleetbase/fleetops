@@ -229,6 +229,7 @@ function fleetopsCustomerHelperBoot(): SQLiteConnection
         'companies'              => ['uuid', 'public_id', 'name', 'country'],
         'tracking_statuses'      => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'proof_uuid', 'status', 'details', 'location', 'code', 'complete', '_key'],
         'directives'             => ['uuid', 'public_id', 'company_uuid', 'permission_uuid', 'key', 'rules', 'subject_type'],
+        'driver_ratings'         => ['uuid', '_key', 'company_uuid', 'order_uuid', 'driver_uuid', 'customer_uuid', 'customer_type', 'stars', 'comment'],
     ];
     foreach ($tables as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
