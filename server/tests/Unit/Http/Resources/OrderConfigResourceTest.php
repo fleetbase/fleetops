@@ -136,3 +136,55 @@ test('order config resource keeps flow fields absent from a legacy activity null
         ->and($flow[0]['activities'])->toBe([])
         ->and($flow[0]['logic'])->toBeNull();
 });
+
+test('order config resource lists the custom fields orders of the config carry, once they are loaded', function () {
+    $request                                          = Request::create('/v1/fleet-ops/order-configs/order_config_public', 'GET');
+    FleetOpsOrderConfigResourceRequestState::$request = $request;
+    FleetOpsSupportRequestState::$request             = $request;
+
+    $config = new OrderConfig();
+    $config->setRawAttributes(['id' => 11, 'uuid' => 'order-config-uuid', 'public_id' => 'order_config_public', 'key' => 'passenger', 'name' => 'Passenger', 'flow' => []], true);
+
+    // Without the relation loaded, the resource doesn't query for it.
+    expect((new OrderConfigResource($config))->resolve($request))->not->toHaveKey('custom_fields');
+
+    $passengers = new Fleetbase\Models\CustomField();
+    $passengers->setRawAttributes([
+        'uuid'             => 'field-passengers',
+        'name'             => 'passengers',
+        'label'            => 'Passengers',
+        'type'             => 'input',
+        'component'        => 'input',
+        'options'          => json_encode(['min' => 1]),
+        'required'         => 1,
+        'default_value'    => '1',
+        'help_text'        => 'How many people are travelling.',
+        'validation_rules' => json_encode(['integer']),
+    ], true);
+    $notes = new Fleetbase\Models\CustomField();
+    $notes->setRawAttributes(['uuid' => 'field-notes', 'name' => 'notes', 'label' => 'Notes', 'type' => 'textarea', 'required' => null], true);
+    $config->setRelation('customFields', collect([3 => $passengers, 7 => $notes]));
+
+    expect((new OrderConfigResource($config))->resolve($request)['custom_fields'])->toBe([
+        [
+            'name'          => 'passengers',
+            'label'         => 'Passengers',
+            'type'          => 'input',
+            'component'     => 'input',
+            'options'       => ['min' => 1],
+            'required'      => true,
+            'default_value' => '1',
+            'help_text'     => 'How many people are travelling.',
+        ],
+        [
+            'name'          => 'notes',
+            'label'         => 'Notes',
+            'type'          => 'textarea',
+            'component'     => null,
+            'options'       => null,
+            'required'      => false,
+            'default_value' => null,
+            'help_text'     => null,
+        ],
+    ]);
+});

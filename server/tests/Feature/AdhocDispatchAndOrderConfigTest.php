@@ -14,10 +14,14 @@ use Fleetbase\FleetOps\Support\AdhocDispatch\SequentialStrategy;
 use Fleetbase\FleetOps\Support\DriverMatching;
 use Fleetbase\FleetOps\Support\DriverRatings;
 use Fleetbase\FleetOps\Support\OrderChat;
+use Fleetbase\FleetOps\Support\OrderConfig\Actions\CancelOrder;
 use Fleetbase\FleetOps\Support\OrderConfig\Actions\NotifyCustomer;
 use Fleetbase\FleetOps\Support\OrderConfig\Actions\NotifyDriver;
+use Fleetbase\FleetOps\Support\OrderConfig\Actions\OpenChat;
+use Fleetbase\FleetOps\Support\OrderConfig\Actions\SetMeta;
 use Fleetbase\FleetOps\Support\OrderConfig\OrderConfigTemplates;
 use Fleetbase\FleetOps\Support\OrderConfig\OrderConfigTriggers;
+use Fleetbase\FleetOps\Support\OrderCustomFields;
 use Fleetbase\FleetOps\Support\OrderOffers;
 use Fleetbase\FleetOps\Support\OrderRepricing;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
@@ -37,8 +41,53 @@ if (!function_exists('Fleetbase\Observers\event')) {
     eval('namespace Fleetbase\Observers; function event($event = null, $payload = []) { return []; }');
 }
 
+// Settings read the company from the session store, which the harness keeps as a plain array.
+if (!function_exists('Fleetbase\Models\session')) {
+    eval('namespace Fleetbase\Models; function session($key = null, $default = null) { if ($key === null) { return new class { public function has($k) { return \session($k) !== null; } public function get($k, $d = null) { return \session($k, $d); } public function missing($k) { return \session($k) === null; } }; } return \session($key, $default); }');
+}
+
 if (!function_exists('Fleetbase\FleetOps\Support\event')) {
     eval('namespace Fleetbase\FleetOps\Support; function event($event = null) { if (\AdhocCfgRecorder::$failEvents) { throw new \RuntimeException(\'socket down\'); } \AdhocCfgRecorder::$events[] = $event; return $event; }');
+}
+
+/**
+ * Stands in for Laravel's validator, which this package doesn't install: it records what it was
+ * asked to check and applies the `required` and `integer` rules, naming fields by their attribute.
+ */
+class AdhocCfgValidator
+{
+    public static array $made = [];
+
+    public function make($data = [], $rules = [], $messages = [], $attributes = [])
+    {
+        static::$made[] = ['data' => $data, 'rules' => $rules, 'attributes' => $attributes];
+        $errors         = new Illuminate\Support\MessageBag();
+        foreach ($rules as $field => $fieldRules) {
+            $value = $data[$field] ?? null;
+            $name  = $attributes[$field] ?? $field;
+            if (in_array('required', $fieldRules, true) && ($value === null || $value === '')) {
+                $errors->add($field, 'The ' . $name . ' field is required.');
+            } elseif ($value !== null && in_array('integer', $fieldRules, true) && filter_var($value, FILTER_VALIDATE_INT) === false) {
+                $errors->add($field, 'The ' . $name . ' field must be an integer.');
+            }
+        }
+
+        return new class($errors) {
+            public function __construct(public Illuminate\Support\MessageBag $bag)
+            {
+            }
+
+            public function fails(): bool
+            {
+                return $this->bag->isNotEmpty();
+            }
+
+            public function errors(): Illuminate\Support\MessageBag
+            {
+                return $this->bag;
+            }
+        };
+    }
 }
 
 class AdhocCfgRecorder
@@ -998,6 +1047,11 @@ test('an order update push carries its title, message and type to the device cha
         ->and($update->data)->toBe(['id' => 'order_one', 'type' => 'order_arrived'])
         ->and($default->data)->toBe(['id' => 'order_one', 'type' => 'order_update'])
         ->and($update->via(null))->toBe([NotificationChannels\Fcm\FcmChannel::class, NotificationChannels\Apn\ApnChannel::class]);
+
+    // Building each channel's message hands the push to core's PushNotification, which needs the
+    // FCM and APN credentials this harness doesn't configure.
+    expect(fn () => $update->toFcm(null))->toThrow(TypeError::class)
+        ->and(fn () => $update->toApn(null))->toThrow(Error::class);
 });
 
 test('the notify actions push to the order\'s customer and driver, with placeholders filled in', function () {
@@ -1126,6 +1180,112 @@ test('the queued action job reads the order again and runs a registered action',
         ->and($unknown)->toBeFalse()
         ->and($gone)->toBeFalse()
         ->and((new RunOrderConfigAction($order, 'set_meta'))->orderUuid)->toBe('order-1');
+});
+
+test('the cancel, open chat and set meta actions act on the order, and skip what they cannot do', function () {
+    $connection = adhocCfgBoot();
+    adhocCfgSeedOrder($connection, ['status' => 'started']);
+
+    // A finished order, by its config's terminal activities, is not canceled again.
+    $connection->table('orders')->update(['status' => 'no_show']);
+    (new CancelOrder())->handle(adhocCfgFresh(), ['reason' => 'Too late']);
+    $connection->table('orders')->update(['status' => 'started']);
+    (new CancelOrder())->handle(adhocCfgFresh(), ['reason' => 'Rider asked']);
+    (new CancelOrder())->handle(adhocCfgFresh(), ['reason' => 42]);
+    (new CancelOrder())->handle(adhocCfgFresh());
+
+    expect(AdhocCfgOrder::$canceled)->toBe([['order-1', 'Rider asked'], ['order-1', '42'], ['order-1', null]]);
+
+    (new OpenChat())->handle(adhocCfgFresh());
+    $channel = $connection->table('chat_channels')->first();
+    expect($channel)->not->toBeNull()
+        ->and($connection->table('orders')->where('uuid', 'order-1')->value('chat_channel_uuid'))->toBe($channel->uuid)
+        ->and($connection->table('chat_participants')->orderBy('id')->pluck('user_uuid')->all())->toBe(['user-sam', 'user-chen']);
+
+    // A key that is blank or not a string writes nothing; `{now}` writes the current time.
+    Carbon::setTestNow('2026-11-06 09:30:00');
+    (new SetMeta())->handle(adhocCfgFresh(), ['key' => '   ', 'value' => 'blank']);
+    (new SetMeta())->handle(adhocCfgFresh(), ['key' => 7, 'value' => 'number']);
+    (new SetMeta())->handle(adhocCfgFresh(), ['value' => 'missing']);
+    $untouched = adhocCfgFresh()->meta;
+    (new SetMeta())->handle(adhocCfgFresh(), ['key' => ' picked_up_at ', 'value' => '{now}']);
+    Carbon::setTestNow();
+
+    expect($untouched)->toBeEmpty()
+        ->and(adhocCfgFresh()->getMeta('picked_up_at'))->toBe('2026-11-06T09:30:00.000000Z');
+});
+
+test('the notify driver action sends nothing when it has neither a title nor a message', function () {
+    $connection = adhocCfgBoot();
+    $order      = adhocCfgSeedOrder($connection, ['status' => 'started']);
+
+    (new NotifyDriver())->handle($order, [], ['event' => 'order.completed']);
+    (new NotifyDriver())->handle($order, ['title' => '', 'message' => ''], ['event' => 'order.activity', 'activity' => ['status' => 'Started']]);
+    expect(AdhocCfgRecorder::$notified)->toBe([]);
+
+    (new NotifyDriver())->handle($order, [], ['event' => 'order.activity', 'activity' => ['status' => 'Started']]);
+    expect(AdhocCfgRecorder::$notified)->toBe([['chen', OrderUpdate::class]])
+        ->and([AdhocCfgRecorder::$sent[0]->title, AdhocCfgRecorder::$sent[0]->message])->toBe(['Started', '']);
+});
+
+/** The test config's custom fields, by name, label and snake-cased label, and a validator that checks them. */
+function adhocCfgCustomFields(SQLiteConnection $connection): void
+{
+    $subject = ['company_uuid' => 'company-1', 'subject_uuid' => 'config-adhoc', 'subject_type' => OrderConfig::class];
+    $connection->table('custom_fields')->insert([
+        [...$subject, 'uuid' => 'field-passengers', 'name' => 'passengers', 'label' => 'Passengers', 'type' => 'input', 'required' => 1, 'validation_rules' => json_encode(['nullable', 'integer', 'required', 5]), 'order' => '0'],
+        [...$subject, 'uuid' => 'field-flight', 'name' => 'cf_flight', 'label' => 'Flight Number', 'type' => null, 'required' => 0, 'validation_rules' => null, 'order' => '1'],
+        [...$subject, 'uuid' => 'field-notes', 'name' => 'cf_notes', 'label' => 'Pickup Notes', 'type' => 'textarea', 'required' => 0, 'validation_rules' => json_encode([]), 'order' => '2'],
+        [...$subject, 'uuid' => 'field-gate', 'name' => 'gate_code', 'label' => null, 'type' => 'input', 'required' => 0, 'validation_rules' => null, 'order' => '3'],
+    ]);
+    app()->instance('validator', new AdhocCfgValidator());
+    Illuminate\Support\Facades\Validator::clearResolvedInstance('validator');
+    AdhocCfgValidator::$made = [];
+}
+
+test('custom field values are checked against the config\'s fields, found by name, label or snake-cased label', function () {
+    $connection = adhocCfgBoot();
+    adhocCfgCustomFields($connection);
+    $connection->table('order_configs')->insert(['uuid' => 'config-bare', 'public_id' => 'order_config_bare', 'company_uuid' => 'company-1', 'name' => 'Bare', 'key' => 'bare']);
+    $config = OrderConfig::where('uuid', 'config-adhoc')->first();
+
+    $missing = OrderCustomFields::validate($config, ['flight_number' => 'SQ12', 'Pickup Notes' => 'By the lobby', 'gate_code' => '4411']);
+    $checked = AdhocCfgValidator::$made[0];
+    $typed   = OrderCustomFields::validate($config, ['passengers' => 'two']);
+    $fine    = OrderCustomFields::validate($config, ['passengers' => 3, 'ignored' => 'x']);
+
+    expect($missing)->toBe('The Passengers field is required.')
+        ->and($checked['data'])->toBe(['passengers' => null, 'cf_flight' => 'SQ12', 'cf_notes' => 'By the lobby', 'gate_code' => '4411'])
+        // A field's own `required` and `nullable` rules give way to its required flag; rules that aren't strings are dropped.
+        ->and($checked['rules'])->toBe(['passengers' => ['required', 'integer'], 'cf_flight' => ['nullable'], 'cf_notes' => ['nullable'], 'gate_code' => ['nullable']])
+        ->and($checked['attributes'])->toBe(['passengers' => 'Passengers', 'cf_flight' => 'Flight Number', 'cf_notes' => 'Pickup Notes', 'gate_code' => 'gate_code'])
+        ->and($typed)->toBe('The Passengers field must be an integer.')
+        ->and($fine)->toBeNull()
+        // A config without fields, or a request without values, isn't checked.
+        ->and(OrderCustomFields::validate(OrderConfig::where('uuid', 'config-bare')->first(), ['passengers' => 2]))->toBeNull()
+        ->and(OrderCustomFields::validate($config, []))->toBeNull()
+        ->and(AdhocCfgValidator::$made)->toHaveCount(3);
+});
+
+test('custom field values are stored on the order for the fields its config has, typed by the field', function () {
+    $connection = adhocCfgBoot();
+    adhocCfgCustomFields($connection);
+    $order  = adhocCfgOrder($connection);
+    $stored = fn () => $connection->table('custom_field_values')->orderBy('id')->get(['custom_field_uuid', 'subject_uuid', 'value', 'value_type'])->map(fn ($row) => (array) $row)->all();
+
+    expect(OrderCustomFields::apply($order, ['luggage' => 2]))->toBe(0)
+        ->and(OrderCustomFields::apply($order, []))->toBe(0)
+        ->and($stored())->toBe([])
+        ->and(OrderCustomFields::apply($order, ['passengers' => '2', 'flight_number' => 'SQ12', 'Pickup Notes' => 'By the lobby']))->toBe(3)
+        ->and($stored())->toBe([
+            ['custom_field_uuid' => 'field-passengers', 'subject_uuid' => 'order-1', 'value' => '2', 'value_type' => 'input'],
+            ['custom_field_uuid' => 'field-flight', 'subject_uuid' => 'order-1', 'value' => 'SQ12', 'value_type' => 'text'],
+            ['custom_field_uuid' => 'field-notes', 'subject_uuid' => 'order-1', 'value' => 'By the lobby', 'value_type' => 'textarea'],
+        ])
+        // Sending a field again updates its value rather than adding one.
+        ->and(OrderCustomFields::apply(adhocCfgFresh(), ['passengers' => '4']))->toBe(1)
+        ->and($connection->table('custom_field_values')->count())->toBe(3)
+        ->and($connection->table('custom_field_values')->where('custom_field_uuid', 'field-passengers')->value('value'))->toBe('4');
 });
 
 /** Positions the driver reported: one before metering began, then 1.0 km and 1.05 km. */
@@ -1599,4 +1759,69 @@ test('a customer order keeps how it will be paid on its payload, and tells how d
     expect($connection->table('payloads')->where('uuid', 'payload-1')->value('payment_method'))->toBe('card')
         ->and($order->dispatchOutcome())->toBe('no_driver_found')
         ->and($order->chatChannel)->toBeNull();
+});
+
+test('a customer order is refused with 422 for a config customers may not order, a payment method the policy doesn\'t offer, or a bad custom field', function () {
+    $connection = adhocCfgBoot();
+    adhocCfgPolicies($connection, ['customer' => ['ordering' => ['payment_methods' => ['cash', 'card']]]]);
+    adhocCfgSeedOrder($connection);
+    adhocCfgCustomFields($connection);
+    $controller = new AdhocCfgCustomerController();
+    $order      = fn (array $input) => $controller->createOrder(new Fleetbase\FleetOps\Http\Requests\CreateCustomerOrderRequest($input));
+
+    $controller->settings = ['fleet-ops.customer-enabled-order-configs' => ['config-other']];
+    $notOffered           = $order(['payment_method' => 'cash']);
+    $controller->settings = [];
+    $bitcoin              = $order(['payment_method' => 'bitcoin']);
+    $noPassengers         = $order(['payment_method' => 'cash', 'custom_fields' => ['flight_number' => 'SQ12']]);
+    $wordy                = $order(['custom_fields' => ['passengers' => 'two']]);
+
+    expect([$notOffered->getStatusCode(), $bitcoin->getStatusCode(), $noPassengers->getStatusCode(), $wordy->getStatusCode()])->toBe([422, 422, 422, 422])
+        ->and(adhocCfgJson($notOffered)['error'])->toBe('Customers cannot place this type of order.')
+        ->and(adhocCfgJson($bitcoin)['error'])->toBe('Choose a payment method: cash, card.')
+        ->and(adhocCfgJson($noPassengers)['error'])->toBe('The Passengers field is required.')
+        ->and(adhocCfgJson($wordy)['error'])->toBe('The Passengers field must be an integer.')
+        // Nothing was made for a refused order.
+        ->and($connection->table('orders')->count())->toBe(1)
+        ->and($connection->table('payloads')->count())->toBe(1);
+});
+
+/** A customer controller that reads the company's settings from the settings table, as it does in production. */
+class AdhocCfgStoredSettingsCustomerController extends Fleetbase\FleetOps\Http\Controllers\Api\v1\CustomerController
+{
+    public function helper(string $method, ...$arguments): mixed
+    {
+        return $this->{$method}(...$arguments);
+    }
+}
+
+test('the order configs customers may use are read from the company\'s stored settings', function () {
+    $connection = adhocCfgBoot();
+    $connection->getSchemaBuilder()->create('settings', function ($blueprint) {
+        $blueprint->increments('id');
+        $blueprint->string('key')->nullable();
+        $blueprint->text('value')->nullable();
+        $blueprint->timestamps();
+    });
+    $controller = new AdhocCfgStoredSettingsCustomerController();
+    $config     = OrderConfig::where('uuid', 'config-adhoc')->first();
+    $key        = 'fleet-ops.customer-enabled-order-configs';
+
+    $unset = [$controller->helper('lookupCompanySetting', $key, ['fallback']), $controller->helper('customersMayOrder', $config)];
+
+    $connection->table('settings')->insert(['key' => 'company.company-1.' . $key, 'value' => json_encode(['order_config_other'])]);
+    $refused = [$controller->helper('lookupCompanySetting', $key), $controller->helper('customersMayOrder', $config)];
+
+    $connection->table('settings')->update(['value' => json_encode(['order_config_passenger'])]);
+    $allowed = $controller->helper('customersMayOrder', $config);
+
+    // Another company's setting doesn't apply.
+    session(['company' => 'company-2']);
+    $elsewhere = $controller->helper('lookupCompanySetting', $key, []);
+    session(['company' => 'company-1']);
+
+    expect($unset)->toBe([['fallback'], true])
+        ->and($refused)->toBe([['order_config_other'], false])
+        ->and($allowed)->toBeTrue()
+        ->and($elsewhere)->toBe([]);
 });

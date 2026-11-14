@@ -146,7 +146,7 @@ function fleetopsOrderNearbyBoot(): SQLiteConnection
         'vendors'            => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'name'],
         'integrated_vendors' => ['uuid', 'public_id', 'company_uuid', 'provider'],
         'companies'          => ['uuid', 'public_id', 'name', 'options'],
-        'order_configs'      => ['uuid', 'company_uuid', 'adhoc_strategy'],
+        'order_configs'      => ['uuid', 'company_uuid', 'policies'],
         'order_offers'       => ['uuid', 'order_uuid', 'driver_uuid', 'status', 'expires_at'],
         'tracking_numbers'   => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'owner_uuid', 'owner_type', 'status_uuid', '_key'],
         'tracking_statuses'  => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'code', 'status', 'details'],

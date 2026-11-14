@@ -173,6 +173,16 @@ test('flow conditions evaluate comparison operators and reject unknown operators
     expect((new Condition(['field' => 'tags', 'operator' => 'has', 'value' => 'fragile']))->eval($tagged))->toBeTrue()
         ->and((new Condition(['field' => 'tags', 'operator' => 'doesntHave', 'value' => 'oversize']))->eval($tagged))->toBeTrue()
         ->and((new Condition(['field' => 'tags', 'operator' => 'has', 'value' => 'oversize']))->eval($tagged))->toBeFalse();
+
+    // A field read as a collection, such as a relation, is compared as its list.
+    $collected = flowTestOrder(['tags' => collect(['Fragile', 'express']), 'status' => 'Ready']);
+    expect((new Condition(['field' => 'tags', 'operator' => 'has', 'value' => 'FRAGILE']))->eval($collected))->toBeTrue()
+        ->and((new Condition(['field' => 'tags', 'operator' => 'doesntHave', 'value' => 'express']))->eval($collected))->toBeFalse()
+        // A single value is a list of one, and a missing field an empty list.
+        ->and((new Condition(['field' => 'status', 'operator' => 'in', 'value' => 'ready']))->eval($collected))->toBeTrue()
+        ->and((new Condition(['field' => 'status', 'operator' => 'notIn', 'value' => 'held']))->eval($collected))->toBeTrue()
+        ->and((new Condition(['field' => 'missing_field', 'operator' => 'has', 'value' => 'fragile']))->eval($collected))->toBeFalse()
+        ->and((new Condition(['field' => 'status', 'operator' => 'in', 'value' => null]))->eval($collected))->toBeFalse();
 });
 
 test('flow logic combines conditions with and or not and if semantics', function () {
