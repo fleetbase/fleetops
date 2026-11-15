@@ -220,10 +220,19 @@ function fleetopsInternalOrderConfigDbBoot(): SQLiteConnection
     });
     $schema->create('order_configs', function ($blueprint) {
         $blueprint->increments('id');
-        foreach (['uuid', 'public_id', 'company_uuid', 'created_by_uuid', 'author_uuid', 'category_uuid', 'icon_uuid', 'name', 'key', 'namespace', 'description', 'tags', 'flow', 'entities', 'meta', 'version', 'status', 'type', '_key'] as $column) {
+        foreach (['uuid', 'public_id', 'company_uuid', 'created_by_uuid', 'author_uuid', 'category_uuid', 'icon_uuid', 'name', 'key', 'namespace', 'description', 'tags', 'flow', 'entities', 'meta', 'policies', 'triggers', 'version', 'status', 'type', '_key'] as $column) {
             $blueprint->string($column)->nullable();
         }
         $blueprint->integer('core_service')->nullable();
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+
+    $schema->create('custom_fields', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'category_uuid', 'subject_uuid', 'subject_type', 'name', 'label', 'type', 'for', 'component', 'options', 'required', 'editable', 'default_value', 'validation_rules', 'meta', 'description', 'help_text', 'order'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
         $blueprint->timestamps();
         $blueprint->timestamp('deleted_at')->nullable();
     });
@@ -311,4 +320,48 @@ test('internal order config controller real helpers create and delete records', 
 
     $missing = $controller->deleteRecord('missing-uuid', Request::create('/int/v1/order-configs', 'DELETE'));
     expect(json_encode($missing->getData(true)))->toContain('No order config found');
+});
+
+test('internal order config controller describes what order configs can use, for the console', function () {
+    $response = (new FleetOpsInternalOrderConfigRealHelpersProbe())->capabilities();
+    $body     = $response->getData(true);
+
+    expect($response->getStatusCode())->toBe(200)
+        ->and(array_keys($body))->toBe(['templates', 'policies', 'actions', 'events'])
+        ->and($body['templates'])->toBe(Fleetbase\FleetOps\Support\OrderConfig\OrderConfigTemplates::describe())
+        ->and(array_column($body['templates'], 'key'))->toBe(['transport', 'passenger'])
+        ->and($body['policies'])->toBe(json_decode(json_encode(Fleetbase\FleetOps\Support\OrderConfig\OrderConfigPolicies::describe()), true))
+        ->and(array_column($body['actions'], 'name'))->toContain('cancel', 'open_chat', 'set_meta', 'notify_driver')
+        ->and($body['events'])->toBe(Fleetbase\FleetOps\Support\OrderConfig\OrderConfigTriggers::EVENTS);
+});
+
+test('internal order config controller makes a named config from a template once, for the company in session', function () {
+    $connection = fleetopsInternalOrderConfigDbBoot();
+    $controller = new FleetOpsInternalOrderConfigRealHelpersProbe();
+    $make       = fn (array $input) => $controller->createFromTemplate(Request::create('/int/v1/order-configs/from-template', 'POST', $input));
+    $error      = fn ($response) => $response->getData(true)['error'] ?? null;
+
+    $unknown  = $make(['template' => 'limousine', 'name' => 'Limos']);
+    $blank    = $make(['template' => 'passenger', 'name' => '   ']);
+    $created  = $make(['template' => 'passenger', 'name' => ' Airport Transfers ']);
+    $sameKey  = $make(['template' => 'transport', 'name' => 'airport transfers']);
+    $sameName = $make(['template' => 'transport', 'name' => 'Airport Transfers']);
+
+    session(['company' => null]);
+    $noCompany = $make(['template' => 'passenger', 'name' => 'Night Rides']);
+    session(['company' => 'company-1']);
+
+    $config = $connection->table('order_configs')->first();
+    expect($error($unknown))->toBe('Choose an order config template.')
+        ->and($error($blank))->toBe('Give the order config a name.')
+        ->and($error($sameKey))->toBe('An order config with this name already exists.')
+        ->and($error($sameName))->toBe('An order config with this name already exists.')
+        ->and($error($noCompany))->toBe('No organization in session.')
+        ->and($created)->toHaveKey('order_config')
+        ->and($created['order_config']->resource->uuid)->toBe($config->uuid)
+        ->and($connection->table('order_configs')->count())->toBe(1)
+        ->and([$config->company_uuid, $config->name, $config->key, $config->namespace, (int) $config->core_service])->toBe(['company-1', 'Airport Transfers', 'airport-transfers', 'acme:order-config:airport-transfers', 0])
+        ->and(json_decode($config->policies, true)['dispatch']['adhoc']['strategy'])->toBe('sequential')
+        // The passenger template's custom field is made with the config.
+        ->and($connection->table('custom_fields')->where('subject_uuid', $config->uuid)->pluck('name')->all())->toBe(['passengers']);
 });

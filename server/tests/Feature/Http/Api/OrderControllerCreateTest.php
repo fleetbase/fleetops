@@ -123,6 +123,7 @@ function fleetopsApiOrderCreateBoot(): SQLiteConnection
         'integrated_vendors'  => ['uuid', 'public_id', 'company_uuid', 'provider'],
         'companies'           => ['uuid', 'public_id', 'name', 'options'],
         'company_users'       => ['uuid', 'company_uuid', 'user_uuid', 'status'],
+        'custom_fields'       => ['uuid', 'public_id', 'company_uuid', 'subject_uuid', 'subject_type', 'name', 'label', 'type', 'required', 'validation_rules', 'order'],
     ];
     foreach ($tables as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
@@ -276,4 +277,52 @@ test('create surfaces customer identity conflicts as api errors', function () {
         'dispatch' => false,
     ]));
     expect($existing->getData(true)['error'] ?? '')->toBe('That user already exists.');
+});
+
+test('create refuses custom field values that fail the order config\'s fields with 422, before making the order', function () {
+    $connection = fleetopsApiOrderCreateBoot();
+    $connection->table('payloads')->insert(['uuid' => '66666666-6666-4666-8666-666666666666', 'public_id' => 'payload_test', 'company_uuid' => 'company-1']);
+    $connection->table('custom_fields')->insert(['uuid' => 'field-dock', 'company_uuid' => 'company-1', 'subject_uuid' => 'config-1', 'subject_type' => Fleetbase\FleetOps\Models\OrderConfig::class, 'name' => 'dock_number', 'label' => 'Dock Number', 'required' => '1', 'order' => '0']);
+    $checked = [];
+    app()->instance('validator', new class($checked) {
+        public function __construct(public array &$checked)
+        {
+        }
+
+        public function make($data = [], $rules = [], $messages = [], $attributes = [])
+        {
+            $this->checked[] = [$data, $rules, $attributes];
+            $missing         = array_keys(array_filter($data, fn ($value) => $value === null));
+
+            return new class($missing ? 'The ' . $attributes[$missing[0]] . ' field is required.' : null) {
+                public function __construct(public ?string $message)
+                {
+                }
+
+                public function fails(): bool
+                {
+                    return $this->message !== null;
+                }
+
+                public function errors(): Illuminate\Support\MessageBag
+                {
+                    return new Illuminate\Support\MessageBag($this->message ? ['dock_number' => [$this->message]] : []);
+                }
+            };
+        }
+    });
+    Illuminate\Support\Facades\Validator::clearResolvedInstance('validator');
+
+    $response = (new FleetOpsApiOrderCreateProbe())->create(CreateOrderRequest::create('/v1/orders', 'POST', [
+        'type'          => 'transport',
+        'payload'       => 'payload_test',
+        'custom_fields' => ['gate' => 'B'],
+        'dispatch'      => false,
+    ]));
+
+    expect($response)->toBeInstanceOf(JsonResponse::class)
+        ->and($response->getStatusCode())->toBe(422)
+        ->and($response->getData(true))->toBe(['error' => 'The Dock Number field is required.'])
+        ->and($checked)->toBe([[['dock_number' => null], ['dock_number' => ['required']], ['dock_number' => 'Dock Number']]])
+        ->and($connection->table('orders')->count())->toBe(0);
 });

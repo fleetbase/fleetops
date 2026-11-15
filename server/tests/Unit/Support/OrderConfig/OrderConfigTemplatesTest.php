@@ -164,3 +164,41 @@ test('the passenger template asks how many people are travelling', function () {
         'order'            => 0,
     ]]);
 });
+
+/** A template an extension might add. */
+class OrderConfigTemplatesFreightTemplate extends Fleetbase\FleetOps\Support\OrderConfig\Templates\Template
+{
+    protected string $key         = 'freight';
+    protected string $name        = 'Freight';
+    protected string $description = 'Pallets, picked up and delivered.';
+
+    public function attributes(): array
+    {
+        return ['tags' => ['freight'], 'flow' => ['created' => static::activity('created', 'Order Created', 'New order was created.')]];
+    }
+}
+
+test('extensions register their own templates by key, and an unknown template makes no config', function () {
+    $registry = new ReflectionProperty(OrderConfigTemplates::class, 'templates');
+    $before   = $registry->getValue();
+
+    try {
+        OrderConfigTemplates::register(OrderConfigTemplatesFreightTemplate::class);
+
+        expect(OrderConfigTemplates::has('freight'))->toBeTrue()
+            ->and(OrderConfigTemplates::get('freight'))->toBeInstanceOf(OrderConfigTemplatesFreightTemplate::class)
+            ->and(array_column(OrderConfigTemplates::describe(), 'key'))->toBe(['transport', 'passenger', 'freight'])
+            ->and(Arr::only(OrderConfigTemplates::attributes('freight'), ['name', 'key', 'namespace', 'tags']))->toBe([
+                'name'      => 'Freight',
+                'key'       => 'freight',
+                'namespace' => 'system:order-config:freight',
+                'tags'      => ['freight'],
+            ]);
+    } finally {
+        $registry->setValue(null, $before);
+    }
+
+    // Refused before any config is looked up or made.
+    expect(fn () => OrderConfigTemplates::create('limousine', new Fleetbase\Models\Company()))->toThrow(InvalidArgumentException::class, 'No order config template named limousine.')
+        ->and(OrderConfigTemplates::has('freight'))->toBeFalse();
+});
