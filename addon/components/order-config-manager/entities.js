@@ -58,6 +58,22 @@ export default class OrderConfigManagerEntitiesComponent extends Component {
      * Action method to create a new custom entity and open it for editing.
      * @action
      */
+    /** Common things to start from, with their usual size and weight filled in. */
+    get suggestions() {
+        const S = 'order-config-manager.entities.suggest';
+        return [
+            { key: 'pallet', type: 'Pallet', props: { length: 120, width: 80, height: 14.4, dimensions_unit: 'cm', weight: 25, weight_unit: 'kg' } },
+            { key: 'parcel', type: 'Parcel', props: { length: 30, width: 20, height: 15, dimensions_unit: 'cm' } },
+            { key: 'crate', type: 'Crate', props: { dimensions_unit: 'cm' } },
+            { key: 'container', type: 'Container', props: { length: 6.06, width: 2.44, height: 2.59, dimensions_unit: 'm', weight: 2300, weight_unit: 'kg' } },
+            { key: 'suitcase', type: 'Luggage', props: { length: 75, width: 50, height: 30, dimensions_unit: 'cm' } },
+        ].map((suggestion) => ({ ...suggestion, label: this.intl.t(`${S}.${suggestion.key}`) }));
+    }
+
+    @action startFrom(suggestion) {
+        return this.editCustomEntity(createCustomEntity(suggestion.label, suggestion.type, '', suggestion.props), -1);
+    }
+
     @action createNewCustomEntity() {
         const customEntity = createCustomEntity();
         return this.editCustomEntity(customEntity);
@@ -77,6 +93,9 @@ export default class OrderConfigManagerEntitiesComponent extends Component {
             resource: customEntity,
             pojoResource: true,
             saveTask: inlineTask(() => {
+                if (!customEntity.get('name')) {
+                    return this.notifications.warning(this.intl.t('order-config-manager.entities.name-required'));
+                }
                 if (index > -1) {
                     this.customEntities = this.customEntities.map((_, i) => {
                         if (i === index) {

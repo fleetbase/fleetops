@@ -1,32 +1,99 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
-    <div class="modal-body-container">
-        {{#if @options.templates.length}}
-            <InputGroup @name={{t "order-config-manager.template"}} @helpText={{t "order-config-manager.template-help-text"}}>
-                <Select
-                    @value={{@options.template}}
-                    @options={{@options.templateOptions}}
-                    @optionLabel="name"
-                    @optionValue="key"
-                    @onSelect={{@options.selectTemplate}}
-                    class="w-full"
-                    data-test-order-config-template
+    <div class="modal-body-container oc-page flex flex-col gap-5">
+        <p class="oc-section__description">{{t "order-config-manager.new-config.intro"}}</p>
+
+        <div class="flex flex-col gap-2.5" role="group" aria-labelledby="oc-new-step-1">
+            <div class="flex items-baseline gap-2.5">
+                <span class="oc-glance__heading">{{t "order-config-manager.new-config.step-label" number=1}}</span>
+                <span id="oc-new-step-1" class="oc-ov-step__title">{{t "order-config-manager.new-config.step-choose"}}</span>
+            </div>
+            <div class="oc-template-grid">
+                {{#each @options.templates as |template|}}
+                    <button
+                        type="button"
+                        aria-pressed={{if (eq template.key @options.template) "true" "false"}}
+                        class="oc-card oc-template-card {{if (eq template.key @options.template) 'oc-template-card--selected'}}"
+                        data-test-order-config-template={{template.key}}
+                        {{on "click" (fn @options.selectTemplate template.key)}}
+                    >
+                        <span class="flex justify-between items-start w-full">
+                            <span class="oc-template-card__icon"><FaIcon @icon={{template.icon}} /></span>
+                            {{#if (eq template.key @options.template)}}
+                                <span class="oc-template-card__selected"><FaIcon @icon="check" @size="xs" />{{t "order-config-manager.new-config.selected"}}</span>
+                            {{/if}}
+                        </span>
+                        <span class="oc-template-card__name">{{template.name}}</span>
+                        <span class="oc-template-card__description">{{template.description}}</span>
+                        <span class="oc-line__help mt-auto">{{template.summaryText}}</span>
+                    </button>
+                {{/each}}
+            </div>
+            <p class="oc-line__help">{{t "order-config-manager.new-config.more-templates"}}</p>
+        </div>
+
+        <div class="oc-card oc-template-preview">
+            {{#if @options.current}}
+                <div class="flex justify-between items-baseline">
+                    <span class="oc-ov-step__title">{{t "order-config-manager.new-config.preview-title" template=@options.current.name}}</span>
+                    <span class="oc-line__help">{{@options.current.summaryText}}</span>
+                </div>
+                {{#if @options.current.steps.length}}
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        {{#each @options.current.steps as |step index|}}
+                            {{#if index}}<FaIcon @icon="arrow-right" @size="xs" class="oc-ov-rule__icon" />{{/if}}
+                            <span class="oc-role-chip">{{step}}</span>
+                        {{/each}}
+                    </div>
+                {{/if}}
+                <div class="grid grid-cols-3 gap-2.5">
+                    {{#each @options.current.facts as |fact|}}
+                        <span class="oc-ov-rule"><FaIcon @icon="check" @size="xs" class="oc-template-preview__check" />{{fact}}</span>
+                    {{/each}}
+                </div>
+            {{else}}
+                <div class="flex flex-col items-center justify-center gap-1.5 py-5 text-center">
+                    <FaIcon @icon="layer-group" class="oc-ov-rule__icon" />
+                    <span class="oc-ov-step__title">{{t "order-config-manager.new-config.preview-empty-title"}}</span>
+                    <span class="oc-line__help">{{t "order-config-manager.new-config.preview-empty-hint"}}</span>
+                </div>
+            {{/if}}
+        </div>
+
+        <div class="flex flex-col gap-3">
+            <div class="flex items-baseline gap-2.5">
+                <span class="oc-glance__heading">{{t "order-config-manager.new-config.step-label" number=2}}</span>
+                <span class="oc-ov-step__title">{{t "order-config-manager.new-config.step-name"}}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <InputGroup
+                    @name={{t "order-config-manager.new-config.name"}}
+                    @value={{@options.orderConfig.name}}
+                    @required={{true}}
+                    @placeholder={{if @options.current @options.current.namePlaceholder (t "order-config-manager.new-config.name-placeholder-empty")}}
+                    @helpText={{t "order-config-manager.new-config.name-help"}}
+                    @disabled={{not @options.current}}
                 />
-            </InputGroup>
-        {{/if}}
-        <InputGroup @name={{t "modals.new-order-config.name"}} @value={{@options.orderConfig.name}} />
-        <InputGroup @name={{t "modals.new-order-config.description"}} @value={{@options.orderConfig.description}} />
-        <InputGroup @name={{t "modals.new-order-config.tags"}}>
-            <TagInput
-                class="form-input"
-                @placeholder={{t "modals.new-order-config.add-tags"}}
-                @allowSpacesInTags={{true}}
-                @tags={{@options.orderConfig.tags}}
-                @addTag={{@options.addTag}}
-                @removeTagAtIndex={{@options.removeTag}}
-                as |tag|
-            >
-                {{tag}}
-            </TagInput>
-        </InputGroup>
+                <InputGroup @name={{t "order-config-manager.new-config.tags"}} @helpText={{t "order-config-manager.new-config.tags-help"}}>
+                    <TagInput
+                        class="form-input"
+                        @placeholder={{t "order-config-manager.new-config.tags-placeholder"}}
+                        @allowSpacesInTags={{true}}
+                        @tags={{@options.orderConfig.tags}}
+                        @addTag={{@options.addTag}}
+                        @removeTagAtIndex={{@options.removeTag}}
+                        @readOnly={{not @options.current}}
+                        as |tag|
+                    >
+                        {{tag}}
+                    </TagInput>
+                </InputGroup>
+            </div>
+            <InputGroup
+                @name={{t "order-config-manager.new-config.description"}}
+                @value={{@options.orderConfig.description}}
+                @placeholder={{@options.current.description}}
+                @disabled={{not @options.current}}
+            />
+        </div>
     </div>
 </Modal::Default>

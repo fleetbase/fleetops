@@ -71,4 +71,30 @@ module('Unit | Controller | settings/dispatch', function (hooks) {
         ]);
         assert.strictEqual(this.notified[0][0], 'success');
     });
+
+    test('it lists the order configs that offer orders to drivers, and which set their own values', function (assert) {
+        const controller = this.owner.lookup('controller:settings/dispatch');
+        controller.orderConfigs = [
+            { id: '1', name: 'Passenger', policies: { dispatch: { adhoc: { customer_orders: true } } } },
+            { id: '2', name: 'Shuttle', policies: { dispatch: { adhoc: { customer_orders: true, strategy: 'broadcast', offer_timeout: 45 } } } },
+            { id: '3', name: 'Transport', policies: {} },
+        ];
+
+        assert.deepEqual(
+            controller.adhocConfigs.map((config) => [config.name, config.own]),
+            [
+                ['Passenger', false],
+                ['Shuttle', true],
+            ]
+        );
+        assert.strictEqual(controller.overrideCount, 1);
+    });
+
+    test('it refuses an offer time outside 10 to 120 seconds', function (assert) {
+        const controller = this.owner.lookup('controller:settings/dispatch');
+        controller.adhocOfferTimeout = 5;
+        assert.true(controller.timeoutInvalid);
+        controller.adhocOfferTimeout = 30;
+        assert.false(controller.timeoutInvalid);
+    });
 });

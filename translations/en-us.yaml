@@ -1263,41 +1263,142 @@ order-config-manager:
     template-help-text: A ready-made configuration for one kind of operation, with its flow, policies and triggers. Change anything once it is created.
     blank-template: Blank configuration
     tabs:
+        overview: Overview
         details: Details
         custom-fields: Custom Fields
         activity-flow: Activity Flow
         lifecycle: Lifecycle
         entities: Entities
         policies: Policies
-        triggers: Triggers
     policies:
-        description: Policies decide how orders of this configuration behave. A setting you leave at its default follows Fleet-Ops' default or your company's dispatch settings.
-        default: Default
-        add-value: Add a value
-        use-default: Use the default
-    triggers:
-        title: Triggers
-        description: What this configuration does when something happens to its orders, such as notifying the customer when the driver arrives.
-        when: When
-        do: Do
-        add: Add Trigger
-        remove: Remove trigger
-        empty: No triggers yet.
-        conditions: This trigger runs only when its {count, plural, one {condition passes} other {# conditions pass}}.
-        reaches-activity: 'The order reaches: {activity}'
-        approaching-target: Approaching
-        approaching-distance: Within (meters)
-        pickup: Pickup
-        dropoff: Drop-off
-        events:
-            order:
-                created: The order is created
-                completed: The order is completed
-                canceled: The order is canceled
-            dispatch:
-                offer_exhausted: No driver accepted the offer
-            driver:
-                approaching: The driver is approaching
+        on-this-page: On this page
+        nav-defaults: defaults
+        nav-set: '{count} set'
+        nav-unsaved: '{count} unsaved'
+        legend-title: Reading this page
+        legend-default: 'Left alone: follows the default shown.'
+        legend-set: Set for this config. Reset brings back the default.
+        legend-click: Click any highlighted words to change them.
+        defaults-banner: 'Every policy here follows its default, so this config works like a standard Fleet-Ops order: your team assigns drivers and customers can cancel until it finishes. Change only what your operation needs.'
+        save-hint: Saved policies apply to new orders. Orders already running keep the policies they started with.
+        save-hint-errors: '{count, plural, one {Fix the highlighted setting to save.} other {Fix the highlighted settings to save.}}'
+        saved: Policies saved. New orders use them right away.
+        applies-when-offered: Applies only when customer orders are offered to nearby drivers.
+        offering:
+            title: How are orders offered to drivers?
+            nav: Offering to drivers
+            description: 'Whether customer orders go to drivers near the pickup, and how.'
+            customer-orders:
+                sentence: 'Orders customers place {choice}.'
+                wait: wait for an operator to assign them
+                offer: are offered to nearby drivers
+            customer-orders-aria: What happens to customer orders
+            customer-orders-help: Orders your team creates are always assigned or dispatched by your team.
+            strategy:
+                sentence: 'Offer them to {strategy}, giving each driver {seconds} seconds to accept.'
+                sequential: one driver at a time
+                broadcast: all nearby drivers at once
+            strategy-only: 'Offer them to {strategy}.'
+            strategy-aria: How orders are offered
+            seconds-aria: Seconds each driver has to accept
+            strategy-help: 'Left empty, these follow Settings → Dispatch: {strategy}, {seconds} seconds.'
+            radius: 'Look for drivers within {metres} metres of the pickup.'
+            radius-aria: Search radius in metres
+            radius-help: 'Left empty, this follows Settings → Dispatch ({metres} m).'
+            exhausted:
+                sentence: 'If no driver accepts, {choice}.'
+                keep-open: keep the order open for an operator
+                cancel: cancel the order
+            exhausted-aria: If no driver accepts
+            exhausted-help: Keeping it open lets your team assign it by hand.
+        drivers:
+            title: Which drivers can take them?
+            nav: Which drivers
+            description: Narrow down who an order is offered to.
+            vehicle:
+                sentence: 'Offer orders to drivers with {choice}.'
+                any: any vehicle
+                match: a vehicle that matches the service type
+            vehicle-aria: Vehicle matching
+            vehicle-help: The service type is the one the customer chose when ordering.
+            busy:
+                sentence: 'Drivers already on an order are {choice}.'
+                offered: still offered new orders
+                skipped: skipped
+            busy-aria: Busy drivers
+            busy-help: A driver is busy while any of their orders hasn’t reached a step that ends it.
+        ordering:
+            title: What do customers need to place an order?
+            nav: Ordering
+            description: For orders placed through a customer app or the customer API.
+            payment: 'Customers can pay by {methods}.'
+            payment-aria: Payment methods customers can choose
+            payment-empty: no choice
+            payment-help: 'Left empty, customers don’t choose how to pay.'
+            quote:
+                sentence: 'A price quote is {choice} before ordering.'
+                optional: optional
+                required: required
+            quote-aria: Quote before ordering
+            quote-help: Required means customers see and accept a price first.
+            settlement: 'Block new orders while an earlier order paid by {methods} is unpaid.'
+            settlement-aria: Payment methods that must be settled
+            settlement-empty: any method · never blocked
+            settlement-help: 'Usually card or bank transfer: cash is collected by the driver at the end.'
+            method:
+                cash: Cash
+                card: Card
+                bank_transfer: Bank transfer
+                wallet: Wallet
+        cancelling:
+            title: Can customers cancel?
+            nav: Cancelling
+            description: Customers canceling their own orders.
+            until: 'Customers {choice} their own orders until {step}.'
+            'off': 'Customers {choice} their own orders. Your team still can.'
+            can: can cancel
+            cannot: can’t cancel
+            finishes: it finishes
+            reaches: 'it reaches {step}'
+            enabled-aria: Customers canceling
+            until-aria: Cancel until
+        cancelling-help: 'From that step on, only your team can cancel.'
+        interactions:
+            title: What can customers do with the driver?
+            nav: Customer and driver
+            description: Contact and feedback between a customer and the driver of their order.
+            sentence: 'Customers {message} the driver, {rate} them after completion, and {share} a live tracking link.'
+            message:
+                'on': can message
+                'off': can’t message
+            rate:
+                'on': can rate
+                'off': can’t rate
+            share:
+                'on': can share
+                'off': can’t share
+            message-aria: Messaging the driver
+            rate-aria: Rating the driver
+            share-aria: Sharing live tracking
+        interactions-help: The chat itself opens and closes with what happens at the steps you choose in Activity Flow.
+        price:
+            title: How is the price settled?
+            nav: Price
+            description: The final price once the order is complete.
+            reprice: 'On completion, {choice}, measured from {step}.'
+            no-reprice: 'On completion, {choice}.'
+            stands: the quoted price stands
+            recalculate: the price is recalculated from the actual distance and time
+            from-start: when the order starts
+            reprice-aria: Final price
+            from-aria: Measure from
+        price-help: Recalculating uses the service rate the order was quoted on and updates its invoice.
+        extension-badge: EXTENSION
+        extension-fallback: '{label}: {control}'
+        extension-on: 'on'
+        extension-off: 'off'
+        extension-none: not set
+        extension-aria: Setting
     details:
         details: Details
         name: Name
@@ -1314,64 +1415,70 @@ order-config-manager:
             delete-body-message: Once this order config is deleted it will not be recoverable and you will lose all configurations.
             confirm-delete: Delete
     lifecycle:
-        title: Lifecycle
-        description: A configured lifecycle lets this order type start, complete and cancel at its own activities instead of the default dispatch lifecycle (created, dispatched, started, completed, canceled).
-        default-lifecycle: This order type uses the default dispatch lifecycle. Orders start at "created", can be dispatched to drivers and complete or cancel through the standard activities.
-        enable: Use a configured lifecycle
-        enable-help: Orders of this type start at the initial activity you choose and follow the activity flow instead of the dispatch lifecycle.
-        initial: Initial activity
-        initial-help: New orders of this type start here. Must be an activity in the flow.
-        completed: Completed activity
-        completed-help: Reaching this activity completes the order.
-        canceled: Canceled activity
-        canceled-help: Canceling an order moves it to this activity.
-        terminal: Terminal activities
-        terminal-help: No further transition is allowed after these. The completed and canceled activities are always terminal.
-        dispatch: Allow dispatch
-        dispatch-help: When off, orders of this type are never dispatched to drivers and the dispatch actions are refused.
-        strict-transitions: Strict transitions
-        strict-transitions-help: When on, an activity can only move to one of its configured next activities in the flow.
-        select-activity: Select activity
-        select-activities: Select activities
-        problems-title: Fix before saving
-        problem-initial-required: Choose the initial activity.
-        problem-no-activities: Add at least one activity.
-        problem-duplicate-code: 'An activity with the code "{code}" already exists.'
-        activities: Activities
-        activities-help: The statuses an order of this type can be in. Each activity lists the activities it can move to; the graph on the Activity Flow tab shows the same flow. Changes here are saved with the lifecycle.
-        activity-label: Label
-        activity-label-placeholder: e.g. Vehicle Assigned
-        activity-code: Code
-        activity-code-help: Stored status value. Derived from the label when left empty; cannot change once added.
-        activity-code-placeholder: e.g. vehicle_assigned
-        activity-details: Details
-        activity-details-placeholder: Shown with the activity in the timeline
-        activity-color: Colour
-        activity-next: Can move to
-        add-activity: Add activity
-        remove-activity: Remove activity
-        no-activities: No activities yet. Add the first one below; it becomes the initial activity.
-        blank-flow: Start from a blank flow
-        blank-flow-title: Remove all activities?
-        blank-flow-body: The default dispatch activities (created, dispatched, started, …) are removed so you can define your own. Nothing is saved until you click Save changes.
-        blank-flow-confirm: Remove activities
-        initial-short: initial
-        problem-missing-activity: '"{code}" is not an activity in the flow.'
-        summary: Summary
-        summary-initial: Orders start at
-        summary-completed: Completed at
-        summary-canceled: Canceled at
-        summary-terminal: Terminal
-        summary-dispatch: Dispatch
-        summary-strict: Strict transitions
-        'yes': 'Yes'
-        'no': 'No'
-        none: None
-        remove: Remove configured lifecycle
-        remove-title: Remove the configured lifecycle?
-        remove-body: Orders of this type will use the default dispatch lifecycle again. Existing orders keep their current status.
-        remove-confirm: Remove
-        saved: Lifecycle saved for {orderConfigName}.
+        title: How do orders start and end?
+        description: 'Which steps begin and finish an order, and how strictly orders follow the flow. The steps themselves are edited on Activity Flow.'
+        system-banner: 'Its steps come from a template, so how its orders start and end is read-only.'
+        mode:
+            sentence: 'Orders follow {choice}.'
+            standard: the standard dispatch steps
+            own: this config’s own steps
+        mode-aria: Which steps orders follow
+        mode-help-standard: 'Created → Dispatched → Started → Completed, or Canceled. Choose this config’s own steps to set where orders start and end.'
+        mode-help-own: Orders move through the steps on Activity Flow.
+        not-set: not set
+        initial: 'New orders start at {step}.'
+        initial-aria: Where new orders start
+        initial-help: 'Orders created by your team, customers or the API all begin here.'
+        completed: 'An order is complete when it reaches {step}.'
+        completed-aria: Step that completes the order
+        completed-help: Completing counts the order as done in reports and invoices.
+        canceled: 'Canceling an order moves it to {step}.'
+        canceled-aria: Step for canceled orders
+        canceled-help: Orders can be canceled from any step that hasn’t ended them.
+        terminal: 'These steps also end an order: {steps}'
+        terminal-aria: Other steps that end the order
+        terminal-none: none
+        terminal-help: An ended order can’t move again. The complete and cancel steps always end it.
+        dispatch:
+            sentence: 'Orders {choice}.'
+            'on': can be dispatched to drivers
+            'off': are never dispatched
+        dispatch-aria: Dispatch
+        dispatch-help: 'Turn dispatch off for orders that don’t need a driver, such as in-store pickups.'
+        strict:
+            sentence: 'An order can move {choice}.'
+            'off': to any step
+            'on': only along the flow’s arrows
+        strict-aria: Moving between steps
+        strict-help: Along the arrows stops drivers and your team skipping steps by mistake.
+        checks: Checks
+        check-completable: 'New orders can reach {step}'
+        check-no-dead-ends: Every step leads on or ends the order
+        check-dead-end: '{step} doesn’t lead anywhere'
+        check-dead-end-body: 'It has no next step and doesn’t end the order, so orders that reach it get stuck there.'
+        check-dead-end-fix: Make it end the order
+        problem-initial-required: Choose the step new orders start at.
+        problem-missing-activity: '“{code}” is not a step in the flow.'
+        save-blocked: Fix the highlighted rules to save.
+        save-hint: Orders already running keep their current status. New rules apply to their next status change.
+        saved: '{orderConfigName} lifecycle saved.'
+        at-a-glance: At a glance
+        glance-starts: Starts at
+        glance-along: Along the way
+        glance-ends: Ends at
+        glance-rules: Rules
+        glance-complete: complete
+        glance-canceled: canceled
+        glance-dispatched: Dispatched to drivers
+        glance-never-dispatched: Never dispatched
+        glance-strict: Follows the arrows
+        glance-any: Any step to any step
+        standard:
+            created: Created
+            dispatched: Dispatched
+            started: Started
+            completed: Completed
+            canceled: Canceled
     activity-flow:
         save-activity-flow: Save Activity Flow
         edit-activity-unique-code-warning: Activity code must be unique!
@@ -1390,7 +1497,7 @@ order-config-manager:
     entities:
         new-custom-entity: New Custom Entity
         name: Name
-        description: Description
+        description: 'Things that often travel on this kind of order, such as containers, crates or pallets. Add one to an order’s payload in a click, with its size and weight already filled in.'
         type: Type
         length: Length
         width: Width
@@ -1399,11 +1506,254 @@ order-config-manager:
         delete-custom-entity-title: Delete this custom entity?
         delete-custom-entity-body: Once this custom entity is deleted it will not be recoverable and you will lose all configurations.
         confirm-delete: Confirm
+        title: Entities
+        edit: 'Edit {name}'
+        no-size: No size
+        no-weight: No weight
+        empty-title: No entities on this config
+        empty-body: 'That’s fine: orders can still carry any item. Add entities for the things you move often, so nobody has to type their size and weight again.'
+        start-from: 'Start from:'
+        suggest:
+            pallet: Euro pallet
+            parcel: Small parcel
+            crate: Crate
+            container: 20 ft container
+            suitcase: Suitcase
+        name-placeholder: e.g. 20 ft container
+        name-help: Shown when adding it to an order.
+        name-required: Give the entity a name.
+        type-placeholder: e.g. Container
+        type-help: Groups entities in the picker.
+        description-placeholder: 'e.g. Standard dry container, weight when empty'
+        photo-help: Optional. Shown when picking it for an order.
+        photo-needs-name: Give the entity a name first.
+        size-help: Outside dimensions. Used for capacity and vehicle matching.
+        preview: When adding to an order’s payload
+        name-preview: Entity name
+        type-preview: Type
     types:
         no-order-installed: No order configurations installed!
         you-have-no-configs: You currently have no order configs installed, check at the extensions to install an order configuration to get started.
         view-extensions: View extensions
 
+    common:
+        default: Default
+        default-suffix: '{value} · default'
+        reset-to-default: Reset to default
+        unsaved: Unsaved
+        unsaved-changes: Unsaved changes
+        unsaved-count: '{count, plural, one {# unsaved change} other {# unsaved changes}}'
+        discard: Discard
+        save-changes: Save changes
+        add: + Add
+        edit: Edit
+        remove: Remove
+        remove-item: 'Remove {item}'
+        undo: Undo
+        done: Done
+        cancel: Cancel
+        only-if: Only if
+        or: or
+        system-title: System config.
+        system-banner: 'Made from a template, so it can’t be deleted and its steps are read-only. Its policies and what happens at each step can still be changed.'
+        readonly-title: View only.
+        readonly-banner: You can see how this config behaves but not change it. Ask an administrator for the “Update order configs” permission.
+        steps-readonly: Steps are read-only on this system config
+        number-range-error: 'Enter a number between {min} and {max}.'
+    new-config:
+        title: New order config
+        intro: 'Start from a template that already sets up the steps, policies and triggers for one kind of operation. You can change all of it afterwards.'
+        step-label: 'STEP {number}'
+        step-choose: Choose a starting point
+        step-name: Name it
+        selected: Selected
+        more-templates: 'More templates, such as parcel delivery and rental, will appear here as they’re added.'
+        preview-empty-title: Pick a template to see what it sets up
+        preview-empty-hint: Not sure? Transport fits most delivery and haulage work.
+        preview-title: 'What {template} sets up'
+        summary: '{steps, plural, =0 {No steps} one {# step} other {# steps}} · {policies, plural, =0 {policies at defaults} one {# policy} other {# policies}} · {triggers, plural, =0 {no triggers} one {# trigger} other {# triggers}}{fields, plural, =0 {} one { · # custom field} other { · # custom fields}}'
+        summary-blank: Standard steps · policies at defaults · no triggers
+        name: Name
+        name-help: Shown when creating orders. The key is made from it.
+        name-placeholder: e.g. Same-day delivery
+        name-placeholder-empty: Choose a starting point first
+        tags: Tags
+        tags-help: Optional. Helps you find configs later.
+        tags-placeholder: 'e.g. on-demand, city'
+        description: Description
+        create: Create config
+        create-from: 'Create from {template}'
+    templates:
+        transport:
+            name: Transport
+            description: 'Deliveries and haulage dispatched by your team, the default every company gets.'
+            name-placeholder: e.g. Same-day delivery
+            fact-1: Orders are assigned or dispatched by your team
+            fact-2: Every policy left at its Fleet-Ops default
+            fact-3: No automatic notifications yet
+        passenger:
+            name: Passenger
+            description: 'On-demand trips booked by customers, offered to nearby drivers and priced from the actual trip.'
+            name-placeholder: e.g. Airport shuttle
+            fact-1: Offered to one nearby driver at a time; canceled if nobody accepts
+            fact-2: 'Customers can cancel, message, rate and share; card trips settle before the next booking'
+            fact-3: Customer notified at each step; price recalculated on completion; adds a Passengers field
+        blank:
+            name: Blank
+            description: 'A configuration for a process you want to build yourself, step by step.'
+            name-placeholder: e.g. Equipment rental
+            fact-1: Starts with the standard steps; build your own in Activity Flow
+            fact-2: Every policy left at its Fleet-Ops default
+            fact-3: Add what happens at each step as you go
+    flow:
+        reset: Reset
+        click-a-step: Click a step to see and change what happens there.
+        order-events: Order events
+        legend: Legend
+        zoom-in: Zoom in
+        zoom-out: Zoom out
+        role-start: Start
+        role-complete: Completes order
+        role-end: Ends order
+        legend-notification: Notification
+        legend-chat: Chat
+        legend-invoice: Invoice
+    step:
+        sections: Step sections
+        kicker: 'Step {position} of {total}'
+        saved: Step saved.
+        tab-details: Details
+        tab-happens: 'What happens here · {count}'
+        tab-conditions: Conditions
+        when-reaches: 'When an order reaches {step}:'
+        then: Then
+        what-happens: What happens
+        choose-action: choose what happens
+        new: NEW
+        edited: Edited
+        no-action-error: Choose what should happen.
+        removed-note: removed when you save
+        every-time: Every time
+        only-if-count: '{count, plural, one {Only if # condition passes} other {Only if # conditions pass}}'
+        push-notification: Push notification
+        title: Title
+        title-placeholder: 'Leave empty to use: {status}'
+        title-placeholder-event: e.g. Your driver is almost there
+        message: Message
+        message-placeholder: Leave empty to use the step’s details
+        message-fallback: Uses the step’s details
+        insert: 'Insert:'
+        insert-token: 'Insert {token}'
+        preview: Preview with sample data
+        add-condition: Add a condition
+        condition-hint: Runs every time unless a condition is added. All conditions must pass.
+        add: Add something that happens here
+        quick-add: 'Quick add:'
+        empty: Nothing happens here yet. Orders just move on.
+        quick:
+            notify_customer: Notify customer
+            notify_driver: Notify driver
+            open_chat: Open chat
+            close_chat: Close chat
+            send_invoice: Send invoice
+        footnote: 'These run every time an order reaches this step, in this order, without holding the order up. For things that don’t belong to one step, such as an order being canceled, use Order events on the canvas.'
+        details-readonly: 'This step belongs to a system config or the standard dispatch steps, so its details are read-only.'
+        status-placeholder: e.g. Arrived at pickup
+        status-help: What customers and your team see.
+        code-placeholder: e.g. arrived
+        code-help: Used by the API and apps.
+        key-placeholder: e.g. arrived
+        details-placeholder: e.g. The driver is waiting at the pickup.
+        details-help: 'Shown in tracking, and used as a notification’s message when it has none of its own.'
+        completes-order: Completes the order
+        completes-order-help: Reaching this step marks the order complete.
+        requires-pod: Requires proof of delivery
+        requires-pod-help: 'The driver must capture proof, such as a photo or signature, to reach this step.'
+        developer-events: Developer events
+        developer-events-help: 'Webhook events sent when an order reaches this step, for integrations. For notifications and other actions, use What happens here.'
+        conditions-lead: 'Conditions decide whether an order can move to {step}, not what happens when it does.'
+        conditions-readonly: Read-only on system configs and the standard dispatch steps.
+    actions:
+        notify_customer: Notify the customer
+        notify_customer-description: Push notification to the customer’s app.
+        notify_driver: Notify the driver
+        notify_driver-description: Push notification to the driver’s app.
+        open_chat: Open the customer chat
+        open_chat-description: Customer and driver can message each other.
+        close_chat: Close the customer chat
+        close_chat-description: Ends the chat; its history is kept.
+        set_meta: Set order meta
+        set_meta-description: Store a value on the order for reports or integrations.
+        cancel: Cancel the order
+        cancel-description: Cancels with the reason you give.
+    events:
+        title: Order events
+        intro: 'What happens when something happens to an order outside its steps. For what happens when an order reaches a step, click the step.'
+        add: Add an order event
+        when: 'When {event}'
+        remove: Remove this order event
+        then-also: Then also…
+        empty: No order events yet.
+        empty-actions: Nothing happens yet. Add what should happen.
+        created: an order is created
+        created-menu: An order is created
+        created-description: 'As soon as it’s placed, by anyone.'
+        completed: an order is completed
+        completed-menu: An order is completed
+        completed-description: Whichever step completes it.
+        canceled: the order is canceled
+        canceled-menu: An order is canceled
+        canceled-description: 'By the customer, your team or a policy.'
+        exhausted: no driver accepts the order
+        exhausted-menu: No driver accepts the order
+        exhausted-description: Every nearby driver declined or let the offer run out.
+        approaching: 'When the driver is within {metres} metres of the {target}'
+        approaching-menu: The driver is approaching
+        approaching-description: Within a distance of the pickup or drop-off.
+        approaching-short: 'Driver within {metres} m of the {target}'
+        target-pickup: pickup
+        target-dropoff: drop-off
+        target-aria: Pickup or drop-off
+        distance-aria: Distance in metres
+        approaching-help: Checked as the driver’s location updates. Runs once per order.
+        approaching-help-dropoff: 'Checked as the driver’s location updates. Runs once per order, after pickup.'
+        save: Save order events
+        saved: Order events saved.
+    overview:
+        title: 'What happens to a {config} order'
+        readonly-hint: Read-only summary. Use the links to change anything.
+        before: Before the order is placed
+        edit-policies: Edit policies
+        edit-step: Edit what happens
+        edit-events: Edit order events
+        happens-here: Happens here
+        policies-apply: Policies that apply
+        nothing: Nothing
+        none: None
+        any-time: Any time
+        at-a-glance: At a glance
+        no-events: No order events.
+        has-condition: Only if its conditions pass
+        tag-completes: Completes the order
+        tag-ends: Ends the order
+        branch-from: 'Ends the order · branch from {step}'
+        rule-payment: 'Customers pay by {methods}'
+        rule-quote: Customers accept a price quote first
+        rule-settlement: 'Customers with an unpaid {methods} order can’t place a new one'
+        rule-interactions: 'Customers can {list}'
+        interaction-chat: message the driver
+        interaction-rating: rate the driver
+        interaction-share_tracking: share tracking
+        rule-offered: 'Offered to nearby drivers, not assigned by your team'
+        rule-vehicle: Only drivers whose vehicle matches the service type
+        rule-can-cancel: Customer can still cancel
+        rule-cannot-cancel: Customer can no longer cancel
+        rule-metering: Distance and time measured from here
+        rule-repriced: Price recalculated from the actual trip
+        rule-rating: Customer can rate the driver
+        glance-steps: '{count, plural, one {# step} other {# steps}} · {ends, plural, =0 {none end the order} one {# ends the order} other {# end the order}}'
+        glance-automatic: '{count, plural, =0 {Nothing happens automatically} one {# thing happens automatically} other {# things happen automatically}}'
+        glance-policies: '{count, plural, =0 {Every policy at its default} one {# policy setting changed from the defaults} other {# policy settings changed from the defaults}}'
 place:
     fields:
         details: Place Details
@@ -2853,13 +3203,28 @@ route-list:
 settings:
     dispatch:
         title: Fleet-Ops Dispatch
-        adhoc-orders: Adhoc Orders
-        intro: How orders without an assigned driver are offered to drivers nearby. An order config or a single order can choose differently.
-        strategy: How Orders Are Offered
-        offer-timeout: Offer Time (seconds)
-        offer-timeout-help-text: How long each driver has to accept before the order goes to the next driver.
-        ping-radius: Radius (meters)
-        ping-radius-help-text: How far from the pickup drivers are offered an order.
+        adhoc-orders: Adhoc dispatch defaults
+        intro: Company-wide defaults for offering orders to nearby drivers.
+        override-banner: These apply to every order config that offers orders to nearby drivers and leaves these settings empty. An order config can set its own values on its Policies tab.
+        override-count: '{count, plural, one {# config sets its own values.} other {# configs set their own values.}}'
+        strategy: How orders are offered
+        strategy-placeholder: One driver at a time
+        strategy-help-text: 'One at a time offers the order to the nearest driver first, then the next if they decline or run out of time. All at once offers it to every nearby driver, and the first to accept gets it.'
+        offer-timeout: Time each driver has to accept
+        offer-timeout-placeholder: '20'
+        offer-timeout-help-text: Between 10 and 120. Leave empty for 20 seconds.
+        offer-timeout-error: Enter a number between 10 and 120.
+        ping-radius: Search radius around the pickup
+        ping-radius-placeholder: '6000'
+        ping-radius-help-text: 'Drivers farther from the pickup aren’t offered the order. Leave empty for 6,000 m.'
+        seconds: seconds
+        metres: metres
+        section-configs: Order configs that offer orders to drivers
+        uses-defaults: Uses these defaults
+        sets-own: 'Sets its own: {settings}'
+        setting-strategy: how orders are offered
+        setting-offer_timeout: time to accept
+        setting-radius: search radius
         saved: Dispatch settings saved.
     telematics:
         telematics-settings: Telematics Settings

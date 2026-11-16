@@ -172,19 +172,49 @@ export default class OrderConfigManagerComponent extends Component {
             tags: [],
         });
         const templates = await this.loadTemplates();
-
+        const blank = {
+            key: 'blank',
+            name: this.intl.t('order-config-manager.templates.blank.name'),
+            description: this.intl.t('order-config-manager.templates.blank.description'),
+            steps: [],
+            summary: null,
+        };
+        const describe = (template) => {
+            const key = `order-config-manager.templates.${template.key}`;
+            const tr = (suffix, fallback) => (this.intl.exists(`${key}.${suffix}`) ? this.intl.t(`${key}.${suffix}`) : fallback);
+            const summary = template.summary;
+            return {
+                ...template,
+                name: tr('name', template.name),
+                description: tr('description', template.description),
+                namePlaceholder: tr('name-placeholder', this.intl.t('order-config-manager.new-config.name-placeholder')),
+                icon: { transport: 'truck', passenger: 'user', blank: 'plus' }[template.key] ?? 'diagram-project',
+                summaryText: summary
+                    ? this.intl.t('order-config-manager.new-config.summary', { steps: summary.steps, policies: summary.policies, triggers: summary.triggers, fields: summary.custom_fields })
+                    : this.intl.t('order-config-manager.new-config.summary-blank'),
+                facts: [1, 2, 3].map((n) => tr(`fact-${n}`, null)).filter(Boolean),
+            };
+        };
+        const choices = [...templates.map(describe), describe(blank)];
+        const pick = (key) => {
+            const template = choices.find((item) => item.key === key);
+            this.modalsManager.setOption('template', key);
+            this.modalsManager.setOption('current', template);
+            this.modalsManager.setOption('acceptButtonDisabled', !template);
+            this.modalsManager.setOption(
+                'acceptButtonText',
+                template ? this.intl.t('order-config-manager.new-config.create-from', { template: template.name }) : this.intl.t('order-config-manager.new-config.create')
+            );
+        };
         this.modalsManager.show('modals/new-order-config', {
-            templates,
-            templateOptions: [{ key: null, name: this.intl.t('order-config-manager.blank-template') }, ...templates],
+            templates: choices,
             template: null,
-            selectTemplate: (key) => {
-                this.modalsManager.setOption('template', key);
-                const template = templates.find((item) => item.key === key);
-                if (template && !orderConfig.description) {
-                    orderConfig.set('description', template.description);
-                }
-            },
-            title: this.intl.t('order-config-manager.create-new-title'),
+            current: null,
+            selectTemplate: pick,
+            acceptButtonDisabled: true,
+            acceptButtonText: this.intl.t('order-config-manager.new-config.create'),
+            modalClass: 'modal-lg',
+            title: this.intl.t('order-config-manager.new-config.title'),
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
             declineButtonIcon: 'times',
@@ -203,7 +233,7 @@ export default class OrderConfigManagerComponent extends Component {
 
                 modal.startLoading();
                 const template = this.modalsManager.getOption('template');
-                if (template) {
+                if (template && template !== 'blank') {
                     return this.createFromTemplate(template, orderConfig, modal);
                 }
 

@@ -35,7 +35,7 @@
             {{else if this.isSystemConfig}}
                 <OrderConfig::Notice @icon="lock" @title={{t "order-config-manager.common.system-title"}} @text={{t "order-config-manager.common.system-banner" config=this.config.name}} />
             {{/if}}
-            {{#if this.allDefaults}}
+            {{#if (and this.allDefaults this.policies.length)}}
                 <OrderConfig::Notice @type="neutral" @text={{t "order-config-manager.policies.defaults-banner"}} />
             {{/if}}
 

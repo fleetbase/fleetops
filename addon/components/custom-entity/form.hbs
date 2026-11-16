@@ -1,9 +1,25 @@
 <div class="form-wrapper" ...attributes>
     <ContentPanel @title={{t "custom-entity.fields.details"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="space-y-2">
-            <InputGroup @name={{t "custom-entity.fields.name"}} @value={{@resource.name}} />
-            <InputGroup @name={{t "custom-entity.fields.description"}} @value={{@resource.description}} />
-            <InputGroup @name={{t "custom-entity.fields.type"}} @value={{@resource.type}} {{on "input" this.setCustomEntityType}} />
+            <InputGroup
+                @name={{t "custom-entity.fields.name"}}
+                @value={{@resource.name}}
+                @required={{true}}
+                @placeholder={{t "order-config-manager.entities.name-placeholder"}}
+                @helpText={{t "order-config-manager.entities.name-help"}}
+            />
+            <InputGroup
+                @name={{t "custom-entity.fields.type"}}
+                @value={{@resource.type}}
+                @placeholder={{t "order-config-manager.entities.type-placeholder"}}
+                @helpText={{t "order-config-manager.entities.type-help"}}
+                {{on "input" this.setCustomEntityType}}
+            />
+            <InputGroup
+                @name={{t "custom-entity.fields.description"}}
+                @value={{@resource.description}}
+                @placeholder={{t "order-config-manager.entities.description-placeholder"}}
+            />
         </div>
     </ContentPanel>
     <ContentPanel @title={{t "custom-entity.fields.entity-image"}} @open={{true}} @wrapperClass="bordered-top">
@@ -13,13 +29,14 @@
                 @name={{t "common.photos"}}
                 @accept="image/*"
                 @onFileAdded={{this.onFileAdded}}
-                @disabled={{not (and @resource.name @resource.description)}}
-                @helpText={{if (not (and @resource.name @resource.description)) "Input custom entity name and description first to upload image" ""}}
+                @disabled={{not @resource.name}}
+                @helpText={{if @resource.name (t "order-config-manager.entities.photo-help") (t "order-config-manager.entities.photo-needs-name")}}
                 class="w-32"
             />
         </div>
     </ContentPanel>
     <ContentPanel @title={{t "custom-entity.fields.measurements"}} @open={{true}} @wrapperClass="bordered-top">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">{{t "order-config-manager.entities.size-help"}}</p>
         <div class="grid grid-cols-2 gap-2">
             <InputGroup @name={{t "custom-entity.fields.length"}} @helpText={{t "custom-entity.fields.length-text"}} @wrapperClass="mb-2">
                 <UnitInput class="w-full" @value={{@resource.length}} @unit={{@resource.dimensions_unit}} @canSelectUnit={{true}} @onUnitChange={{this.updateCustomEntityDimensionsUnit}} />
@@ -42,4 +59,16 @@
             </InputGroup>
         </div>
     </ContentPanel>
+    <div class="oc-page px-4 pb-4">
+        <div class="oc-card oc-entity-preview">
+            <span class="oc-glance__heading">{{t "order-config-manager.entities.preview"}}</span>
+            <span class="flex gap-2.5 items-center">
+                <span class="oc-entity-preview__icon"><FaIcon @icon="box" /></span>
+                <span class="flex flex-col">
+                    <span class="oc-trigger-card__title font-semibold">{{or @resource.name (t "order-config-manager.entities.name-preview")}}</span>
+                    <span class="oc-line__help">{{this.previewMeta}}</span>
+                </span>
+            </span>
+        </div>
+    </div>
 </div>

@@ -5,44 +5,76 @@
         @icon="save"
         @text={{t "common.save-changes"}}
         @onClick={{perform this.saveSettings}}
-        @disabled={{this.saveSettings.isRunning}}
+        @disabled={{or this.saveSettings.isRunning this.timeoutInvalid}}
         @isLoading={{or this.saveSettings.isRunning this.getSettings.isRunning}}
     />
 </Layout::Section::Header>
 
 <Layout::Section::Body class="overflow-y-scroll-i h-full">
     <div class="container mx-auto h-screen">
-        <div class="max-w-3xl my-10 mx-auto space-y-6">
+        <div class="oc-page max-w-3xl my-10 mx-auto space-y-6">
+            <OrderConfig::Notice @text={{t "settings.dispatch.override-banner"}}>
+                {{#if this.overrideCount}}
+                    <strong>{{t "settings.dispatch.override-count" count=this.overrideCount}}</strong>
+                {{/if}}
+            </OrderConfig::Notice>
             <ContentPanel @title={{t "settings.dispatch.adhoc-orders"}} @open={{true}} @wrapperClass="bordered-classic">
                 <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">{{t "settings.dispatch.intro"}}</p>
-                <InputGroup @name={{t "settings.dispatch.strategy"}} @helpText={{this.selectedStrategy.description}}>
+                <InputGroup @name={{t "settings.dispatch.strategy"}} @helpText={{or this.selectedStrategy.description (t "settings.dispatch.strategy-help-text")}}>
                     <Select
                         @value={{this.adhocStrategy}}
                         @options={{this.strategies}}
                         @optionLabel="label"
                         @optionValue="name"
+                        @placeholder={{t "settings.dispatch.strategy-placeholder"}}
                         @onSelect={{fn (mut this.adhocStrategy)}}
                         class="w-full"
                         data-test-adhoc-strategy
                     />
                 </InputGroup>
-                {{#if this.usesOfferTimeout}}
-                    <InputGroup
-                        @name={{t "settings.dispatch.offer-timeout"}}
-                        @type="number"
-                        @value={{this.adhocOfferTimeout}}
-                        @helpText={{t "settings.dispatch.offer-timeout-help-text"}}
-                        data-test-adhoc-offer-timeout
-                    />
-                {{/if}}
-                <InputGroup
-                    @name={{t "settings.dispatch.ping-radius"}}
-                    @type="number"
-                    @value={{this.adhocDistance}}
-                    @helpText={{t "settings.dispatch.ping-radius-help-text"}}
-                    data-test-adhoc-distance
-                />
+                <div class="grid grid-cols-2 gap-x-6">
+                    {{#if this.usesOfferTimeout}}
+                        <InputGroup @name={{t "settings.dispatch.offer-timeout"}} @helpText={{t "settings.dispatch.offer-timeout-help-text"}}>
+                            <div class="oc-unit-input {{if this.timeoutInvalid 'oc-unit-input--error'}}">
+                                <Input
+                                    @type="number"
+                                    @value={{this.adhocOfferTimeout}}
+                                    class="form-input"
+                                    min="10"
+                                    max="120"
+                                    placeholder={{t "settings.dispatch.offer-timeout-placeholder"}}
+                                    aria-invalid={{if this.timeoutInvalid "true" "false"}}
+                                    data-test-adhoc-offer-timeout
+                                />
+                                <span class="oc-unit-input__unit">{{t "settings.dispatch.seconds"}}</span>
+                            </div>
+                            {{#if this.timeoutInvalid}}
+                                <span class="oc-line__error mt-1" role="alert"><FaIcon @icon="circle-exclamation" />{{t "settings.dispatch.offer-timeout-error"}}</span>
+                            {{/if}}
+                        </InputGroup>
+                    {{/if}}
+                    <InputGroup @name={{t "settings.dispatch.ping-radius"}} @helpText={{t "settings.dispatch.ping-radius-help-text"}}>
+                        <div class="oc-unit-input">
+                            <Input @type="number" @value={{this.adhocDistance}} class="form-input" min="100" placeholder={{t "settings.dispatch.ping-radius-placeholder"}} data-test-adhoc-distance />
+                            <span class="oc-unit-input__unit">{{t "settings.dispatch.metres"}}</span>
+                        </div>
+                    </InputGroup>
+                </div>
             </ContentPanel>
+            {{#if this.adhocConfigs.length}}
+                <ContentPanel @title={{t "settings.dispatch.section-configs"}} @open={{true}} @wrapperClass="bordered-classic">
+                    {{#each this.adhocConfigs as |config|}}
+                        <div class="flex justify-between items-center py-2.5 border-t border-gray-200 dark:border-gray-700 first:border-t-0">
+                            <span class="flex flex-col">
+                                <span class="text-sm font-medium dark:text-gray-100">{{config.name}}</span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">
+                                    {{if config.own (t "settings.dispatch.sets-own" settings=config.ownSettings) (t "settings.dispatch.uses-defaults")}}
+                                </span>
+                            </span>
+                        </div>
+                    {{/each}}
+                </ContentPanel>
+            {{/if}}
         </div>
     </div>
 </Layout::Section::Body>
