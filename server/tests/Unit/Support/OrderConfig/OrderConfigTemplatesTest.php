@@ -41,8 +41,20 @@ function orderConfigTemplatesFlow(array $flow): array
 
 test('the registry describes its templates and refuses unknown ones', function () {
     expect(OrderConfigTemplates::describe())->toBe([
-        ['key' => 'transport', 'name' => 'Transport', 'description' => 'Default order configuration for transport'],
-        ['key' => 'passenger', 'name' => 'Passenger', 'description' => (new PassengerTemplate())->description()],
+        [
+            'key'         => 'transport',
+            'name'        => 'Transport',
+            'description' => 'Default order configuration for transport',
+            'steps'       => ['Order Created', 'Order Dispatched', 'Order Started', 'Driver Enroute', 'Order Completed'],
+            'summary'     => ['steps' => 5, 'policies' => 0, 'triggers' => 0, 'custom_fields' => 0],
+        ],
+        [
+            'key'         => 'passenger',
+            'name'        => 'Passenger',
+            'description' => (new PassengerTemplate())->description(),
+            'steps'       => ['Trip requested', 'Finding a driver', 'Driver on the way', 'Driver has arrived', 'Trip in progress', 'Trip completed'],
+            'summary'     => ['steps' => count((new PassengerTemplate())->attributes()['flow']), 'policies' => 6, 'triggers' => count((new PassengerTemplate())->attributes()['triggers']) + array_sum(array_map(fn ($activity) => count($activity['actions']), (new PassengerTemplate())->attributes()['flow'])), 'custom_fields' => count((new PassengerTemplate())->customFields())],
+        ],
     ])
         ->and(OrderConfigTemplates::has('passenger'))->toBeTrue()
         ->and(OrderConfigTemplates::has('limousine'))->toBeFalse()

@@ -97,6 +97,9 @@ test('policies describe each setting\'s type, default and choices for people con
             ['value' => 'cancel', 'label' => 'Cancel the order'],
         ])
         ->and(orderConfigPoliciesSetting('dispatch.adhoc', 'customer_orders'))->toBe(['name' => 'customer_orders', 'type' => 'boolean', 'default' => false, 'choices' => null])
+        // Numbers carry the range their rules allow.
+        ->and(orderConfigPoliciesSetting('dispatch.adhoc', 'offer_timeout'))->toMatchArray(['type' => 'number', 'min' => 10, 'max' => 120])
+        ->and(orderConfigPoliciesSetting('dispatch.adhoc', 'radius'))->toMatchArray(['min' => 100, 'max' => 200000])
         ->and(orderConfigPoliciesSetting('customer.ordering', 'payment_methods')['type'])->toBe('list')
         ->and(orderConfigPoliciesSetting('customer.ordering', 'require_settlement')['type'])->toBe('list')
         // An activity setting is a choice among the config's own activities.

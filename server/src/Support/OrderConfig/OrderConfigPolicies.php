@@ -100,7 +100,7 @@ class OrderConfigPolicies
 
     /**
      * Every policy, for people configuring them, with each setting's type (`boolean`, `number`,
-     * `text`, `list` or `choice`) and choices.
+     * `text`, `list` or `choice`), choices, and for numbers the `min` and `max` its rules allow.
      *
      * @return array<int, array{key: string, label: string, description: string, defaults: array, settings: array}>
      */
@@ -119,7 +119,7 @@ class OrderConfigPolicies
                     in_array('integer', $settingRules, true) || in_array('numeric', $settingRules, true) => 'number',
                     default                                                                              => 'text',
                 };
-                $settings[] = ['name' => $name, 'type' => $type, 'default' => $default, 'choices' => $choices[$name] ?? null];
+                $settings[] = ['name' => $name, 'type' => $type, 'default' => $default, 'choices' => $choices[$name] ?? null] + ($type === 'number' ? static::bounds($settingRules) : []);
             }
 
             return [
@@ -130,5 +130,20 @@ class OrderConfigPolicies
                 'settings'    => $settings,
             ];
         }, static::all()));
+    }
+
+    /**
+     * The `min` and `max` in a setting's rules, as numbers, when it has them.
+     */
+    protected static function bounds(array $rules): array
+    {
+        $bounds = [];
+        foreach ($rules as $rule) {
+            if (is_string($rule) && preg_match('/^(min|max):(-?\d+(?:\.\d+)?)$/', $rule, $match)) {
+                $bounds[$match[1]] = $match[2] + 0;
+            }
+        }
+
+        return $bounds;
     }
 }

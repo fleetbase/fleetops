@@ -17,6 +17,20 @@ abstract class Action implements OrderConfigAction
     protected string $description;
     protected array $parameters = [];
 
+    /**
+     * The placeholders `render()` fills in, for people writing notification text.
+     */
+    public const PLACEHOLDERS = [
+        'driver.first_name',
+        'driver.name',
+        'customer.name',
+        'order.id',
+        'order.tracking_number',
+        'order.status',
+        'activity.status',
+        'activity.details',
+    ];
+
     public function name(): string
     {
         return $this->name;

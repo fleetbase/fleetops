@@ -327,12 +327,13 @@ test('internal order config controller describes what order configs can use, for
     $body     = $response->getData(true);
 
     expect($response->getStatusCode())->toBe(200)
-        ->and(array_keys($body))->toBe(['templates', 'policies', 'actions', 'events'])
+        ->and(array_keys($body))->toBe(['templates', 'policies', 'actions', 'events', 'placeholders'])
         ->and($body['templates'])->toBe(Fleetbase\FleetOps\Support\OrderConfig\OrderConfigTemplates::describe())
         ->and(array_column($body['templates'], 'key'))->toBe(['transport', 'passenger'])
         ->and($body['policies'])->toBe(json_decode(json_encode(Fleetbase\FleetOps\Support\OrderConfig\OrderConfigPolicies::describe()), true))
         ->and(array_column($body['actions'], 'name'))->toContain('cancel', 'open_chat', 'set_meta', 'notify_driver')
-        ->and($body['events'])->toBe(Fleetbase\FleetOps\Support\OrderConfig\OrderConfigTriggers::EVENTS);
+        ->and($body['events'])->toBe(Fleetbase\FleetOps\Support\OrderConfig\OrderConfigTriggers::EVENTS)
+        ->and($body['placeholders'])->toBe(Fleetbase\FleetOps\Support\OrderConfig\Actions\Action::PLACEHOLDERS);
 });
 
 test('internal order config controller makes a named config from a template once, for the company in session', function () {

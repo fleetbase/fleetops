@@ -48,17 +48,56 @@ class OrderConfigTemplates
     }
 
     /**
-     * Every template, for people choosing one.
+     * Every template, for people choosing one, with what it sets up: the step labels along its
+     * main path and how many steps, policies, triggers and custom fields it brings.
      *
-     * @return array<int, array{key: string, name: string, description: string}>
+     * @return array<int, array{key: string, name: string, description: string, steps: array<int, string>, summary: array{steps: int, policies: int, triggers: int, custom_fields: int}}>
      */
     public static function describe(): array
     {
         return array_values(array_map(function (string $class) {
-            $template = app($class);
+            $template   = app($class);
+            $attributes = $template->attributes();
+            $flow       = is_array($attributes['flow'] ?? null) ? $attributes['flow'] : [];
 
-            return ['key' => $template->key(), 'name' => $template->name(), 'description' => $template->description()];
+            return [
+                'key'         => $template->key(),
+                'name'        => $template->name(),
+                'description' => $template->description(),
+                'steps'       => static::mainPath($flow, data_get($attributes, 'meta.lifecycle.initial')),
+                'summary'     => [
+                    'steps'         => count($flow),
+                    'policies'      => static::countPolicies($attributes['policies'] ?? []),
+                    'triggers'      => count($attributes['triggers'] ?? []) + array_sum(array_map(fn ($activity) => count($activity['actions'] ?? []), $flow)),
+                    'custom_fields' => count($template->customFields()),
+                ],
+            ];
         }, static::$templates));
+    }
+
+    /**
+     * The status labels from the first step, following each step's first next step.
+     */
+    protected static function mainPath(array $flow, ?string $initial = null): array
+    {
+        $code   = $initial ?: (isset($flow['created']) ? 'created' : array_key_first($flow));
+        $labels = [];
+        $seen   = [];
+        while ($code && isset($flow[$code]) && !isset($seen[$code])) {
+            $seen[$code] = true;
+            $labels[]    = (string) ($flow[$code]['status'] ?? $code);
+            $code        = $flow[$code]['activities'][0] ?? null;
+        }
+
+        return $labels;
+    }
+
+    /**
+     * How many registered policies the template sets anything on.
+     */
+    protected static function countPolicies(array $policies): int
+    {
+        return count(array_filter(array_keys(OrderConfigPolicies::all()), fn (string $key) => !empty(data_get($policies, $key))));
     }
 
     /**

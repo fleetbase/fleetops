@@ -6,6 +6,7 @@ use Fleetbase\Exceptions\FleetbaseRequestValidationException;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderConfigRequest;
 use Fleetbase\FleetOps\Models\OrderConfig;
+use Fleetbase\FleetOps\Support\OrderConfig\Actions\Action;
 use Fleetbase\FleetOps\Support\OrderConfig\OrderConfigActions;
 use Fleetbase\FleetOps\Support\OrderConfig\OrderConfigPolicies;
 use Fleetbase\FleetOps\Support\OrderConfig\OrderConfigTemplates;
@@ -85,10 +86,11 @@ class OrderConfigController extends FleetOpsController
     public function capabilities()
     {
         return response()->json([
-            'templates' => OrderConfigTemplates::describe(),
-            'policies'  => OrderConfigPolicies::describe(),
-            'actions'   => OrderConfigActions::describe(),
-            'events'    => OrderConfigTriggers::EVENTS,
+            'templates'    => OrderConfigTemplates::describe(),
+            'policies'     => OrderConfigPolicies::describe(),
+            'actions'      => OrderConfigActions::describe(),
+            'events'       => OrderConfigTriggers::EVENTS,
+            'placeholders' => Action::PLACEHOLDERS,
         ]);
     }
 
