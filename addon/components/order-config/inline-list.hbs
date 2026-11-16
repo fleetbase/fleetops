@@ -1,0 +1,25 @@
+<span class="oc-inline-list" role="group" aria-label={{@ariaLabel}}>
+    {{#each @items as |item|}}
+        <span class="oc-ctl oc-ctl--set oc-chip">
+            <span>{{item.label}}</span>
+            {{#unless @disabled}}
+                <button type="button" class="oc-chip__remove" aria-label={{t "order-config-manager.common.remove-item" item=item.label}} {{on "click" (fn this.remove item)}}>
+                    <FaIcon @icon="xmark" @size="xs" />
+                </button>
+            {{/unless}}
+        </span>
+    {{else}}
+        <span class="oc-ctl oc-ctl--default oc-ctl--readonly">{{@emptyLabel}}</span>
+    {{/each}}
+    {{#if this.canAdd}}
+        <OrderConfig::InlineSelect
+            @label={{t "order-config-manager.common.add"}}
+            @options={{this.addable}}
+            @isDefault={{false}}
+            @hideCaret={{true}}
+            @class="oc-ctl--add"
+            @ariaLabel={{@ariaLabel}}
+            @onSelect={{this.add}}
+        />
+    {{/if}}
+</span>

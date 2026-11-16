@@ -17,7 +17,7 @@ import OrderConfigManagerActivityFlowComponent from './order-config-manager/acti
 import OrderConfigManagerLifecycleComponent from './order-config-manager/lifecycle';
 import OrderConfigManagerEntitiesComponent from './order-config-manager/entities';
 import OrderConfigManagerPoliciesComponent from './order-config-manager/policies';
-import OrderConfigManagerTriggersComponent from './order-config-manager/triggers';
+import OrderConfigManagerOverviewComponent from './order-config-manager/overview';
 import findActiveTab from '../utils/find-active-tab';
 
 const configManagerContext = EmberObject.extend(Evented);
@@ -45,14 +45,15 @@ export default class OrderConfigManagerComponent extends Component {
      */
     get tabs() {
         const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:order-config-manager');
+        const tab = (key, icon, component) => this.universe._createMenuItem(this.intl.t(`order-config-manager.tabs.${key}`), null, { icon, component, slug: key });
         const defaultTabs = [
-            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.details'), null, { icon: 'circle-info', component: OrderConfigManagerDetailsComponent }),
-            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.custom-fields'), null, { icon: 'rectangle-list', component: OrderConfigManagerCustomFieldsComponent }),
-            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.activity-flow'), null, { icon: 'diagram-project', component: OrderConfigManagerActivityFlowComponent }),
-            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.lifecycle'), null, { icon: 'arrows-spin', component: OrderConfigManagerLifecycleComponent }),
-            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.policies'), null, { icon: 'sliders', component: OrderConfigManagerPoliciesComponent }),
-            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.triggers'), null, { icon: 'bolt', component: OrderConfigManagerTriggersComponent }),
-            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.entities'), null, { icon: 'boxes-packing', component: OrderConfigManagerEntitiesComponent }),
+            tab('overview', 'list-check', OrderConfigManagerOverviewComponent),
+            tab('details', 'circle-info', OrderConfigManagerDetailsComponent),
+            tab('custom-fields', 'rectangle-list', OrderConfigManagerCustomFieldsComponent),
+            tab('activity-flow', 'diagram-project', OrderConfigManagerActivityFlowComponent),
+            tab('lifecycle', 'arrows-spin', OrderConfigManagerLifecycleComponent),
+            tab('policies', 'sliders', OrderConfigManagerPoliciesComponent),
+            tab('entities', 'boxes-packing', OrderConfigManagerEntitiesComponent),
         ];
 
         if (isArray(registeredTabs)) {

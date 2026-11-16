@@ -3,8 +3,60 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { underscore, capitalize, w } from '@ember/string';
 import { task } from 'ember-concurrency';
+import { inject as service } from '@ember/service';
 
+/**
+ * A step of an order config's flow, in its side panel: Details (status, code, details, whether it
+ * completes the order and needs proof of delivery), What happens here (the triggers that run when
+ * an order reaches it) and Conditions (logic that must pass to reach it).
+ *
+ * The panel passes options on its overlay: `readonlyDetails` for system configs and steps that
+ * can't change, `actions` and `placeholders` from capabilities, and `initialTab`.
+ */
 export default class ActivityFormComponent extends Component {
+    @service abilities;
+    @service intl;
+
+    @tracked tab;
+
+    constructor() {
+        super(...arguments);
+        this.tab = this.args.overlay?.initialTab ?? 'details';
+    }
+
+    get canUpdate() {
+        return this.abilities.can('fleet-ops update order-config');
+    }
+
+    get readonlyDetails() {
+        return !this.canUpdate || Boolean(this.args.overlay?.readonlyDetails);
+    }
+
+    get triggers() {
+        return this.args.resource?.get?.('actions') ?? this.args.resource?.actions ?? [];
+    }
+
+    get tabs() {
+        const tab = (key, label) => ({ key, label, selected: this.tab === key });
+        return [
+            tab('details', this.intl.t('order-config-manager.step.tab-details')),
+            tab('happens', this.intl.t('order-config-manager.step.tab-happens', { count: this.triggers.length })),
+            tab('conditions', this.intl.t('order-config-manager.step.tab-conditions')),
+        ];
+    }
+
+    @action selectTab(key) {
+        this.tab = key;
+    }
+
+    @action setTriggers(triggers) {
+        this.args.resource.set('actions', triggers);
+    }
+
+    @action toggle(key, value) {
+        this.args.resource.set(key, value);
+    }
+
     /**
      * Proof of delivery options.
      *

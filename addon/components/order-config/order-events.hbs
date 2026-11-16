@@ -1,0 +1,75 @@
+<div class="oc-page flex flex-col gap-3" data-test-order-events>
+    <p class="oc-line__help">{{t "order-config-manager.events.intro"}}</p>
+
+    {{#each this.cards as |card|}}
+        <div class="oc-card oc-event-card {{if card.isNew 'oc-event-card--new'}}" data-test-order-event={{card.group.event}}>
+            <div class="flex justify-between items-start gap-2.5">
+                <div class="oc-line__sentence">
+                    <FaIcon @icon="bolt" class="oc-ov-rule__icon--action" />
+                    {{#each card.parts as |part|}}
+                        {{#if (eq part.kind "text")}}
+                            <span class="font-semibold">{{part.text}}</span>
+                        {{else if (eq part.kind "number")}}
+                            <OrderConfig::InlineNumber
+                                @value={{part.value}}
+                                @defaultLabel={{part.defaultLabel}}
+                                @invalid={{part.invalid}}
+                                @width={{part.width}}
+                                @ariaLabel={{part.ariaLabel}}
+                                @disabled={{this.readonly}}
+                                @onChange={{part.onChange}}
+                            />
+                        {{else if (eq part.kind "choice")}}
+                            <OrderConfig::InlineSelect
+                                @value={{part.value}}
+                                @options={{part.options}}
+                                @isDefault={{part.isDefault}}
+                                @ariaLabel={{part.ariaLabel}}
+                                @disabled={{this.readonly}}
+                                @onSelect={{part.onChange}}
+                            />
+                        {{/if}}
+                    {{/each}}
+                </div>
+                {{#unless this.readonly}}
+                    <Button @type="danger" @size="xs" @icon="trash" @onClick={{fn this.removeGroup card.index}} @helpText={{t "order-config-manager.events.remove"}} />
+                {{/unless}}
+            </div>
+            {{#if card.help}}<span class="oc-line__help">{{card.help}}</span>{{/if}}
+            <OrderConfig::TriggerList
+                @triggers={{card.group.triggers}}
+                @onChange={{fn this.setTriggers card.index}}
+                @actions={{@overlay.actions}}
+                @placeholders={{@overlay.placeholders}}
+                @readonly={{this.readonly}}
+                @hideQuickAdd={{true}}
+                @addText={{t "order-config-manager.events.then-also"}}
+                @emptyText={{t "order-config-manager.events.empty-actions"}}
+            />
+        </div>
+    {{else}}
+        <div class="oc-trigger-empty">{{t "order-config-manager.events.empty"}}</div>
+    {{/each}}
+
+    {{#unless this.readonly}}
+        <OrderConfig::InlineSelect
+            @label={{t "order-config-manager.events.add"}}
+            @options={{this.eventMenu}}
+            @isDefault={{false}}
+            @hideCaret={{true}}
+            @class="oc-add-button"
+            @ariaLabel={{t "order-config-manager.events.add"}}
+            @onSelect={{this.addEvent}}
+        />
+    {{/unless}}
+
+    {{#if this.isDirty}}
+        <div class="oc-save-bar oc-save-bar--panel" role="region" aria-label={{t "order-config-manager.common.unsaved-changes"}}>
+            <span class="oc-save-bar__title">{{t "order-config-manager.common.unsaved-changes"}}</span>
+            <span class="oc-save-bar__actions">
+                <Button @type="default" @text={{t "order-config-manager.common.discard"}} @onClick={{this.discard}} />
+                <Button @type="primary" @icon="save" @text={{t "order-config-manager.events.save"}} @onClick={{perform this.save}} @isLoading={{this.save.isRunning}} />
+            </span>
+        </div>
+    {{/if}}
+</div>
