@@ -26,12 +26,7 @@
 
         <div class="flex-1 min-w-0 flex flex-col gap-4">
             {{#if this.readonly}}
-                <OrderConfig::Notice
-                    @type="warning"
-                    @icon="eye"
-                    @title={{t "order-config-manager.common.readonly-title"}}
-                    @text={{t "order-config-manager.common.readonly-banner"}}
-                />
+                <OrderConfig::Notice @type="warning" @icon="eye" @title={{t "order-config-manager.common.readonly-title"}} @text={{t "order-config-manager.common.readonly-banner"}} />
             {{else if this.isSystemConfig}}
                 <OrderConfig::Notice @icon="lock" @title={{t "order-config-manager.common.system-title"}} @text={{t "order-config-manager.common.system-banner" config=this.config.name}} />
             {{/if}}
@@ -71,14 +66,14 @@
                 </section>
             {{/each}}
 
-            <OrderConfig::UnsavedBar
-                @count={{this.unsavedCount}}
-                @hint={{t "order-config-manager.policies.save-hint"}}
-                @errorHint={{this.errorHint}}
-                @isSaving={{this.save.isRunning}}
-                @onDiscard={{this.discard}}
-                @onSave={{perform this.save}}
-            />
         </div>
     </div>
+    <OrderConfig::UnsavedBar
+        @count={{this.unsavedCount}}
+        @hint={{t "order-config-manager.policies.save-hint"}}
+        @errorHint={{this.errorHint}}
+        @isSaving={{this.save.isRunning}}
+        @onDiscard={{this.discard}}
+        @onSave={{perform this.save}}
+    />
 </div>

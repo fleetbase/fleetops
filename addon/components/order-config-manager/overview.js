@@ -135,6 +135,7 @@ export default class OrderConfigManagerOverviewComponent extends Component {
                 rules,
                 tag: isComplete ? this.t('tag-completes') : ends ? (step.branchFrom ? this.t('branch-from', { step: label(step.branchFrom) }) : this.t('tag-ends')) : null,
                 ends,
+                role: isComplete ? 'complete' : ends ? 'end' : index === 0 ? 'start' : 'step',
                 isLast: index === steps.length - 1,
             };
         });

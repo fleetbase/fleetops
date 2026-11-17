@@ -1,9 +1,7 @@
 <div class="oc-page">
     <div class="flex flex-row items-center justify-between px-6 py-2 gap-2">
         <div class="flex flex-row items-center gap-2">
-            {{#if this.config.core_service}}
-                <span class="oc-flow-chip"><FaIcon @icon="lock" @size="xs" />{{t "order-config-manager.common.steps-readonly"}}</span>
-            {{else}}
+            {{#unless this.config.core_service}}
                 <Button
                     @type="primary"
                     @icon="save"
@@ -13,28 +11,68 @@
                     @permission="fleet-ops update order-config"
                 />
                 <Button @type="default" @icon="rotate" @text={{t "order-config-manager.flow.reset"}} @onClick={{this.resetConfig}} @disabled={{cannot "fleet-ops update order-config"}} />
-            {{/if}}
+            {{/unless}}
             <span class="oc-line__help">{{t "order-config-manager.flow.click-a-step"}}</span>
         </div>
-        <button type="button" class="oc-flow-events" data-test-order-events-button {{on "click" this.openOrderEvents}}>
-            <FaIcon @icon="bolt" @size="sm" />
-            {{t "order-config-manager.flow.order-events"}}
-            <span class="oc-flow-events__count">{{this.eventCount}}</span>
-        </button>
     </div>
-    <div class="activity-flow-graph-container" {{did-insert this.setupGraphScrollContainer}}>
-        <div class="activity-flow-zoom-controls">
-            <Button @icon="plus" @onClick={{this.zoomIn}} @helpText={{t "order-config-manager.flow.zoom-in"}} />
-            <Button @icon="minus" @onClick={{this.zoomOut}} @helpText={{t "order-config-manager.flow.zoom-out"}} />
-        </div>
-        {{#if this.legend.length}}
-            <div class="oc-flow-legend" aria-label={{t "order-config-manager.flow.legend"}}>
-                {{#each this.legend as |item|}}
-                    <span><FaIcon @icon={{item.icon}} @size="xs" class="oc-flow-legend__icon" />{{item.label}}</span>
-                {{/each}}
+    <div class="px-6 pb-4">
+        <div class="oc-flow-canvas {{if this.isFullscreen 'oc-flow-canvas--fullscreen'}}" data-test-flow-canvas>
+            <div class="activity-flow-graph-container" {{did-insert this.setupGraphScrollContainer}}>
+                <JointGraph @onSetup={{this.initializeGraph}} />
             </div>
-        {{/if}}
-        <JointGraph @onSetup={{this.initializeGraph}} />
+
+            <div class="oc-flow-toolbar">
+                <div class="oc-flow-toolbar__group">
+                    {{#if this.config.core_service}}
+                        <span class="oc-flow-chip"><FaIcon @icon="lock" @size="xs" />{{t "order-config-manager.common.steps-readonly"}}</span>
+                    {{else if (can "fleet-ops update order-config")}}
+                        <button type="button" class="oc-flow-tool oc-flow-tool--primary" data-test-flow-add-step {{on "click" this.addStep}}>
+                            <FaIcon @icon="plus" @size="xs" />{{t "order-config-manager.flow.add-step"}}
+                        </button>
+                    {{/if}}
+                    <button type="button" class="oc-flow-tool" data-test-flow-tidy {{on "click" this.tidyLayout}}>
+                        <FaIcon @icon="sitemap" @size="xs" />{{t "order-config-manager.flow.tidy-layout"}}
+                    </button>
+                </div>
+                <button type="button" class="oc-flow-events" data-test-order-events-button {{on "click" this.openOrderEvents}}>
+                    <FaIcon @icon="bolt" @size="sm" />
+                    {{t "order-config-manager.flow.order-events"}}
+                    <span class="oc-flow-events__count">{{this.eventCount}}</span>
+                </button>
+            </div>
+
+            {{#if this.legend.length}}
+                <div class="oc-flow-legend" aria-label={{t "order-config-manager.flow.legend"}}>
+                    {{#each this.legend as |item|}}
+                        <span><FaIcon @icon={{item.icon}} @size="xs" class="oc-flow-legend__icon" />{{item.label}}</span>
+                    {{/each}}
+                </div>
+            {{/if}}
+
+            <div class="oc-flow-zoom" role="group" aria-label={{t "order-config-manager.flow.zoom"}}>
+                <button type="button" aria-label={{t "order-config-manager.flow.zoom-in"}} title={{t "order-config-manager.flow.zoom-in"}} {{on "click" this.zoomIn}}><FaIcon
+                        @icon="plus"
+                        @size="xs"
+                    /></button>
+                <button type="button" aria-label={{t "order-config-manager.flow.zoom-out"}} title={{t "order-config-manager.flow.zoom-out"}} {{on "click" this.zoomOut}}><FaIcon
+                        @icon="minus"
+                        @size="xs"
+                    /></button>
+                <button type="button" aria-label={{t "order-config-manager.flow.fit"}} title={{t "order-config-manager.flow.fit"}} {{on "click" this.fitToScreen}}><FaIcon
+                        @icon="expand"
+                        @size="xs"
+                    /></button>
+                <button
+                    type="button"
+                    aria-label={{if this.isFullscreen (t "order-config-manager.flow.exit-fullscreen") (t "order-config-manager.flow.fullscreen")}}
+                    title={{if this.isFullscreen (t "order-config-manager.flow.exit-fullscreen") (t "order-config-manager.flow.fullscreen")}}
+                    aria-pressed={{if this.isFullscreen "true" "false"}}
+                    {{on "click" this.toggleFullscreen}}
+                >
+                    <FaIcon @icon={{if this.isFullscreen "down-left-and-up-right-to-center" "up-right-and-down-left-from-center"}} @size="xs" />
+                </button>
+            </div>
+        </div>
     </div>
     <div class="activity-flow-horizontal-scrollbar {{unless this.hasHorizontalOverflow 'is-hidden'}}" {{did-insert this.setupHorizontalScrollbar}}>
         <div class="activity-flow-horizontal-scrollbar-content"></div>

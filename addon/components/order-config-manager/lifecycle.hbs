@@ -39,14 +39,6 @@
                 </section>
             {{/if}}
 
-            <OrderConfig::UnsavedBar
-                @count={{this.unsavedCount}}
-                @hint={{t "order-config-manager.lifecycle.save-hint"}}
-                @errorHint={{this.errorHint}}
-                @isSaving={{this.save.isRunning}}
-                @onDiscard={{this.discard}}
-                @onSave={{perform this.save}}
-            />
         </div>
 
         <aside class="oc-card oc-glance" aria-labelledby="oc-glance-title">
@@ -57,10 +49,7 @@
                     <div class="flex flex-wrap gap-1.5">
                         {{#each group.items as |item|}}
                             <span class="oc-role-chip oc-role-chip--{{item.role}}">
-                                <FaIcon
-                                    @icon={{if (eq item.role "start") "play" (if (eq item.role "complete") "check" (if (eq item.role "end") "stop" "circle"))}}
-                                    @size="xs"
-                                />
+                                <FaIcon @icon={{if (eq item.role "start") "play" (if (eq item.role "complete") "check" (if (eq item.role "end") "stop" "circle"))}} @size="xs" />
                                 {{item.label}}
                                 {{#if item.note}}<span class="oc-role-chip__note">· {{item.note}}</span>{{/if}}
                             </span>
@@ -70,4 +59,12 @@
             {{/each}}
         </aside>
     </div>
+    <OrderConfig::UnsavedBar
+        @count={{this.unsavedCount}}
+        @hint={{t "order-config-manager.lifecycle.save-hint"}}
+        @errorHint={{this.errorHint}}
+        @isSaving={{this.save.isRunning}}
+        @onDiscard={{this.discard}}
+        @onSave={{perform this.save}}
+    />
 </div>

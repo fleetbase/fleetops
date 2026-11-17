@@ -105,6 +105,10 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      */
     @tracked listeningForClicks = false;
 
+    /** True while the canvas fills the window. */
+    @tracked isFullscreen = false;
+    onFullscreenKeydown;
+
     graphScrollContainer;
     horizontalScrollbar;
     horizontalScrollbarContent;
@@ -175,6 +179,160 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         if (this.onWindowResize) {
             window.removeEventListener('resize', this.onWindowResize);
         }
+
+        if (this.onFullscreenKeydown) {
+            document.removeEventListener('keydown', this.onFullscreenKeydown);
+        }
+    }
+
+    /**
+     * Adds a step at the end of the main path. When the path already ends the order (it completes
+     * or ends it), the new step goes in just before that last step instead of branching off it.
+     */
+    @action addStep() {
+        const path = this.mainPath();
+        if (!path.length) {
+            return this.createNewActivity(null);
+        }
+
+        const last = path[path.length - 1];
+        const lastRole = this.activityRole(last);
+        if (path.length > 1 && (lastRole === 'complete' || lastRole === 'end')) {
+            return this.createNewActivity(path[path.length - 2], { before: last });
+        }
+
+        return this.createNewActivity(last);
+    }
+
+    /**
+     * The longest run of steps from the starting step, preferring steps that don't end the order.
+     *
+     * @returns {Array} activities, from the start
+     */
+    mainPath() {
+        const root = this.rootActivity();
+        if (!root) {
+            return [];
+        }
+
+        const depthCache = {};
+        const depth = (activity, seen) => {
+            const code = activity.get('code');
+            if (depthCache[code] !== undefined) return depthCache[code];
+            const children = this.childActivities(activity).filter((child) => !seen.has(child.get('code')));
+            const next = new Set([...seen, code]);
+            const value = 1 + Math.max(0, ...children.map((child) => depth(child, next)));
+            depthCache[code] = value;
+            return value;
+        };
+
+        const path = [root];
+        const seen = new Set([root.get('code')]);
+        let current = root;
+        for (;;) {
+            const children = this.childActivities(current).filter((child) => !seen.has(child.get('code')));
+            if (!children.length) break;
+            const ranked = children
+                .map((child) => ({ child, score: depth(child, seen) * 2 + (['complete', 'end'].includes(this.activityRole(child)) ? 0 : 1) }))
+                .sort((a, b) => b.score - a.score);
+            current = ranked[0].child;
+            seen.add(current.get('code'));
+            path.push(current);
+        }
+
+        return path;
+    }
+
+    rootActivity() {
+        const rootCode = getOrderConfigFlowRootCode(this.flow, this.lifecycle?.initial);
+        return (rootCode && this.flow[rootCode]) || Object.values(this.flow)[0] || null;
+    }
+
+    /** A step's next steps as they are on the canvas. */
+    childActivities(activity) {
+        return (activity.get('activities') ?? []).map((child) => this.flow[child.get?.('code')] ?? child).filter((child) => child?.get?.('node'));
+    }
+
+    /**
+     * Lays the steps out left to right: each step one column after the step before it, branches
+     * stacked under each other, and the whole flow centred in the canvas.
+     */
+    @action tidyLayout() {
+        const root = this.rootActivity();
+        if (!this.paper || !root?.get('node')) {
+            return;
+        }
+
+        const columnWidth = NODE_WIDTH + 100;
+        const rowHeight = NODE_HEIGHT + 44;
+        const placed = new Set();
+        const positions = [];
+        let nextRow = 0;
+
+        const place = (activity, column) => {
+            placed.add(activity.get('code'));
+            const children = this.childActivities(activity).filter((child) => !placed.has(child.get('code')));
+            children.forEach((child) => placed.add(child.get('code')));
+            const rows = children.map((child) => place(child, column + 1));
+            const row = rows.length ? (rows[0] + rows[rows.length - 1]) / 2 : nextRow++;
+            positions.push({ activity, column, row });
+            return row;
+        };
+
+        place(root, 0);
+        Object.values(this.flow)
+            .filter((activity) => activity.get('node') && !placed.has(activity.get('code')))
+            .forEach((activity) => place(activity, 0));
+
+        const contentHeight = Math.max(0, nextRow - 1) * rowHeight + NODE_HEIGHT;
+        const top = Math.max(76, (this.paper.options.height - contentHeight) / 2);
+        positions.forEach(({ activity, column, row }) => {
+            activity.get('node').position(64 + column * columnWidth, top + row * rowHeight);
+        });
+
+        this.resizePaperWidthToFitActivities();
+    }
+
+    /** Zooms and moves the canvas so every step is in view. */
+    @action fitToScreen() {
+        if (!this.paper || !this.graph || !this.graphScrollContainer) {
+            return;
+        }
+
+        const box = this.graph.getBBox();
+        if (!box || !box.width) {
+            return;
+        }
+
+        const width = this.graphScrollContainer.clientWidth;
+        const height = this.graphScrollContainer.clientHeight;
+        const scale = Math.min(1.2, Math.max(0.2, Math.min((width - 96) / box.width, (height - 152) / box.height)));
+        this.paper.scale(scale);
+        this.paper.translate((width - box.width * scale) / 2 - box.x * scale, (height - box.height * scale) / 2 - box.y * scale + 12);
+        this.graphScrollContainer.scrollLeft = 0;
+        this.updateHorizontalScrollbar();
+    }
+
+    /** Lets the canvas fill the window; Escape returns it. */
+    @action toggleFullscreen() {
+        this.isFullscreen = !this.isFullscreen;
+
+        if (this.isFullscreen) {
+            this.onFullscreenKeydown = (event) => {
+                if (event.key === 'Escape' && !document.querySelector('.next-content-overlay.is-open, .resource-context-panel.is-open')) {
+                    this.toggleFullscreen();
+                }
+            };
+            document.addEventListener('keydown', this.onFullscreenKeydown);
+        } else if (this.onFullscreenKeydown) {
+            document.removeEventListener('keydown', this.onFullscreenKeydown);
+            this.onFullscreenKeydown = null;
+        }
+
+        next(this, () => {
+            window.dispatchEvent(new Event('resize'));
+            next(this, this.fitToScreen);
+        });
     }
 
     /**
@@ -239,6 +397,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
     changeConfig(newConfig) {
         this.clearGraph({
             onAfter: () => {
+                this.flow = {};
                 this.config = newConfig;
                 this.initializeActivityFlow();
                 this.listenForElementClicks();
@@ -323,6 +482,8 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         const flow = this.serializeFlow();
         this.config.set('flow', flow);
         yield this.config.save().then((config) => {
+            this.clearGraph();
+            this.flow = {};
             this.config = config;
             this.initializeActivityFlow();
             this.listenForElementClicks();
@@ -409,25 +570,13 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      */
     serializeFlow() {
         const serialized = {};
-        const keys = Object.keys(this.flow);
-        keys.forEach((key) => {
+        Object.keys(this.flow).forEach((key) => {
             const activity = this.flow[key];
-            // remove node
-            activity.set('node', undefined);
-            // remove ids
-            activity.set('id', undefined);
-            activity.set('parentId', undefined);
-            // remove internal model
-            activity.set('_internalModel', undefined);
-            // map activities into id and code string
-            const activities = activity.get('activities');
-            activity.set(
-                'activities',
-                activities.map((_activity) => {
-                    return _activity.get('code');
-                })
-            );
-            serialized[key] = activity.content;
+            // Copy the step without its canvas node, ids and internal model, so the canvas keeps working.
+            // eslint-disable-next-line no-unused-vars
+            const { node, id, parentId, _internalModel, ...content } = activity.content ?? {};
+            content.activities = (activity.get('activities') ?? []).map((child) => (typeof child === 'string' ? child : child.get('code')));
+            serialized[key] = content;
         });
 
         return serialized;
@@ -451,6 +600,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         const rootCode = getOrderConfigFlowRootCode(deserializedFlow, this.lifecycle?.initial);
         if (rootCode && deserializedFlow[rootCode]) {
             this.addDeserializedActivityToGraph(deserializedFlow[rootCode]);
+            this.tidyLayout();
         }
     }
 
@@ -1098,7 +1248,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             const parentActivity = this.getActivityById(deletedActivity.get('parentId'));
             if (parentActivity) {
                 this.removeActivityFromParentById(parentActivity, deletedActivityId);
-                this.repositionActivities(parentActivity);
+                this.tidyLayout();
             }
         }
     }
@@ -1185,9 +1335,9 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * @param {Object} targetActivity - The activity object that will serve as the reference for the new activity.
      * @returns {Object} - The newly created activity object.
      */
-    createNewActivity(targetActivity) {
+    createNewActivity(targetActivity, options = {}) {
         const activity = createFlowActivity();
-        return this.editActivity(activity, targetActivity);
+        return this.editActivity(activity, targetActivity, options);
     }
 
     /**
@@ -1196,7 +1346,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * @param {Object} activity - The activity object to be edited.
      * @param {Object} targetActivity - The target activity object that may be linked to the activity being edited.
      */
-    editActivity(activity, targetActivity) {
+    editActivity(activity, targetActivity, options = {}) {
         const isNew = Boolean(targetActivity) && !this.flow[activity.get('code')];
         // A system config's steps, and the standard dispatch steps, keep their details; what happens at them can still change.
         const readonlyDetails = Boolean(this.config.core_service) || this.immutableActivities.includes(activity.get('code'));
@@ -1224,7 +1374,9 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
 
                 contextComponentCallback(this, 'onContextChanged', null);
                 this.updateActivityInFlowMap(activity);
-                if (targetActivity) {
+                if (targetActivity && options.before) {
+                    this.insertActivityBefore(targetActivity, activity, options.before);
+                } else if (targetActivity) {
                     this.addNewLinkedActivity(targetActivity, activity);
                 }
                 this.refreshActivityNode(activity);
@@ -1278,9 +1430,31 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
 
         // Link the new activity
         this.addLinkToGraph(targetActivity, newActivity);
-        this.resizePaperWidthToFitActivities();
+        this.tidyLayout();
 
         return newActivity;
+    }
+
+    /**
+     * Puts a new step between a step and one it leads to: the step now leads to the new one, and
+     * the new one to where it used to lead. The canvas is redrawn from the changed flow.
+     */
+    insertActivityBefore(parentActivity, activity, beforeActivity) {
+        const beforeCode = beforeActivity.get('code');
+        parentActivity.set(
+            'activities',
+            parentActivity.get('activities').map((child) => (child.get('code') === beforeCode ? activity : child))
+        );
+        activity.set('activities', [beforeActivity]);
+        this.redrawFlow();
+    }
+
+    /** Rebuilds the canvas from the flow as it is now. */
+    redrawFlow() {
+        this.clearGraph();
+        const flow = this.serializeFlow();
+        this.flow = {};
+        this.deserializeFlow(flow);
     }
 
     /**

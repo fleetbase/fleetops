@@ -1610,8 +1610,14 @@ order-config-manager:
         click-a-step: Click a step to see and change what happens there.
         order-events: Order events
         legend: Legend
+        zoom: Zoom
         zoom-in: Zoom in
         zoom-out: Zoom out
+        fit: Fit to screen
+        fullscreen: Full screen
+        exit-fullscreen: Exit full screen
+        add-step: Add step
+        tidy-layout: Tidy layout
         role-start: Start
         role-complete: Completes order
         role-end: Ends order

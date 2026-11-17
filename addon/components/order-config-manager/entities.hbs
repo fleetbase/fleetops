@@ -19,7 +19,12 @@
         <div class="oc-entity-grid">
             {{#each this.customEntities as |customEntity index|}}
                 <div class="oc-card oc-entity-card" data-test-custom-entity={{customEntity.name}}>
-                    <button type="button" class="oc-entity-card__media" aria-label={{t "order-config-manager.entities.edit" name=customEntity.name}} {{on "click" (fn this.editCustomEntity customEntity index)}}>
+                    <button
+                        type="button"
+                        class="oc-entity-card__media"
+                        aria-label={{t "order-config-manager.entities.edit" name=customEntity.name}}
+                        {{on "click" (fn this.editCustomEntity customEntity index)}}
+                    >
                         <Image src={{customEntity.photo_url}} alt={{customEntity.name}} class="oc-entity-card__img" />
                     </button>
                     <div class="oc-entity-card__body">
@@ -33,7 +38,14 @@
                             <span><FaIcon @icon="weight-hanging" @size="xs" />{{entity-weight customEntity (t "order-config-manager.entities.no-weight")}}</span>
                         </div>
                         <div class="flex gap-1.5 justify-end">
-                            <Button @type="default" @size="xs" @icon="pencil" @text={{t "order-config-manager.common.edit"}} @onClick={{fn this.editCustomEntity customEntity index}} @permission="fleet-ops update order-config" />
+                            <Button
+                                @type="default"
+                                @size="xs"
+                                @icon="pencil"
+                                @text={{t "order-config-manager.common.edit"}}
+                                @onClick={{fn this.editCustomEntity customEntity index}}
+                                @permission="fleet-ops update order-config"
+                            />
                             <Button @type="danger" @size="xs" @icon="trash" @onClick={{fn this.deleteCustomEntity customEntity index}} @permission="fleet-ops update order-config" />
                         </div>
                     </div>

@@ -25,10 +25,10 @@
                 {{#each this.steps as |step|}}
                     <li class="oc-ov-item">
                         <div class="oc-ov-rail">
-                            <span class="oc-ov-dot {{if step.ends 'oc-ov-dot--end'}}">{{step.number}}</span>
+                            <span class="oc-ov-dot oc-ov-dot--{{step.role}}">{{step.number}}</span>
                             {{#unless step.isLast}}<span class="oc-ov-line"></span>{{/unless}}
                         </div>
-                        <div class="oc-card oc-ov-card {{if step.branchFrom 'oc-ov-card--branch'}}">
+                        <div class="oc-card oc-ov-card oc-ov-card--{{step.role}} {{if step.branchFrom 'oc-ov-card--branch'}}">
                             <div class="flex justify-between items-baseline gap-2.5">
                                 <span class="flex gap-2 items-baseline flex-wrap">
                                     <span class="oc-ov-step__title">{{step.label}}</span>
