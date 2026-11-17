@@ -664,8 +664,38 @@ body[data-theme='light'] .fleetops-pill-tabs > nav > a.ui-tab.active {
     stroke-linejoin: round;
 }
 
-.flow-activity-tile--start {
+.flow-activity--start {
     fill: #172554;
+    stroke: #3b82f6;
+    stroke-width: 1.5;
+}
+
+.flow-activity--complete {
+    fill: #052e16;
+    stroke: #22c55e;
+    stroke-width: 1.5;
+}
+
+.flow-activity--end {
+    fill: #3f1212;
+    stroke: #ef4444;
+    stroke-width: 1.5;
+}
+
+.joint-type-fleetbase-activity:hover .flow-activity--start {
+    stroke: #93c5fd;
+}
+
+.joint-type-fleetbase-activity:hover .flow-activity--complete {
+    stroke: #86efac;
+}
+
+.joint-type-fleetbase-activity:hover .flow-activity--end {
+    stroke: #fca5a5;
+}
+
+.flow-activity-tile--start {
+    fill: #1e3a8a;
 }
 
 .flow-activity-tile-icon--start {
@@ -674,7 +704,7 @@ body[data-theme='light'] .fleetops-pill-tabs > nav > a.ui-tab.active {
 }
 
 .flow-activity-tile--complete {
-    fill: #052e16;
+    fill: #14532d;
 }
 
 .flow-activity-tile-icon--complete {
@@ -682,7 +712,7 @@ body[data-theme='light'] .fleetops-pill-tabs > nav > a.ui-tab.active {
 }
 
 .flow-activity-tile--end {
-    fill: #3f1212;
+    fill: #7f1d1d;
 }
 
 .flow-activity-tile-icon--end {
@@ -741,8 +771,35 @@ body[data-theme='light'] .flow-activity-tile-icon {
     stroke: #374151;
 }
 
-body[data-theme='light'] .flow-activity-tile--start {
+body[data-theme='light'] .flow-activity--start {
     fill: #eff6ff;
+    stroke: #3b82f6;
+}
+
+body[data-theme='light'] .flow-activity--complete {
+    fill: #f0fdf4;
+    stroke: #22c55e;
+}
+
+body[data-theme='light'] .flow-activity--end {
+    fill: #fef2f2;
+    stroke: #ef4444;
+}
+
+body[data-theme='light'] .joint-type-fleetbase-activity:hover .flow-activity--start {
+    stroke: #1d4ed8;
+}
+
+body[data-theme='light'] .joint-type-fleetbase-activity:hover .flow-activity--complete {
+    stroke: #15803d;
+}
+
+body[data-theme='light'] .joint-type-fleetbase-activity:hover .flow-activity--end {
+    stroke: #b91c1c;
+}
+
+body[data-theme='light'] .flow-activity-tile--start {
+    fill: #dbeafe;
 }
 
 body[data-theme='light'] .flow-activity-tile-icon--start {
@@ -751,7 +808,7 @@ body[data-theme='light'] .flow-activity-tile-icon--start {
 }
 
 body[data-theme='light'] .flow-activity-tile--complete {
-    fill: #dcfce7;
+    fill: #bbf7d0;
 }
 
 body[data-theme='light'] .flow-activity-tile-icon--complete {
@@ -759,7 +816,7 @@ body[data-theme='light'] .flow-activity-tile-icon--complete {
 }
 
 body[data-theme='light'] .flow-activity-tile--end {
-    fill: #fee2e2;
+    fill: #fecaca;
 }
 
 body[data-theme='light'] .flow-activity-tile-icon--end {
@@ -14023,7 +14080,8 @@ body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-
  * Dark first; light overrides below. Cards inside gray-800 panels are gray-800 with a border and
  * a shadow, never gray-900.
  * ------------------------------------------------------------------------------------------- */
-.oc-page {
+.oc-page,
+.oc-menu {
     --oc-surface: #1f2937;
     --oc-border: #374151;
     --oc-line: #2b3544;
@@ -14065,7 +14123,8 @@ body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-
     color: var(--oc-text2);
 }
 
-body[data-theme='light'] .oc-page {
+body[data-theme='light'] .oc-page,
+body[data-theme='light'] .oc-menu {
     --oc-surface: #fff;
     --oc-border: #e5e7eb;
     --oc-line: #f0f1f3;
@@ -14333,12 +14392,14 @@ body[data-theme='light'] .oc-page {
     display: inline-flex;
 }
 
-.oc-menu {
+.oc-menu,
+body.fleetbase-console .ember-basic-dropdown-content.oc-menu {
     z-index: 30;
     min-width: 15rem;
     margin-top: 0.375rem;
     padding: 0.25rem;
-    background: var(--oc-surface, #1f2937);
+    background-color: var(--oc-surface, #1f2937);
+    color: var(--oc-text, #f9fafb);
     border: 1px solid var(--oc-input-border, #4b5563);
     border-radius: 0.5rem;
     box-shadow: var(--oc-menu-shadow);

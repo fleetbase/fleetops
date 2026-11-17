@@ -880,7 +880,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         const roleText = role === 'step' ? '' : ` · ${this.intl.t(`order-config-manager.flow.role-${role}`)}`;
         const textWidth = width - 54 - 12 - shown.length * 23;
         const attrs = {
-            body: { class: 'flow-activity' },
+            body: { class: `flow-activity flow-activity--${role}` },
             tile: { class: `flow-activity-tile flow-activity-tile--${role}` },
             tileIcon: { d: ROLE_ICONS[role], class: `flow-activity-tile-icon flow-activity-tile-icon--${role}` },
             status: { text: joint.util.breakText(status, { width: textWidth }, { 'font-size': 13, 'font-weight': 600 }, { maxLineCount: 1, ellipsis: true }) },
