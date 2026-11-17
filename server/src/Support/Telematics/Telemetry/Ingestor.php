@@ -79,7 +79,7 @@ class Ingestor
                 $device->last_online_at = Carbon::parse($contact)->utc()->toDateTimeString();
                 $device->online         = $device->last_online_at->gt(now()->subMinutes(10));
                 if (in_array($device->status, ['online', 'recently_offline', 'offline', 'long_offline', 'never_connected'], true)) {
-                    $minutes        = $device->last_online_at->diffInMinutes(now());
+                    $minutes        = (int) $device->last_online_at->diffInMinutes(now(), true);
                     $device->status = $minutes <= 10 ? 'online' : ($minutes <= 60 ? 'recently_offline' : ($minutes <= 1440 ? 'offline' : 'long_offline'));
                 }
                 $device->meta           = array_replace_recursive($device->meta ?? [], ['telemetry' => ['provider_at' => $contact, 'last_received_at' => $received]]);

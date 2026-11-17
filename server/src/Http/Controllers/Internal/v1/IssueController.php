@@ -42,12 +42,12 @@ class IssueController extends FleetOpsController
             }
         }
 
-        $customFieldValues = $request->array('issue.custom_field_values');
+        $customFieldValues = $request->inputArray('issue.custom_field_values');
         if ($customFieldValues) {
             $issue->syncCustomFieldValues($customFieldValues);
         }
 
-        $uploads = $request->array('issue.files');
+        $uploads = $request->inputArray('issue.files');
         if ($uploads) {
             $this->filesForUploads($uploads)->each(function (File $file) use ($issue) {
                 $file->setKey($issue);
@@ -346,7 +346,7 @@ class IssueController extends FleetOpsController
     public function export(ExportRequest $request)
     {
         $format       = $request->input('format', 'xlsx');
-        $selections   = $request->array('selections');
+        $selections   = $request->inputArray('selections');
         $fileName     = trim(Str::slug('issue-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return Excel::download(new IssueExport($selections), $fileName);

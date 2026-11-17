@@ -167,7 +167,7 @@ class PositionController extends FleetOpsController
                     }
                 } else {
                     if ($dwellStart !== null) {
-                        $dwellDuration = $previousPosition->created_at->diffInSeconds($dwellStart);
+                        $dwellDuration = (int) $previousPosition->created_at->diffInSeconds($dwellStart, true);
                         if ($dwellDuration >= $dwellThreshold) {
                             $dwellTimes[] = [
                                 'start'    => $dwellStart->toDateTimeString(),
@@ -181,7 +181,7 @@ class PositionController extends FleetOpsController
 
                 // Calculate acceleration
                 if ($previousSpeed !== null) {
-                    $timeDiff = $position->created_at->diffInSeconds($previousPosition->created_at);
+                    $timeDiff = (int) $position->created_at->diffInSeconds($previousPosition->created_at, true);
                     if ($timeDiff > 0) {
                         $acceleration = abs($speed - $previousSpeed) / $timeDiff;
                         if ($acceleration > $accelerationThreshold) {
@@ -207,7 +207,7 @@ class PositionController extends FleetOpsController
         // Calculate total duration
         $firstPosition = $positions->first();
         $lastPosition  = $positions->last();
-        $totalDuration = $lastPosition->created_at->diffInSeconds($firstPosition->created_at);
+        $totalDuration = (int) $lastPosition->created_at->diffInSeconds($firstPosition->created_at, true);
 
         return [
             'total_distance'      => round($totalDistance / 1000, 2), // Convert to km

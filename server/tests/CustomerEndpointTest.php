@@ -236,7 +236,7 @@ test('FormRequest validators are present and authorize via api credential', func
     // (code + for + meta->identity) is strictly stronger than exists:verification_codes.
     expect($create)
         ->toContain("'code'     => 'required|string'")
-        ->toContain("'password' => 'required|string|min:8'")
+        ->toContain("'password' => 'nullable|string|min:8'")
         ->and($verify)->toContain("'mode'     => 'required|in:email,sms'");
 });
 

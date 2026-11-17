@@ -23,7 +23,7 @@ return new class extends Migration {
             $table->mediumText('notes')->after('meta')->nullable();
             $table->string('usage_type')->after('type')->nullable();
             $table->string('measurement_system')->after('type')->nullable();
-            $table->json('vin_data')->change();
+            $table->json('vin_data')->nullable()->change();
             $table->renameColumn('model_data', 'specs');
         });
 
@@ -70,7 +70,7 @@ return new class extends Migration {
             $table->dropColumn('usage_type');
             $table->dropColumn('measurement_system');
             $table->dropColumn('ownership_type');
-            $table->mediumText('vin_data')->change();
+            $table->mediumText('vin_data')->nullable()->change();
             $table->renameColumn('specs', 'model_data');
         });
     }

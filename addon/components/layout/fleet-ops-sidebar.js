@@ -206,6 +206,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             this.createItem('menu.payments', 'cash-register', 'settings.payments', 'fleet-ops view payments', 'fleet-ops see payments'),
             this.createItem('menu.notifications', 'bell', 'settings.notifications', 'fleet-ops view notification-settings', 'fleet-ops see notification-settings'),
             this.createItem('menu.routing', 'route', 'settings.routing', 'fleet-ops view routing-settings', 'fleet-ops see routing-settings'),
+            this.createItem('menu.dispatch', 'paper-plane', 'settings.dispatch', 'fleet-ops view routing-settings', 'fleet-ops see routing-settings'),
             this.createItem('menu.orchestrator', 'circle-nodes', 'settings.orchestrator', 'fleet-ops view routing-settings', 'fleet-ops see routing-settings'),
             this.createItem('menu.scheduling', 'calendar-days', 'settings.scheduling', 'fleet-ops view scheduling-settings', 'fleet-ops see scheduling-settings'),
             this.createItem(
@@ -411,12 +412,13 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             'settings.payments': 3,
             'settings.notifications': 4,
             'settings.routing': 5,
-            'settings.orchestrator': 6,
-            'settings.scheduling': 7,
-            'settings.tracking-page': 8,
-            'settings.telematics': 9,
-            'settings.custom-fields': 10,
-            'settings.avatars': 11,
+            'settings.dispatch': 6,
+            'settings.orchestrator': 7,
+            'settings.scheduling': 8,
+            'settings.tracking-page': 9,
+            'settings.telematics': 10,
+            'settings.custom-fields': 11,
+            'settings.avatars': 12,
         };
 
         return priorities[route] ?? 0;

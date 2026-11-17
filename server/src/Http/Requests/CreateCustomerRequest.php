@@ -33,7 +33,7 @@ class CreateCustomerRequest extends FleetbaseRequest
             // non-production testing bypass (fleetops.customers.verification_bypass_code).
             'code'     => 'required|string',
             'name'     => 'required|string',
-            'password' => 'required|string|min:8',
+            'password' => 'nullable|string|min:8',
             'email'    => [
                 'email', 'nullable',
                 Rule::unique('contacts')->where(function ($query) {

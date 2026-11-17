@@ -25,7 +25,7 @@ if (!class_exists('Fleetbase\Http\Requests\ImportRequest', false)) {
 
 class FleetOpsInternalExportRequestFake extends ExportRequest
 {
-    public function array($key = null, $default = [])
+    public function inputArray($key = null, $default = [])
     {
         $value = $this->input($key, $default);
 
@@ -37,7 +37,7 @@ class FleetOpsInternalImportRequestFake extends ImportRequest
 {
     public array $resolvedFiles = [];
 
-    public function array($key = null, $default = [])
+    public function inputArray($key = null, $default = [])
     {
         $value = $this->input($key, $default);
 

@@ -1,60 +1,78 @@
-<div class="px-6 space-y-4">
-    <div class="flex flex-row items-center py-2 space-x-4">
-        <Button
-            @type="primary"
-            @icon="plus"
-            @text={{t "order-config-manager.entities.new-custom-entity"}}
-            @onClick={{this.createNewCustomEntity}}
-            @permission="fleet-ops update order-config"
-        />
+<div class="oc-page px-6 py-4 flex flex-col gap-4">
+    <div class="flex justify-between items-end gap-4">
+        <div class="flex flex-col gap-1 max-w-2xl">
+            <h2 class="oc-section__title">{{t "order-config-manager.entities.title"}}</h2>
+            <span class="oc-section__description">{{t "order-config-manager.entities.description"}}</span>
+        </div>
+        {{#if this.customEntities.length}}
+            <Button
+                @type="primary"
+                @icon="plus"
+                @text={{t "order-config-manager.entities.new-custom-entity"}}
+                @onClick={{this.createNewCustomEntity}}
+                @permission="fleet-ops update order-config"
+            />
+        {{/if}}
     </div>
-    {{#each this.customEntities as |customEntity index|}}
-        <ContentPanel @title={{customEntity.name}} @subtitle={{customEntity.description}} @panelSubtitleInlineClass="text-xs" @open={{true}} @wrapperClass="bordered-classic">
-            <div class="flex flex-row items-center py-2 space-x-2 mb-4">
-                <Button @type="default" @icon="pencil" @onClick={{fn this.editCustomEntity customEntity index}} @permission="fleet-ops update order-config" />
-                <Button @type="danger" @icon="trash" @onClick={{fn this.deleteCustomEntity customEntity index}} @permission="fleet-ops update order-config" />
-            </div>
-            <div class="flex">
-                <div class="pr-4">
-                    <div class="w-32 flex flex-col items-center">
-                        <Image src={{customEntity.photo_url}} alt={{customEntity.name}} height="128" width="128" class="h-32 w-32 rounded-md" />
-                    </div>
-                </div>
-                <div class="flex-1 space-y-4 pl-2">
-                    <div class="grid grid-cols-4 gap-2">
-                        <div>
-                            <div class="font-semibold text-sm mb-2">{{t "order-config-manager.entities.name"}}</div>
-                            <div class="text-xs">{{customEntity.name}}</div>
+
+    {{#if this.customEntities.length}}
+        <div class="oc-entity-grid">
+            {{#each this.customEntities as |customEntity index|}}
+                <div class="oc-card oc-entity-card" data-test-custom-entity={{customEntity.name}}>
+                    <button
+                        type="button"
+                        class="oc-entity-card__media"
+                        aria-label={{t "order-config-manager.entities.edit" name=customEntity.name}}
+                        {{on "click" (fn this.editCustomEntity customEntity index)}}
+                    >
+                        <Image src={{customEntity.photo_url}} alt={{customEntity.name}} class="oc-entity-card__img" />
+                    </button>
+                    <div class="oc-entity-card__body">
+                        <div class="flex justify-between items-center gap-2">
+                            <span class="oc-trigger-card__title font-semibold truncate">{{customEntity.name}}</span>
+                            {{#if customEntity.type}}<span class="oc-ov-tag">{{customEntity.type}}</span>{{/if}}
                         </div>
-                        <div>
-                            <div class="font-semibold text-sm mb-2">{{t "order-config-manager.entities.description"}}</div>
-                            <div class="text-xs">{{customEntity.description}}</div>
+                        <span class="oc-line__help oc-entity-card__description">{{customEntity.description}}</span>
+                        <div class="oc-entity-card__specs">
+                            <span><FaIcon @icon="ruler-combined" @size="xs" />{{entity-size customEntity (t "order-config-manager.entities.no-size")}}</span>
+                            <span><FaIcon @icon="weight-hanging" @size="xs" />{{entity-weight customEntity (t "order-config-manager.entities.no-weight")}}</span>
                         </div>
-                        <div>
-                            <div class="font-semibold text-sm mb-2">{{t "order-config-manager.entities.type"}}</div>
-                            <div class="text-xs"><Badge @type="default">{{customEntity.type}}</Badge></div>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-4 gap-2">
-                        <div>
-                            <div class="font-semibold text-sm mb-2">{{t "order-config-manager.entities.length"}}</div>
-                            <div class="text-xs">{{customEntity.length}} {{customEntity.dimensions_unit}}</div>
-                        </div>
-                        <div>
-                            <div class="font-semibold text-sm mb-2">{{t "order-config-manager.entities.width"}}</div>
-                            <div class="text-xs">{{customEntity.width}} {{customEntity.dimensions_unit}}</div>
-                        </div>
-                        <div>
-                            <div class="font-semibold text-sm mb-2">{{t "order-config-manager.entities.height"}}</div>
-                            <div class="text-xs">{{customEntity.height}} {{customEntity.dimensions_unit}}</div>
-                        </div>
-                        <div>
-                            <div class="font-semibold text-sm mb-2">{{t "order-config-manager.entities.weight"}}</div>
-                            <div class="text-xs">{{customEntity.weight}} {{customEntity.weight_unit}}</div>
+                        <div class="flex gap-1.5 justify-end">
+                            <Button
+                                @type="default"
+                                @size="xs"
+                                @icon="pencil"
+                                @text={{t "order-config-manager.common.edit"}}
+                                @onClick={{fn this.editCustomEntity customEntity index}}
+                                @permission="fleet-ops update order-config"
+                            />
+                            <Button @type="danger" @size="xs" @icon="trash" @onClick={{fn this.deleteCustomEntity customEntity index}} @permission="fleet-ops update order-config" />
                         </div>
                     </div>
                 </div>
-            </div>
-        </ContentPanel>
-    {{/each}}
+            {{/each}}
+        </div>
+    {{else}}
+        <div class="oc-entity-empty" data-test-entities-empty>
+            <span class="oc-entity-empty__icon"><FaIcon @icon="boxes-packing" @size="lg" /></span>
+            <span class="oc-section__title text-base">{{t "order-config-manager.entities.empty-title"}}</span>
+            <span class="oc-section__description max-w-md text-center">{{t "order-config-manager.entities.empty-body"}}</span>
+            {{#if (can "fleet-ops update order-config")}}
+                <div class="flex flex-wrap justify-center gap-2 items-center mt-1">
+                    <span class="oc-line__help">{{t "order-config-manager.entities.start-from"}}</span>
+                    {{#each this.suggestions as |suggestion|}}
+                        <button type="button" class="oc-token oc-token--pill" {{on "click" (fn this.startFrom suggestion)}}>{{suggestion.label}}</button>
+                    {{/each}}
+                </div>
+            {{/if}}
+            <Button
+                @type="primary"
+                @icon="plus"
+                @text={{t "order-config-manager.entities.new-custom-entity"}}
+                @onClick={{this.createNewCustomEntity}}
+                @permission="fleet-ops update order-config"
+                @wrapperClass="mt-2"
+            />
+        </div>
+    {{/if}}
 </div>

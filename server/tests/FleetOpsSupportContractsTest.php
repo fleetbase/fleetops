@@ -2,15 +2,13 @@
 
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Support\FleetOps;
+use Fleetbase\FleetOps\Support\OrderConfig\OrderConfigTemplates;
 use Fleetbase\FleetOps\Support\Geocoding;
 use Illuminate\Support\Str;
 
 function fleetopsTransportConfigDefaults(): array
 {
-    $reflection = new ReflectionMethod(FleetOps::class, 'transportConfigDefaults');
-    $reflection->setAccessible(true);
-
-    return $reflection->invoke(null);
+    return OrderConfigTemplates::attributes('transport');
 }
 
 class FleetOpsGeocodingResultFake

@@ -1,16 +1,16 @@
 <div class="activity-logic-builder rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700" ...attributes>
     <div class="activity-logic-builder-actions flex flex-row items-center justify-between px-4 py-2">
         <div>
-            <div class="text-sm font-semibold">{{t "activity.form.logic-builder.activity-logic"}}</div>
+            <div class="text-sm font-semibold">{{or @title (t "activity.form.logic-builder.activity-logic")}}</div>
             <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
-                <InputInfo @text={{t "activity.form.logic-builder.activity-logic-help-text"}} />
+                <InputInfo @text={{or @helpText (t "activity.form.logic-builder.activity-logic-help-text")}} />
             </Attach::Tooltip>
         </div>
         <div>
             <Button
                 @type="magic"
                 @icon="plus"
-                @text={{t "activity.form.logic-builder.add-logic"}}
+                @text={{or @addText (t "activity.form.logic-builder.add-logic")}}
                 @onClick={{this.addLogic}}
                 @helpText={{t "activity.form.logic-builder.activity-logic-add-logic-help-text"}}
             />
@@ -138,7 +138,7 @@
                             @type="magic"
                             @icon="plus"
                             @size="xs"
-                            @text={{t "activity.form.logic-builder.add-logic"}}
+                            @text={{or @addText (t "activity.form.logic-builder.add-logic")}}
                             @onClick={{this.addLogic}}
                             @helpText={{t "activity.form.logic-builder.activity-logic-add-logic-help-text"}}
                         />

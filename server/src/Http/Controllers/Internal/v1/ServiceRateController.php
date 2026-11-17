@@ -129,7 +129,7 @@ class ServiceRateController extends FleetOpsController
     public static function export(ExportRequest $request)
     {
         $format       = $request->input('format', 'xlsx');
-        $selections   = $request->array('selections');
+        $selections   = $request->inputArray('selections');
         $fileName     = trim(Str::slug('contacts-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return Excel::download(new ServiceRateExport($selections), $fileName);

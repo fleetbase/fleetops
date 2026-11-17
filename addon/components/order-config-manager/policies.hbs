@@ -1,0 +1,79 @@
+<div class="oc-page px-6 py-4">
+    <div class="flex gap-7 items-start">
+        <aside class="oc-policy-nav" aria-label={{t "order-config-manager.policies.on-this-page"}}>
+            <span class="oc-policy-nav__heading">{{t "order-config-manager.policies.on-this-page"}}</span>
+            {{#each this.groups as |group|}}
+                <a href="#{{group.anchor}}" class="oc-policy-nav__item">
+                    <span>{{group.nav}}</span>
+                    <span class="oc-policy-nav__count {{if group.hasUnsaved 'oc-policy-nav__count--unsaved'}}">{{group.navCount}}</span>
+                </a>
+            {{/each}}
+            <div class="oc-card oc-policy-legend">
+                <span class="oc-policy-legend__title">{{t "order-config-manager.policies.legend-title"}}</span>
+                <span class="oc-policy-legend__row">
+                    <span class="oc-ctl oc-ctl--default oc-ctl--readonly">{{t "order-config-manager.common.default-suffix" value="6,000"}}</span>
+                    {{t "order-config-manager.policies.legend-default"}}
+                </span>
+                <span class="oc-policy-legend__row">
+                    <span class="oc-ctl oc-ctl--set oc-ctl--readonly">{{t "order-config-manager.policies.offering.exhausted.cancel"}}</span>
+                    {{t "order-config-manager.policies.legend-set"}}
+                </span>
+                {{#unless this.readonly}}
+                    <span>{{t "order-config-manager.policies.legend-click"}}</span>
+                {{/unless}}
+            </div>
+        </aside>
+
+        <div class="flex-1 min-w-0 flex flex-col gap-4">
+            {{#if this.readonly}}
+                <OrderConfig::Notice @type="warning" @icon="eye" @title={{t "order-config-manager.common.readonly-title"}} @text={{t "order-config-manager.common.readonly-banner"}} />
+            {{else if this.isSystemConfig}}
+                <OrderConfig::Notice @icon="lock" @title={{t "order-config-manager.common.system-title"}} @text={{t "order-config-manager.common.system-banner" config=this.config.name}} />
+            {{/if}}
+            {{#if (and this.allDefaults this.policies.length)}}
+                <OrderConfig::Notice @type="neutral" @text={{t "order-config-manager.policies.defaults-banner"}} />
+            {{/if}}
+
+            {{#if this.loadPolicies.isRunning}}
+                <div class="flex justify-center py-10"><Spinner /></div>
+            {{/if}}
+
+            {{#each this.groups as |group|}}
+                <section id={{group.anchor}} class="oc-section" aria-labelledby="{{group.anchor}}-title" data-test-policy-group={{group.id}}>
+                    <div class="flex flex-col gap-1 mb-1">
+                        <div class="flex items-center gap-2">
+                            <h2 id="{{group.anchor}}-title" class="oc-section__title">{{group.title}}</h2>
+                            {{#if group.isExtension}}
+                                <span class="oc-badge-ext">{{t "order-config-manager.policies.extension-badge"}}</span>
+                            {{/if}}
+                        </div>
+                        <span class="oc-section__description">{{group.description}}</span>
+                    </div>
+                    <div class="flex flex-col">
+                        {{#each group.lines as |line|}}
+                            <OrderConfig::SentenceField
+                                @parts={{line.parts}}
+                                @help={{line.help}}
+                                @error={{line.error}}
+                                @dim={{line.dim}}
+                                @unsaved={{line.unsaved}}
+                                @canReset={{line.canReset}}
+                                @onReset={{line.onReset}}
+                                @readonly={{this.readonly}}
+                            />
+                        {{/each}}
+                    </div>
+                </section>
+            {{/each}}
+
+        </div>
+    </div>
+    <OrderConfig::UnsavedBar
+        @count={{this.unsavedCount}}
+        @hint={{t "order-config-manager.policies.save-hint"}}
+        @errorHint={{this.errorHint}}
+        @isSaving={{this.save.isRunning}}
+        @onDiscard={{this.discard}}
+        @onSave={{perform this.save}}
+    />
+</div>

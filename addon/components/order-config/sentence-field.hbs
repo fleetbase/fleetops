@@ -1,0 +1,55 @@
+<div class="oc-line {{if @error 'oc-line--error' (if @unsaved 'oc-line--unsaved')}} {{if @dim 'oc-line--dim'}}" ...attributes>
+    <div class="oc-line__row">
+        <div class="oc-line__sentence">
+            {{#each @parts as |part|}}
+                {{#if (eq part.kind "text")}}
+                    <span>{{part.text}}</span>
+                {{else if (eq part.kind "choice")}}
+                    <OrderConfig::InlineSelect
+                        @value={{part.value}}
+                        @options={{part.options}}
+                        @isDefault={{part.isDefault}}
+                        @label={{part.label}}
+                        @invalid={{part.invalid}}
+                        @ariaLabel={{part.ariaLabel}}
+                        @disabled={{or @readonly part.disabled}}
+                        @onSelect={{part.onChange}}
+                    />
+                {{else if (eq part.kind "number")}}
+                    <OrderConfig::InlineNumber
+                        @value={{part.value}}
+                        @defaultLabel={{part.defaultLabel}}
+                        @invalid={{part.invalid}}
+                        @width={{part.width}}
+                        @ariaLabel={{part.ariaLabel}}
+                        @disabled={{or @readonly part.disabled}}
+                        @onChange={{part.onChange}}
+                    />
+                {{else if (eq part.kind "list")}}
+                    <OrderConfig::InlineList
+                        @items={{part.items}}
+                        @options={{part.options}}
+                        @emptyLabel={{part.emptyLabel}}
+                        @ariaLabel={{part.ariaLabel}}
+                        @disabled={{or @readonly part.disabled}}
+                        @onChange={{part.onChange}}
+                    />
+                {{/if}}
+            {{/each}}
+        </div>
+        <div class="oc-line__status">
+            {{#if @unsaved}}
+                <span class="oc-unsaved-dot">{{t "order-config-manager.common.unsaved"}}</span>
+            {{/if}}
+            {{#if (and @canReset (not @readonly))}}
+                <button type="button" class="oc-link" {{on "click" @onReset}}>{{t "order-config-manager.common.reset-to-default"}}</button>
+            {{/if}}
+        </div>
+    </div>
+    {{#if @help}}
+        <span class="oc-line__help">{{@help}}</span>
+    {{/if}}
+    {{#if @error}}
+        <span class="oc-line__error" role="alert"><FaIcon @icon="circle-exclamation" />{{@error}}</span>
+    {{/if}}
+</div>

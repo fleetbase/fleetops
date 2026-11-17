@@ -32,7 +32,7 @@ class FleetController extends FleetOpsController
      */
     public function afterSave(Request $request, Fleet $fleet)
     {
-        $customFieldValues = $request->array('fleet.custom_field_values');
+        $customFieldValues = $request->inputArray('fleet.custom_field_values');
         if ($customFieldValues) {
             $fleet->syncCustomFieldValues($customFieldValues);
         }
@@ -47,7 +47,7 @@ class FleetController extends FleetOpsController
     public static function onQueryRecord($query, $request): void
     {
         if ($request->has('excludeDriverJobs')) {
-            $excludeJobs = $request->array('excludeDriverJobs');
+            $excludeJobs = $request->inputArray('excludeDriverJobs');
             $query->with('drivers', function ($query) use ($excludeJobs) {
                 $query->with('jobs', function ($query) use ($excludeJobs) {
                     if (is_array($excludeJobs)) {
@@ -97,7 +97,7 @@ class FleetController extends FleetOpsController
     public static function export(ExportRequest $request)
     {
         $format       = $request->input('format', 'xlsx');
-        $selections   = $request->array('selections');
+        $selections   = $request->inputArray('selections');
         $fileName     = trim(Str::slug('fleets-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return static::downloadExport(new FleetExport($selections), $fileName);

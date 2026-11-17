@@ -292,7 +292,7 @@ test('a driver reaches only their own driver record, vehicle, devices, positions
     expect(socketChannelsAllows($walker, 'vehicle.vehicles-a'))->toBeFalse();
 });
 
-test('a customer reaches their own orders and the driver and vehicle of their active orders', function () {
+test('a customer reaches their own orders and the vehicle of their active orders, never a driver', function () {
     socketChannelsBoot();
     $customer = socketChannelsCustomer();
 
@@ -302,10 +302,10 @@ test('a customer reaches their own orders and the driver and vehicle of their ac
         ->and(socketChannelsAllows($customer, 'order.order-a2'))->toBeFalse()
         ->and(socketChannelsAllows($customer, 'order.orders-b'))->toBeFalse();
 
-    // driver-a1 drives an active order of theirs; driver-a2 only a completed one.
-    expect(socketChannelsAllows($customer, 'driver.driver-a1'))->toBeTrue()
-        ->and(socketChannelsAllows($customer, 'driverAssigned.driver_a1'))->toBeTrue()
-        ->and(socketChannelsAllows($customer, 'driver.driver-a3'))->toBeTrue()
+    // Not even the driver of an active order of theirs: driver events carry the driver's phone.
+    expect(socketChannelsAllows($customer, 'driver.driver-a1'))->toBeFalse()
+        ->and(socketChannelsAllows($customer, 'driverAssigned.driver_a1'))->toBeFalse()
+        ->and(socketChannelsAllows($customer, 'driver.driver-a3'))->toBeFalse()
         ->and(socketChannelsAllows($customer, 'driver.driver-a2'))->toBeFalse();
 
     // vehicle-a1 is assigned to an active order; vehicle-a3 is driven by an active order's driver.
@@ -377,6 +377,39 @@ test('a sanctum user who drives for the current company gets a driver principal'
     $homeless = User::where('uuid', 'user-driver-a1')->first();
     $homeless->setRawAttributes(array_merge($homeless->getAttributes(), ['company_uuid' => null]));
     expect(SocketChannels::driverPrincipal($request, $homeless))->toBeNull();
+});
+
+test('a customer token gets the customer principal limited to their own records', function () {
+    socketChannelsBoot();
+    $request  = Request::create('/v1/socket/token', 'POST');
+    $customer = new User();
+    $customer->setRawAttributes(['uuid' => 'user-rider-a', 'company_uuid' => 'company-a', 'type' => 'customer'], true);
+    Fleetbase\FleetOps\Models\Contact::query()->insert(['uuid' => 'contact-rider-a', 'public_id' => 'contact_ridera', 'company_uuid' => 'company-a', 'user_uuid' => 'user-rider-a', 'type' => 'customer']);
+
+    session(['company' => 'company-a']);
+    $principal = SocketChannels::customerPrincipal($request, $customer);
+
+    expect($principal)->toBeInstanceOf(SocketPrincipal::class)
+        ->and($principal->kind)->toBe('customer')
+        ->and($principal->sub)->toBe('contact-rider-a')
+        ->and($principal->ids)->toBe(['contact-rider-a', 'contact_ridera', 'user-rider-a'])
+        ->and($principal->cid)->toBe('company-a')
+        ->and($principal->cpid)->toBe('company_a')
+        ->and($principal->adm)->toBeFalse();
+
+    // Another company's rider, an office user and a stranger object: no claim.
+    session(['company' => 'company-b']);
+    expect(SocketChannels::customerPrincipal($request, $customer))->toBeNull();
+
+    session(['company' => 'company-a']);
+    expect(SocketChannels::customerPrincipal($request, User::where('uuid', 'user-office-a')->first()))->toBeNull()
+        ->and(SocketChannels::customerPrincipal($request, (object) ['uuid' => 'user-rider-a']))->toBeNull()
+        ->and(SocketChannels::customerPrincipal($request, null))->toBeNull();
+
+    session(['company' => null]);
+    $homeless = new User();
+    $homeless->setRawAttributes(['uuid' => 'user-rider-a', 'company_uuid' => null, 'type' => 'customer'], true);
+    expect(SocketChannels::customerPrincipal($request, $homeless))->toBeNull();
 });
 
 test('the service provider registers the fleetops channels when the registry is built', function () {

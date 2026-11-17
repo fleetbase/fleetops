@@ -78,7 +78,7 @@ class InspectionSubmissionController extends FleetOpsController
      * The first of the given keys that carries a list.
      *
      * The console posts a record under its resource name and the app posts it
-     * flat, so both spellings are read. `Request::array()` arrived in Laravel
+     * flat, so both spellings are read. `Request::inputArray()` arrived in Laravel
      * 11 and this runs on 10, where calling it is a BadMethodCallException.
      *
      * @return array<int, mixed>

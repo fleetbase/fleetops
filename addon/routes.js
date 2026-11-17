@@ -320,6 +320,7 @@ export default buildRoutes(function () {
         this.route('custom-fields');
         this.route('avatars');
         this.route('routing');
+        this.route('dispatch');
         this.route('map');
         this.route('orchestrator');
         this.route('scheduling');

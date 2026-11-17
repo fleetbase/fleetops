@@ -1,52 +1,109 @@
-<div class="form-wrapper" ...attributes>
-    <InputGroup
-        @name={{t "activity.form.key"}}
-        @value={{@resource.key}}
-        @helpText={{t "activity.form.key-help-text"}}
-        @disabled={{cannot "fleet-ops update order-config"}}
-        {{on "input" this.setActivityKey}}
-    />
-    <InputGroup
-        @name={{t "activity.form.code"}}
-        @value={{@resource.code}}
-        @helpText={{t "activity.form.code-help-text"}}
-        @disabled={{cannot "fleet-ops update order-config"}}
-        {{on "input" this.setActivityCode}}
-    />
-    <InputGroup @name={{t "activity.form.status"}} @value={{@resource.status}} @disabled={{cannot "fleet-ops update order-config"}} @helpText={{t "activity.form.status-help-text"}} />
-    <InputGroup @name={{t "activity.form.details"}} @value={{@resource.details}} @disabled={{cannot "fleet-ops update order-config"}} @helpText={{t "activity.form.details-help-text"}} />
-    <InputGroup>
-        <Toggle @isToggled={{@resource.complete}} @onToggle={{fn (mut @resource.complete)}} @disabled={{cannot "fleet-ops update order-config"}}>
-            <span class="dark:text-gray-100 text-sm ml-2">{{t "activity.form.completes-order"}}</span>
-        </Toggle>
-    </InputGroup>
-    <InputGroup @helpText={{t "activity.form.require-pod-help-text"}}>
-        <Toggle
-            @isToggled={{@resource.require_pod}}
-            @onToggle={{fn (mut @resource.require_pod)}}
-            @disabled={{cannot "fleet-ops update order-config"}}
-            @helpText={{t "activity.form.require-pod-help-text"}}
-        >
-            <span class="dark:text-gray-100 text-sm mx-2">{{t "activity.form.require-pod"}}</span>
-        </Toggle>
-    </InputGroup>
-    {{#if @resource.require_pod}}
-        <InputGroup @name={{t "activity.form.select-pod-method"}}>
-            <select class="form-select w-full has--placeholder" disabled={{cannot "fleet-ops update order-config"}} {{on "change" this.setProofOfDeliveryMethod}}>
-                <option selected disabled>
-                    {{t "activity.form.pod-method-placeholder"}}
-                </option>
-                {{#each this.podOptions as |podOption|}}
-                    <option value={{podOption}} selected={{eq @resource.pod_method podOption}}>
-                        {{smart-humanize podOption}}
+<div class="form-wrapper oc-page" ...attributes>
+    <div role="tablist" aria-label={{t "order-config-manager.step.sections"}} class="oc-panel-tabs">
+        {{#each this.tabs as |tab|}}
+            <button
+                type="button"
+                role="tab"
+                aria-selected={{if tab.selected "true" "false"}}
+                class="oc-panel-tab {{if tab.selected 'oc-panel-tab--active'}}"
+                data-test-step-tab={{tab.key}}
+                {{on "click" (fn this.selectTab tab.key)}}
+            >{{tab.label}}</button>
+        {{/each}}
+    </div>
+
+    {{#if (eq this.tab "details")}}
+        {{#if this.readonlyDetails}}
+            <OrderConfig::Notice @icon="lock" @text={{t "order-config-manager.step.details-readonly"}} class="mb-4" />
+        {{/if}}
+        <div class="grid grid-cols-2 gap-x-4">
+            <InputGroup
+                @name={{t "activity.form.status"}}
+                @value={{@resource.status}}
+                @placeholder={{t "order-config-manager.step.status-placeholder"}}
+                @disabled={{this.readonlyDetails}}
+                @helpText={{t "order-config-manager.step.status-help"}}
+            />
+            <InputGroup
+                @name={{t "activity.form.code"}}
+                @value={{@resource.code}}
+                @placeholder={{t "order-config-manager.step.code-placeholder"}}
+                @helpText={{t "order-config-manager.step.code-help"}}
+                @disabled={{this.readonlyDetails}}
+                {{on "input" this.setActivityCode}}
+            />
+        </div>
+        <InputGroup
+            @name={{t "activity.form.key"}}
+            @value={{@resource.key}}
+            @placeholder={{t "order-config-manager.step.key-placeholder"}}
+            @helpText={{t "activity.form.key-help-text"}}
+            @disabled={{this.readonlyDetails}}
+            {{on "input" this.setActivityKey}}
+        />
+        <InputGroup
+            @name={{t "activity.form.details"}}
+            @value={{@resource.details}}
+            @placeholder={{t "order-config-manager.step.details-placeholder"}}
+            @disabled={{this.readonlyDetails}}
+            @helpText={{t "order-config-manager.step.details-help"}}
+        />
+        <div class="flex flex-col gap-4 mb-4">
+            <Toggle
+                @label={{t "order-config-manager.step.completes-order"}}
+                @helpText={{t "order-config-manager.step.completes-order-help"}}
+                @isToggled={{@resource.complete}}
+                @onToggle={{fn this.toggle "complete"}}
+                @disabled={{this.readonlyDetails}}
+            />
+            <Toggle
+                @label={{t "order-config-manager.step.requires-pod"}}
+                @helpText={{t "order-config-manager.step.requires-pod-help"}}
+                @isToggled={{@resource.require_pod}}
+                @onToggle={{fn this.toggle "require_pod"}}
+                @disabled={{this.readonlyDetails}}
+            />
+        </div>
+        {{#if @resource.require_pod}}
+            <InputGroup @name={{t "activity.form.select-pod-method"}}>
+                <select class="form-select w-full has--placeholder" disabled={{this.readonlyDetails}} {{on "change" this.setProofOfDeliveryMethod}}>
+                    <option selected disabled>
+                        {{t "activity.form.pod-method-placeholder"}}
                     </option>
-                {{/each}}
-            </select>
-        </InputGroup>
+                    {{#each this.podOptions as |podOption|}}
+                        <option value={{podOption}} selected={{eq @resource.pod_method podOption}}>
+                            {{smart-humanize podOption}}
+                        </option>
+                    {{/each}}
+                </select>
+            </InputGroup>
+        {{/if}}
+        {{#unless this.readonlyDetails}}
+            <div class="oc-developer-events">
+                <span class="oc-section__title text-sm">{{t "order-config-manager.step.developer-events"}}</span>
+                <span class="oc-line__help mb-2">{{t "order-config-manager.step.developer-events-help"}}</span>
+                <Activity::EventSelector @activity={{@resource}} @onChange={{this.updateActivityEvents}} />
+            </div>
+        {{/unless}}
+    {{else if (eq this.tab "happens")}}
+        <p class="oc-step-lead">{{t "order-config-manager.step.when-reaches" step=(or @resource.status @resource.code)}}</p>
+        <OrderConfig::TriggerList
+            @triggers={{this.triggers}}
+            @onChange={{this.setTriggers}}
+            @actions={{@overlay.actions}}
+            @placeholders={{@overlay.placeholders}}
+            @stepStatus={{@resource.status}}
+            @stepDetails={{@resource.details}}
+            @readonly={{not this.canUpdate}}
+        />
+        <p class="oc-line__help mt-4">{{t "order-config-manager.step.footnote"}}</p>
+    {{else}}
+        <p class="oc-step-lead">{{t "order-config-manager.step.conditions-lead" step=(or @resource.status @resource.code)}}</p>
+        {{#if this.readonlyDetails}}
+            <OrderConfig::Notice @type="neutral" @text={{t "order-config-manager.step.conditions-readonly"}} />
+        {{else}}
+            <Activity::LogicBuilder @activity={{@resource}} @onChange={{this.updateActivityLogic}} />
+        {{/if}}
     {{/if}}
-    {{#unless (cannot "fleet-ops update order-config")}}
-        <Activity::LogicBuilder @activity={{@resource}} @onChange={{this.updateActivityLogic}} class="mb-4" />
-        <Activity::EventSelector @activity={{@resource}} @onChange={{this.updateActivityEvents}} />
-    {{/unless}}
-    <Spacer @height="400px" />
+    <Spacer @height="200px" />
 </div>

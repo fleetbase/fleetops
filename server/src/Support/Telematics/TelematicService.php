@@ -674,7 +674,7 @@ class TelematicService
             return 'never_connected';
         }
 
-        $minutesOffline = Carbon::parse($lastSeen)->diffInMinutes(now());
+        $minutesOffline = (int) Carbon::parse($lastSeen)->diffInMinutes(now(), true);
 
         if ($minutesOffline <= 10) {
             return 'online';

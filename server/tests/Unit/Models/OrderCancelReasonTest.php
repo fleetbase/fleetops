@@ -83,6 +83,8 @@ function fleetopsOrderCancelReasonOrder(): array
 }
 
 test('canceling with a reason records it as the canceled details and on the event', function () {
+    fleetopsTestConnectionResolver();
+
     [$order, $config] = fleetopsOrderCancelReasonOrder();
 
     $order->cancelWithReason('  Customer moved house  ');
@@ -97,6 +99,8 @@ test('canceling with a reason records it as the canceled details and on the even
 });
 
 test('a plain cancel keeps the config activity and sends no reason', function () {
+    fleetopsTestConnectionResolver();
+
     [$order, $config] = fleetopsOrderCancelReasonOrder();
 
     $order->cancel();

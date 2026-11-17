@@ -7,7 +7,7 @@ test('order file updates attach files to the order like creation does', function
     $formJs     = file_get_contents(dirname(dirname(__DIR__)) . '/addon/components/order/form/documents.js');
 
     expect($controller)
-        ->toContain("\$uploads = \$request->array('order.files')")
+        ->toContain("\$uploads = \$request->inputArray('order.files')")
         ->toContain('$order->attachFiles($uploads)')
         ->and($orderModel)
         ->toContain('public function attachFiles($uploads): self')

@@ -26,7 +26,7 @@ if (!class_exists('Fleetbase\Http\Requests\ExportRequest', false)) {
 
 class FleetOpsSmallControllerExportRequestFake extends ExportRequest
 {
-    public function array($key = null, $default = [])
+    public function inputArray($key = null, $default = [])
     {
         $value = $this->input($key, $default);
 

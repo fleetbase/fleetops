@@ -51,7 +51,16 @@ function fleetopsApiOrderConfigBoot(): SQLiteConnection
     $schema = $connection->getSchemaBuilder();
     $schema->create('order_configs', function ($table) {
         $table->increments('id');
-        foreach (['uuid', 'public_id', 'company_uuid', 'name', 'key', 'namespace', 'flow', 'meta', 'entities', 'version'] as $column) {
+        foreach (['uuid', 'public_id', 'company_uuid', 'name', 'key', 'namespace', 'flow', 'meta', 'policies', 'triggers', 'entities', 'version'] as $column) {
+            $table->string($column)->nullable();
+        }
+        $table->timestamps();
+        $table->timestamp('deleted_at')->nullable();
+    });
+    // Order config resources carry the config's custom fields, which customer apps ask for.
+    $schema->create('custom_fields', function ($table) {
+        $table->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'subject_uuid', 'subject_type', 'name', 'label', 'type', 'component', 'options', 'required', 'editable', 'default_value', 'validation_rules', 'help_text', 'order'] as $column) {
             $table->string($column)->nullable();
         }
         $table->timestamps();
@@ -82,8 +91,11 @@ test('order config helpers resolve identifiers and wrap resources', function () 
     expect($probe->callProtected('findOrderConfigOrFail', 'order_config_test'))->toBeInstanceOf(OrderConfig::class);
     expect(fn () => $probe->callProtected('findOrderConfigOrFail', 'missing'))->toThrow(ModelNotFoundException::class);
 
+    $connection->table('custom_fields')->insert(['uuid' => 'field-1', 'company_uuid' => 'company-1', 'subject_uuid' => '44444444-4444-4444-8444-444444444444', 'subject_type' => OrderConfig::class, 'name' => 'passengers', 'label' => 'Passengers', 'order' => 0]);
     $config = OrderConfig::where('key', 'transport')->first();
     expect($probe->callProtected('orderConfigResource', $config))->toBeInstanceOf(OrderConfigResource::class)
+        ->and($config->relationLoaded('customFields'))->toBeTrue()
+        ->and($config->customFields->pluck('name')->all())->toBe(['passengers'])
         ->and($probe->callProtected('orderConfigCollection', [[$config]]))
         ->toBeInstanceOf(Illuminate\Http\Resources\Json\ResourceCollection::class);
 

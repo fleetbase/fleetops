@@ -123,7 +123,7 @@ class LiveController extends Controller
      */
     public function orders(Request $request)
     {
-        $exclude     = $request->array('exclude');
+        $exclude     = $request->inputArray('exclude');
         $active      = $request->boolean('active');
         $unassigned  = $request->boolean('unassigned');
 

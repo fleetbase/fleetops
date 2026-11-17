@@ -14,7 +14,7 @@ return new class extends Migration {
     {
         // Increase size of vehicles avatar url column for signed urls
         Schema::table('vehicles', function (Blueprint $table) {
-            $table->mediumText('avatar_url')->change();
+            $table->mediumText('avatar_url')->nullable()->change();
         });
 
         // Add avatar url column to places
@@ -38,7 +38,7 @@ return new class extends Migration {
         // @todo this can break migrations if avatar url is over 300 characters to we need to remove this and keep mediumtext
         // Reverse: Increase size of vehicles avatar url column for signed urls
         Schema::table('vehicles', function (Blueprint $table) {
-            $table->string('avatar_url', 300)->change();
+            $table->string('avatar_url', 300)->nullable()->change();
         });
 
         // Reverse: Add avatar url column to places

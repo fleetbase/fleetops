@@ -149,6 +149,8 @@ test('internal telematic controller describes activity logs and safe issue messa
 });
 
 test('internal customer controller serializes portal login payloads', function () {
+    fleetopsTestConnectionResolver();
+
     $controller = new FleetOpsCustomerControllerProbe();
     $customer   = new Contact();
     $customer->setRawAttributes([

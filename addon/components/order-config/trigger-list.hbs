@@ -1,0 +1,123 @@
+<div class="oc-triggers flex flex-col gap-3" ...attributes>
+    {{#each this.cards as |card|}}
+        {{#if card.isEditing}}
+            <div class="oc-card oc-trigger-editor {{if this.missingAction 'oc-trigger-editor--error'}}" data-test-trigger-editor>
+                <div class="oc-line__sentence">
+                    <span>{{t "order-config-manager.step.then"}}</span>
+                    <OrderConfig::InlineSelect
+                        @value={{this.draft.action}}
+                        @label={{unless this.draft.action (t "order-config-manager.step.choose-action")}}
+                        @options={{this.actionOptions}}
+                        @isDefault={{not this.draft.action}}
+                        @hideDefaultSuffix={{true}}
+                        @invalid={{this.missingAction}}
+                        @ariaLabel={{t "order-config-manager.step.what-happens"}}
+                        @onSelect={{this.setDraftAction}}
+                    />
+                    {{#if card.isNew}}<span class="oc-new-badge">{{t "order-config-manager.step.new"}}</span>{{/if}}
+                </div>
+                {{#if this.missingAction}}
+                    <span class="oc-line__error" role="alert"><FaIcon @icon="circle-exclamation" />{{t "order-config-manager.step.no-action-error"}}</span>
+                {{/if}}
+
+                {{#if this.draftIsNotify}}
+                    <InputGroup @name={{t "order-config-manager.step.title"}}>
+                        <input class="form-input w-full" value={{this.draft.params.title}} placeholder={{this.titlePlaceholder}} aria-label={{t "order-config-manager.step.title"}} {{on "input" (fn this.setParam "title")}} />
+                    </InputGroup>
+                    <InputGroup @name={{t "order-config-manager.step.message"}} @wrapperClass="mb-0">
+                        <textarea
+                            class="form-input w-full"
+                            aria-label={{t "order-config-manager.step.message"}}
+                            rows="2"
+                            placeholder={{t "order-config-manager.step.message-placeholder"}}
+                            value={{this.draft.params.message}}
+                            {{did-insert this.registerMessage}}
+                            {{on "input" (fn this.setParam "message")}}
+                        ></textarea>
+                    </InputGroup>
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <span class="oc-line__help">{{t "order-config-manager.step.insert"}}</span>
+                        {{#each this.placeholders as |token|}}
+                            <button type="button" class="oc-token" aria-label={{t "order-config-manager.step.insert-token" token=token}} {{on "click" (fn this.insertToken token)}}>{{token}}</button>
+                        {{/each}}
+                    </div>
+                    <div class="oc-preview">
+                        <span class="oc-glance__heading">{{t "order-config-manager.step.preview"}}</span>
+                        <span class="oc-preview__body">
+                            <span class="oc-preview__icon"></span>
+                            <span class="flex flex-col">
+                                <span class="oc-preview__title">{{this.previewTitle}}</span>
+                                <span class="oc-preview__message">{{this.previewMessage}}</span>
+                            </span>
+                        </span>
+                    </div>
+                {{/if}}
+
+                {{#each this.draftParameters as |parameter|}}
+                    <InputGroup @name={{smart-humanize parameter.name}} @helpText={{parameter.description}}>
+                        <input class="form-input w-full" value={{parameter.value}} aria-label={{smart-humanize parameter.name}} {{on "input" (fn this.setParam parameter.name)}} />
+                    </InputGroup>
+                {{/each}}
+
+                <Activity::LogicBuilder
+                    @activity={{hash logic=this.draft.when}}
+                    @onChange={{this.setWhen}}
+                    @title={{t "order-config-manager.common.only-if"}}
+                    @helpText={{t "order-config-manager.step.condition-hint"}}
+                    @addText={{t "order-config-manager.step.add-condition"}}
+                />
+
+                <div class="flex justify-end gap-2">
+                    <Button @type="default" @size="sm" @text={{t "order-config-manager.common.cancel"}} @onClick={{this.cancel}} />
+                    <Button @type="primary" @size="sm" @text={{t "order-config-manager.common.done"}} @onClick={{this.done}} />
+                </div>
+            </div>
+        {{else}}
+            <div class="oc-card oc-trigger-card {{if card.isChanged 'oc-trigger-card--changed'}}" data-test-trigger-card={{card.trigger.action}}>
+                <span class="oc-trigger-card__icon"><FaIcon @icon={{card.icon}} /></span>
+                <div class="flex-1 min-w-0 flex flex-col gap-0.5">
+                    <span class="oc-trigger-card__title"><strong>{{card.label}}</strong>{{#if card.title}} “{{card.title}}”{{/if}}</span>
+                    {{#if card.message}}<span class="oc-trigger-card__message">{{card.message}}</span>{{/if}}
+                    <span class="oc-line__help">{{card.meta}}</span>
+                </div>
+                {{#unless @readonly}}
+                    <div class="flex gap-1.5 items-center">
+                        {{#if card.isChanged}}<span class="oc-unsaved-dot">{{t "order-config-manager.step.edited"}}</span>{{/if}}
+                        <Button @type="default" @size="xs" @text={{t "order-config-manager.common.edit"}} @onClick={{fn this.edit card.index}} @disabled={{if this.draft true false}} />
+                        <Button @type="danger" @size="xs" @icon="trash" @onClick={{fn this.remove card.index}} @disabled={{if this.draft true false}} @helpText={{t "order-config-manager.common.remove"}} />
+                    </div>
+                {{/unless}}
+            </div>
+        {{/if}}
+    {{/each}}
+
+    {{#each this.removed as |entry|}}
+        <div class="oc-trigger-removed">
+            <span><span class="line-through">{{entry.label}}</span> · {{t "order-config-manager.step.removed-note"}}</span>
+            <button type="button" class="oc-link" {{on "click" (fn this.undo entry)}}>{{t "order-config-manager.common.undo"}}</button>
+        </div>
+    {{/each}}
+
+    {{#unless this.triggers.length}}
+        {{#unless this.removed.length}}
+            <div class="oc-trigger-empty">{{or @emptyText (t "order-config-manager.step.empty")}}</div>
+        {{/unless}}
+    {{/unless}}
+
+    {{#unless @readonly}}
+        {{#unless this.draft}}
+            <button type="button" class="oc-add-button" {{on "click" (fn this.add null)}}>
+                <FaIcon @icon="plus" @size="sm" />
+                {{or @addText (t "order-config-manager.step.add")}}
+            </button>
+            {{#unless @hideQuickAdd}}
+                <div class="flex flex-wrap gap-1.5 items-center">
+                    <span class="oc-line__help">{{t "order-config-manager.step.quick-add"}}</span>
+                    {{#each this.quickAdd as |quick|}}
+                        <button type="button" class="oc-token oc-token--pill" {{on "click" (fn this.add quick.name)}}>{{quick.label}}</button>
+                    {{/each}}
+                </div>
+            {{/unless}}
+        {{/unless}}
+    {{/unless}}
+</div>

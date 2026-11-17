@@ -56,7 +56,7 @@ class TelematicController extends FleetOpsController
     public function export(ExportRequest $request)
     {
         $format     = $request->input('format', 'xlsx');
-        $selections = $request->array('selections');
+        $selections = $request->inputArray('selections');
         $fileName   = trim(Str::slug('telematics-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return Excel::download(new TelematicExport($selections), $fileName);
@@ -108,7 +108,7 @@ class TelematicController extends FleetOpsController
     #[SkipAuthorizationCheck]
     public function testCredentials(Request $request, string $key): JsonResponse
     {
-        $credentials = $request->array('credentials', []);
+        $credentials = $request->inputArray('credentials', []);
         $async       = $request->input('async', false);
 
         try {

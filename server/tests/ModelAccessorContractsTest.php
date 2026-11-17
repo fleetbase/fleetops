@@ -1564,7 +1564,7 @@ test('fuel report accessors mutators and meta helpers are stable', function () {
         ->and($imported->volume)->toBe('45.5')
         ->and($imported->metric_unit)->toBe('gal')
         ->and($imported->status)->toBe('approved')
-        ->and($imported->location->getValue(new Illuminate\Database\Query\Grammars\Grammar()))->toContain('POINT');
+        ->and($imported->location->getValue(new Illuminate\Database\Query\Grammars\Grammar(new SQLiteConnection(new PDO('sqlite::memory:')))))->toContain('POINT');
 });
 
 test('fuel provider transaction accessors expose related names and station points', function () {

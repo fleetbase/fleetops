@@ -17,7 +17,7 @@ return new class extends Migration {
             $table->string('category')->nullable()->after('type');
             $table->json('tags')->nullable()->after('priority');
             $table->json('meta')->nullable()->after('priority');
-            $table->mediumText('report')->change();
+            $table->mediumText('report')->nullable()->change();
             $table->foreignUuid('reported_by_uuid')->nullable()->after('assigned_to_uuid')->references('uuid')->on('users')->onDelete('cascade');
         });
     }
@@ -33,7 +33,7 @@ return new class extends Migration {
             $table->string('longitude')->nullable()->after('location');
             $table->string('latitude')->nullable()->after('location');
             $table->string('odometer')->nullable()->after('location');
-            $table->string('report')->change();
+            $table->string('report')->nullable()->change();
             $table->dropForeign(['reported_by_uuid']);
             $table->dropColumn(['reported_by_uuid', 'meta', 'tags', 'category']);
         });

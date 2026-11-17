@@ -30,7 +30,7 @@ class MetricsController extends Controller
     {
         $start    = $request->date('start');
         $end      = $request->date('end');
-        $discover = $request->array('discover', []);
+        $discover = $request->inputArray('discover', []);
 
         try {
             $data = $this->metricsForCompany($request->user()->company, $start, $end)->with($discover)->get();

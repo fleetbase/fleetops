@@ -16,6 +16,8 @@ import OrderConfigManagerCustomFieldsComponent from './order-config-manager/cust
 import OrderConfigManagerActivityFlowComponent from './order-config-manager/activity-flow';
 import OrderConfigManagerLifecycleComponent from './order-config-manager/lifecycle';
 import OrderConfigManagerEntitiesComponent from './order-config-manager/entities';
+import OrderConfigManagerPoliciesComponent from './order-config-manager/policies';
+import OrderConfigManagerOverviewComponent from './order-config-manager/overview';
 import findActiveTab from '../utils/find-active-tab';
 
 const configManagerContext = EmberObject.extend(Evented);
@@ -24,6 +26,7 @@ export default class OrderConfigManagerComponent extends Component {
     @service('universe/menu-service') menuService;
     @service notifications;
     @service modalsManager;
+    @service fetch;
     @service store;
     @service intl;
     @tracked configs = [];
@@ -42,12 +45,15 @@ export default class OrderConfigManagerComponent extends Component {
      */
     get tabs() {
         const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:order-config-manager');
+        const tab = (key, icon, component) => this.universe._createMenuItem(this.intl.t(`order-config-manager.tabs.${key}`), null, { icon, component, slug: key });
         const defaultTabs = [
-            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.details'), null, { icon: 'circle-info', component: OrderConfigManagerDetailsComponent }),
-            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.custom-fields'), null, { icon: 'rectangle-list', component: OrderConfigManagerCustomFieldsComponent }),
-            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.activity-flow'), null, { icon: 'diagram-project', component: OrderConfigManagerActivityFlowComponent }),
-            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.lifecycle'), null, { icon: 'arrows-spin', component: OrderConfigManagerLifecycleComponent }),
-            this.universe._createMenuItem(this.intl.t('order-config-manager.tabs.entities'), null, { icon: 'boxes-packing', component: OrderConfigManagerEntitiesComponent }),
+            tab('overview', 'list-check', OrderConfigManagerOverviewComponent),
+            tab('details', 'circle-info', OrderConfigManagerDetailsComponent),
+            tab('custom-fields', 'rectangle-list', OrderConfigManagerCustomFieldsComponent),
+            tab('activity-flow', 'diagram-project', OrderConfigManagerActivityFlowComponent),
+            tab('lifecycle', 'arrows-spin', OrderConfigManagerLifecycleComponent),
+            tab('policies', 'sliders', OrderConfigManagerPoliciesComponent),
+            tab('entities', 'boxes-packing', OrderConfigManagerEntitiesComponent),
         ];
 
         if (isArray(registeredTabs)) {
@@ -161,13 +167,54 @@ export default class OrderConfigManagerComponent extends Component {
      * for the confirm action. The confirm action includes validation and saving of the
      * new order configuration, along with success and warning notifications.
      */
-    @action createNewOrderConfig() {
+    @action async createNewOrderConfig() {
         const orderConfig = this.store.createRecord('order-config', {
             tags: [],
         });
-
+        const templates = await this.loadTemplates();
+        const blank = {
+            key: 'blank',
+            name: this.intl.t('order-config-manager.templates.blank.name'),
+            description: this.intl.t('order-config-manager.templates.blank.description'),
+            steps: [],
+            summary: null,
+        };
+        const describe = (template) => {
+            const key = `order-config-manager.templates.${template.key}`;
+            const tr = (suffix, fallback) => (this.intl.exists(`${key}.${suffix}`) ? this.intl.t(`${key}.${suffix}`) : fallback);
+            const summary = template.summary;
+            return {
+                ...template,
+                name: tr('name', template.name),
+                description: tr('description', template.description),
+                namePlaceholder: tr('name-placeholder', this.intl.t('order-config-manager.new-config.name-placeholder')),
+                icon: { transport: 'truck', passenger: 'user', blank: 'plus' }[template.key] ?? 'diagram-project',
+                summaryText: summary
+                    ? this.intl.t('order-config-manager.new-config.summary', { steps: summary.steps, policies: summary.policies, triggers: summary.triggers, fields: summary.custom_fields })
+                    : this.intl.t('order-config-manager.new-config.summary-blank'),
+                facts: [1, 2, 3].map((n) => tr(`fact-${n}`, null)).filter(Boolean),
+            };
+        };
+        const choices = [...templates.map(describe), describe(blank)];
+        const pick = (key) => {
+            const template = choices.find((item) => item.key === key);
+            this.modalsManager.setOption('template', key);
+            this.modalsManager.setOption('current', template);
+            this.modalsManager.setOption('acceptButtonDisabled', !template);
+            this.modalsManager.setOption(
+                'acceptButtonText',
+                template ? this.intl.t('order-config-manager.new-config.create-from', { template: template.name }) : this.intl.t('order-config-manager.new-config.create')
+            );
+        };
         this.modalsManager.show('modals/new-order-config', {
-            title: this.intl.t('order-config-manager.create-new-title'),
+            templates: choices,
+            template: null,
+            current: null,
+            selectTemplate: pick,
+            acceptButtonDisabled: true,
+            acceptButtonText: this.intl.t('order-config-manager.new-config.create'),
+            modalClass: 'modal-lg',
+            title: this.intl.t('order-config-manager.new-config.title'),
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
             declineButtonIcon: 'times',
@@ -185,6 +232,11 @@ export default class OrderConfigManagerComponent extends Component {
                 }
 
                 modal.startLoading();
+                const template = this.modalsManager.getOption('template');
+                if (template && template !== 'blank') {
+                    return this.createFromTemplate(template, orderConfig, modal);
+                }
+
                 orderConfig.set('key', dasherize(orderConfig.name));
                 orderConfig
                     .save()
@@ -207,6 +259,41 @@ export default class OrderConfigManagerComponent extends Component {
                 modal.done();
             },
         });
+    }
+
+    /**
+     * The order config templates the server offers, or none when they can't be loaded.
+     */
+    async loadTemplates() {
+        try {
+            const { templates } = await this.fetch.get('order-configs/capabilities');
+            return templates ?? [];
+        } catch {
+            return [];
+        }
+    }
+
+    /**
+     * Create the config from a template under the name entered, then select it.
+     */
+    async createFromTemplate(template, orderConfig, modal) {
+        try {
+            const { order_config } = await this.fetch.post('order-configs/from-template', { template, name: orderConfig.name });
+            orderConfig.unloadRecord();
+            this.notifications.success(this.intl.t('order-config-manager.create-success-message'));
+            this.loadOrderConfigs.perform({
+                onAfter: (configs = []) => {
+                    const created = configs.find((config) => config.id === order_config?.uuid || config.public_id === order_config?.public_id);
+                    if (created) {
+                        this.selectConfig(created);
+                    }
+                },
+            });
+            modal.done();
+        } catch (error) {
+            modal.stopLoading();
+            this.notifications.serverError(error);
+        }
     }
 
     /**

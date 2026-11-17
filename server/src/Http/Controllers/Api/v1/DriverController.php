@@ -26,6 +26,7 @@ use Fleetbase\FleetOps\Support\ApiCacheThrottle;
 use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
 use Fleetbase\FleetOps\Support\NavigatorReview;
+use Fleetbase\FleetOps\Support\OrderConfig\OrderConfigTriggers;
 use Fleetbase\FleetOps\Support\OSRM;
 use Fleetbase\FleetOps\Support\ProfileAccountManager;
 use Fleetbase\FleetOps\Support\TrackingPublisher;
@@ -335,7 +336,7 @@ class DriverController extends Controller
             return $this->driverResource($driver);
         }
 
-        $isGeocodable = Carbon::parse($driver->updated_at)->diffInMinutes(Carbon::now(), false) > 10 || empty($driver->country) || empty($driver->city);
+        $isGeocodable = (int) Carbon::parse($driver->updated_at)->diffInMinutes(Carbon::now(), false) > 10 || empty($driver->country) || empty($driver->city);
 
         $positionData = [
             'location'  => new Point($latitude, $longitude),
@@ -393,6 +394,9 @@ class DriverController extends Controller
 
         broadcast(new DriverLocationChanged($driver));
         app(TrackingPublisher::class)->driverMoved($driver);
+
+        // The order's config can act when its driver comes close to the pickup or drop-off.
+        OrderConfigTriggers::driverMoved($driver, $order instanceof Order ? $order : null);
 
         // ----------------------------------------------------------------
         // Geofence intersection detection
@@ -1309,7 +1313,7 @@ class DriverController extends Controller
 
                 $dwellMinutes = null;
                 if ($state && $state->entered_at) {
-                    $dwellMinutes = (int) Carbon::parse($state->entered_at)->diffInMinutes(now());
+                    $dwellMinutes = (int) Carbon::parse($state->entered_at)->diffInMinutes(now(), true);
                 }
 
                 DB::table($stateTable)

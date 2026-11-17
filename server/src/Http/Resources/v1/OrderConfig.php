@@ -23,21 +23,43 @@ class OrderConfig extends FleetbaseResource
     public function toArray($request): array
     {
         return [
-            'id'           => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
-            'uuid'         => $this->when(Http::isInternalRequest(), $this->uuid),
-            'public_id'    => $this->when(Http::isInternalRequest(), $this->public_id),
-            'company_uuid' => $this->when(Http::isInternalRequest(), $this->company_uuid),
-            'key'          => $this->key,
-            'name'         => $this->name,
-            'namespace'    => $this->namespace,
-            'description'  => $this->description,
-            'tags'         => $this->tags,
-            'status'       => $this->status,
-            'version'      => $this->version,
-            'flow'         => $this->projectFlow(),
-            'created_at'   => $this->created_at,
-            'updated_at'   => $this->updated_at,
+            'id'                    => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
+            'uuid'                  => $this->when(Http::isInternalRequest(), $this->uuid),
+            'public_id'             => $this->when(Http::isInternalRequest(), $this->public_id),
+            'company_uuid'          => $this->when(Http::isInternalRequest(), $this->company_uuid),
+            'key'                   => $this->key,
+            'name'                  => $this->name,
+            'namespace'             => $this->namespace,
+            'description'           => $this->description,
+            'tags'                  => $this->tags,
+            'status'                => $this->status,
+            'version'               => $this->version,
+            'flow'                  => $this->projectFlow(),
+            // Every policy setting, defaults filled in: what a customer app needs to know about
+            // ordering, cancelling, payment methods and the like for this order type.
+            'policies'              => $this->resource->resolvedPolicies(),
+            'triggers'              => $this->when(Http::isInternalRequest(), $this->triggers ?? []),
+            'custom_fields'         => $this->when($this->resource->relationLoaded('customFields'), fn () => $this->projectCustomFields()),
+            'created_at'            => $this->created_at,
+            'updated_at'            => $this->updated_at,
         ];
+    }
+
+    /**
+     * The custom fields orders of the config carry, with what a form needs to ask for them.
+     */
+    protected function projectCustomFields(): array
+    {
+        return $this->resource->customFields->map(fn ($field) => [
+            'name'          => $field->name,
+            'label'         => $field->label,
+            'type'          => $field->type,
+            'component'     => $field->component,
+            'options'       => $field->options,
+            'required'      => (bool) $field->required,
+            'default_value' => $field->default_value,
+            'help_text'     => $field->help_text,
+        ])->values()->all();
     }
 
     /**

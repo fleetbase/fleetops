@@ -1,0 +1,86 @@
+<div class="oc-page px-6 py-4">
+    <div class="flex gap-6 items-start">
+        <div class="flex-1 min-w-0 flex flex-col gap-3.5">
+            <div class="flex justify-between items-baseline">
+                <h2 class="oc-section__title">{{t "order-config-manager.overview.title" config=this.config.name}}</h2>
+                <span class="oc-section__description">{{t "order-config-manager.overview.readonly-hint"}}</span>
+            </div>
+
+            {{#if this.before}}
+                <section class="oc-card oc-ov-step" aria-labelledby="oc-ov-before">
+                    <span class="oc-ov-dot oc-ov-dot--ghost">0</span>
+                    <div class="flex-1 flex flex-col gap-1.5">
+                        <div class="flex justify-between">
+                            <span id="oc-ov-before" class="oc-ov-step__title">{{t "order-config-manager.overview.before"}}</span>
+                            <button type="button" class="oc-link" {{on "click" (fn this.go "policies")}}>{{t "order-config-manager.overview.edit-policies"}}</button>
+                        </div>
+                        {{#each this.before as |rule|}}
+                            <span class="oc-ov-rule"><FaIcon @icon="shield-halved" @size="xs" class="oc-ov-rule__icon" />{{rule}}</span>
+                        {{/each}}
+                    </div>
+                </section>
+            {{/if}}
+
+            <ol class="oc-ov-list">
+                {{#each this.steps as |step|}}
+                    <li class="oc-ov-item">
+                        <div class="oc-ov-rail">
+                            <span class="oc-ov-dot oc-ov-dot--{{step.role}}">{{step.number}}</span>
+                            {{#unless step.isLast}}<span class="oc-ov-line"></span>{{/unless}}
+                        </div>
+                        <div class="oc-card oc-ov-card oc-ov-card--{{step.role}} {{if step.branchFrom 'oc-ov-card--branch'}}">
+                            <div class="flex justify-between items-baseline gap-2.5">
+                                <span class="flex gap-2 items-baseline flex-wrap">
+                                    <span class="oc-ov-step__title">{{step.label}}</span>
+                                    <span class="oc-ov-code">{{step.code}}</span>
+                                    {{#if step.tag}}<span class="oc-ov-tag">{{step.tag}}</span>{{/if}}
+                                </span>
+                                <button type="button" class="oc-link" {{on "click" (fn this.go "activity-flow")}}>{{t "order-config-manager.overview.edit-step"}}</button>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="flex flex-col gap-1">
+                                    <span class="oc-glance__heading">{{t "order-config-manager.overview.happens-here"}}</span>
+                                    {{#each step.happens as |item|}}
+                                        <span class="oc-ov-rule"><FaIcon @icon={{item.icon}} @size="xs" class="oc-ov-rule__icon oc-ov-rule__icon--action" />{{item.text}}</span>
+                                    {{else}}
+                                        <span class="oc-ov-none">{{t "order-config-manager.overview.nothing"}}</span>
+                                    {{/each}}
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <span class="oc-glance__heading">{{t "order-config-manager.overview.policies-apply"}}</span>
+                                    {{#each step.rules as |rule|}}
+                                        <span class="oc-ov-rule"><FaIcon @icon="shield-halved" @size="xs" class="oc-ov-rule__icon" />{{rule}}</span>
+                                    {{else}}
+                                        <span class="oc-ov-none">{{t "order-config-manager.overview.none"}}</span>
+                                    {{/each}}
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                {{/each}}
+            </ol>
+        </div>
+
+        <aside class="flex flex-col gap-3 w-80 flex-none">
+            <div class="oc-card p-4 flex flex-col gap-2.5">
+                <div class="flex justify-between items-baseline">
+                    <span class="oc-glance__title">{{t "order-config-manager.overview.any-time"}}</span>
+                    <button type="button" class="oc-link" {{on "click" (fn this.go "activity-flow")}}>{{t "order-config-manager.overview.edit-events"}}</button>
+                </div>
+                {{#each this.anyTime as |item|}}
+                    <div class="oc-ov-event">
+                        <span class="oc-ov-event__when"><FaIcon @icon="bolt" @size="xs" class="oc-ov-rule__icon--action" />{{item.when}}</span>
+                        <span class="oc-ov-event__then">{{item.then}}</span>
+                        {{#if item.hasCondition}}<span class="oc-ov-event__if">{{t "order-config-manager.overview.has-condition"}}</span>{{/if}}
+                    </div>
+                {{else}}
+                    <span class="oc-ov-none">{{t "order-config-manager.overview.no-events"}}</span>
+                {{/each}}
+            </div>
+            <div class="oc-card p-4 flex flex-col gap-2 text-sm">
+                <span class="oc-glance__title">{{t "order-config-manager.overview.at-a-glance"}}</span>
+                {{#each this.glance as |line|}}<span class="oc-ov-rule">{{line}}</span>{{/each}}
+            </div>
+        </aside>
+    </div>
+</div>

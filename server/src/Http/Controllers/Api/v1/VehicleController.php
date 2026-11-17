@@ -369,7 +369,7 @@ class VehicleController extends Controller
 
                 $dwellMinutes = null;
                 if ($state && $state->entered_at) {
-                    $dwellMinutes = (int) Carbon::parse($state->entered_at)->diffInMinutes(now());
+                    $dwellMinutes = (int) Carbon::parse($state->entered_at)->diffInMinutes(now(), true);
                 }
 
                 DB::table('vehicle_geofence_states')

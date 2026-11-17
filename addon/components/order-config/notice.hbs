@@ -1,0 +1,6 @@
+<div class="oc-notice oc-notice--{{or @type 'info'}}" role={{if (eq @type "warning") "status"}} ...attributes>
+    <FaIcon @icon={{or @icon "circle-info"}} class="oc-notice__icon" />
+    <span class="oc-notice__text">
+        {{#if @title}}<strong>{{@title}}</strong> {{/if}}{{@text}}{{yield}}
+    </span>
+</div>

@@ -27,9 +27,14 @@ permissions:
 
 jobs:
   contract:
+    # Laravel 12 release only. Remove `stack` once this release ships. The published image is
+    # Laravel 10 and its extensions require core-api 1.x, so this branch can only resolve
+    # against the whole Laravel 12 train: the `l12` stack builds the image from fleetbase's
+    # Laravel 12 branch and links core-api and every extension from their release branches.
     uses: fleetbase/fleetbase/.github/workflows/api-contract.yml@main
     with:
       collections: "Fleetbase API"
+      stack: l12
       build-from-source: false
       # Without this the run tests the version of fleetbase/fleetops-api baked into the
       # published image, not the branch under review. The workflow checks this

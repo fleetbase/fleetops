@@ -7,7 +7,19 @@ import { dasherize } from '@ember/string';
 export default class CustomEntityFormComponent extends Component {
     @service notifications;
     @service fetch;
+    @service intl;
     @tracked config;
+
+    /** How the entity reads when it's picked for an order: type, size and weight. */
+    get previewMeta() {
+        const resource = this.args.resource;
+        const get = (key) => resource?.get?.(key) ?? resource?.[key];
+        const size = [get('length'), get('width'), get('height')].every((value) => value !== undefined && value !== null && value !== '')
+            ? `${get('length')} × ${get('width')} × ${get('height')} ${get('dimensions_unit') ?? ''}`.trim()
+            : this.intl.t('order-config-manager.entities.no-size');
+        const weight = get('weight') ? `${get('weight')} ${get('weight_unit') ?? ''}`.trim() : this.intl.t('order-config-manager.entities.no-weight');
+        return [get('type') || this.intl.t('order-config-manager.entities.type-preview'), size, weight].join(' · ');
+    }
 
     /**
      * Action method to save the custom entity. It triggers an optional onSave callback

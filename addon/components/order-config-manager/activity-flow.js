@@ -13,6 +13,29 @@ import inlineTask from '@fleetbase/ember-core/utils/inline-task';
 import createFlowActivity from '../../utils/create-flow-activity';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
 import normalizeOrderConfigFlow, { getOrderConfigFlowRootCode } from '../../utils/normalize-order-config-flow';
+import { ICON_GROUPS, actionIcon, actionLabel } from '../../utils/order-config-action-meta';
+
+const NODE_WIDTH = 236;
+const NODE_HEIGHT = 64;
+
+/** Role tile icons, drawn on a 24 × 24 grid. */
+const ROLE_ICONS = {
+    start: 'M8 5v14l11-7z',
+    step: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+    complete: 'M5 12l5 5L20 7',
+    end: 'M7 7h10v10H7z',
+};
+
+/** Action icons on a node, drawn on a 24 × 24 grid, keyed by the icon names in order-config-action-meta. */
+const ACTION_PATHS = {
+    bell: 'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4',
+    comments: 'M21 12a8 8 0 0 1-12 7l-5 1 1-4a8 8 0 1 1 16-4z',
+    'comment-slash': 'M21 12a8 8 0 0 1-12 7l-5 1 1-4a8 8 0 1 1 16-4zM4 4l16 16',
+    'file-invoice': 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6',
+    tag: 'M3 12V4h8l10 10-8 8zM7.5 7.5h.01',
+    ban: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM5.6 5.6l12.8 12.8',
+    bolt: 'M13 3L5 14h6l-1 7 8-11h-6z',
+};
 
 /**
  * Manages the activity flow for order configuration, allowing users to create, edit, and view a sequence of activities.
@@ -23,6 +46,10 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
     @service notifications;
     @service intl;
     @service abilities;
+    @service fetch;
+
+    /** Actions, events and placeholders triggers can use, from `order-configs/capabilities`. */
+    @tracked capabilities = { actions: [], events: [], placeholders: [] };
 
     /**
      * Represents the current state of the activity flow.
@@ -78,6 +105,10 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      */
     @tracked listeningForClicks = false;
 
+    /** True while the canvas fills the window. */
+    @tracked isFullscreen = false;
+    onFullscreenKeydown;
+
     graphScrollContainer;
     horizontalScrollbar;
     horizontalScrollbarContent;
@@ -94,6 +125,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
     constructor(owner, { config, configManagerContext }) {
         super(...arguments);
         this.config = config;
+        this.loadCapabilities.perform();
 
         configManagerContext.on('onConfigChanged', (newConfig) => {
             this.changeConfig(newConfig);
@@ -147,6 +179,160 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         if (this.onWindowResize) {
             window.removeEventListener('resize', this.onWindowResize);
         }
+
+        if (this.onFullscreenKeydown) {
+            document.removeEventListener('keydown', this.onFullscreenKeydown);
+        }
+    }
+
+    /**
+     * Adds a step at the end of the main path. When the path already ends the order (it completes
+     * or ends it), the new step goes in just before that last step instead of branching off it.
+     */
+    @action addStep() {
+        const path = this.mainPath();
+        if (!path.length) {
+            return this.createNewActivity(null);
+        }
+
+        const last = path[path.length - 1];
+        const lastRole = this.activityRole(last);
+        if (path.length > 1 && (lastRole === 'complete' || lastRole === 'end')) {
+            return this.createNewActivity(path[path.length - 2], { before: last });
+        }
+
+        return this.createNewActivity(last);
+    }
+
+    /**
+     * The longest run of steps from the starting step, preferring steps that don't end the order.
+     *
+     * @returns {Array} activities, from the start
+     */
+    mainPath() {
+        const root = this.rootActivity();
+        if (!root) {
+            return [];
+        }
+
+        const depthCache = {};
+        const depth = (activity, seen) => {
+            const code = activity.get('code');
+            if (depthCache[code] !== undefined) return depthCache[code];
+            const children = this.childActivities(activity).filter((child) => !seen.has(child.get('code')));
+            const next = new Set([...seen, code]);
+            const value = 1 + Math.max(0, ...children.map((child) => depth(child, next)));
+            depthCache[code] = value;
+            return value;
+        };
+
+        const path = [root];
+        const seen = new Set([root.get('code')]);
+        let current = root;
+        for (;;) {
+            const children = this.childActivities(current).filter((child) => !seen.has(child.get('code')));
+            if (!children.length) break;
+            const ranked = children
+                .map((child) => ({ child, score: depth(child, seen) * 2 + (['complete', 'end'].includes(this.activityRole(child)) ? 0 : 1) }))
+                .sort((a, b) => b.score - a.score);
+            current = ranked[0].child;
+            seen.add(current.get('code'));
+            path.push(current);
+        }
+
+        return path;
+    }
+
+    rootActivity() {
+        const rootCode = getOrderConfigFlowRootCode(this.flow, this.lifecycle?.initial);
+        return (rootCode && this.flow[rootCode]) || Object.values(this.flow)[0] || null;
+    }
+
+    /** A step's next steps as they are on the canvas. */
+    childActivities(activity) {
+        return (activity.get('activities') ?? []).map((child) => this.flow[child.get?.('code')] ?? child).filter((child) => child?.get?.('node'));
+    }
+
+    /**
+     * Lays the steps out left to right: each step one column after the step before it, branches
+     * stacked under each other, and the whole flow centred in the canvas.
+     */
+    @action tidyLayout() {
+        const root = this.rootActivity();
+        if (!this.paper || !root?.get('node')) {
+            return;
+        }
+
+        const columnWidth = NODE_WIDTH + 100;
+        const rowHeight = NODE_HEIGHT + 44;
+        const placed = new Set();
+        const positions = [];
+        let nextRow = 0;
+
+        const place = (activity, column) => {
+            placed.add(activity.get('code'));
+            const children = this.childActivities(activity).filter((child) => !placed.has(child.get('code')));
+            children.forEach((child) => placed.add(child.get('code')));
+            const rows = children.map((child) => place(child, column + 1));
+            const row = rows.length ? (rows[0] + rows[rows.length - 1]) / 2 : nextRow++;
+            positions.push({ activity, column, row });
+            return row;
+        };
+
+        place(root, 0);
+        Object.values(this.flow)
+            .filter((activity) => activity.get('node') && !placed.has(activity.get('code')))
+            .forEach((activity) => place(activity, 0));
+
+        const contentHeight = Math.max(0, nextRow - 1) * rowHeight + NODE_HEIGHT;
+        const top = Math.max(76, (this.paper.options.height - contentHeight) / 2);
+        positions.forEach(({ activity, column, row }) => {
+            activity.get('node').position(64 + column * columnWidth, top + row * rowHeight);
+        });
+
+        this.resizePaperWidthToFitActivities();
+    }
+
+    /** Zooms and moves the canvas so every step is in view. */
+    @action fitToScreen() {
+        if (!this.paper || !this.graph || !this.graphScrollContainer) {
+            return;
+        }
+
+        const box = this.graph.getBBox();
+        if (!box || !box.width) {
+            return;
+        }
+
+        const width = this.graphScrollContainer.clientWidth;
+        const height = this.graphScrollContainer.clientHeight;
+        const scale = Math.min(1.2, Math.max(0.2, Math.min((width - 96) / box.width, (height - 152) / box.height)));
+        this.paper.scale(scale);
+        this.paper.translate((width - box.width * scale) / 2 - box.x * scale, (height - box.height * scale) / 2 - box.y * scale + 12);
+        this.graphScrollContainer.scrollLeft = 0;
+        this.updateHorizontalScrollbar();
+    }
+
+    /** Lets the canvas fill the window; Escape returns it. */
+    @action toggleFullscreen() {
+        this.isFullscreen = !this.isFullscreen;
+
+        if (this.isFullscreen) {
+            this.onFullscreenKeydown = (event) => {
+                if (event.key === 'Escape' && !document.querySelector('.next-content-overlay.is-open, .resource-context-panel.is-open')) {
+                    this.toggleFullscreen();
+                }
+            };
+            document.addEventListener('keydown', this.onFullscreenKeydown);
+        } else if (this.onFullscreenKeydown) {
+            document.removeEventListener('keydown', this.onFullscreenKeydown);
+            this.onFullscreenKeydown = null;
+        }
+
+        next(this, () => {
+            window.dispatchEvent(new Event('resize'));
+            next(this, this.fitToScreen);
+        });
     }
 
     /**
@@ -211,6 +397,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
     changeConfig(newConfig) {
         this.clearGraph({
             onAfter: () => {
+                this.flow = {};
                 this.config = newConfig;
                 this.initializeActivityFlow();
                 this.listenForElementClicks();
@@ -256,46 +443,32 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * Initializes the custom JointJS shapes used in the activity flow.
      */
     initializeActivityJointModel() {
+        const chip = (index) => [
+            { tagName: 'rect', selector: `chip${index}`, className: 'flow-activity-chip' },
+            { tagName: 'path', selector: `chipIcon${index}`, className: 'flow-activity-chip-icon' },
+        ];
         joint.shapes.fleetbase = {};
-        joint.shapes.fleetbase.Activity = joint.shapes.standard.Rectangle.define(
+        joint.shapes.fleetbase.Activity = joint.dia.Element.define(
             'fleetbase.Activity',
             {
                 attrs: {
-                    rect: { stroke: 'none', fillOpacity: 0 },
-                    text: {
-                        textVerticalAnchor: 'middle',
-                        textAnchor: 'middle',
-                        refX: '50%',
-                        refY: '50%',
-                        fontSize: 14,
-                        fill: '#333',
-                    },
+                    body: { width: 'calc(w)', height: 'calc(h)', rx: 12, ry: 12 },
+                    tile: { x: 12, y: 'calc(0.5*h-16)', width: 32, height: 32, rx: 9, ry: 9 },
+                    tileIcon: { transform: 'translate(20, 24) scale(0.67)' },
+                    status: { x: 54, y: 'calc(0.5*h-4)', fontSize: 13, fontWeight: 600, textVerticalAnchor: 'middle' },
+                    meta: { x: 54, y: 'calc(0.5*h+13)', fontSize: 11, textVerticalAnchor: 'middle' },
                 },
             },
             {
                 markup: [
-                    {
-                        tagName: 'rect',
-                        selector: 'body',
-                        className: 'flow-activity',
-                    },
-                    {
-                        tagName: 'rect',
-                        selector: 'pill',
-                        className: 'flow-activity-status-pill',
-                    },
-                    {
-                        tagName: 'text',
-                        selector: 'code',
-                    },
-                    {
-                        tagName: 'text',
-                        selector: 'status',
-                    },
-                    {
-                        tagName: 'text',
-                        selector: 'details',
-                    },
+                    { tagName: 'rect', selector: 'body', className: 'flow-activity' },
+                    { tagName: 'rect', selector: 'tile', className: 'flow-activity-tile' },
+                    { tagName: 'path', selector: 'tileIcon', className: 'flow-activity-tile-icon' },
+                    { tagName: 'text', selector: 'status', className: 'flow-activity-status' },
+                    { tagName: 'text', selector: 'meta', className: 'flow-activity-meta' },
+                    ...chip(0),
+                    ...chip(1),
+                    ...chip(2),
                 ],
             }
         );
@@ -309,9 +482,68 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         const flow = this.serializeFlow();
         this.config.set('flow', flow);
         yield this.config.save().then((config) => {
+            this.clearGraph();
+            this.flow = {};
             this.config = config;
             this.initializeActivityFlow();
             this.listenForElementClicks();
+        });
+    }
+
+    /**
+     * Saves the flow as it is on the canvas without redrawing it, for "Save step".
+     */
+    @task *persistFlow() {
+        this.config.set('flow', this.serializeFlow());
+        try {
+            yield this.config.save();
+            this.notifications.success(this.intl.t('order-config-manager.step.saved'));
+            this.args.onConfigUpdated?.(this.config);
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
+
+    @task *loadCapabilities() {
+        try {
+            const { actions, events, placeholders } = yield this.fetch.get('order-configs/capabilities');
+            this.capabilities = { actions: actions ?? [], events: events ?? [], placeholders: placeholders ?? [] };
+        } catch {
+            this.capabilities = { actions: [], events: [], placeholders: [] };
+        }
+    }
+
+    get eventCount() {
+        return (this.config?.triggers ?? []).length;
+    }
+
+    /** The actions used anywhere on the flow, for the legend. */
+    get legend() {
+        const used = new Set(
+            Object.values(this.config?.flow ?? {})
+                .flatMap((activity) => activity?.actions ?? [])
+                .map((trigger) => trigger?.action)
+        );
+        return ICON_GROUPS.filter((group) => group.actions.some((name) => used.has(name))).map((group) => ({
+            icon: group.icon,
+            label: this.intl.t(`order-config-manager.flow.${group.key}`),
+        }));
+    }
+
+    /**
+     * Opens the order events: triggers for things that happen to an order outside its steps.
+     */
+    @action openOrderEvents() {
+        this.resourceContextPanel.open({
+            content: 'order-config/order-events',
+            title: this.intl.t('order-config-manager.events.title'),
+            panelContentClass: 'py-2 px-4',
+            resource: this.config,
+            config: this.config,
+            actions: this.capabilities.actions,
+            events: this.capabilities.events,
+            placeholders: this.capabilities.placeholders,
+            onSaved: (config) => this.args.onConfigUpdated?.(config),
         });
     }
 
@@ -338,25 +570,13 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      */
     serializeFlow() {
         const serialized = {};
-        const keys = Object.keys(this.flow);
-        keys.forEach((key) => {
+        Object.keys(this.flow).forEach((key) => {
             const activity = this.flow[key];
-            // remove node
-            activity.set('node', undefined);
-            // remove ids
-            activity.set('id', undefined);
-            activity.set('parentId', undefined);
-            // remove internal model
-            activity.set('_internalModel', undefined);
-            // map activities into id and code string
-            const activities = activity.get('activities');
-            activity.set(
-                'activities',
-                activities.map((_activity) => {
-                    return _activity.get('code');
-                })
-            );
-            serialized[key] = activity.content;
+            // Copy the step without its canvas node, ids and internal model, so the canvas keeps working.
+            // eslint-disable-next-line no-unused-vars
+            const { node, id, parentId, _internalModel, ...content } = activity.content ?? {};
+            content.activities = (activity.get('activities') ?? []).map((child) => (typeof child === 'string' ? child : child.get('code')));
+            serialized[key] = content;
         });
 
         return serialized;
@@ -380,6 +600,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         const rootCode = getOrderConfigFlowRootCode(deserializedFlow, this.lifecycle?.initial);
         if (rootCode && deserializedFlow[rootCode]) {
             this.addDeserializedActivityToGraph(deserializedFlow[rootCode]);
+            this.tidyLayout();
         }
     }
 
@@ -577,12 +798,46 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * @returns {Object} - The link object that has been added to the graph.
      */
     addLinkToGraph(parentActivity, childActivity) {
-        const link = new joint.shapes.standard.Link({
-            source: { id: parentActivity.get('id') },
-            target: { id: childActivity.get('id') },
-        });
+        const link = this.createLink(parentActivity, childActivity);
         link.addTo(this.graph);
         return link;
+    }
+
+    /**
+     * A connector from a step to one it leads to: a smooth curve with an arrowhead, labelled "or"
+     * when it's the second (or later) way out of the step.
+     */
+    createLink(parentActivity, childActivity) {
+        const siblings = (parentActivity.get('activities') ?? []).map((activity) => activity?.get?.('id'));
+        const isBranch = siblings.indexOf(childActivity.get('id')) > 0;
+        return new joint.shapes.standard.Link({
+            source: { id: parentActivity.get('id'), anchor: { name: 'right' } },
+            target: { id: childActivity.get('id'), anchor: { name: 'left' } },
+            connector: { name: 'smooth' },
+            attrs: {
+                line: {
+                    class: 'flow-activity-link',
+                    stroke: '#64748b',
+                    strokeWidth: 1.6,
+                    targetMarker: { type: 'path', d: 'M 9 -4.5 L 0 0 L 9 4.5', fill: 'none', 'stroke-width': 1.6 },
+                },
+            },
+            labels: isBranch
+                ? [
+                      {
+                          markup: [
+                              { tagName: 'rect', selector: 'labelBody', className: 'flow-activity-link-label' },
+                              { tagName: 'text', selector: 'labelText', className: 'flow-activity-link-label-text' },
+                          ],
+                          attrs: {
+                              labelText: { text: this.intl.t('order-config-manager.common.or'), fontSize: 11, textAnchor: 'middle', textVerticalAnchor: 'middle' },
+                              labelBody: { ref: 'labelText', x: 'calc(x-8)', y: 'calc(y-3)', width: 'calc(w+16)', height: 'calc(h+6)', rx: 9, ry: 9 },
+                          },
+                          position: { distance: 0.5 },
+                      },
+                  ]
+                : [],
+        });
     }
 
     /**
@@ -590,8 +845,8 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * @param {Object} elementView - The JointJS element view of the clicked activity.
      */
     onActivityClicked(elementView) {
-        // Disable editing activity if core service or if cannot view order config
-        if (this.config.core_service || this.abilities.cannot('fleet-ops view order-config')) return;
+        // Anyone who can view the config can open a step; what they can change is decided in the panel.
+        if (this.abilities.cannot('fleet-ops view order-config')) return;
 
         const { model } = elementView;
         const activity = this.getActivityById(model.id);
@@ -744,38 +999,10 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      */
     createActivityNode(activity, positionals = {}) {
         const { width, height, x, y } = positionals;
-        const code = this.activityText(activity.get('code'));
-        const status = this.activityText(activity.get('status'));
-        const details = this.activityText(activity.get('details'));
-        const wrappedDetails = this.activityText(joint.util.breakText(details, { width }));
         const activityNode = new joint.shapes.fleetbase.Activity({
             position: { x, y },
             size: { width, height },
-            attrs: {
-                pill: {
-                    ref: 'code',
-                    refWidth: code.length * 1.35,
-                    refHeight: 5,
-                    refX: -5,
-                    refY: -2,
-                    rx: 5,
-                    ry: 5,
-                    fill: '#374151',
-                    stroke: '#374151',
-                    strokeWidth: 1,
-                },
-                code: { ref: 'pill', text: code, fill: 'white', fontSize: 14, textAnchor: 'left', refX: 15, refY: 20, yAlignment: 'middle' },
-                status: { text: status, fill: 'white', fontSize: 14, fontWeight: 'bold', refY: 40, refX: 10, textAnchor: 'left' },
-                details: {
-                    text: wrappedDetails,
-                    fill: 'white',
-                    refY: 60,
-                    fontSize: 14,
-                    refX: 10,
-                    textAnchor: 'left',
-                },
-                body: { fill: activity.get('color'), stroke: '#374151', strokeWidth: 1, rx: 10, ry: 10 },
-            },
+            attrs: this.activityNodeAttrs(activity, width),
             interactive: false,
             activity: activity,
         });
@@ -787,6 +1014,72 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
     }
 
     /**
+     * What a step's node shows: a tile for its role (start, step, completes the order, ends it),
+     * its status and code, and an icon for each thing that happens when an order reaches it.
+     *
+     * @param {Object} activity
+     * @param {Number} width
+     * @returns {Object} JointJS attrs
+     */
+    activityNodeAttrs(activity, width = NODE_WIDTH) {
+        const code = this.activityText(activity.get('code'));
+        const status = this.activityText(activity.get('status')) || code;
+        const role = this.activityRole(activity);
+        const actions = (activity.get('actions') ?? []).map((trigger) => trigger?.action).filter(Boolean);
+        const shown = actions.slice(0, 3);
+        const roleText = role === 'step' ? '' : ` · ${this.intl.t(`order-config-manager.flow.role-${role}`)}`;
+        const textWidth = width - 54 - 12 - shown.length * 23;
+        const attrs = {
+            body: { class: `flow-activity flow-activity--${role}` },
+            tile: { class: `flow-activity-tile flow-activity-tile--${role}` },
+            tileIcon: { d: ROLE_ICONS[role], class: `flow-activity-tile-icon flow-activity-tile-icon--${role}` },
+            status: { text: joint.util.breakText(status, { width: textWidth }, { 'font-size': 13, 'font-weight': 600 }, { maxLineCount: 1, ellipsis: true }) },
+            meta: { text: joint.util.breakText(`${code}${roleText}`, { width: textWidth }, { 'font-size': 11 }, { maxLineCount: 1, ellipsis: true }) },
+        };
+        for (let index = 0; index < 3; index++) {
+            const name = shown[index];
+            const chipX = width - 12 - (shown.length - index) * 23 + 3;
+            attrs[`chip${index}`] = name ? { display: 'block', x: chipX, y: 22, width: 20, height: 20, rx: 6, ry: 6 } : { display: 'none' };
+            attrs[`chipIcon${index}`] = name
+                ? { display: 'block', d: ACTION_PATHS[actionIcon(name)] ?? ACTION_PATHS.bolt, transform: `translate(${chipX + 4.5}, 26.5) scale(0.46)` }
+                : { display: 'none' };
+            if (name) {
+                attrs[`chip${index}`].title = actionLabel(this.intl, name, this.capabilities.actions);
+            }
+        }
+
+        return attrs;
+    }
+
+    /**
+     * A step's role in the lifecycle: where orders start, a step along the way, the step that
+     * completes them, or another step that ends them.
+     */
+    activityRole(activity) {
+        const code = activity.get('code');
+        const lifecycle = this.lifecycle ?? {};
+        const root = getOrderConfigFlowRootCode(normalizeOrderConfigFlow(this.config?.flow ?? {}), lifecycle.initial);
+        if (activity.get('complete') || lifecycle.completed === code) {
+            return 'complete';
+        }
+        if (lifecycle.canceled === code || (lifecycle.terminal ?? []).includes(code)) {
+            return 'end';
+        }
+        if (code === (lifecycle.initial ?? root ?? 'created')) {
+            return 'start';
+        }
+        return 'step';
+    }
+
+    /** Redraws a step's node after it changed in the side panel. */
+    refreshActivityNode(activity) {
+        const node = activity?.get?.('node');
+        if (node) {
+            node.attr(this.activityNodeAttrs(activity, node.size().width));
+        }
+    }
+
+    /**
      * Determines the positioning for an activity node.
      * @param {Object} activity - The activity for which to determine positioning.
      * @param {Object} [parentActivity] - The parent activity, if applicable.
@@ -794,13 +1087,8 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      */
     getActivityPositioning(activity, parentActivity) {
         const parentActivities = parentActivity ? parentActivity.get('activities') : [];
-        const width = 250;
-        const baseHeight = 90;
-        const lineHeight = 10;
-        const details = this.activityText(activity.get('details'));
-        const wrappedDetails = this.activityText(joint.util.breakText(details, { width }));
-        const numberOfLines = wrappedDetails.split('\n').length;
-        const height = baseHeight + lineHeight * (numberOfLines - 1);
+        const width = NODE_WIDTH;
+        const height = NODE_HEIGHT;
         let x = 100;
         if (parentActivity) {
             const parentActivityX = parentActivity.get('node').position().x;
@@ -960,7 +1248,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             const parentActivity = this.getActivityById(deletedActivity.get('parentId'));
             if (parentActivity) {
                 this.removeActivityFromParentById(parentActivity, deletedActivityId);
-                this.repositionActivities(parentActivity);
+                this.tidyLayout();
             }
         }
     }
@@ -1047,9 +1335,9 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * @param {Object} targetActivity - The activity object that will serve as the reference for the new activity.
      * @returns {Object} - The newly created activity object.
      */
-    createNewActivity(targetActivity) {
+    createNewActivity(targetActivity, options = {}) {
         const activity = createFlowActivity();
-        return this.editActivity(activity, targetActivity);
+        return this.editActivity(activity, targetActivity, options);
     }
 
     /**
@@ -1058,18 +1346,26 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * @param {Object} activity - The activity object to be edited.
      * @param {Object} targetActivity - The target activity object that may be linked to the activity being edited.
      */
-    editActivity(activity, targetActivity) {
-        // if immutable do nothing
-        if (this.immutableActivities.includes(activity.get('code'))) return;
+    editActivity(activity, targetActivity, options = {}) {
+        const isNew = Boolean(targetActivity) && !this.flow[activity.get('code')];
+        // A system config's steps, and the standard dispatch steps, keep their details; what happens at them can still change.
+        const readonlyDetails = Boolean(this.config.core_service) || this.immutableActivities.includes(activity.get('code'));
+        const steps = Object.keys(this.flow);
+        const position = steps.indexOf(activity.get('code')) + 1;
 
         contextComponentCallback(this, 'onContextChanged', this._createContextualActivity(activity));
         this.resourceContextPanel.open({
             content: 'activity/form',
-            title: this.intl.t('common.create-new-resource', { resource: lowercase(this.intl.t('resource.activity')) }),
+            title: isNew ? this.intl.t('common.create-new-resource', { resource: lowercase(this.intl.t('resource.activity')) }) : activity.get('status') || activity.get('code'),
             panelContentClass: 'py-2 px-4',
             resource: activity,
             pojoResource: true,
-            saveTask: inlineTask(() => {
+            readonlyDetails,
+            initialTab: isNew ? 'details' : 'happens',
+            actions: this.capabilities.actions,
+            placeholders: this.capabilities.placeholders,
+            stepPosition: position > 0 ? this.intl.t('order-config-manager.step.kicker', { position, total: steps.length }) : null,
+            saveTask: inlineTask(async () => {
                 // Check if the activity exists and if it's not the same instance being updated
                 const existingActivity = this.flow[activity.get('code')];
                 if (existingActivity && existingActivity !== activity) {
@@ -1078,13 +1374,18 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
 
                 contextComponentCallback(this, 'onContextChanged', null);
                 this.updateActivityInFlowMap(activity);
-                if (targetActivity) {
+                if (targetActivity && options.before) {
+                    this.insertActivityBefore(targetActivity, activity, options.before);
+                } else if (targetActivity) {
                     this.addNewLinkedActivity(targetActivity, activity);
                 }
+                this.refreshActivityNode(activity);
                 this.resourceContextPanel.closeAll();
+                await this.persistFlow.perform();
             }),
             onClose: () => {
                 contextComponentCallback(this, 'onContextChanged', null);
+                this.refreshActivityNode(activity);
             },
         });
     }
@@ -1128,14 +1429,32 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         this.repositionActivities(targetActivity);
 
         // Link the new activity
-        const link = new joint.shapes.standard.Link({
-            source: { id: targetActivity.get('id') },
-            target: { id: newActivity.get('id') },
-        });
-        link.addTo(this.graph);
-        this.resizePaperWidthToFitActivities();
+        this.addLinkToGraph(targetActivity, newActivity);
+        this.tidyLayout();
 
         return newActivity;
+    }
+
+    /**
+     * Puts a new step between a step and one it leads to: the step now leads to the new one, and
+     * the new one to where it used to lead. The canvas is redrawn from the changed flow.
+     */
+    insertActivityBefore(parentActivity, activity, beforeActivity) {
+        const beforeCode = beforeActivity.get('code');
+        parentActivity.set(
+            'activities',
+            parentActivity.get('activities').map((child) => (child.get('code') === beforeCode ? activity : child))
+        );
+        activity.set('activities', [beforeActivity]);
+        this.redrawFlow();
+    }
+
+    /** Rebuilds the canvas from the flow as it is now. */
+    redrawFlow() {
+        this.clearGraph();
+        const flow = this.serializeFlow();
+        this.flow = {};
+        this.deserializeFlow(flow);
     }
 
     /**

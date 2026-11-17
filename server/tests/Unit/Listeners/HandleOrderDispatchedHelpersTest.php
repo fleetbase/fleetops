@@ -4,7 +4,6 @@ use Fleetbase\FleetOps\Events\OrderDispatchFailed;
 use Fleetbase\FleetOps\Listeners\HandleOrderDispatched;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
-use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\SQLiteConnection;
@@ -92,7 +91,7 @@ function fleetopsDispatchHelperBoot(): SQLiteConnection
         'orders'            => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'driver_assigned_uuid', 'status', 'adhoc', 'dispatched', 'dispatched_at', 'payload_uuid', 'meta', 'type'],
         'tracking_statuses' => ['uuid', 'company_uuid', 'code', 'tracking_number_uuid', 'status', 'details'],
         'tracking_numbers'  => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'owner_uuid', 'owner_type', 'status_uuid', 'type'],
-        'drivers'           => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'status', 'online', 'location', 'meta'],
+        'drivers'           => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'status', 'online', 'location', 'meta', 'current_job_uuid'],
         'companies'         => ['uuid', 'public_id', 'name'],
         'company_users'     => ['uuid', 'company_uuid', 'user_uuid'],
         'users'             => ['uuid', 'public_id', 'company_uuid', 'name', 'phone', 'email'],
@@ -148,20 +147,6 @@ test('dispatch activity existence check reflects tracking statuses', function ()
     expect($probe->callHelper('doesntHaveDispatchActivity', $order))->toBeFalse();
 });
 
-test('nearby available drivers runs the spatial company scoped query', function () {
-    $connection = fleetopsDispatchHelperBoot();
-
-    $probe   = new FleetOpsDispatchHelperProbe();
-    $drivers = $probe->callHelper('nearbyAvailableDrivers', new Point(1.3, 103.8), 5000);
-
-    expect($drivers)->toHaveCount(1)
-        ->and($drivers->first()->uuid)->toBe('driver-1');
-
-    // Offline drivers are excluded
-    $connection->table('drivers')->where('uuid', 'driver-1')->update(['online' => '0']);
-    expect($probe->callHelper('nearbyAvailableDrivers', new Point(1.3, 103.8), 5000))->toHaveCount(0);
-});
-
 test('assigned driver lookup and notification helpers resolve and send', function () {
     fleetopsDispatchHelperBoot();
     $order                       = Order::where('uuid', 'order-1')->withoutGlobalScopes()->first();
@@ -179,8 +164,6 @@ test('assigned driver lookup and notification helpers resolve and send', functio
     app()->instance(Illuminate\Contracts\Notifications\Dispatcher::class, $dispatcher);
 
     $probe->callHelper('notifyAssignedDriver', $driver, $order);
-    $driver->distance = 250;
-    $probe->callHelper('notifyAdhocDriver', $driver, $order);
 
-    expect($dispatcher->sent)->toHaveCount(2);
+    expect($dispatcher->sent)->toHaveCount(1);
 });

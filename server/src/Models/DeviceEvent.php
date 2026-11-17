@@ -311,7 +311,7 @@ class DeviceEvent extends Model
     {
         $startTime = $this->occurred_at ?? $this->created_at;
 
-        return $startTime->diffInMinutes(now());
+        return (int) $startTime->diffInMinutes(now(), true);
     }
 
     /**
@@ -325,7 +325,7 @@ class DeviceEvent extends Model
 
         $startTime = $this->occurred_at ?? $this->created_at;
 
-        return $startTime->diffInMinutes($this->processed_at);
+        return (int) $startTime->diffInMinutes($this->processed_at, true);
     }
 
     /**

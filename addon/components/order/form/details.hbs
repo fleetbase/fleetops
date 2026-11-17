@@ -171,6 +171,25 @@
                     @wrapperClass="mb-0"
                     @helpText={{t "order.fields.adhoc-ping-help-text"}}
                 />
+                <InputGroup @name={{t "order.fields.adhoc-strategy"}} @helpText={{t "order.fields.adhoc-strategy-help-text"}} @wrapperClass="mt-3 mb-0">
+                    <Select
+                        @value={{this.adhocStrategy}}
+                        @options={{this.adhocStrategyOptions}}
+                        @optionLabel="label"
+                        @optionValue="name"
+                        @onSelect={{this.setAdhocStrategy}}
+                        class="w-full"
+                        data-test-order-adhoc-strategy
+                    />
+                </InputGroup>
+                <InputGroup
+                    @name={{t "order.fields.required-vehicle-type"}}
+                    @value={{@resource.required_vehicle_type}}
+                    @placeholder={{t "order.fields.required-vehicle-type-placeholder"}}
+                    @helpText={{t "order.fields.required-vehicle-type-help-text"}}
+                    @wrapperClass="mt-3 mb-0"
+                    data-test-order-required-vehicle-type
+                />
                 <div class="mt-2 px-3 py-1 rounded-lg border border-blue-600 bg-blue-100 flex items-center">
                     <FaIcon @icon="triangle-exclamation" class="text-blue-900 mr-1.5" />
                     <span class="text-blue-900 text-xs">{{t "order.fields.adhoc-ping-message"}}</span>

@@ -45,7 +45,7 @@ class ReplayPositions implements ShouldQueue
 
         foreach ($this->positions as $index => $position) {
             $currentTime = Carbon::parse($position->created_at);
-            $offset      = $baseTime->diffInSeconds($currentTime, false) / $this->speed;
+            $offset      = (int) $baseTime->diffInSeconds($currentTime, false) / $this->speed;
 
             // Schedule a small job for each event with its own delay
             $this->dispatchReplayPosition($position, $index, max(0, $offset));

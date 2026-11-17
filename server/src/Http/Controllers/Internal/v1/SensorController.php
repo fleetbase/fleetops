@@ -25,7 +25,7 @@ class SensorController extends FleetOpsController
     public function export(ExportRequest $request)
     {
         $format     = $request->input('format', 'xlsx');
-        $selections = $request->array('selections');
+        $selections = $request->inputArray('selections');
         $fileName   = trim(Str::slug('sensors-' . date('Y-m-d-H:i')) . '.' . $format);
 
         return $this->downloadExport(new SensorExport($selections), $fileName);

@@ -11,8 +11,13 @@ class Flow extends FlowResource implements \IteratorAggregate
      */
     public function getIterator(): \Traversable
     {
-        foreach ($this->attributes['activities'] as $activityAttributes) {
-            yield new Activity($activityAttributes, $this->serialize());
+        // Stored flows are keyed by activity code; older ones list them under `activities`.
+        $activities = isset($this->attributes['activities']) && is_array($this->attributes['activities']) ? $this->attributes['activities'] : $this->attributes;
+
+        foreach ($activities as $activityAttributes) {
+            if (is_array($activityAttributes) && isset($activityAttributes['code'])) {
+                yield new Activity($activityAttributes, $this->serialize());
+            }
         }
     }
 

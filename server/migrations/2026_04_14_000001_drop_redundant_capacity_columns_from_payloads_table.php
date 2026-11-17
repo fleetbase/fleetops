@@ -35,8 +35,8 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('payloads', function (Blueprint $table) {
-            $table->unsignedDecimal('capacity_weight_kg', 10, 2)->nullable()->after('cod_currency');
-            $table->unsignedDecimal('capacity_volume_m3', 10, 3)->nullable()->after('capacity_weight_kg');
+            $table->decimal('capacity_weight_kg', 10, 2)->unsigned()->nullable()->after('cod_currency');
+            $table->decimal('capacity_volume_m3', 10, 3)->unsigned()->nullable()->after('capacity_weight_kg');
             $table->unsignedInteger('capacity_pallets')->nullable()->after('capacity_volume_m3');
             $table->unsignedInteger('capacity_parcels')->nullable()->after('capacity_pallets');
         });

@@ -24,9 +24,12 @@ class PurchaseRate extends FleetbaseResource
             'order'         => $this->order_id,
             'customer'      => $this->customer_id,
             'transaction'   => $this->transaction_id,
+            'service_name'  => data_get($this, 'serviceQuote.serviceRate.service_name'),
             'amount'        => $this->amount,
             'currency'      => $this->currency,
             'status'        => $this->status,
+            // Priced again from the order's actual distance and time (the config's pricing policy).
+            'repriced'      => (bool) data_get($this->meta, 'repriced'),
             // 'type'          => $this->when(Http::isInternalRequest(), 'service-rate'),
             'updated_at'    => $this->updated_at,
             'created_at'    => $this->created_at,

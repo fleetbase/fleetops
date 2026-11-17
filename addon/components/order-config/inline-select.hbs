@@ -1,0 +1,46 @@
+{{#if @disabled}}
+    <span class="oc-ctl {{if @isDefault 'oc-ctl--default' 'oc-ctl--set'}} oc-ctl--readonly" aria-label={{@ariaLabel}}>{{this.displayLabel}}</span>
+{{else}}
+    <BasicDropdown @renderInPlace={{true}} @horizontalPosition="left" as |dd|>
+        <dd.Trigger
+            class="oc-ctl {{if @invalid 'oc-ctl--error' (if @isDefault 'oc-ctl--default' 'oc-ctl--set')}} {{@class}}"
+            aria-label={{@ariaLabel}}
+            aria-haspopup="listbox"
+            aria-expanded={{if dd.isOpen "true" "false"}}
+        >
+            <span>{{this.displayLabel}}</span>
+            {{#unless @hideCaret}}
+                <FaIcon @icon="chevron-down" @size="xs" class="oc-ctl__caret" />
+            {{/unless}}
+        </dd.Trigger>
+        <dd.Content class="oc-menu">
+            <ul role="listbox" aria-label={{@ariaLabel}}>
+                {{#each @options as |option|}}
+                    <li
+                        role="option"
+                        tabindex="0"
+                        aria-selected={{if (eq option.value @value) "true" "false"}}
+                        class="oc-menu__item"
+                        {{on "click" (fn this.select dd option)}}
+                        {{on "keydown" (fn this.selectOnKey dd option)}}
+                    >
+                        <span class="oc-menu__label">
+                            <span>{{option.label}}</span>
+                            {{#if option.description}}
+                                <span class="oc-menu__description">{{option.description}}</span>
+                            {{/if}}
+                        </span>
+                        <span class="oc-menu__meta">
+                            {{#if option.isDefault}}
+                                <span>{{t "order-config-manager.common.default"}}</span>
+                            {{/if}}
+                            {{#if (eq option.value @value)}}
+                                <span class="oc-menu__check" aria-hidden="true">✓</span>
+                            {{/if}}
+                        </span>
+                    </li>
+                {{/each}}
+            </ul>
+        </dd.Content>
+    </BasicDropdown>
+{{/if}}

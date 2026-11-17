@@ -1,0 +1,12 @@
+<input
+    type="text"
+    inputmode="numeric"
+    class="oc-ctl oc-ctl--input {{if @invalid 'oc-ctl--error' (if this.isEmpty 'oc-ctl--default' 'oc-ctl--set')}}"
+    style={{this.style}}
+    value={{@value}}
+    placeholder={{this.placeholder}}
+    aria-label={{@ariaLabel}}
+    aria-invalid={{if @invalid "true" "false"}}
+    readonly={{@disabled}}
+    {{on "input" this.change}}
+/>

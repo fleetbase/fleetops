@@ -131,7 +131,7 @@ class FleetOpsInternalMetricsRequestFake extends Request
         return str((string) ($this->values[$key] ?? $default ?? ''));
     }
 
-    public function array($key = null, $default = []): array
+    public function inputArray($key = null, $default = []): array
     {
         $value = $this->values[$key] ?? $default;
 

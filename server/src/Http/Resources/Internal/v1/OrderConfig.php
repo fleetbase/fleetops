@@ -32,6 +32,9 @@ class OrderConfig extends FleetbaseResource
             'entities'      => $this->entities ?? [],
             'tags'          => $this->tags ?? [],
             'meta'          => $this->meta ?? [],
+            // As stored, for editing: settings left out take their defaults on the server.
+            'policies'      => $this->policies ?? (object) [],
+            'triggers'      => $this->triggers ?? [],
             'created_at'    => $this->created_at,
             'updated_at'    => $this->updated_at,
             'deleted_at'    => $this->deleted_at,

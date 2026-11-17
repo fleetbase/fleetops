@@ -1,0 +1,20 @@
+{{#if @count}}
+    <div class="oc-save-bar" role="region" aria-label={{t "order-config-manager.common.unsaved-changes"}}>
+        <span class="oc-save-bar__text">
+            <span class="oc-save-bar__title">{{t "order-config-manager.common.unsaved-count" count=@count}}</span>
+            <span class="oc-save-bar__hint {{if @errorHint 'oc-save-bar__hint--error'}}">{{or @errorHint @hint}}</span>
+        </span>
+        <span class="oc-save-bar__actions">
+            <Button @type="default" @text={{t "order-config-manager.common.discard"}} @onClick={{@onDiscard}} @disabled={{@isSaving}} />
+            <Button
+                @type="primary"
+                @icon="save"
+                @text={{t "order-config-manager.common.save-changes"}}
+                @onClick={{@onSave}}
+                @isLoading={{@isSaving}}
+                @disabled={{if @errorHint true false}}
+                @permission="fleet-ops update order-config"
+            />
+        </span>
+    </div>
+{{/if}}

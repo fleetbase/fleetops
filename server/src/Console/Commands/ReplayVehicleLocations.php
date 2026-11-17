@@ -259,7 +259,7 @@ class ReplayVehicleLocations extends Command
     {
         $currentTime   = Carbon::parse($createdAt);
         $previousTime  = Carbon::parse($previousTimestamp);
-        $diffInSeconds = $currentTime->diffInSeconds($previousTime);
+        $diffInSeconds = (int) $currentTime->diffInSeconds($previousTime, true);
 
         return [$diffInSeconds, $diffInSeconds / $speedMultiplier];
     }

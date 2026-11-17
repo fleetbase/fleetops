@@ -14,11 +14,37 @@ export default class OrderFormDetailsComponent extends Component {
     @service leafletLayerVisibilityManager;
     @service currentUser;
     @service orderPresentation;
+    @service fetch;
+    @service intl;
     @tracked customFields;
+    @tracked adhocStrategies = [];
 
     constructor() {
         super(...arguments);
         this.orderConfigActions.loadAll.perform();
+        this.loadAdhocStrategies.perform();
+    }
+
+    /** Strategy choices for an adhoc order, with the default first. An empty name stands for no strategy of the order's own. */
+    get adhocStrategyOptions() {
+        return [{ name: '', label: this.intl.t('order.fields.adhoc-strategy-default') }, ...this.adhocStrategies];
+    }
+
+    get adhocStrategy() {
+        return this.args.resource?.adhoc_strategy ?? '';
+    }
+
+    @action setAdhocStrategy(name) {
+        this.args.resource.adhoc_strategy = name || null;
+    }
+
+    @task *loadAdhocStrategies() {
+        try {
+            const { strategies } = yield this.fetch.get('fleet-ops/settings/adhoc-dispatch-strategies');
+            this.adhocStrategies = strategies ?? [];
+        } catch {
+            this.adhocStrategies = [];
+        }
     }
 
     /** The presentation profile applying to the order's current config, if any. */

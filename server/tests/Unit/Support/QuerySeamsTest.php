@@ -178,8 +178,7 @@ test('adhoc dispatch seams build order and driver queries', function () {
     $class   = Fleetbase\FleetOps\Console\Commands\DispatchAdhocOrders::class;
 
     // The order query is bound to the named connection
-    expect(fleetopsQuerySeamInvoke($command, $class, 'newOrderQuery', ['mysql'])->get()->pluck('uuid')->all())->toBe(['order-adhoc-1'])
-        ->and(fleetopsQuerySeamInvoke($command, $class, 'newDriverQuery')->get()->pluck('uuid')->all())->toBe(['driver-adhoc-1']);
+    expect(fleetopsQuerySeamInvoke($command, $class, 'newOrderQuery', ['mysql'])->get()->pluck('uuid')->all())->toBe(['order-adhoc-1']);
 });
 
 test('order finalization job seams resolve records and fire the ready event', function () {
@@ -292,22 +291,20 @@ test('adhoc dispatch finds online drivers for the orders company', function () {
     });
     $connection->table('drivers')->insert([
         // Online and in the order's company
-        ['uuid' => 'driver-near-1', 'company_uuid' => 'company-seam-1', 'user_uuid' => 'user-adhoc-a', 'online' => '1'],
+        ['uuid' => 'driver-near-1', 'company_uuid' => 'company-seam-1', 'user_uuid' => 'user-adhoc-a', 'online' => '1', 'status' => 'available'],
         // Online but another company
-        ['uuid' => 'driver-near-2', 'company_uuid' => 'company-other', 'user_uuid' => 'user-adhoc-b', 'online' => '1'],
+        ['uuid' => 'driver-near-2', 'company_uuid' => 'company-other', 'user_uuid' => 'user-adhoc-b', 'online' => '1', 'status' => 'available'],
         // Right company but offline
-        ['uuid' => 'driver-near-3', 'company_uuid' => 'company-seam-1', 'user_uuid' => 'user-adhoc-a', 'online' => '0'],
+        ['uuid' => 'driver-near-3', 'company_uuid' => 'company-seam-1', 'user_uuid' => 'user-adhoc-a', 'online' => '0', 'status' => 'available'],
     ]);
 
     $order = new Fleetbase\FleetOps\Models\Order();
     $order->setRawAttributes(['uuid' => 'order-adhoc-near', 'company_uuid' => 'company-seam-1'], true);
 
-    $class   = Fleetbase\FleetOps\Console\Commands\DispatchAdhocOrders::class;
-    $command = (new ReflectionClass($class))->newInstanceWithoutConstructor();
     $pickup  = new Fleetbase\LaravelMysqlSpatial\Types\Point(1.30, 103.80);
 
     // In testing mode the spatial predicates are skipped so the company and
     // online filters can be asserted on their own
-    $drivers = $command->getNearbyDriversForOrder($order, $pickup, 5000, true);
+    $drivers = Fleetbase\FleetOps\Support\DriverMatching::nearby($order, $pickup, true)->get();
     expect($drivers->pluck('uuid')->all())->toBe(['driver-near-1']);
 });

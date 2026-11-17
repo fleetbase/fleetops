@@ -25,8 +25,8 @@ return new class extends Migration {
             // Skills / capabilities
             $table->json('skills')->nullable()->after('status');
             // Multi-dimensional capacity
-            $table->unsignedDecimal('capacity_weight_kg', 10, 2)->nullable()->after('skills');
-            $table->unsignedDecimal('capacity_volume_m3', 10, 3)->nullable()->after('capacity_weight_kg');
+            $table->decimal('capacity_weight_kg', 10, 2)->unsigned()->nullable()->after('skills');
+            $table->decimal('capacity_volume_m3', 10, 3)->unsigned()->nullable()->after('capacity_weight_kg');
             $table->unsignedInteger('capacity_pallets')->nullable()->after('capacity_volume_m3');
             $table->unsignedInteger('capacity_parcels')->nullable()->after('capacity_pallets');
             // Route constraints

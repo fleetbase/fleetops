@@ -234,7 +234,7 @@ class Maintenance extends Model
     public function getDurationHoursAttribute(): ?float
     {
         if ($this->started_at && $this->completed_at) {
-            return $this->started_at->diffInHours($this->completed_at);
+            return (int) $this->started_at->diffInHours($this->completed_at, true);
         }
 
         return null;
@@ -261,7 +261,7 @@ class Maintenance extends Model
             return null;
         }
 
-        return now()->diffInDays($this->scheduled_at, false);
+        return (int) now()->diffInDays($this->scheduled_at, false);
     }
 
     /**

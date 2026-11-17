@@ -373,7 +373,7 @@ class Device extends Model
             return 'never_connected';
         }
 
-        $minutesOffline = $this->last_online_at->diffInMinutes(now());
+        $minutesOffline = (int) $this->last_online_at->diffInMinutes(now(), true);
 
         if ($minutesOffline <= 10) {
             return 'online';
