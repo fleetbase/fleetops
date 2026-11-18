@@ -14,12 +14,18 @@ class CompanyObserver
      */
     public function created(Company $company)
     {
-        // Add the default transport order config
+        // Add the default order configs: transport and passenger
         $this->createTransportConfig($company);
+        $this->createPassengerConfig($company);
     }
 
     protected function createTransportConfig(Company $company): void
     {
         FleetOps::createTransportConfig($company);
+    }
+
+    protected function createPassengerConfig(Company $company): void
+    {
+        FleetOps::createPassengerConfig($company);
     }
 }

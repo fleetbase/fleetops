@@ -32,10 +32,10 @@ class FleetOpsObserverHelperDatabaseProbe
 function fleetopsObserverHelperConnection(): SQLiteConnection
 {
     $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
-    $connection->statement('create table custom_fields (uuid varchar(64) primary key, category_uuid varchar(64) null, company_uuid varchar(64) null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
+    $connection->statement('create table custom_fields (uuid varchar(64) primary key, category_uuid varchar(64) null, company_uuid varchar(64) null, subject_uuid varchar(64) null, subject_type varchar(255) null, public_id varchar(64) null, name varchar(255) null, label varchar(255) null, type varchar(64) null, component varchar(64) null, default_value text null, required tinyint null, editable tinyint null, validation_rules text null, help_text text null, description text null, options text null, meta text null, "order" integer null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
     $connection->statement('create table users (uuid varchar(64) primary key, company_uuid varchar(64) null, public_id varchar(64) null, avatar_uuid varchar(64) null, name varchar(255) null, phone varchar(64) null, email varchar(255) null, type varchar(64) null, status varchar(64) null, last_login datetime null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
     $connection->statement('create table drivers (uuid varchar(64) primary key, user_uuid varchar(64) null, company_uuid varchar(64) null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
-    $connection->statement('create table order_configs (id integer primary key autoincrement, uuid varchar(64) null, public_id varchar(64) null, company_uuid varchar(64) null, author_uuid varchar(64) null, category_uuid varchar(64) null, icon_uuid varchar(64) null, name varchar(255) null, namespace varchar(255) null, description text null, key varchar(255) null, status varchar(64) null, version varchar(64) null, core_service tinyint null, flow text null, entities text null, tags text null, meta text null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
+    $connection->statement('create table order_configs (id integer primary key autoincrement, uuid varchar(64) null, public_id varchar(64) null, company_uuid varchar(64) null, author_uuid varchar(64) null, category_uuid varchar(64) null, icon_uuid varchar(64) null, name varchar(255) null, namespace varchar(255) null, description text null, key varchar(255) null, status varchar(64) null, version varchar(64) null, core_service tinyint null, flow text null, entities text null, tags text null, meta text null, policies text null, triggers text null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
 
     $resolver = new ConnectionResolver([
         'default' => $connection,
@@ -88,7 +88,7 @@ test('user observer deletes scoped driver records for the removed user', functio
         ->and(Driver::withTrashed()->withoutGlobalScopes()->where('user_uuid', 'other-user')->whereNull('deleted_at')->count())->toBe(1);
 });
 
-test('company observer creates the default transport order config', function () {
+test('company observer creates the default transport and passenger order configs', function () {
     fleetopsObserverHelperConnection();
 
     $company = new Company();
@@ -107,6 +107,21 @@ test('company observer creates the default transport order config', function () 
         ->and($transport->core_service)->toBe(1)
         ->and($transport->tags)->toBe(['transport', 'delivery'])
         ->and($transport->flow)->toHaveKeys(['created', 'enroute', 'started', 'completed', 'dispatched']);
+
+    $passenger = OrderConfig::where([
+        'company_uuid' => 'company-uuid',
+        'key'          => 'passenger',
+        'namespace'    => 'system:order-config:passenger',
+    ])->first();
+
+    expect($passenger)->toBeInstanceOf(OrderConfig::class)
+        ->and($passenger->name)->toBe('Passenger')
+        ->and($passenger->core_service)->toBe(1)
+        ->and($passenger->flow)->toHaveKeys(['created', 'dispatched', 'started', 'arrived', 'in_progress', 'completed', 'no_show']);
+
+    (new CompanyObserver())->created($company);
+
+    expect(OrderConfig::where('company_uuid', 'company-uuid')->where('key', 'passenger')->count())->toBe(1);
 });
 
 test('zone observer invalidates service area cache only when a service area is present', function () {
