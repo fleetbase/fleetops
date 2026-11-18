@@ -32,17 +32,4 @@ class FleetOps
     {
         return OrderConfigTemplates::create('passenger', $company);
     }
-
-    /**
-     * The order configs every company has: transport and passenger.
-     *
-     * @return array<string, OrderConfig>
-     */
-    public static function createDefaultConfigs(Company $company): array
-    {
-        return [
-            'transport' => static::createTransportConfig($company),
-            'passenger' => static::createPassengerConfig($company),
-        ];
-    }
 }
