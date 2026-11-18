@@ -19,6 +19,13 @@ use Illuminate\Support\Facades\Schema;
  * Every step checks first and skips work that already exists. MySQL does not roll back DDL, so
  * a run that fails partway (the v0.8.0 production deploy stopped at `order_configs`) leaves the
  * earlier tables and columns in place, and a plain re-run would fail on "table already exists".
+ *
+ * Column changes run with MySQL 8.4's `restrict_fk_on_non_standard_key` off for this session.
+ * `order_configs.uuid` has an ordinary index, and `orders`, `service_rates` and storefront's
+ * `stores` and `networks` all have foreign keys pointing at it. With that setting on (8.4's
+ * default), MySQL rejects any ALTER of the parent with "1553 Cannot drop index '<unknown key
+ * name>'". That is what stopped the v0.8.0 production deploy. MySQL 8.0 has no such setting, so
+ * there it changes nothing.
  */
 return new class extends Migration {
     public function up(): void
@@ -102,11 +109,40 @@ return new class extends Migration {
             return;
         }
 
-        Schema::table($table, function (Blueprint $blueprint) use ($missing) {
-            foreach ($missing as $define) {
-                $define($blueprint);
-            }
+        $this->allowingNonStandardForeignKeys(function () use ($table, $missing) {
+            Schema::table($table, function (Blueprint $blueprint) use ($missing) {
+                foreach ($missing as $define) {
+                    $define($blueprint);
+                }
+            });
         });
+    }
+
+    /**
+     * Run `$callback` with `restrict_fk_on_non_standard_key` off for this session, then restore it.
+     * Where the variable doesn't exist (MySQL before 8.4, MariaDB, SQLite) it just runs `$callback`.
+     */
+    private function allowingNonStandardForeignKeys(callable $callback): void
+    {
+        $connection = Schema::getConnection();
+        $setting    = $connection->getDriverName() === 'mysql'
+            ? $connection->selectOne("show session variables like 'restrict_fk_on_non_standard_key'")
+            : null;
+
+        if (!$setting) {
+            $callback();
+
+            return;
+        }
+
+        $previous = strtoupper((string) $setting->Value) === 'OFF' ? 'OFF' : 'ON';
+        $connection->statement('set session restrict_fk_on_non_standard_key = OFF');
+
+        try {
+            $callback();
+        } finally {
+            $connection->statement("set session restrict_fk_on_non_standard_key = {$previous}");
+        }
     }
 
     /**
@@ -116,7 +152,7 @@ return new class extends Migration {
     {
         $existing = array_values(array_filter($columns, fn ($column) => Schema::hasColumn($table, $column)));
         if ($existing) {
-            Schema::table($table, fn (Blueprint $blueprint) => $blueprint->dropColumn($existing));
+            $this->allowingNonStandardForeignKeys(fn () => Schema::table($table, fn (Blueprint $blueprint) => $blueprint->dropColumn($existing)));
         }
     }
 };
