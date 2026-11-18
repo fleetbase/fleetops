@@ -105,6 +105,7 @@ menu:
     navigator-app: Navigator App
     payments: Payments
     notifications: Notifications
+    push-apps: Push Apps
     routing: Routing
     dispatch: Dispatch
     map: Map
@@ -3207,6 +3208,60 @@ route-list:
     more-waypoints: more waypoints
 
 settings:
+    push-apps:
+        title: Push Apps
+        intro: 'Your own apps, each with the Apple and Firebase keys its push notifications are sent with. An app registers devices with its push app key, and those devices get pushes from that app. Navigator and any app registered without a key use the push settings your system administrator set up.'
+        add: Add push app
+        new-title: New push app
+        edit-title: 'Edit {name}'
+        name: Name
+        name-placeholder: Bayline Rides
+        name-help: 'For you to tell your apps apart, for example the name on the App Store.'
+        on: Sending pushes
+        on-help: Turn off to stop sending to this app's devices without removing it.
+        ios: iOS (Apple Push Notification service)
+        ios-help: 'From your Apple Developer account: Certificates, Identifiers & Profiles → Keys, a key with Apple Push Notifications service enabled. Leave all of these empty if the app isn’t on iOS.'
+        key-id: Key ID
+        team-id: Team ID
+        bundle-id: Bundle ID
+        environment: APNs environment
+        environment-help: Leave on both to send to App Store and development builds.
+        environment-both: Production, then sandbox
+        environment-production: Production only
+        environment-sandbox: Sandbox only
+        p8: .p8 key
+        p8-help: Paste the contents of the .p8 file you downloaded from Apple.
+        p8-saved: A key is saved. Leave this empty to keep it, or paste a new one to replace it.
+        android: Android (Firebase Cloud Messaging)
+        android-help: 'From the Firebase console: Project settings → Service accounts → Generate new private key. Leave empty if the app isn’t on Android.'
+        service-account: Service account JSON
+        service-account-placeholder: '{ "type": "service_account", "project_id": "…" }'
+        service-account-help: Paste the whole JSON file.
+        service-account-saved: 'The service account for {project} is saved. Leave this empty to keep it, or paste a new one to replace it.'
+        android-channel: Android notification channel
+        android-channel-help: Optional. The channel ID your app creates for these notifications.
+        key: Push app key
+        key-help: Build this into the app and send it as push_app when the app registers a device.
+        status-on: Sending
+        status-off: Turned off
+        ios-ready: 'iOS: {bundle}'
+        ios-off: No iOS
+        android-ready: 'Android: {project}'
+        android-off: No Android
+        devices: '{count, plural, =0 {No devices yet} one {# device} other {# devices}}'
+        send-test: Send test push
+        test-platform: Platform
+        test-token: Device token
+        test-token-help: The push token of a device with the app installed.
+        test-sent: The test push was sent.
+        test-failed: 'The test push wasn’t sent: {reason}'
+        empty: No push apps yet. Add one for each of your own apps that receives push notifications.
+        created: '{name} added.'
+        saved: '{name} saved.'
+        deleted: '{name} removed.'
+        delete: Remove push app
+        delete-title: 'Remove {name}?'
+        delete-body: '{count, plural, =0 {Its keys are deleted.} one {Its keys are deleted, and its # device stops getting pushes until the app registers again with another key.} other {Its keys are deleted, and its # devices stop getting pushes until the app registers again with another key.}}'
     dispatch:
         title: Fleet-Ops Dispatch
         adhoc-orders: Adhoc dispatch defaults

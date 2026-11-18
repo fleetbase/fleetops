@@ -36,7 +36,7 @@ test('order changed pushes the changes to the driver with fcm safe data', functi
         ->and($notification->message)->toBe('Drop-off changed to 8 Marina View · Items changed')
         ->and($notification->data)->toBe(['type' => 'order_changed', 'id' => 'order_change', 'changes' => ['dropoff', 'items']])
         ->and($notification->fcmData())->toBe(['type' => 'order_changed', 'id' => 'order_change', 'changes' => 'dropoff,items'])
-        ->and($notification->via(null))->toBe(['broadcast', FcmChannel::class, ApnChannel::class])
+        ->and($notification->via(null))->toBe(['broadcast', FcmChannel::class, ApnChannel::class, Fleetbase\Push\PushAppChannel::class])
         ->and($notification->toArray())->toMatchArray(['event' => 'order.changed_notification', 'data' => $notification->data])
         ->and(array_map(fn ($channel) => $channel->name, $notification->broadcastOn()))->toContain('driver.driver-uuid')
         ->and((new OrderChanged(fleetopsOrderChangeNotificationOrder()))->message)->toBe('This order was changed, tap for details.');
@@ -51,7 +51,7 @@ test('order unassigned tells the driver the order is no longer theirs', function
 
     expect($notification->title)->toBe('Order FLB-CHANGE-1 unassigned')
         ->and($notification->data)->toBe(['type' => 'order_unassigned', 'id' => 'order_change'])
-        ->and($notification->via(null))->toBe([FcmChannel::class, ApnChannel::class])
+        ->and($notification->via(null))->toBe([FcmChannel::class, ApnChannel::class, Fleetbase\Push\PushAppChannel::class])
         ->and($notification->toArray()['event'])->toBe('order.unassigned_notification');
 
     expect(fn () => $notification->toFcm(null))->toThrow(TypeError::class)

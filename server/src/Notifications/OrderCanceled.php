@@ -6,7 +6,9 @@ use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\TrackingCode;
-use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Push\Concerns\PushesToApps;
+use Fleetbase\Push\Contracts\SendsToPushApps;
+use Fleetbase\Push\PushAppChannel;
 use Fleetbase\Support\PushNotification;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Bus\Queueable;
@@ -16,9 +18,10 @@ use Illuminate\Notifications\Notification;
 use NotificationChannels\Apn\ApnChannel;
 use NotificationChannels\Fcm\FcmChannel;
 
-class OrderCanceled extends Notification implements ShouldQueue
+class OrderCanceled extends Notification implements ShouldQueue, SendsToPushApps
 {
     use Queueable;
+    use PushesToApps;
 
     /**
      * The order instance this notification is for.
@@ -96,7 +99,7 @@ class OrderCanceled extends Notification implements ShouldQueue
      */
     public function via($notifiable)
     {
-        return ['broadcast', 'mail', FcmChannel::class, ApnChannel::class];
+        return ['broadcast', 'mail', FcmChannel::class, ApnChannel::class, PushAppChannel::class];
     }
 
     /**
