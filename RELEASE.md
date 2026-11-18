@@ -1,17 +1,17 @@
-> v0.7.1 ~ "The adhoc dispatch migration runs on MySQL 8.4 and after a failed run"
+> v0.7.2 ~ "Foreign keys point at unique keys"
 
 ---
 ## Highlights
 
-- **The v0.7.0 migration now runs on MySQL 8.4.** MySQL 8.4 turns on `restrict_fk_on_non_standard_key` by default and then rejects any change to a table whose foreign keys point at a non-unique key, with `1553 Cannot drop index '<unknown key name>': needed in a foreign key constraint`. `order_configs.uuid` is one of those, so `2026_11_06_000001_adhoc_dispatch_and_order_config_policies` failed there. Its column changes now run with that setting off for the session, and nothing changes on MySQL 8.0, MariaDB or SQLite.
-- **A failed run of that migration no longer blocks the next one.** MySQL doesn't roll back schema changes, so the tables and columns made before the failure stayed, and running it again failed on "table already exists". Each table and column is now created only if it's missing.
+- **Fleet-Ops tables that foreign keys point at can be altered on MySQL 8.4 with `restrict_fk_on_non_standard_key` on.** MySQL 8.4 refuses any change to a table that a foreign key points at through a non-unique key, with `1553 Cannot drop index '<unknown key name>'`. v0.7.1 worked around this for one migration. This release removes the cause: `uuid` is now unique on `devices`, `inspection_forms`, `inspection_submissions`, `order_configs`, `telematics`, `warranties` and `work_orders`. Each column's old index is replaced, so it is not indexed twice. A column that already has a unique or primary key is left alone. A table with duplicate values is skipped and reported, and the migration can be run again once they are removed. Runs on the main and sandbox databases. Storefront's foreign keys to `order_configs` are covered too.
 
 ---
 ## Upgrading
-If a v0.7.0 upgrade stopped in this migration, upgrade to v0.7.1 and run `php artisan migrate` again. It finishes from where it stopped. Run `php artisan sandbox:migrate` too if you use sandbox.
+
+- Run `php artisan migrate` and `php artisan sandbox:migrate`. If a table is reported as having duplicate values, it is skipped. Remove the duplicates, then run the `php artisan migrate:refresh --force --path=…` command the message gives. It rolls back and re-runs only that migration, and lists every other migration as "Migration not found" without touching them.
+- No new dependency: the migration doesn't need core-api 2.0.2's migration hook.
 
 ---
 ## Need help?
 - [GitHub Discussions](https://github.com/fleetbase/fleetbase/discussions)
 - [Discord](https://discord.gg/HnTqQ6zAVn)
----
