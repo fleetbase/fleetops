@@ -15,70 +15,144 @@ use Illuminate\Support\Facades\Schema;
  * - service_quotes: the `distance` (metres) and `time` (seconds) a quote was priced on.
  * - driver_ratings: a customer's stars for the driver of a finished order, with each driver's
  *   average and count kept on `drivers`.
+ *
+ * Every step checks first and skips work that already exists. MySQL does not roll back DDL, so
+ * a run that fails partway (the v0.8.0 production deploy stopped at `order_configs`) leaves the
+ * earlier tables and columns in place, and a plain re-run would fail on "table already exists".
+ *
+ * Column changes run with MySQL 8.4's `restrict_fk_on_non_standard_key` off for this session.
+ * `order_configs.uuid` has an ordinary index, and `orders`, `service_rates` and storefront's
+ * `stores` and `networks` all have foreign keys pointing at it. With that setting on (8.4's
+ * default), MySQL rejects any ALTER of the parent with "1553 Cannot drop index '<unknown key
+ * name>'". That is what stopped the v0.8.0 production deploy. MySQL 8.0 has no such setting, so
+ * there it changes nothing.
  */
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('order_offers', function (Blueprint $table) {
-            $table->increments('id');
-            $table->uuid('uuid')->unique();
-            $table->uuid('company_uuid')->nullable()->index();
-            $table->uuid('order_uuid')->index();
-            $table->uuid('driver_uuid')->index();
-            $table->string('status', 16)->default('pending');
-            $table->unsignedInteger('distance')->nullable();
-            $table->timestamp('expires_at')->nullable()->index();
-            $table->timestamp('responded_at')->nullable();
-            $table->timestamps();
-            $table->softDeletes();
+        if (!Schema::hasTable('order_offers')) {
+            Schema::create('order_offers', function (Blueprint $table) {
+                $table->increments('id');
+                $table->uuid('uuid')->unique();
+                $table->uuid('company_uuid')->nullable()->index();
+                $table->uuid('order_uuid')->index();
+                $table->uuid('driver_uuid')->index();
+                $table->string('status', 16)->default('pending');
+                $table->unsignedInteger('distance')->nullable();
+                $table->timestamp('expires_at')->nullable()->index();
+                $table->timestamp('responded_at')->nullable();
+                $table->timestamps();
+                $table->softDeletes();
 
-            $table->index(['order_uuid', 'status']);
-            $table->index(['driver_uuid', 'status']);
-        });
+                $table->index(['order_uuid', 'status']);
+                $table->index(['driver_uuid', 'status']);
+            });
+        }
 
-        Schema::create('driver_ratings', function (Blueprint $table) {
-            $table->increments('id');
-            $table->uuid('uuid')->unique();
-            $table->uuid('company_uuid')->nullable()->index();
-            $table->uuid('order_uuid')->unique();
-            $table->uuid('driver_uuid')->index();
-            $table->uuid('customer_uuid')->nullable()->index();
-            $table->string('customer_type')->nullable();
-            $table->unsignedTinyInteger('stars');
-            $table->text('comment')->nullable();
-            $table->timestamps();
-            $table->softDeletes();
-        });
+        if (!Schema::hasTable('driver_ratings')) {
+            Schema::create('driver_ratings', function (Blueprint $table) {
+                $table->increments('id');
+                $table->uuid('uuid')->unique();
+                $table->uuid('company_uuid')->nullable()->index();
+                $table->uuid('order_uuid')->unique();
+                $table->uuid('driver_uuid')->index();
+                $table->uuid('customer_uuid')->nullable()->index();
+                $table->string('customer_type')->nullable();
+                $table->unsignedTinyInteger('stars');
+                $table->text('comment')->nullable();
+                $table->timestamps();
+                $table->softDeletes();
+            });
+        }
 
-        Schema::table('orders', function (Blueprint $table) {
-            $table->string('adhoc_strategy', 32)->nullable()->after('adhoc_distance');
-            $table->string('required_vehicle_type')->nullable()->after('adhoc_strategy');
-            $table->uuid('chat_channel_uuid')->nullable();
-        });
+        $this->addMissingColumns('orders', [
+            'adhoc_strategy'        => fn (Blueprint $table) => $table->string('adhoc_strategy', 32)->nullable()->after('adhoc_distance'),
+            'required_vehicle_type' => fn (Blueprint $table) => $table->string('required_vehicle_type')->nullable()->after('adhoc_strategy'),
+            'chat_channel_uuid'     => fn (Blueprint $table) => $table->uuid('chat_channel_uuid')->nullable(),
+        ]);
 
-        Schema::table('order_configs', function (Blueprint $table) {
-            $table->json('policies')->nullable();
-            $table->json('triggers')->nullable();
-        });
+        $this->addMissingColumns('order_configs', [
+            'policies' => fn (Blueprint $table) => $table->json('policies')->nullable(),
+            'triggers' => fn (Blueprint $table) => $table->json('triggers')->nullable(),
+        ]);
 
-        Schema::table('service_quotes', function (Blueprint $table) {
-            $table->unsignedInteger('distance')->nullable();
-            $table->unsignedInteger('time')->nullable();
-        });
+        $this->addMissingColumns('service_quotes', [
+            'distance' => fn (Blueprint $table) => $table->unsignedInteger('distance')->nullable(),
+            'time'     => fn (Blueprint $table) => $table->unsignedInteger('time')->nullable(),
+        ]);
 
-        Schema::table('drivers', function (Blueprint $table) {
-            $table->decimal('rating_average', 3, 2)->nullable();
-            $table->unsignedInteger('rating_count')->default(0);
-        });
+        $this->addMissingColumns('drivers', [
+            'rating_average' => fn (Blueprint $table) => $table->decimal('rating_average', 3, 2)->nullable(),
+            'rating_count'   => fn (Blueprint $table) => $table->unsignedInteger('rating_count')->default(0),
+        ]);
     }
 
     public function down(): void
     {
-        Schema::table('drivers', fn (Blueprint $table) => $table->dropColumn(['rating_average', 'rating_count']));
-        Schema::table('service_quotes', fn (Blueprint $table) => $table->dropColumn(['distance', 'time']));
-        Schema::table('order_configs', fn (Blueprint $table) => $table->dropColumn(['policies', 'triggers']));
-        Schema::table('orders', fn (Blueprint $table) => $table->dropColumn(['adhoc_strategy', 'required_vehicle_type', 'chat_channel_uuid']));
+        $this->dropExistingColumns('drivers', ['rating_average', 'rating_count']);
+        $this->dropExistingColumns('service_quotes', ['distance', 'time']);
+        $this->dropExistingColumns('order_configs', ['policies', 'triggers']);
+        $this->dropExistingColumns('orders', ['adhoc_strategy', 'required_vehicle_type', 'chat_channel_uuid']);
         Schema::dropIfExists('driver_ratings');
         Schema::dropIfExists('order_offers');
+    }
+
+    /**
+     * Add each column the table doesn't have yet, in the order given.
+     *
+     * @param array<string, \Closure(Blueprint): mixed> $columns
+     */
+    private function addMissingColumns(string $table, array $columns): void
+    {
+        $missing = array_filter($columns, fn ($column) => !Schema::hasColumn($table, $column), ARRAY_FILTER_USE_KEY);
+        if (!$missing) {
+            return;
+        }
+
+        $this->allowingNonStandardForeignKeys(function () use ($table, $missing) {
+            Schema::table($table, function (Blueprint $blueprint) use ($missing) {
+                foreach ($missing as $define) {
+                    $define($blueprint);
+                }
+            });
+        });
+    }
+
+    /**
+     * Run `$callback` with `restrict_fk_on_non_standard_key` off for this session, then restore it.
+     * Where the variable doesn't exist (MySQL before 8.4, MariaDB, SQLite) it just runs `$callback`.
+     */
+    private function allowingNonStandardForeignKeys(callable $callback): void
+    {
+        $connection = Schema::getConnection();
+        $setting    = $connection->getDriverName() === 'mysql'
+            ? $connection->selectOne("show session variables like 'restrict_fk_on_non_standard_key'")
+            : null;
+
+        if (!$setting) {
+            $callback();
+
+            return;
+        }
+
+        $previous = strtoupper((string) $setting->Value) === 'OFF' ? 'OFF' : 'ON';
+        $connection->statement('set session restrict_fk_on_non_standard_key = OFF');
+
+        try {
+            $callback();
+        } finally {
+            $connection->statement("set session restrict_fk_on_non_standard_key = {$previous}");
+        }
+    }
+
+    /**
+     * @param array<int, string> $columns
+     */
+    private function dropExistingColumns(string $table, array $columns): void
+    {
+        $existing = array_values(array_filter($columns, fn ($column) => Schema::hasColumn($table, $column)));
+        if ($existing) {
+            $this->allowingNonStandardForeignKeys(fn () => Schema::table($table, fn (Blueprint $blueprint) => $blueprint->dropColumn($existing)));
+        }
     }
 };
