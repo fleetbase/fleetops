@@ -1046,7 +1046,7 @@ test('an order update push carries its title, message and type to the device cha
     expect([$update->title, $update->message])->toBe(['Your driver has arrived', 'Chen is waiting.'])
         ->and($update->data)->toBe(['id' => 'order_one', 'type' => 'order_arrived'])
         ->and($default->data)->toBe(['id' => 'order_one', 'type' => 'order_update'])
-        ->and($update->via(null))->toBe([NotificationChannels\Fcm\FcmChannel::class, NotificationChannels\Apn\ApnChannel::class]);
+        ->and($update->via(null))->toBe([NotificationChannels\Fcm\FcmChannel::class, NotificationChannels\Apn\ApnChannel::class, Fleetbase\Push\PushAppChannel::class]);
 
     // Building each channel's message hands the push to core's PushNotification, which needs the
     // FCM and APN credentials this harness doesn't configure.

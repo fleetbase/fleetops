@@ -1690,3 +1690,17 @@ test('a shared order links to the public tracking page', function () {
 
     expect($url)->toContain('track/TRK1');
 });
+
+test('api customer controller refuses a device whose push app key is not the organization', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $connection->statement('create table push_apps (id integer primary key autoincrement, uuid varchar(64) null, company_uuid varchar(64) null, key varchar(255) null, status varchar(32) null, deleted_at datetime null)');
+    $resolver = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+
+    $controller = fleetopsApiCustomerController();
+    $response   = $controller->registerDevice(Request::create('/v1/customers/register-device', 'POST', ['token' => 'push-token', 'os' => 'ios', 'push_app' => 'push_app_unknown']));
+
+    expect(fleetopsApiCustomerJson($response))->toBe(['error' => 'This push app key is not one of the organization\'s push apps.'])
+        ->and($controller->devices)->toBe([]);
+});

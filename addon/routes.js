@@ -317,6 +317,7 @@ export default buildRoutes(function () {
     this.route('settings', function () {
         this.route('navigator-app');
         this.route('notifications');
+        this.route('push-apps');
         this.route('custom-fields');
         this.route('avatars');
         this.route('routing');

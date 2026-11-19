@@ -1002,3 +1002,28 @@ test('api driver controller only renames a team member account linked to a drive
     expect($staff->updates)->toBe([['name' => 'Staff Driver']])
         ->and($staff->email)->toBe('staff@example.test');
 });
+
+/** A database with only an empty push_apps table, for looking up a push app key. */
+function fleetopsApiDriverPushAppsDatabase(): void
+{
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $connection->statement('create table push_apps (id integer primary key autoincrement, uuid varchar(64) null, company_uuid varchar(64) null, key varchar(255) null, status varchar(32) null, deleted_at datetime null)');
+    $resolver = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+}
+
+test('api driver controller refuses a device whose push app key is not the organization', function () {
+    fleetopsApiDriverPushAppsDatabase();
+    $driver = new FleetOpsApiDriverFake();
+    $driver->setRawAttributes(['uuid' => 'driver-uuid', 'public_id' => 'driver_public', 'user_uuid' => 'user-uuid', 'company_uuid' => 'company-uuid'], true);
+
+    $controller         = new FleetOpsApiDriverControllerProbe();
+    $controller->driver = $driver;
+
+    expect($controller->registerDevice('driver_public', new FleetOpsApiDriverRegisterDeviceRequest(['token' => 'push-token', 'platform' => 'ios', 'push_app' => 'push_app_unknown'])))->toBe([
+        'apiError' => 'This push app key is not one of the organization\'s push apps.',
+        'status'   => 400,
+    ])
+        ->and($controller->deviceCreates)->toBe([]);
+});

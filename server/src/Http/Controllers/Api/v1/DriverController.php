@@ -29,6 +29,7 @@ use Fleetbase\FleetOps\Support\NavigatorReview;
 use Fleetbase\FleetOps\Support\OrderConfig\OrderConfigTriggers;
 use Fleetbase\FleetOps\Support\OSRM;
 use Fleetbase\FleetOps\Support\ProfileAccountManager;
+use Fleetbase\FleetOps\Support\PushAppDevices;
 use Fleetbase\FleetOps\Support\TrackingPublisher;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
@@ -508,6 +509,11 @@ class DriverController extends Controller
             return $this->apiError('Platform is required to register device.');
         }
 
+        $pushApp = PushAppDevices::resolve($request, $driver->company_uuid);
+        if ($pushApp === false) {
+            return $this->apiError('This push app key is not one of the organization\'s push apps.');
+        }
+
         $device = $this->firstOrCreateUserDevice(
             [
                 'token'    => $token,
@@ -520,6 +526,7 @@ class DriverController extends Controller
                 'status'    => 'active',
             ]
         );
+        PushAppDevices::link($device, $pushApp, $request);
 
         return $this->jsonResponse([
             'device' => $device->public_id,

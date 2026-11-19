@@ -850,7 +850,7 @@ test('contact accessors imports notifications and customer identity helpers are 
         ->and($contact->customerOrders())->toBeInstanceOf(HasMany::class)
         ->and($contact->files())->toBeInstanceOf(HasMany::class)
         ->and($contact->routeNotificationForFcm())->toBe(['android-token'])
-        ->and($contact->routeNotificationForApn())->toBe([1 => 'ios-token'])
+        ->and($contact->routeNotificationForApn())->toBe(['ios-token'])
         ->and($contact->routeNotificationForTwilio())->toContain('555')
         ->and($contact->photo_url)->toBe('https://cdn.example/avatar.png');
 
@@ -1975,8 +1975,8 @@ test('driver accessors notification routes and assignment helpers are stable', f
         ->and($driver->phone)->toBe('+15551234567')
         ->and($driver->email)->toBe('dana@example.test')
         ->and($driver->rotation)->toBe(180.0)
-        ->and($driver->routeNotificationForFcm())->toBe([0 => 'fcm-a', 2 => 'fcm-b'])
-        ->and($driver->routeNotificationForApn())->toBe([1 => 'apn-a'])
+        ->and($driver->routeNotificationForFcm())->toBe(['fcm-a', 'fcm-b'])
+        ->and($driver->routeNotificationForApn())->toBe(['apn-a'])
         ->and((string) $driver->receivesBroadcastNotificationsOn(new stdClass()))->toBe('driver.driver_public')
         ->and($driver->isVehicleNotAssigned())->toBeTrue()
         ->and($driver->isVehicleAssigned())->toBeFalse()

@@ -3,6 +3,9 @@
 namespace Fleetbase\FleetOps\Notifications;
 
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\Push\Concerns\PushesToApps;
+use Fleetbase\Push\Contracts\SendsToPushApps;
+use Fleetbase\Push\PushAppChannel;
 use Fleetbase\Support\PushNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -15,9 +18,10 @@ use NotificationChannels\Fcm\FcmChannel;
  *
  * Push data: { type: "order_unassigned", id: order public id }.
  */
-class OrderUnassigned extends Notification implements ShouldQueue
+class OrderUnassigned extends Notification implements ShouldQueue, SendsToPushApps
 {
     use Queueable;
+    use PushesToApps;
 
     public static string $name        = 'Order Unassigned';
     public static string $description = 'Notify a driver when an order is unassigned from them or reassigned to another driver.';
@@ -41,7 +45,7 @@ class OrderUnassigned extends Notification implements ShouldQueue
 
     public function via($notifiable): array
     {
-        return [FcmChannel::class, ApnChannel::class];
+        return [FcmChannel::class, ApnChannel::class, PushAppChannel::class];
     }
 
     public function toArray($notifiable = null): array

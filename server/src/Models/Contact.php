@@ -10,6 +10,7 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\CompanyUser;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
+use Fleetbase\Models\UserDevice;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasApiModelCache;
 use Fleetbase\Traits\HasCustomFields;
@@ -179,7 +180,7 @@ class Contact extends Model
 
     public function devices(): HasMany
     {
-        return $this->hasMany(\Fleetbase\Models\UserDevice::class, 'user_uuid', 'user_uuid');
+        return $this->hasMany(UserDevice::class, 'user_uuid', 'user_uuid');
     }
 
     public function places(): HasMany
@@ -207,13 +208,7 @@ class Contact extends Model
      */
     public function routeNotificationForFcm(): array
     {
-        return $this->devices
-            ->where('platform', 'android')
-            ->map(
-                function ($userDevice) {
-                    return $userDevice->token;
-                }
-            )->toArray();
+        return UserDevice::installTokens($this->devices, 'android');
     }
 
     /**
@@ -221,13 +216,15 @@ class Contact extends Model
      */
     public function routeNotificationForApn(): array
     {
-        return $this->devices
-            ->where('platform', 'ios')
-            ->map(
-                function ($userDevice) {
-                    return $userDevice->token;
-                }
-            )->toArray();
+        return UserDevice::installTokens($this->devices, 'ios');
+    }
+
+    /**
+     * The devices that registered with a push app, for the PushAppChannel.
+     */
+    public function routeNotificationForPushApp()
+    {
+        return collect($this->devices)->filter(fn ($device) => !empty($device->push_app_uuid))->values();
     }
 
     /**

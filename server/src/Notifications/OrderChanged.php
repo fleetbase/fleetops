@@ -3,6 +3,9 @@
 namespace Fleetbase\FleetOps\Notifications;
 
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\Push\Concerns\PushesToApps;
+use Fleetbase\Push\Contracts\SendsToPushApps;
+use Fleetbase\Push\PushAppChannel;
 use Fleetbase\Support\PushNotification;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Bus\Queueable;
@@ -16,9 +19,10 @@ use NotificationChannels\Fcm\FcmChannel;
  *
  * Push data: { type: "order_changed", id: order public id, changes: [...] }.
  */
-class OrderChanged extends Notification implements ShouldQueue
+class OrderChanged extends Notification implements ShouldQueue, SendsToPushApps
 {
     use Queueable;
+    use PushesToApps;
 
     public static string $name        = 'Order Changed';
     public static string $description = 'Notify the assigned driver when an order they have is changed.';
@@ -45,7 +49,7 @@ class OrderChanged extends Notification implements ShouldQueue
 
     public function via($notifiable): array
     {
-        return ['broadcast', FcmChannel::class, ApnChannel::class];
+        return ['broadcast', FcmChannel::class, ApnChannel::class, PushAppChannel::class];
     }
 
     public function broadcastOn(): array
