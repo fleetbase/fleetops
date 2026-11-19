@@ -8,13 +8,17 @@ use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\PushApp;
 use Fleetbase\Models\UserDevice;
 use Fleetbase\Push\PushAppChannel;
+use Fleetbase\Push\PushConfigurationException;
 use Fleetbase\Push\PushOutcome;
+use Fleetbase\Push\PushProviders;
 use Fleetbase\Support\Auth;
 use Illuminate\Http\Request;
 
 /**
- * Settings → Push apps: the organization's own apps and the APNs and FCM credentials each
- * one's pushes are sent with. Keys are written here but never read back.
+ * Settings → Push apps: the organization's own apps and each one's settings for the push
+ * providers it sends through (Apple's `apn` and Firebase's `fcm`, plus any registered with
+ * PushProviders). Each provider's settings are sent under its key and checked by the
+ * provider. Secrets are written here but never read back.
  */
 class PushAppController extends Controller
 {
@@ -99,16 +103,27 @@ class PushAppController extends Controller
             return response()->error('Push app not found.', 404);
         }
 
-        $token    = trim((string) $request->input('token'));
-        $platform = UserDevice::normalizePlatform($request->input('platform'));
-        if ($token === '' || !$platform) {
-            return response()->error('Enter a device token and choose iOS or Android.', 422);
+        $token  = trim((string) $request->input('token'));
+        $device = new UserDevice([
+            'token'         => $token,
+            'platform'      => UserDevice::normalizePlatform($request->input('platform')) ?? 'ios',
+            'push_provider' => PushProviders::normalize($request->input('push_provider')),
+            'push_app_uuid' => $app->uuid,
+            'status'        => 'active',
+            'environment'   => $request->input('environment') ?: null,
+        ]);
+        $provider = app(PushProviders::class)->forDevice($device);
+        if ($token === '' || !$provider) {
+            return response()->error('Paste a device token and choose which service issued it.', 422);
         }
-        if (!$app->credentials($platform === 'ios' ? 'apn' : 'fcm')) {
-            return response()->error($platform === 'ios' ? 'Add the app\'s APNs key first.' : 'Add the app\'s Firebase service account first.', 422);
+        if (!$app->credentials($provider)) {
+            return response()->error(match ($provider) {
+                'apn'   => 'This is an Apple device token, and the app has no Apple settings yet. Add them, or choose Firebase if the app gets its tokens from Firebase.',
+                'fcm'   => 'This is a Firebase token, and the app has no Firebase service account yet. Add one first.',
+                default => 'The app isn\'t set up for the service that issued this token.',
+            }, 422);
         }
 
-        $device = new UserDevice(['token' => $token, 'platform' => $platform, 'push_app_uuid' => $app->uuid, 'status' => 'active', 'environment' => $request->input('environment')]);
         $target = new class([$device]) {
             public function __construct(public array $devices)
             {
@@ -133,7 +148,7 @@ class PushAppController extends Controller
     {
         $name = trim((string) $request->input('name', $app?->name));
         if ($name === '') {
-            return 'Give the push app a name.';
+            return 'Give the push app a name, for example the app\'s name on the App Store.';
         }
 
         $attributes = ['name' => $name];
@@ -144,76 +159,26 @@ class PushAppController extends Controller
             $attributes['status'] = $request->input('status');
         }
 
-        if ($request->has('apn')) {
-            $apn = $this->apn((array) $request->input('apn'), $app);
-            if (is_string($apn)) {
-                return $apn;
+        $providers = app(PushProviders::class);
+        $configs   = $app ? (array) $app->providers : [];
+        foreach ($providers->keys() as $key) {
+            if (!$request->has($key)) {
+                continue;
             }
-            $attributes['apn'] = $apn;
-        }
-
-        if ($request->has('fcm')) {
-            $fcm = $this->fcm((array) $request->input('fcm'), $app);
-            if (is_string($fcm)) {
-                return $fcm;
+            try {
+                $config = $providers->get($key)->configure((array) $request->input($key), $app?->provider($key));
+            } catch (PushConfigurationException $e) {
+                return $e->getMessage();
             }
-            $attributes['fcm'] = $fcm;
+            if ($config === null) {
+                unset($configs[$key]);
+            } else {
+                $configs[$key] = $config;
+            }
         }
+        $attributes['providers'] = $configs;
 
         return $attributes;
-    }
-
-    /**
-     * APNs settings: all of key ID, team ID, bundle ID and a .p8 key, or none to turn iOS off.
-     * A key left empty when editing keeps the saved one.
-     */
-    protected function apn(array $input, ?PushApp $app): array|string|null
-    {
-        $apn = array_map(fn ($value) => is_string($value) ? trim($value) : $value, array_intersect_key($input, array_flip(['key_id', 'team_id', 'app_bundle_id', 'private_key_content', 'environment'])));
-        if (!array_filter($apn)) {
-            return null;
-        }
-
-        foreach (['key_id' => 'the key ID', 'team_id' => 'the team ID', 'app_bundle_id' => 'the bundle ID'] as $field => $label) {
-            if (empty($apn[$field])) {
-                return 'Enter ' . $label . ' for iOS, or clear the iOS settings.';
-            }
-        }
-        if (empty($apn['private_key_content']) && empty($app?->apn['private_key_content'])) {
-            return 'Add the .p8 key for iOS.';
-        }
-        if (!empty($apn['private_key_content']) && !str_contains($apn['private_key_content'], 'PRIVATE KEY')) {
-            return 'The iOS key should be the contents of the .p8 file, starting with "-----BEGIN PRIVATE KEY-----".';
-        }
-        if (!empty($apn['environment']) && !in_array($apn['environment'], ['production', 'sandbox'], true)) {
-            return 'Choose production or sandbox for iOS, or leave it to try both.';
-        }
-
-        return $apn;
-    }
-
-    /**
-     * FCM settings: the Firebase service account JSON, or none to turn Android off. Left empty
-     * when editing, the saved one is kept.
-     */
-    protected function fcm(array $input, ?PushApp $app): array|string|null
-    {
-        $credentials = $input['credentials'] ?? null;
-        $channel     = trim((string) ($input['android_channel_id'] ?? ''));
-        if (empty($credentials)) {
-            if (empty($app?->fcm['credentials'])) {
-                return $channel === '' ? null : 'Add the Firebase service account for Android.';
-            }
-
-            return array_filter(['credentials' => null, 'android_channel_id' => $channel ?: null]);
-        }
-
-        $account = is_string($credentials) ? json_decode(trim($credentials), true) : $credentials;
-        if (!is_array($account) || empty($account['project_id']) || empty($account['client_email']) || empty($account['private_key'])) {
-            return 'The Firebase service account should be the JSON file from Firebase, with project_id, client_email and private_key.';
-        }
-
-        return array_filter(['credentials' => json_encode($account), 'android_channel_id' => $channel ?: null]);
     }
 
     protected function present(PushApp $app): array
@@ -223,8 +188,7 @@ class PushAppController extends Controller
             'name'         => $app->name,
             'key'          => $app->key,
             'status'       => $app->status,
-            'apn'          => $app->apn_summary,
-            'fcm'          => $app->fcm_summary,
+            'providers'    => (object) $app->summaries,
             'devices'      => (int) ($app->devices_count ?? 0),
             'created_at'   => $app->created_at,
         ];

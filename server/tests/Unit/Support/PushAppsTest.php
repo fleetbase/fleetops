@@ -93,8 +93,8 @@ class FleetOpsPushAppsChannelFake extends PushAppChannel
 function fleetopsPushAppsDatabase(): SQLiteConnection
 {
     $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
-    $connection->statement('create table push_apps (id integer primary key autoincrement, uuid varchar(64) null, public_id varchar(64) null, company_uuid varchar(64) null, created_by_uuid varchar(64) null, name varchar(255) null, key varchar(255) null, apn text null, fcm text null, status varchar(32) null, owner_uuid varchar(64) null, owner_type varchar(255) null, meta text null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
-    $connection->statement('create table user_devices (id integer primary key autoincrement, uuid varchar(64) null, public_id varchar(64) null, user_uuid varchar(64) null, company_uuid varchar(64) null, push_app_uuid varchar(64) null, platform varchar(32) null, app_identifier varchar(64) null, environment varchar(32) null, token varchar(255) null, status varchar(32) null, last_seen_at datetime null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
+    $connection->statement('create table push_apps (id integer primary key autoincrement, uuid varchar(64) null, public_id varchar(64) null, company_uuid varchar(64) null, created_by_uuid varchar(64) null, name varchar(255) null, key varchar(255) null, providers text null, status varchar(32) null, owner_uuid varchar(64) null, owner_type varchar(255) null, meta text null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
+    $connection->statement('create table user_devices (id integer primary key autoincrement, uuid varchar(64) null, public_id varchar(64) null, user_uuid varchar(64) null, company_uuid varchar(64) null, push_app_uuid varchar(64) null, platform varchar(32) null, push_provider varchar(32) null, app_identifier varchar(64) null, environment varchar(32) null, token varchar(255) null, status varchar(32) null, last_seen_at datetime null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
 
     $resolver = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
     $resolver->setDefaultConnection('mysql');
@@ -120,7 +120,7 @@ function fleetopsPushAppsDatabase(): SQLiteConnection
 
 function fleetopsPushAppsApn(array $overrides = []): array
 {
-    return array_replace(['key_id' => 'KEY123', 'team_id' => 'TEAM123', 'app_bundle_id' => 'com.bayline.rides', 'private_key_content' => "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----"], $overrides);
+    return array_replace(['key_id' => 'KEY123ABCD', 'team_id' => 'TEAM123456', 'app_bundle_id' => 'com.bayline.rides', 'private_key_content' => "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----"], $overrides);
 }
 
 function fleetopsPushAppsAccount(): string
@@ -162,7 +162,7 @@ test('drivers and customers send push-app devices to their app and the rest to t
 
 test('a registering device is linked to the push app its key names', function () {
     fleetopsPushAppsDatabase();
-    $app = PushApp::create(['name' => 'Bayline Rides', 'company_uuid' => 'company-uuid', 'apn' => fleetopsPushAppsApn()]);
+    $app = PushApp::create(['name' => 'Bayline Rides', 'company_uuid' => 'company-uuid', 'providers' => ['apn' => fleetopsPushAppsApn()]]);
 
     expect(PushAppDevices::resolve(Request::create('/', 'POST'), 'company-uuid'))->toBeNull()
         ->and(PushAppDevices::resolve(Request::create('/', 'POST', ['push_app' => 'push_app_unknown']), 'company-uuid'))->toBeFalse()
@@ -176,16 +176,21 @@ test('a registering device is linked to the push app its key names', function ()
         ->and(PushAppDevices::link($other, $app, Request::create('/')))->toBe($other)
         ->and($device->push_app_uuid)->toBeNull();
 
-    PushAppDevices::link($device, $app, Request::create('/', 'POST', ['environment' => 'Sandbox']));
+    PushAppDevices::link($device, $app, Request::create('/', 'POST', ['environment' => 'Sandbox', 'push_provider' => 'APNs']));
     $saved = UserDevice::where('uuid', $device->uuid)->first();
     expect($saved->push_app_uuid)->toBe($app->uuid)
         ->and($saved->company_uuid)->toBe('company-uuid')
         ->and($saved->app_identifier)->toBe($app->uuid)
-        ->and($saved->environment)->toBe('sandbox');
+        ->and($saved->environment)->toBe('sandbox')
+        ->and($saved->push_provider)->toBe('apn');
 
-    // Registering again with an unknown environment changes nothing, so nothing is saved.
-    PushAppDevices::link($saved, $app, Request::create('/', 'POST', ['environment' => 'staging']));
-    expect($saved->isDirty())->toBeFalse()->and($saved->environment)->toBe('sandbox');
+    // Registering again with an unknown environment or provider changes nothing, so nothing is saved.
+    PushAppDevices::link($saved, $app, Request::create('/', 'POST', ['environment' => 'staging', 'push_provider' => 'pigeon']));
+    expect($saved->isDirty())->toBeFalse()->and($saved->environment)->toBe('sandbox')->and($saved->push_provider)->toBe('apn');
+
+    // An iOS app that gets its token from Firebase says so.
+    PushAppDevices::link($saved, $app, Request::create('/', 'POST', ['push_provider' => 'firebase']));
+    expect(UserDevice::where('uuid', $device->uuid)->first()->push_provider)->toBe('fcm');
 });
 
 test('settings lists, adds and edits push apps without ever returning their keys', function () {
@@ -205,8 +210,8 @@ test('settings lists, adds and edits push apps without ever returning their keys
         ->and($app['name'])->toBe('Bayline Rides')
         ->and($app['key'])->toStartWith('push_app_')
         ->and($app['status'])->toBe('active')
-        ->and($app['apn'])->toBe(['key_id' => 'KEY123', 'team_id' => 'TEAM123', 'app_bundle_id' => 'com.bayline.rides', 'environment' => 'production', 'has_key' => true])
-        ->and($app['fcm'])->toBe(['project_id' => 'bayline-rides', 'client_email' => 'push@bayline-rides.iam.gserviceaccount.com', 'android_channel_id' => 'trips', 'has_credentials' => true])
+        ->and($app['providers']['apn'])->toBe(['key_id' => 'KEY123ABCD', 'team_id' => 'TEAM123456', 'app_bundle_id' => 'com.bayline.rides', 'environment' => 'production', 'has_key' => true])
+        ->and($app['providers']['fcm'])->toBe(['project_id' => 'bayline-rides', 'client_email' => 'push@bayline-rides.iam.gserviceaccount.com', 'android_channel_id' => 'trips', 'has_credentials' => true])
         ->and($app['devices'])->toBe(0)
         ->and(json_encode($created))->not->toContain('PRIVATE KEY')->not->toContain('secret')
         ->and(PushApp::where('public_id', $app['id'])->first()->created_by_uuid)->toBe('user-uuid');
@@ -215,22 +220,22 @@ test('settings lists, adds and edits push apps without ever returning their keys
     $updated = fleetopsPushAppsJson($controller->update($app['id'], Request::create('/', 'PUT', [
         'name'   => 'Bayline',
         'status' => 'inactive',
-        'apn'    => fleetopsPushAppsApn(['key_id' => 'KEY999', 'private_key_content' => '']),
+        'apn'    => fleetopsPushAppsApn(['key_id' => 'KEY999ABCD', 'private_key_content' => '']),
         'fcm'    => ['credentials' => '', 'android_channel_id' => ''],
     ])))['body']['push_app'];
     $saved = PushApp::where('public_id', $app['id'])->first();
 
     expect($updated['name'])->toBe('Bayline')
         ->and($updated['status'])->toBe('inactive')
-        ->and($updated['apn']['key_id'])->toBe('KEY999')
+        ->and($updated['providers']['apn']['key_id'])->toBe('KEY999ABCD')
         ->and($updated['key'])->toBe($app['key'])
-        ->and($saved->apn['private_key_content'])->toContain('BEGIN PRIVATE KEY')
-        ->and($saved->fcm['credentials'])->toBe(fleetopsPushAppsAccount())
-        ->and($updated['fcm']['android_channel_id'])->toBeNull();
+        ->and($saved->provider('apn')['private_key_content'])->toContain('BEGIN PRIVATE KEY')
+        ->and($saved->provider('fcm')['credentials'])->toBe(fleetopsPushAppsAccount())
+        ->and($updated['providers']['fcm']['android_channel_id'])->toBeNull();
 
     // Clearing iOS turns it off.
     $cleared = fleetopsPushAppsJson($controller->update($app['id'], Request::create('/', 'PUT', ['apn' => ['key_id' => '', 'team_id' => '']])))['body']['push_app'];
-    expect($cleared['apn'])->toBeNull()->and($cleared['name'])->toBe('Bayline');
+    expect($cleared['providers'])->not->toHaveKey('apn')->and($cleared['providers'])->toHaveKey('fcm')->and($cleared['name'])->toBe('Bayline');
 
     UserDevice::create(['user_uuid' => 'user-uuid', 'platform' => 'android', 'token' => 'rides-android', 'push_app_uuid' => $saved->uuid]);
     PushApp::create(['name' => 'Other organization', 'company_uuid' => 'other-company']);
@@ -244,22 +249,18 @@ test('settings explains what is wrong with a push app it can not save', function
     $controller = new PushAppController();
     $error      = fn (array $input) => fleetopsPushAppsError($controller->store(Request::create('/', 'POST', array_replace(['name' => 'Bayline Rides'], $input))));
 
-    expect($error(['name' => '  ']))->toBe('Give the push app a name.')
+    // Each provider's own messages; core-api tests every one of them.
+    expect($error(['name' => '  ']))->toContain('Give the push app a name')
         ->and($error(['status' => 'paused']))->toBe('Choose whether the push app is on or off.')
-        ->and($error(['apn' => ['team_id' => 'TEAM123']]))->toBe('Enter the key ID for iOS, or clear the iOS settings.')
-        ->and($error(['apn' => ['key_id' => 'KEY123']]))->toBe('Enter the team ID for iOS, or clear the iOS settings.')
-        ->and($error(['apn' => ['key_id' => 'KEY123', 'team_id' => 'TEAM123']]))->toBe('Enter the bundle ID for iOS, or clear the iOS settings.')
-        ->and($error(['apn' => fleetopsPushAppsApn(['private_key_content' => ''])]))->toBe('Add the .p8 key for iOS.')
-        ->and($error(['apn' => fleetopsPushAppsApn(['private_key_content' => 'not a key'])]))->toContain('contents of the .p8 file')
-        ->and($error(['apn' => fleetopsPushAppsApn(['environment' => 'staging'])]))->toBe('Choose production or sandbox for iOS, or leave it to try both.')
-        ->and($error(['fcm' => ['android_channel_id' => 'trips']]))->toBe('Add the Firebase service account for Android.')
-        ->and($error(['fcm' => ['credentials' => '{"project_id":"bayline"}']]))->toContain('the JSON file from Firebase');
+        ->and($error(['apn' => ['team_id' => 'TEAM123456']]))->toContain('Enter the Key ID of your Apple push key')
+        ->and($error(['apn' => fleetopsPushAppsApn(['app_bundle_id' => 'Bayline Rides'])]))->toContain('should look like com.acme.driver')
+        ->and($error(['fcm' => ['credentials' => json_encode(['project_info' => [], 'client' => []])]]))->toContain('looks like google-services.json');
 
     $empty = fleetopsPushAppsJson($controller->store(Request::create('/', 'POST', ['name' => 'Web only', 'apn' => [], 'fcm' => []])))['body']['push_app'];
-    expect($empty['apn'])->toBeNull()->and($empty['fcm'])->toBeNull();
+    expect($empty['providers'])->toBe([]);
 
     $app = PushApp::where('public_id', $empty['id'])->first();
-    expect(fleetopsPushAppsError($controller->update($empty['id'], Request::create('/', 'PUT', ['name' => '']))))->toBe('Give the push app a name.')
+    expect(fleetopsPushAppsError($controller->update($empty['id'], Request::create('/', 'PUT', ['name' => '']))))->toContain('Give the push app a name')
         ->and($app->name)->toBe('Web only');
 });
 
@@ -289,24 +290,26 @@ test('settings removes push apps and refuses ones of other organizations', funct
 test('settings sends a test push to one device with the app credentials', function () {
     fleetopsPushAppsDatabase();
     $controller = new PushAppController();
-    $app        = PushApp::create(['name' => 'Bayline Rides', 'company_uuid' => 'company-uuid', 'apn' => fleetopsPushAppsApn()]);
+    $app        = PushApp::create(['name' => 'Bayline Rides', 'company_uuid' => 'company-uuid', 'providers' => ['apn' => fleetopsPushAppsApn()]]);
     $send       = fn (array $input) => fleetopsPushAppsJson($controller->sendTest($app->public_id, Request::create('/', 'POST', $input)));
     $refusal    = fn (array $input) => fleetopsPushAppsError($controller->sendTest($app->public_id, Request::create('/', 'POST', $input)));
 
-    expect($refusal(['platform' => 'ios']))->toBe('Enter a device token and choose iOS or Android.')
-        ->and($refusal(['token' => 'abc', 'platform' => 'web']))->toBe('Enter a device token and choose iOS or Android.')
-        ->and($refusal(['token' => 'abc', 'platform' => 'android']))->toBe('Add the app\'s Firebase service account first.');
+    expect($refusal(['push_provider' => 'apn']))->toBe('Paste a device token and choose which service issued it.')
+        ->and($refusal(['token' => 'abc', 'platform' => 'android']))->toContain('no Firebase service account yet')
+        ->and($refusal(['token' => 'instance:APA91token']))->toContain('no Firebase service account yet');
 
-    $app->update(['apn' => null, 'fcm' => ['credentials' => fleetopsPushAppsAccount()]]);
-    expect($refusal(['token' => 'abc', 'platform' => 'ios']))->toBe('Add the app\'s APNs key first.');
+    $app->update(['providers' => ['fcm' => ['credentials' => fleetopsPushAppsAccount()]]]);
+    expect($refusal(['token' => 'abc', 'push_provider' => 'apns']))->toContain('no Apple settings yet')
+        ->and($refusal(['token' => 'abc', 'push_provider' => 'pigeon', 'platform' => 'web']))->toContain('This is an Apple device token');
 
     $channel = new FleetOpsPushAppsChannelFake(PushOutcome::sent());
     app()->instance(PushAppChannel::class, $channel);
-    expect($send(['token' => 'abc', 'platform' => 'android', 'title' => 'Hello']))->toBe(['status' => 200, 'body' => ['status' => 'sent', 'reason' => null, 'sent' => true]])
+    expect($send(['token' => 'abc', 'push_provider' => 'fcm', 'title' => 'Hello']))->toBe(['status' => 200, 'body' => ['status' => 'sent', 'reason' => null, 'sent' => true]])
         ->and($channel->sent[0])->toBe([['abc'], 'Hello', null]);
 
+    // An iOS app's Firebase token is sent through Firebase without choosing it.
     app()->instance(PushAppChannel::class, new FleetOpsPushAppsChannelFake(PushOutcome::wrongApp('SenderId mismatch')));
-    expect($send(['token' => 'abc', 'platform' => 'fcm'])['body'])->toBe(['status' => 'wrong_app', 'reason' => 'SenderId mismatch', 'sent' => false]);
+    expect($send(['token' => 'instance:APA91token', 'platform' => 'ios'])['body'])->toBe(['status' => 'wrong_app', 'reason' => 'SenderId mismatch', 'sent' => false]);
 
     app()->instance(PushAppChannel::class, new FleetOpsPushAppsChannelFake());
     expect($send(['token' => 'abc', 'platform' => 'android'])['body'])->toMatchArray(['status' => 'error', 'sent' => false]);

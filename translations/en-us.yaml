@@ -3210,58 +3210,73 @@ route-list:
 settings:
     push-apps:
         title: Push Apps
-        intro: 'Your own apps, each with the Apple and Firebase keys its push notifications are sent with. An app registers devices with its push app key, and those devices get pushes from that app. Navigator and any app registered without a key use the push settings your system administrator set up.'
+        intro: 'Add one push app for each mobile app you publish, such as your customer app or your driver app. The same app on iOS and Android is one push app, even when its iOS bundle ID and Android package name are different. Navigator, and apps that register devices without a push app key, use the push settings your system administrator set up.'
         add: Add push app
         new-title: New push app
         edit-title: 'Edit {name}'
-        name: Name
+        name: App name
         name-placeholder: Bayline Rides
-        name-help: 'For you to tell your apps apart, for example the name on the App Store.'
-        on: Sending pushes
-        on-help: Turn off to stop sending to this app's devices without removing it.
-        ios: iOS (Apple Push Notification service)
-        ios-help: 'From your Apple Developer account: Certificates, Identifiers & Profiles → Keys, a key with Apple Push Notifications service enabled. Leave all of these empty if the app isn’t on iOS.'
+        name-help: 'Only shown to you, to tell your apps apart. For example, the app’s name on the App Store or Google Play.'
+        on: Send push notifications
+        on-help: 'Turn off to stop sending to this app’s devices without deleting its settings.'
+        ios: Apple Push Notification service (iOS)
+        ios-help: 'Fill this in if your iOS app gets its push tokens from Apple. If your iOS app gets them from Firebase instead (common in Flutter and React Native apps that use Firebase Messaging), you can leave this empty and fill in Firebase below. Leave it empty if you have no iOS app.'
+        bundle-id: iOS bundle ID
+        bundle-id-placeholder: com.acme.driver
+        bundle-id-help: 'Your iOS app’s Bundle Identifier, in Xcode under your app target → General. It doesn’t have to match your Android package name. One bundle ID per push app: if you publish more than one iOS app, such as a separate staging app, add a push app for each. They can share the same push key.'
         key-id: Key ID
+        key-id-placeholder: ABC123DEFG
+        key-id-help: '10 letters and numbers, shown next to the key in your Apple Developer account under Certificates, Identifiers & Profiles → Keys.'
         team-id: Team ID
-        bundle-id: Bundle ID
-        environment: APNs environment
-        environment-help: Leave on both to send to App Store and development builds.
+        team-id-placeholder: TEAM123456
+        team-id-help: '10 letters and numbers, under Membership details in your Apple Developer account.'
+        p8: Push key (.p8 file)
+        p8-placeholder: '-----BEGIN PRIVATE KEY-----'
+        p8-help: 'Open the AuthKey_….p8 file you downloaded when you created the key, and paste everything in it. Apple lets you download it only once. One key works for every app in your Apple team.'
+        p8-saved: 'A push key is saved. Leave this empty to keep it, or paste a new one to replace it.'
+        environment: Apple servers
+        environment-help: 'Leave on “Production, then sandbox” unless you need one. App Store and TestFlight builds use production; builds run from Xcode use sandbox.'
         environment-both: Production, then sandbox
         environment-production: Production only
         environment-sandbox: Sandbox only
-        p8: .p8 key
-        p8-help: Paste the contents of the .p8 file you downloaded from Apple.
-        p8-saved: A key is saved. Leave this empty to keep it, or paste a new one to replace it.
-        android: Android (Firebase Cloud Messaging)
-        android-help: 'From the Firebase console: Project settings → Service accounts → Generate new private key. Leave empty if the app isn’t on Android.'
-        service-account: Service account JSON
+        android: Firebase Cloud Messaging (Android, and iOS apps that use Firebase)
+        android-help: 'Sends to your Android app, and to your iOS app too if it gets its push tokens from Firebase. Leave it empty if the app doesn’t use Firebase.'
+        no-package-name: 'There’s no Android package name to enter. Firebase works out which app a push is for from each device’s token, so your package name can differ from your iOS bundle ID. Your app and this service account just need to be in the same Firebase project.'
+        firebase-ios: 'If your iOS app uses Firebase for push, upload your Apple push key in Firebase too: Project settings → Cloud Messaging → Apple app configuration.'
+        service-account: Firebase service account key (JSON)
         service-account-placeholder: 'Paste the contents of the service account JSON file'
-        service-account-help: Paste the whole JSON file.
-        service-account-saved: 'The service account for {project} is saved. Leave this empty to keep it, or paste a new one to replace it.'
-        android-channel: Android notification channel
-        android-channel-help: Optional. The channel ID your app creates for these notifications.
+        service-account-help: 'In the Firebase console: Project settings → Service accounts → Generate new private key. Paste the whole file. It isn’t google-services.json or GoogleService-Info.plist; those are the files your app is built with.'
+        service-account-saved: 'The service account for the Firebase project {project} is saved. Leave this empty to keep it, or paste a new one to replace it.'
+        android-channel: Android notification channel ID (optional)
+        android-channel-placeholder: default
+        android-channel-help: 'The ID of a notification channel your Android app creates, so these pushes use its sound and importance. Leave empty to use the app’s default channel.'
         key: Push app key
-        key-help: Build this into the app and send it as push_app when the app registers a device.
+        key-help: 'Build this into the app. When the app registers a device, send this as push_app with the device’s token and platform. An iOS app that gets its token from Firebase can also send push_provider: fcm, although it’s usually worked out from the token.'
         status-on: Sending
         status-off: Turned off
-        ios-ready: 'iOS: {bundle}'
-        ios-off: No iOS
-        android-ready: 'Android: {project}'
-        android-off: No Android
+        ios-ready: 'Apple: {bundle}'
+        ios-off: No Apple settings
+        android-ready: 'Firebase: {project}'
+        android-off: No Firebase settings
         devices: '{count, plural, =0 {No devices yet} one {# device} other {# devices}}'
         send-test: Send test push
-        test-platform: Platform
+        test-token-type: Token type
+        test-token-type-help: 'Which service issued the token. Leave on “Work it out from the token” if you’re not sure.'
+        token-type-auto: Work it out from the token
+        token-type-apn: Apple device token (APNs)
+        token-type-fcm: Firebase token (FCM)
         test-token: Device token
-        test-token-help: The push token of a device with the app installed.
+        test-token-placeholder: Paste a push token from a device with the app installed
+        test-token-help: 'Apple device tokens are 64 letters and numbers. Firebase tokens are much longer and contain a colon.'
         test-sent: The test push was sent.
         test-failed: 'The test push wasn’t sent: {reason}'
-        empty: No push apps yet. Add one for each of your own apps that receives push notifications.
+        empty: No push apps yet. Add one for each mobile app you publish that receives push notifications.
         created: '{name} added.'
         saved: '{name} saved.'
         deleted: '{name} removed.'
         delete: Remove push app
         delete-title: 'Remove {name}?'
-        delete-body: '{count, plural, =0 {Its keys are deleted.} one {Its keys are deleted, and its # device stops getting pushes until the app registers again with another key.} other {Its keys are deleted, and its # devices stop getting pushes until the app registers again with another key.}}'
+        delete-body: '{count, plural, =0 {Its settings are deleted.} one {Its settings are deleted, and its # device stops getting pushes until the app registers again with another key.} other {Its settings are deleted, and its # devices stop getting pushes until the app registers again with another key.}}'
     dispatch:
         title: Fleet-Ops Dispatch
         adhoc-orders: Adhoc dispatch defaults

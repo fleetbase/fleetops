@@ -13,9 +13,10 @@ const blankForm = () => ({
 });
 
 /**
- * The organization's own apps and the APNs and FCM credentials each one's pushes are sent
- * with. An app registers devices with its push app key; keys are entered here but never shown
- * again, and leaving one empty when editing keeps the saved key.
+ * The organization's own apps and each one's Apple (APNs) and Firebase (FCM) settings. One
+ * push app covers an app on iOS and Android. An app registers devices with its push app key;
+ * secrets are entered here but never shown again, and leaving one empty when editing keeps the
+ * saved one. The server answers each app's settings under `providers`, by provider key.
  */
 export default class SettingsPushAppsController extends Controller {
     @service fetch;
@@ -29,7 +30,7 @@ export default class SettingsPushAppsController extends Controller {
     @tracked form = blankForm();
     @tracked error = null;
     @tracked testing = null;
-    @tracked test = { token: '', platform: 'ios', environment: '' };
+    @tracked test = { token: '', push_provider: '', environment: '' };
     @tracked testResult = null;
 
     get canUpdate() {
@@ -44,10 +45,11 @@ export default class SettingsPushAppsController extends Controller {
         ];
     }
 
-    get platforms() {
+    get tokenTypes() {
         return [
-            { value: 'ios', label: 'iOS' },
-            { value: 'android', label: 'Android' },
+            { value: '', label: this.intl.t(`${P}.token-type-auto`) },
+            { value: 'apn', label: this.intl.t(`${P}.token-type-apn`) },
+            { value: 'fcm', label: this.intl.t(`${P}.token-type-fcm`) },
         ];
     }
 
@@ -73,17 +75,18 @@ export default class SettingsPushAppsController extends Controller {
     @action edit(app) {
         this.editing = app.id;
         this.error = null;
+        const { apn, fcm } = app.providers ?? {};
         this.form = {
             name: app.name,
             status: app.status,
             apn: {
-                key_id: app.apn?.key_id ?? '',
-                team_id: app.apn?.team_id ?? '',
-                app_bundle_id: app.apn?.app_bundle_id ?? '',
+                key_id: apn?.key_id ?? '',
+                team_id: apn?.team_id ?? '',
+                app_bundle_id: apn?.app_bundle_id ?? '',
                 private_key_content: '',
-                environment: app.apn?.environment ?? '',
+                environment: apn?.environment ?? '',
             },
-            fcm: { credentials: '', android_channel_id: app.fcm?.android_channel_id ?? '' },
+            fcm: { credentials: '', android_channel_id: fcm?.android_channel_id ?? '' },
         };
     }
 
@@ -136,11 +139,14 @@ export default class SettingsPushAppsController extends Controller {
     @action openTest(app) {
         this.testing = this.testing === app.id ? null : app.id;
         this.testResult = null;
-        this.test = { token: '', platform: app.apn ? 'ios' : 'android', environment: '' };
+        this.test = { token: '', push_provider: '', environment: '' };
     }
 
     @action setTest(field, event) {
         this.test = { ...this.test, [field]: event?.target ? event.target.value : event };
+        if (this.test.push_provider === 'fcm') {
+            this.test = { ...this.test, environment: '' };
+        }
     }
 
     @task *sendTest(app) {
