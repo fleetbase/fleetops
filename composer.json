@@ -25,7 +25,7 @@
         "barryvdh/laravel-dompdf": "^3.1",
         "brick/geo": "0.7.2",
         "cknow/laravel-money": "^8.0",
-        "fleetbase/core-api": "^2.0.3",
+        "fleetbase/core-api": "^2.0.3 || dev-release/v2.0.3",
         "geocoder-php/google-maps-places-provider": "^1.4",
         "giggsey/libphonenumber-for-php": "^8.13",
         "league/geotools": "^1.1.0",

@@ -3235,7 +3235,7 @@ settings:
         android: Android (Firebase Cloud Messaging)
         android-help: 'From the Firebase console: Project settings → Service accounts → Generate new private key. Leave empty if the app isn’t on Android.'
         service-account: Service account JSON
-        service-account-placeholder: '{ "type": "service_account", "project_id": "…" }'
+        service-account-placeholder: 'Paste the contents of the service account JSON file'
         service-account-help: Paste the whole JSON file.
         service-account-saved: 'The service account for {project} is saved. Leave this empty to keep it, or paste a new one to replace it.'
         android-channel: Android notification channel
