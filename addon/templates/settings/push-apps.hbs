@@ -1,0 +1,223 @@
+<Layout::Section::Header @title={{t "settings.push-apps.title"}}>
+    {{#if this.canUpdate}}
+        <Button @type="primary" @size="sm" @icon="plus" @text={{t "settings.push-apps.add"}} @onClick={{this.add}} @disabled={{this.editing}} data-test-push-app-add />
+    {{/if}}
+</Layout::Section::Header>
+
+<Layout::Section::Body class="overflow-y-scroll-i h-full">
+    <div class="container mx-auto h-screen">
+        <div class="oc-page max-w-3xl my-10 mx-auto space-y-6">
+            <OrderConfig::Notice @text={{t "settings.push-apps.intro"}} />
+
+            {{#if this.editing}}
+                <ContentPanel
+                    @title={{if this.editingApp (t "settings.push-apps.edit-title" name=this.editingApp.name) (t "settings.push-apps.new-title")}}
+                    @open={{true}}
+                    @wrapperClass="bordered-classic"
+                    data-test-push-app-form
+                >
+                    <InputGroup @name={{t "settings.push-apps.name"}} @helpText={{t "settings.push-apps.name-help"}}>
+                        <input
+                            class="form-input w-full"
+                            value={{this.form.name}}
+                            placeholder={{t "settings.push-apps.name-placeholder"}}
+                            aria-label={{t "settings.push-apps.name"}}
+                            {{on "input" (fn this.set "name")}}
+                            data-test-push-app-name
+                        />
+                    </InputGroup>
+                    <div class="mb-4">
+                        <Toggle
+                            @isToggled={{eq this.form.status "active"}}
+                            @onToggle={{this.toggleStatus}}
+                            @label={{t "settings.push-apps.on"}}
+                            @helpText={{t "settings.push-apps.on-help"}}
+                        />
+                    </div>
+
+                    <h4 class="oc-glance__heading mt-2 mb-2">{{t "settings.push-apps.ios"}}</h4>
+                    <p class="oc-line__help mb-3">{{t "settings.push-apps.ios-help"}}</p>
+                    <InputGroup @name={{t "settings.push-apps.bundle-id"}} @helpText={{t "settings.push-apps.bundle-id-help"}}>
+                        <input
+                            class="form-input w-full font-mono text-xs"
+                            value={{this.form.apn.app_bundle_id}}
+                            placeholder={{t "settings.push-apps.bundle-id-placeholder"}}
+                            aria-label={{t "settings.push-apps.bundle-id"}}
+                            {{on "input" (fn this.set "apn.app_bundle_id")}}
+                            data-test-push-app-bundle-id
+                        />
+                    </InputGroup>
+                    <div class="grid grid-cols-2 gap-x-6">
+                        <InputGroup @name={{t "settings.push-apps.key-id"}} @helpText={{t "settings.push-apps.key-id-help"}}>
+                            <input
+                                class="form-input w-full font-mono text-xs"
+                                value={{this.form.apn.key_id}}
+                                placeholder={{t "settings.push-apps.key-id-placeholder"}}
+                                aria-label={{t "settings.push-apps.key-id"}}
+                                {{on "input" (fn this.set "apn.key_id")}}
+                            />
+                        </InputGroup>
+                        <InputGroup @name={{t "settings.push-apps.team-id"}} @helpText={{t "settings.push-apps.team-id-help"}}>
+                            <input
+                                class="form-input w-full font-mono text-xs"
+                                value={{this.form.apn.team_id}}
+                                placeholder={{t "settings.push-apps.team-id-placeholder"}}
+                                aria-label={{t "settings.push-apps.team-id"}}
+                                {{on "input" (fn this.set "apn.team_id")}}
+                            />
+                        </InputGroup>
+                    </div>
+                    <InputGroup @name={{t "settings.push-apps.p8"}} @helpText={{if this.editingApp.providers.apn.has_key (t "settings.push-apps.p8-saved") (t "settings.push-apps.p8-help")}}>
+                        <textarea
+                            class="form-input w-full font-mono text-xs"
+                            rows="4"
+                            placeholder={{t "settings.push-apps.p8-placeholder"}}
+                            aria-label={{t "settings.push-apps.p8"}}
+                            value={{this.form.apn.private_key_content}}
+                            {{on "input" (fn this.set "apn.private_key_content")}}
+                        ></textarea>
+                    </InputGroup>
+                    <InputGroup @name={{t "settings.push-apps.environment"}} @helpText={{t "settings.push-apps.environment-help"}}>
+                        <Select
+                            @value={{this.form.apn.environment}}
+                            @options={{this.environments}}
+                            @optionLabel="label"
+                            @optionValue="value"
+                            @onSelect={{fn this.set "apn.environment"}}
+                            class="w-full"
+                        />
+                    </InputGroup>
+
+                    <h4 class="oc-glance__heading mt-2 mb-2">{{t "settings.push-apps.android"}}</h4>
+                    <p class="oc-line__help mb-3">{{t "settings.push-apps.android-help"}}</p>
+                    <OrderConfig::Notice @text={{t "settings.push-apps.no-package-name"}} class="mb-2" data-test-push-app-no-package-name />
+                    <OrderConfig::Notice @text={{t "settings.push-apps.firebase-ios"}} class="mb-4" />
+                    <InputGroup
+                        @name={{t "settings.push-apps.service-account"}}
+                        @helpText={{if
+                            this.editingApp.providers.fcm.has_credentials
+                            (t "settings.push-apps.service-account-saved" project=this.editingApp.providers.fcm.project_id)
+                            (t "settings.push-apps.service-account-help")
+                        }}
+                    >
+                        <textarea
+                            class="form-input w-full font-mono text-xs"
+                            rows="4"
+                            placeholder={{t "settings.push-apps.service-account-placeholder"}}
+                            aria-label={{t "settings.push-apps.service-account"}}
+                            value={{this.form.fcm.credentials}}
+                            {{on "input" (fn this.set "fcm.credentials")}}
+                        ></textarea>
+                    </InputGroup>
+                    <InputGroup @name={{t "settings.push-apps.android-channel"}} @helpText={{t "settings.push-apps.android-channel-help"}}>
+                        <input
+                            class="form-input w-full font-mono text-xs"
+                            value={{this.form.fcm.android_channel_id}}
+                            placeholder={{t "settings.push-apps.android-channel-placeholder"}}
+                            aria-label={{t "settings.push-apps.android-channel"}}
+                            {{on "input" (fn this.set "fcm.android_channel_id")}}
+                        />
+                    </InputGroup>
+
+                    {{#if this.error}}
+                        <span class="oc-line__error mb-3" role="alert"><FaIcon @icon="circle-exclamation" />{{this.error}}</span>
+                    {{/if}}
+                    <div class="flex justify-end gap-2">
+                        <Button @type="default" @size="sm" @text={{t "order-config-manager.common.cancel"}} @onClick={{this.cancel}} />
+                        <Button
+                            @type="primary"
+                            @size="sm"
+                            @icon="save"
+                            @text={{t "common.save-changes"}}
+                            @onClick={{perform this.save}}
+                            @isLoading={{this.save.isRunning}}
+                            data-test-push-app-save
+                        />
+                    </div>
+                </ContentPanel>
+            {{/if}}
+
+            {{#each this.pushApps as |app|}}
+                <ContentPanel @title={{app.name}} @open={{true}} @wrapperClass="bordered-classic" data-test-push-app={{app.id}}>
+                    <div class="flex flex-col gap-3">
+                        <div class="flex flex-wrap items-center gap-2 text-xs">
+                            <span class="oc-tag">{{if (eq app.status "active") (t "settings.push-apps.status-on") (t "settings.push-apps.status-off")}}</span>
+                            <span class="oc-tag">{{if app.providers.apn (t "settings.push-apps.ios-ready" bundle=app.providers.apn.app_bundle_id) (t "settings.push-apps.ios-off")}}</span>
+                            <span class="oc-tag">{{if
+                                    app.providers.fcm.has_credentials
+                                    (t "settings.push-apps.android-ready" project=app.providers.fcm.project_id)
+                                    (t "settings.push-apps.android-off")
+                                }}</span>
+                            <span class="oc-line__help">{{t "settings.push-apps.devices" count=app.devices}}</span>
+                        </div>
+                        <InputGroup @name={{t "settings.push-apps.key"}} @helpText={{t "settings.push-apps.key-help"}} @wrapperClass="mb-0">
+                            <ClickToCopy @value={{app.key}} class="form-input disabled cursor-pointer font-mono text-xs" data-test-push-app-key>{{app.key}}</ClickToCopy>
+                        </InputGroup>
+                        {{#if this.canUpdate}}
+                            <div class="flex gap-2 justify-end">
+                                <Button @type="default" @size="xs" @icon="paper-plane" @text={{t "settings.push-apps.send-test"}} @onClick={{fn this.openTest app}} />
+                                <Button @type="default" @size="xs" @text={{t "order-config-manager.common.edit"}} @onClick={{fn this.edit app}} @disabled={{this.editing}} />
+                                <Button @type="danger" @size="xs" @icon="trash" @onClick={{fn this.remove app}} @helpText={{t "settings.push-apps.delete"}} />
+                            </div>
+                        {{/if}}
+                        {{#if (eq this.testing app.id)}}
+                            <div class="oc-card flex flex-col gap-2" data-test-push-app-test>
+                                <div class="grid grid-cols-2 gap-x-6">
+                                    <InputGroup @name={{t "settings.push-apps.test-token-type"}} @helpText={{t "settings.push-apps.test-token-type-help"}}>
+                                        <Select
+                                            @value={{this.test.push_provider}}
+                                            @options={{this.tokenTypes}}
+                                            @optionLabel="label"
+                                            @optionValue="value"
+                                            @onSelect={{fn this.setTest "push_provider"}}
+                                            class="w-full"
+                                        />
+                                    </InputGroup>
+                                    {{#unless (eq this.test.push_provider "fcm")}}
+                                        <InputGroup @name={{t "settings.push-apps.environment"}} @helpText={{t "settings.push-apps.environment-help"}}>
+                                            <Select
+                                                @value={{this.test.environment}}
+                                                @options={{this.environments}}
+                                                @optionLabel="label"
+                                                @optionValue="value"
+                                                @onSelect={{fn this.setTest "environment"}}
+                                                class="w-full"
+                                            />
+                                        </InputGroup>
+                                    {{/unless}}
+                                </div>
+                                <InputGroup @name={{t "settings.push-apps.test-token"}} @helpText={{t "settings.push-apps.test-token-help"}}>
+                                    <input
+                                        class="form-input w-full font-mono text-xs"
+                                        value={{this.test.token}}
+                                        placeholder={{t "settings.push-apps.test-token-placeholder"}}
+                                        aria-label={{t "settings.push-apps.test-token"}}
+                                        {{on "input" (fn this.setTest "token")}}
+                                    />
+                                </InputGroup>
+                                {{#if this.testResult}}
+                                    <span class={{if this.testResult.ok "text-sm text-green-600 dark:text-green-400" "oc-line__error"}} role="status">{{this.testResult.text}}</span>
+                                {{/if}}
+                                <div class="flex justify-end">
+                                    <Button
+                                        @type="primary"
+                                        @size="xs"
+                                        @text={{t "settings.push-apps.send-test"}}
+                                        @onClick={{perform this.sendTest app}}
+                                        @isLoading={{this.sendTest.isRunning}}
+                                    />
+                                </div>
+                            </div>
+                        {{/if}}
+                    </div>
+                </ContentPanel>
+            {{else}}
+                {{#unless this.editing}}
+                    {{#unless this.load.isRunning}}
+                        <div class="oc-trigger-empty">{{t "settings.push-apps.empty"}}</div>
+                    {{/unless}}
+                {{/unless}}
+            {{/each}}
+        </div>
+    </div>
+</Layout::Section::Body>

@@ -7,6 +7,9 @@ use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Model;
+use Fleetbase\Push\Concerns\PushesToApps;
+use Fleetbase\Push\Contracts\SendsToPushApps;
+use Fleetbase\Push\PushAppChannel;
 use Fleetbase\Support\PushNotification;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Bus\Queueable;
@@ -16,9 +19,15 @@ use Illuminate\Notifications\Notification;
 use NotificationChannels\Apn\ApnChannel;
 use NotificationChannels\Fcm\FcmChannel;
 
-class OrderPing extends Notification implements ShouldQueue
+class OrderPing extends Notification implements ShouldQueue, SendsToPushApps
 {
     use Queueable;
+    use PushesToApps;
+
+    /**
+     * The iOS category of the push, as in toApn().
+     */
+    public string $pushCategory = 'order_ping';
 
     /**
      * The order instance this notification is for.
@@ -90,7 +99,7 @@ class OrderPing extends Notification implements ShouldQueue
     {
         $this->notifiable = $notifiable;
 
-        return ['broadcast', FcmChannel::class, ApnChannel::class];
+        return ['broadcast', FcmChannel::class, ApnChannel::class, PushAppChannel::class];
     }
 
     /**

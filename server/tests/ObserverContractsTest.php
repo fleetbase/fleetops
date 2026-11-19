@@ -585,7 +585,12 @@ class FleetOpsCompanyObserverProbe extends CompanyObserver
 
     protected function createTransportConfig(Company $company): void
     {
-        $this->configs[] = $company->uuid;
+        $this->configs[] = 'transport:' . $company->uuid;
+    }
+
+    protected function createPassengerConfig(Company $company): void
+    {
+        $this->configs[] = 'passenger:' . $company->uuid;
     }
 }
 
@@ -977,7 +982,7 @@ test('fleet service area company category user and payload observers delegate li
     (new PayloadObserver())->created($payload);
 
     expect($categoryObserver->deleted)->toBe(['category-uuid'])
-        ->and($companyObserver->configs)->toBe(['company-uuid'])
+        ->and($companyObserver->configs)->toBe(['transport:company-uuid', 'passenger:company-uuid'])
         ->and($userObserver->deleted)->toBe(['user-uuid'])
         ->and($payload->updates)->toBe(1);
 });

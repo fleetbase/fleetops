@@ -862,6 +862,17 @@ body[data-theme='light'] .flow-activity-link-label-text {
     border: 1px solid var(--oc-border);
 }
 
+.oc-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    color: var(--oc-muted);
+    background: var(--oc-surface);
+    border: 1px solid var(--oc-border);
+}
+
 .oc-flow-events {
     display: inline-flex;
     align-items: center;

@@ -3,6 +3,9 @@
 namespace Fleetbase\FleetOps\Notifications;
 
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\Push\Concerns\PushesToApps;
+use Fleetbase\Push\Contracts\SendsToPushApps;
+use Fleetbase\Push\PushAppChannel;
 use Fleetbase\Support\PushNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,9 +17,10 @@ use NotificationChannels\Fcm\FcmChannel;
  * A push about an order, with the title and message its order config's trigger gave. Sent to
  * the notifiable's own devices, a customer's from `customers/register-device` or a driver's.
  */
-class OrderUpdate extends Notification implements ShouldQueue
+class OrderUpdate extends Notification implements ShouldQueue, SendsToPushApps
 {
     use Queueable;
+    use PushesToApps;
 
     public array $data;
 
@@ -27,7 +31,7 @@ class OrderUpdate extends Notification implements ShouldQueue
 
     public function via($notifiable)
     {
-        return [FcmChannel::class, ApnChannel::class];
+        return [FcmChannel::class, ApnChannel::class, PushAppChannel::class];
     }
 
     public function toFcm($notifiable)

@@ -22,6 +22,7 @@ use Fleetbase\FleetOps\Support\DriverRatings;
 use Fleetbase\FleetOps\Support\OrderChat;
 use Fleetbase\FleetOps\Support\OrderCustomFields;
 use Fleetbase\FleetOps\Support\PlaceSearch;
+use Fleetbase\FleetOps\Support\PushAppDevices;
 use Fleetbase\FleetOps\Support\TrackingCode;
 use Fleetbase\FleetOps\Support\TrackingPage\TrackingShare;
 use Fleetbase\FleetOps\Support\TrackingScope;
@@ -1363,6 +1364,11 @@ class CustomerController extends Controller
             return response()->apiError('Not authenticated.', 401);
         }
 
+        $pushApp = PushAppDevices::resolve($request, $customer->company_uuid);
+        if ($pushApp === false) {
+            return response()->apiError('This push app key is not one of the organization\'s push apps.');
+        }
+
         $device = $this->firstOrCreateDevice(
             [
                 'token'    => $request->input('token'),
@@ -1375,6 +1381,7 @@ class CustomerController extends Controller
                 'status'    => 'active',
             ]
         );
+        PushAppDevices::link($device, $pushApp, $request);
 
         return response()->json([
             'status' => 'ok',
