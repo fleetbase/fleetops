@@ -22,4 +22,14 @@ class FleetOps
     {
         return OrderConfigTemplates::create('transport', $company);
     }
+
+    /**
+     * Creates or retrieves the company's passenger configuration, from the `passenger` order
+     * config template. Like transport it is a system config: it can't be deleted and its flow
+     * is read-only.
+     */
+    public static function createPassengerConfig(Company $company): OrderConfig
+    {
+        return OrderConfigTemplates::create('passenger', $company);
+    }
 }
