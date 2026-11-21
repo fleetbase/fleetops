@@ -15,19 +15,19 @@
     @emptyStateComponent={{component
         "table/empty-state"
         icon="gas-pump"
-        title="No fuel reports yet"
-        description="Create fuel reports to track vehicle fuel usage, cost, and supporting transaction records."
-        filteredTitle="No fuel reports match your filters"
-        filteredDescription="Adjust the search or filters to find another fuel report."
-        primaryText="New fuel report"
+        title=(t "management.empty-states.fuel-reports.title")
+        description=(t "management.empty-states.fuel-reports.description")
+        filteredTitle=(t "management.empty-states.fuel-reports.filtered-title")
+        filteredDescription=(t "management.empty-states.fuel-reports.filtered-description")
+        primaryText=(t "management.empty-states.fuel-reports.primary-text")
         primaryIcon="plus"
         primaryAction=this.fuelReportActions.transition.create
-        secondaryText="Import"
+        secondaryText=(t "common.import")
         secondaryIcon="upload"
         secondaryAction=this.fuelReportActions.import
         docsSlug="fleet-ops/resources/fuel-reports/overview"
-        docsTitle="Fuel reports guide"
-        docsText="Fuel reports guide"
+        docsTitle=(t "management.empty-states.fuel-reports.docs-title")
+        docsText=(t "management.empty-states.fuel-reports.docs-text")
         docsSource="fleet-ops-empty-fuel-reports"
     }}
 />

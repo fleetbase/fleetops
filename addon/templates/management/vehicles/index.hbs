@@ -16,19 +16,19 @@
         @emptyStateComponent={{component
             "table/empty-state"
             icon="truck"
-            title="Add your first vehicle"
-            description="Vehicles connect assignments, live tracking, fleet capacity, maintenance, and compliance history."
-            filteredTitle="No vehicles match your filters"
-            filteredDescription="Adjust the search or filters to find another vehicle."
-            primaryText="New vehicle"
+            title=(t "management.empty-states.vehicles.title")
+            description=(t "management.empty-states.vehicles.description")
+            filteredTitle=(t "management.empty-states.vehicles.filtered-title")
+            filteredDescription=(t "management.empty-states.vehicles.filtered-description")
+            primaryText=(t "management.empty-states.vehicles.primary-text")
             primaryIcon="plus"
             primaryAction=this.vehicleActions.transition.create
-            secondaryText="Import"
+            secondaryText=(t "common.import")
             secondaryIcon="upload"
             secondaryAction=this.vehicleActions.import
             docsSlug="fleet-ops/resources/vehicles/overview"
-            docsTitle="Vehicles guide"
-            docsText="Vehicle guide"
+            docsTitle=(t "management.empty-states.vehicles.docs-title")
+            docsText=(t "management.empty-states.vehicles.docs-text")
             docsSource="fleet-ops-empty-vehicles"
         }}
     />

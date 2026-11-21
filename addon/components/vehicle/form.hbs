@@ -38,7 +38,7 @@
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             {{! Vehicle Identification }}
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
-                Vehicle Identification
+                {{t "vehicle.form.vehicle-identification"}}
             </div>
 
             <InputGroup @name={{t "common.name"}}>
@@ -69,15 +69,15 @@
                 <Input @value={{@resource.year}} @type="text" class="w-full form-input" placeholder={{t "vehicle.fields.vehicle-year"}} disabled={{cannot-write @resource}} />
             </InputGroup>
 
-            <InputGroup @value={{@resource.trim}} @name="Trim" @placeholder="Trim" />
-            <InputGroup @value={{@resource.color}} @name="Color" @placeholder="Vehicle Color" />
-            <InputGroup @value={{@resource.serial_number}} @name="Serial Number" @placeholder="Serial Number" />
-            <InputGroup @value={{@resource.fuel_card_number}} @name="Fuel Card Number" @placeholder="Fuel Card Number" />
-            <InputGroup @value={{@resource.class}} @name="Class" @placeholder="Class" />
+            <InputGroup @value={{@resource.trim}} @name={{t "vehicle.form.trim"}} @placeholder={{t "vehicle.form.trim"}} />
+            <InputGroup @value={{@resource.color}} @name={{t "vehicle.form.color"}} @placeholder={{t "vehicle.form.vehicle-color"}} />
+            <InputGroup @value={{@resource.serial_number}} @name={{t "vehicle.form.serial-number"}} @placeholder={{t "vehicle.form.serial-number"}} />
+            <InputGroup @value={{@resource.fuel_card_number}} @name={{t "vehicle.form.fuel-card-number"}} @placeholder={{t "vehicle.form.fuel-card-number"}} />
+            <InputGroup @value={{@resource.class}} @name={{t "vehicle.form.class"}} @placeholder={{t "vehicle.form.class"}} />
 
             {{! Assignment & Status }}
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
-                Assignment & Status
+                {{t "vehicle.form.assignment-status"}}
             </div>
 
             <InputGroup @name={{t "vehicle.fields.driver-assigned"}}>
@@ -116,11 +116,11 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @value={{@resource.call_sign}} @name="Call Sign" @placeholder="Call Sign" />
+            <InputGroup @value={{@resource.call_sign}} @name={{t "vehicle.form.call-sign"}} @placeholder={{t "vehicle.form.call-sign"}} />
 
             {{! Location }}
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
-                Location
+                {{t "vehicle.form.location"}}
             </div>
 
             <InputGroup @name={{t "common.coordinates"}} @wrapperClass="col-span-2">
@@ -138,19 +138,19 @@
     </RegistryYield>
 
     {{! MEASUREMENT & UNITS / ODOMETER }}
-    <ContentPanel @title="Measurement & Units" @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "vehicle.form.measurement-units"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
-                Measurement & Units
+                {{t "vehicle.form.measurement-units"}}
             </div>
 
-            <InputGroup @name="System of Measurement">
+            <InputGroup @name={{t "vehicle.form.system-of-measurement"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{get-fleet-ops-options "measurementSystems"}}
                         @selected={{find-by "value" @resource.measurement_system (get-fleet-ops-options "measurementSystems")}}
                         @onChange={{set-model-attr @resource "measurement_system"}}
-                        @placeholder="Select System of Measurement"
+                        @placeholder={{t "vehicle.form.select-system-of-measurement"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |option|
@@ -163,13 +163,13 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @name="Fuel Volume Unit">
+            <InputGroup @name={{t "vehicle.form.fuel-volume-unit"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{get-fleet-ops-options "fuelVolumeUnits"}}
                         @selected={{find-by "value" @resource.fuel_volume_unit (get-fleet-ops-options "fuelVolumeUnits")}}
                         @onChange={{set-model-attr @resource "fuel_volume_unit"}}
-                        @placeholder="Select Fuel Volume Unit"
+                        @placeholder={{t "vehicle.form.select-fuel-volume-unit"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |option|
@@ -183,18 +183,18 @@
             </InputGroup>
 
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
-                Odometer & Usage
+                {{t "vehicle.form.odometer-usage"}}
             </div>
 
-            <InputGroup @value={{@resource.odometer}} @name={{concat "Current Odometer (" @resource.odometer_unit ")"}} @type="number" @placeholder="Current Odometer Reading" />
+            <InputGroup @value={{@resource.odometer}} @name={{t "vehicle.form.current-odometer" unit=@resource.odometer_unit}} @type="number" @placeholder={{t "vehicle.form.current-odometer-reading"}} />
 
-            <InputGroup @name="Odometer Unit">
+            <InputGroup @name={{t "vehicle.form.odometer-unit"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{get-fleet-ops-options "odometerUnits"}}
                         @selected={{find-by "value" @resource.odometer_unit (get-fleet-ops-options "odometerUnits")}}
                         @onChange={{set-model-attr @resource "odometer_unit"}}
-                        @placeholder="Select unit"
+                        @placeholder={{t "vehicle.form.select-unit"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |option|
@@ -207,24 +207,24 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @value={{@resource.odometer_at_purchase}} @name="Odometer at Purchase" @type="number" @placeholder="Odometer reading at purchase" />
+            <InputGroup @value={{@resource.odometer_at_purchase}} @name={{t "vehicle.form.odometer-at-purchase"}} @type="number" @placeholder={{t "vehicle.form.odometer-reading-at-purchase"}} />
         </div>
     </ContentPanel>
 
     {{! BODY & USAGE }}
-    <ContentPanel @title="Body & Usage" @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "vehicle.form.body-usage"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
-                Body & Usage
+                {{t "vehicle.form.body-usage"}}
             </div>
 
-            <InputGroup @name="Body Type">
+            <InputGroup @name={{t "vehicle.form.body-type"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{get-fleet-ops-options "vehicleBodyTypes"}}
                         @selected={{find-by "value" @resource.body_type (get-fleet-ops-options "vehicleBodyTypes")}}
                         @onChange={{set-model-attr @resource "body_type"}}
-                        @placeholder="Select body type"
+                        @placeholder={{t "vehicle.form.select-body-type"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |option|
@@ -237,13 +237,13 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @name="Body Subtype">
+            <InputGroup @name={{t "vehicle.form.body-subtype"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{get-fleet-ops-options "vehicleBodySubTypes"}}
                         @selected={{find-by "value" @resource.body_sub_type (get-fleet-ops-options "vehicleBodySubTypes")}}
                         @onChange={{set-model-attr @resource "body_sub_type"}}
-                        @placeholder="Select body sub-type"
+                        @placeholder={{t "vehicle.form.select-body-subtype"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |option|
@@ -256,13 +256,13 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @name="Usage Type">
+            <InputGroup @name={{t "vehicle.form.usage-type"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{get-fleet-ops-options "vehicleUsageTypes"}}
                         @selected={{find-by "value" @resource.usage_type (get-fleet-ops-options "vehicleUsageTypes")}}
                         @onChange={{set-model-attr @resource "usage_type"}}
-                        @placeholder="Select usage type"
+                        @placeholder={{t "vehicle.form.select-usage-type"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |option|
@@ -275,13 +275,13 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @name="Ownership Type">
+            <InputGroup @name={{t "vehicle.form.ownership-type"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{get-fleet-ops-options "vehicleOwnershipTypes"}}
                         @selected={{find-by "value" @resource.ownership_type (get-fleet-ops-options "vehicleOwnershipTypes")}}
                         @onChange={{set-model-attr @resource "ownership_type"}}
-                        @placeholder="Select ownership type"
+                        @placeholder={{t "vehicle.form.select-ownership-type"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |option|
@@ -294,13 +294,13 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @name="Fuel Type">
+            <InputGroup @name={{t "vehicle.form.fuel-type"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{get-fleet-ops-options "fuelTypes"}}
                         @selected={{find-by "value" @resource.fuel_type (get-fleet-ops-options "fuelTypes")}}
                         @onChange={{set-model-attr @resource "fuel_type"}}
-                        @placeholder="Select fuel type"
+                        @placeholder={{t "vehicle.form.select-fuel-type"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |option|
@@ -313,13 +313,13 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @name="Transmission">
+            <InputGroup @name={{t "vehicle.form.transmission"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{get-fleet-ops-options "transmissionTypes"}}
                         @selected={{find-by "value" @resource.transmission (get-fleet-ops-options "transmissionTypes")}}
                         @onChange={{set-model-attr @resource "transmission"}}
-                        @placeholder="Select transmission"
+                        @placeholder={{t "vehicle.form.select-transmission"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |option|
@@ -335,180 +335,180 @@
     </ContentPanel>
 
     {{! TECHNICAL SPECIFICATIONS (ENGINE, CAPACITY, REGULATORY) }}
-    <ContentPanel @title="Technical Specifications" @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "vehicle.form.technical-specifications"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 no-input-group-padding text-xs">
 
             {{! Powertrain & Engine }}
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
-                Powertrain & Engine
+                {{t "vehicle.form.powertrain-engine"}}
             </div>
 
-            <InputGroup @value={{@resource.engine_number}} @name="Engine Number" @placeholder="Engine Number" />
-            <InputGroup @value={{@resource.engine_make}} @name="Engine Make" @placeholder="Engine Manufacturer" />
-            <InputGroup @value={{@resource.engine_model}} @name="Engine Model" @placeholder="Engine Model" />
-            <InputGroup @value={{@resource.engine_family}} @name="Engine Family" @placeholder="Engine Family" />
-            <InputGroup @value={{@resource.engine_configuration}} @name="Engine Configuration" @placeholder="e.g., Inline-4, V6" />
-            <InputGroup @value={{@resource.cylinder_arrangement}} @name="Cylinder Arrangement" @placeholder="e.g., I, V, H" />
-            <InputGroup @value={{@resource.number_of_cylinders}} @name="Number of Cylinders" @type="number" @placeholder="e.g., 4, 6" />
+            <InputGroup @value={{@resource.engine_number}} @name={{t "vehicle.form.engine-number"}} @placeholder={{t "vehicle.form.engine-number"}} />
+            <InputGroup @value={{@resource.engine_make}} @name={{t "vehicle.form.engine-make"}} @placeholder={{t "vehicle.form.engine-manufacturer"}} />
+            <InputGroup @value={{@resource.engine_model}} @name={{t "vehicle.form.engine-model"}} @placeholder={{t "vehicle.form.engine-model"}} />
+            <InputGroup @value={{@resource.engine_family}} @name={{t "vehicle.form.engine-family"}} @placeholder={{t "vehicle.form.engine-family"}} />
+            <InputGroup @value={{@resource.engine_configuration}} @name={{t "vehicle.form.engine-configuration"}} @placeholder={{t "vehicle.form.engine-configuration-example"}} />
+            <InputGroup @value={{@resource.cylinder_arrangement}} @name={{t "vehicle.form.cylinder-arrangement"}} @placeholder={{t "vehicle.form.cylinder-arrangement-example"}} />
+            <InputGroup @value={{@resource.number_of_cylinders}} @name={{t "vehicle.form.number-of-cylinders"}} @type="number" @placeholder={{t "vehicle.form.number-of-cylinders-example"}} />
 
-            <InputGroup @name="Engine Size">
-                <UnitInput class="w-full" @value={{@resource.engine_size}} @unit="L" @type="number" @step="0.1" @placeholder="Engine Size" />
+            <InputGroup @name={{t "vehicle.form.engine-size"}}>
+                <UnitInput class="w-full" @value={{@resource.engine_size}} @unit="L" @type="number" @step="0.1" @placeholder={{t "vehicle.form.engine-size"}} />
             </InputGroup>
 
-            <InputGroup @name="Engine Displacement">
-                <UnitInput class="w-full" @value={{@resource.engine_displacement}} @unit="cc" @type="number" @placeholder="Engine Displacement" />
+            <InputGroup @name={{t "vehicle.form.engine-displacement"}}>
+                <UnitInput class="w-full" @value={{@resource.engine_displacement}} @unit="cc" @type="number" @placeholder={{t "vehicle.form.engine-displacement"}} />
             </InputGroup>
 
-            <InputGroup @name="Horsepower">
-                <UnitInput class="w-full" @value={{@resource.horsepower}} @unit="hp" @type="number" @placeholder="Horsepower" />
+            <InputGroup @name={{t "vehicle.form.horsepower"}}>
+                <UnitInput class="w-full" @value={{@resource.horsepower}} @unit="hp" @type="number" @placeholder={{t "vehicle.form.horsepower"}} />
             </InputGroup>
 
-            <InputGroup @value={{@resource.horsepower_rpm}} @name="Horsepower RPM" @type="number" @placeholder="RPM at Max Horsepower" />
+            <InputGroup @value={{@resource.horsepower_rpm}} @name={{t "vehicle.form.horsepower-rpm"}} @type="number" @placeholder={{t "vehicle.form.rpm-at-max-horsepower"}} />
 
-            <InputGroup @name="Torque">
-                <UnitInput class="w-full" @value={{@resource.torque}} @unit="Nm" @type="number" @placeholder="Torque" />
+            <InputGroup @name={{t "vehicle.form.torque"}}>
+                <UnitInput class="w-full" @value={{@resource.torque}} @unit="Nm" @type="number" @placeholder={{t "vehicle.form.torque"}} />
             </InputGroup>
 
-            <InputGroup @value={{@resource.torque_rpm}} @name="Torque RPM" @type="number" @placeholder="RPM at Max Torque" />
+            <InputGroup @value={{@resource.torque_rpm}} @name={{t "vehicle.form.torque-rpm"}} @type="number" @placeholder={{t "vehicle.form.rpm-at-max-torque"}} />
 
             {{! Capacity & Dimensions }}
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
-                Capacity & Dimensions
+                {{t "vehicle.form.capacity-dimensions"}}
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 col-span-1 lg:col-span-2 gap-2">
-                <InputGroup @name="Fuel Capacity">
-                    <UnitInput class="w-full" @value={{@resource.fuel_capacity}} @unit="L" @placeholder="Fuel Tank Capacity" />
+                <InputGroup @name={{t "vehicle.form.fuel-capacity"}}>
+                    <UnitInput class="w-full" @value={{@resource.fuel_capacity}} @unit="L" @placeholder={{t "vehicle.form.fuel-tank-capacity"}} />
                 </InputGroup>
 
-                <InputGroup @name="Payload Capacity">
-                    <UnitInput class="w-full" @value={{@resource.payload_capacity}} @unit="kg" @placeholder="Maximum Payload" />
+                <InputGroup @name={{t "vehicle.form.payload-capacity"}}>
+                    <UnitInput class="w-full" @value={{@resource.payload_capacity}} @unit="kg" @placeholder={{t "vehicle.form.maximum-payload"}} />
                 </InputGroup>
 
-                <InputGroup @name="Towing Capacity">
-                    <UnitInput class="w-full" @value={{@resource.towing_capacity}} @unit="kg" @placeholder="Towing Capacity" />
+                <InputGroup @name={{t "vehicle.form.towing-capacity"}}>
+                    <UnitInput class="w-full" @value={{@resource.towing_capacity}} @unit="kg" @placeholder={{t "vehicle.form.towing-capacity"}} />
                 </InputGroup>
 
-                <InputGroup @name="Seating Capacity">
-                    <Input @value={{@resource.seating_capacity}} @type="number" class="form-input w-full" placeholder="Number of Seats" />
+                <InputGroup @name={{t "vehicle.form.seating-capacity"}}>
+                    <Input @value={{@resource.seating_capacity}} @type="number" class="form-input w-full" placeholder={{t "vehicle.form.number-of-seats"}} />
                 </InputGroup>
 
-                <InputGroup @name="Vehicle Weight">
-                    <UnitInput class="w-full" @value={{@resource.weight}} @unit="kg" @placeholder="Vehicle Weight" />
+                <InputGroup @name={{t "vehicle.form.vehicle-weight"}}>
+                    <UnitInput class="w-full" @value={{@resource.weight}} @unit="kg" @placeholder={{t "vehicle.form.vehicle-weight"}} />
                 </InputGroup>
 
-                <InputGroup @name="Length">
-                    <UnitInput class="w-full" @value={{@resource.length}} @unit="cm" @placeholder="Length" />
+                <InputGroup @name={{t "vehicle.form.length"}}>
+                    <UnitInput class="w-full" @value={{@resource.length}} @unit="cm" @placeholder={{t "vehicle.form.length"}} />
                 </InputGroup>
 
-                <InputGroup @name="Width">
-                    <UnitInput class="w-full" @value={{@resource.width}} @unit="cm" @placeholder="Width" />
+                <InputGroup @name={{t "vehicle.form.width"}}>
+                    <UnitInput class="w-full" @value={{@resource.width}} @unit="cm" @placeholder={{t "vehicle.form.width"}} />
                 </InputGroup>
 
-                <InputGroup @name="Height">
-                    <UnitInput class="w-full" @value={{@resource.height}} @unit="cm" @placeholder="Height" />
+                <InputGroup @name={{t "vehicle.form.height"}}>
+                    <UnitInput class="w-full" @value={{@resource.height}} @unit="cm" @placeholder={{t "vehicle.form.height"}} />
                 </InputGroup>
 
-                <InputGroup @name="Cargo Volume">
-                    <UnitInput class="w-full" @value={{@resource.cargo_volume}} @unit="L" @placeholder="Cargo Volume" />
+                <InputGroup @name={{t "vehicle.form.cargo-volume"}}>
+                    <UnitInput class="w-full" @value={{@resource.cargo_volume}} @unit="L" @placeholder={{t "vehicle.form.cargo-volume"}} />
                 </InputGroup>
 
-                <InputGroup @name="Payload Volume (m³)" @helpText="The maximum cargo volume this vehicle can carry, in cubic metres.">
-                    <Input @value={{@resource.payload_capacity_volume}} @type="number" class="form-input w-full" placeholder="e.g. 40" disabled={{cannot-write @resource}} />
+                <InputGroup @name={{t "vehicle.form.payload-volume"}} @helpText={{t "vehicle.form.payload-volume-help"}}>
+                    <Input @value={{@resource.payload_capacity_volume}} @type="number" class="form-input w-full" placeholder={{t "vehicle.form.example-40"}} disabled={{cannot-write @resource}} />
                 </InputGroup>
 
-                <InputGroup @name="Pallet Capacity" @helpText="The maximum number of standard pallets this vehicle can carry.">
-                    <Input @value={{@resource.payload_capacity_pallets}} @type="number" class="form-input w-full" placeholder="e.g. 20" disabled={{cannot-write @resource}} />
+                <InputGroup @name={{t "vehicle.form.pallet-capacity"}} @helpText={{t "vehicle.form.pallet-capacity-help"}}>
+                    <Input @value={{@resource.payload_capacity_pallets}} @type="number" class="form-input w-full" placeholder={{t "vehicle.form.example-20"}} disabled={{cannot-write @resource}} />
                 </InputGroup>
 
-                <InputGroup @name="Parcel Capacity" @helpText="The maximum number of parcels or packages this vehicle can carry.">
-                    <Input @value={{@resource.payload_capacity_parcels}} @type="number" class="form-input w-full" placeholder="e.g. 200" disabled={{cannot-write @resource}} />
+                <InputGroup @name={{t "vehicle.form.parcel-capacity"}} @helpText={{t "vehicle.form.parcel-capacity-help"}}>
+                    <Input @value={{@resource.payload_capacity_parcels}} @type="number" class="form-input w-full" placeholder={{t "vehicle.form.example-200"}} disabled={{cannot-write @resource}} />
                 </InputGroup>
 
-                <InputGroup @name="Passenger Volume">
-                    <UnitInput class="w-full" @value={{@resource.passenger_volume}} @unit="L" @placeholder="Passenger Volume" />
+                <InputGroup @name={{t "vehicle.form.passenger-volume"}}>
+                    <UnitInput class="w-full" @value={{@resource.passenger_volume}} @unit="L" @placeholder={{t "vehicle.form.passenger-volume"}} />
                 </InputGroup>
 
-                <InputGroup @name="Interior Volume">
-                    <UnitInput class="w-full" @value={{@resource.interior_volume}} @unit="L" @placeholder="Interior Volume" />
+                <InputGroup @name={{t "vehicle.form.interior-volume"}}>
+                    <UnitInput class="w-full" @value={{@resource.interior_volume}} @unit="L" @placeholder={{t "vehicle.form.interior-volume"}} />
                 </InputGroup>
 
-                <InputGroup @name="Ground Clearance">
-                    <UnitInput class="w-full" @value={{@resource.ground_clearance}} @unit="cm" @placeholder="Ground Clearance" />
+                <InputGroup @name={{t "vehicle.form.ground-clearance"}}>
+                    <UnitInput class="w-full" @value={{@resource.ground_clearance}} @unit="cm" @placeholder={{t "vehicle.form.ground-clearance"}} />
                 </InputGroup>
 
-                <InputGroup @name="Bed Length">
-                    <UnitInput class="w-full" @value={{@resource.bed_length}} @unit="cm" @placeholder="Bed Length" />
+                <InputGroup @name={{t "vehicle.form.bed-length"}}>
+                    <UnitInput class="w-full" @value={{@resource.bed_length}} @unit="cm" @placeholder={{t "vehicle.form.bed-length"}} />
                 </InputGroup>
             </div>
 
             {{! Regulatory & Compliance }}
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
-                Regulatory & Compliance
+                {{t "vehicle.form.regulatory-compliance"}}
             </div>
 
-            <InputGroup @value={{@resource.emission_standard}} @name="Emission Standard" @placeholder="e.g., Euro 6, EPA Tier 3" />
+            <InputGroup @value={{@resource.emission_standard}} @name={{t "vehicle.form.emission-standard"}} @placeholder={{t "vehicle.form.emission-standard-example"}} />
 
             <div></div>
 
-            <InputGroup @name="GVWR (Gross Vehicle Weight Rating)">
-                <UnitInput class="w-full" @value={{@resource.gvwr}} @unit="kg" @placeholder="GVWR" />
+            <InputGroup @name={{t "vehicle.form.gvwr"}}>
+                <UnitInput class="w-full" @value={{@resource.gvwr}} @unit="kg" @placeholder={{t "vehicle.form.gvwr-short"}} />
             </InputGroup>
 
-            <InputGroup @name="GCWR (Gross Combined Weight Rating)">
-                <UnitInput class="w-full" @value={{@resource.gcwr}} @unit="kg" @placeholder="GCWR" />
+            <InputGroup @name={{t "vehicle.form.gcwr"}}>
+                <UnitInput class="w-full" @value={{@resource.gcwr}} @unit="kg" @placeholder={{t "vehicle.form.gcwr-short"}} />
             </InputGroup>
 
             <InputGroup @wrapperClass="mt-1 space-y-2">
-                <Checkbox @value={{@resource.dpf_equipped}} @label="DPF Equipped" @onToggle={{fn (mut @resource.dpf_equipped)}} />
-                <Checkbox @value={{@resource.scr_equipped}} @label="SCR Equipped" @onToggle={{fn (mut @resource.scr_equipped)}} />
+                <Checkbox @value={{@resource.dpf_equipped}} @label={{t "vehicle.form.dpf-equipped"}} @onToggle={{fn (mut @resource.dpf_equipped)}} />
+                <Checkbox @value={{@resource.scr_equipped}} @label={{t "vehicle.form.scr-equipped"}} @onToggle={{fn (mut @resource.scr_equipped)}} />
             </InputGroup>
         </div>
     </ContentPanel>
 
     {{! FINANCIAL & LIFECYCLE }}
-    <ContentPanel @title="Financial & Lifecycle" @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "vehicle.form.financial-lifecycle"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
-                Asset Values
+                {{t "vehicle.form.asset-values"}}
             </div>
 
-            <InputGroup @name="Currency" @value={{@resource.currency}}>
+            <InputGroup @name={{t "vehicle.form.currency"}} @value={{@resource.currency}}>
                 <CurrencySelect @currency={{@resource.currency}} @onCurrencyChange={{fn (mut @resource.currency)}} @triggerClass="w-full form-select" />
             </InputGroup>
             <div></div>
 
-            <InputGroup @name="Acquisition Cost">
+            <InputGroup @name={{t "vehicle.form.acquisition-cost"}}>
                 <MoneyInput @value={{@resource.acquisition_cost}} @currency={{@resource.currency}} />
             </InputGroup>
 
-            <InputGroup @name="Current Value">
+            <InputGroup @name={{t "vehicle.form.current-value"}}>
                 <MoneyInput @value={{@resource.current_value}} @currency={{@resource.currency}} />
             </InputGroup>
 
-            <InputGroup @name="Insurance Value">
+            <InputGroup @name={{t "vehicle.form.insurance-value"}}>
                 <MoneyInput @value={{@resource.insurance_value}} @currency={{@resource.currency}} />
             </InputGroup>
 
-            <InputGroup @name="Depreciation Rate (%)">
+            <InputGroup @name={{t "vehicle.form.depreciation-rate"}}>
                 <Input @value={{@resource.depreciation_rate}} @type="number" step="0.01" class="form-input w-full" />
             </InputGroup>
 
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
-                Lifecycle & Service Life
+                {{t "vehicle.form.lifecycle-service-life"}}
             </div>
 
-            <InputGroup @name="Estimated Service Life (Distance)">
-                <Input @value={{@resource.estimated_service_life_distance}} @type="number" class="form-input w-full" placeholder="Total distance" />
+            <InputGroup @name={{t "vehicle.form.estimated-service-life-distance"}}>
+                <Input @value={{@resource.estimated_service_life_distance}} @type="number" class="form-input w-full" placeholder={{t "vehicle.form.total-distance"}} />
             </InputGroup>
 
-            <InputGroup @name="Service Life Distance Unit">
+            <InputGroup @name={{t "vehicle.form.service-life-distance-unit"}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{get-fleet-ops-options "odometerUnits"}}
                         @selected={{find-by "value" @resource.estimated_service_life_distance_unit (get-fleet-ops-options "odometerUnits")}}
                         @onChange={{set-model-attr @resource "estimated_service_life_distance_unit"}}
-                        @placeholder="Select unit"
+                        @placeholder={{t "vehicle.form.select-unit"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |option|
@@ -521,43 +521,43 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @name="Estimated Service Life (Months)">
+            <InputGroup @name={{t "vehicle.form.estimated-service-life-months"}}>
                 <Input @value={{@resource.estimated_service_life_months}} @type="number" class="form-input w-full" />
             </InputGroup>
 
-            <InputGroup @name="Purchase Date">
+            <InputGroup @name={{t "vehicle.form.purchase-date"}}>
                 <DatePicker
                     @value={{or (format-date-fns @resource.purchased_at "yyyy-MM-dd") null}}
                     @onChange={{fn (mut @resource.purchased_at)}}
-                    @placeholder="DD-MM-YYYY"
+                    @placeholder={{t "vehicle.form.date-placeholder"}}
                     class="filter-date-input w-full flex-1"
                 />
             </InputGroup>
 
-            <InputGroup @name="Lease Expiry Date">
+            <InputGroup @name={{t "vehicle.form.lease-expiry-date"}}>
                 <DatePicker
                     @value={{or (format-date-fns @resource.lease_expires_at "yyyy-MM-dd") null}}
                     @onChange={{fn (mut @resource.lease_expires_at)}}
-                    @placeholder="DD-MM-YYYY"
+                    @placeholder={{t "vehicle.form.date-placeholder"}}
                     class="filter-date-input w-full flex-1"
                 />
             </InputGroup>
 
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
-                Financing (Loan)
+                {{t "vehicle.form.financing-loan"}}
             </div>
 
-            <InputGroup @name="Loan Amount">
+            <InputGroup @name={{t "vehicle.form.loan-amount"}}>
                 <MoneyInput @value={{@resource.loan_amount}} @currency={{@resource.currency}} />
             </InputGroup>
 
-            <InputGroup @value={{@resource.loan_number_of_payments}} @name="Number of Payments" @type="number" @placeholder="Number of payments" />
+            <InputGroup @value={{@resource.loan_number_of_payments}} @name={{t "vehicle.form.number-of-payments"}} @type="number" @placeholder={{t "vehicle.form.number-of-payments"}} />
 
-            <InputGroup @name="First Payment Date">
+            <InputGroup @name={{t "vehicle.form.first-payment-date"}}>
                 <DatePicker
                     @value={{or (format-date-fns @resource.loan_first_payment "yyyy-MM-dd") null}}
                     @onChange={{fn (mut @resource.loan_first_payment)}}
-                    @placeholder="DD-MM-YYYY"
+                    @placeholder={{t "vehicle.form.date-placeholder"}}
                     class="filter-date-input w-full flex-1"
                 />
             </InputGroup>
@@ -565,18 +565,18 @@
     </ContentPanel>
 
     {{! ORCHESTRATOR CONSTRAINTS }}
-    <ContentPanel @title="Orchestrator Constraints" @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "vehicle.form.orchestrator-constraints"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
-                Skills & Capabilities
+                {{t "vehicle.form.skills-capabilities"}}
             </div>
             <div class="col-span-1 lg:col-span-2">
-                <InputGroup @name="Vehicle Skills" @helpText="Skills this vehicle can fulfil (e.g. refrigerated, hazmat). Used by the Orchestrator for order matching.">
+                <InputGroup @name={{t "vehicle.form.vehicle-skills"}} @helpText={{t "vehicle.form.vehicle-skills-help"}}>
                     <MultiSelect
                         @options={{get-fleet-ops-options "vehicleSkills"}}
                         @selected={{@resource.skills}}
                         @onChange={{fn (mut @resource.skills)}}
-                        @placeholder="Select skills…"
+                        @placeholder={{t "vehicle.form.select-skills"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |option|
@@ -586,19 +586,19 @@
                 </InputGroup>
             </div>
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
-                Availability Window
+                {{t "vehicle.form.availability-window"}}
             </div>
-            <InputGroup @name="Available From" @helpText="Earliest time this vehicle is available for dispatch (HH:MM).">
+            <InputGroup @name={{t "vehicle.form.available-from"}} @helpText={{t "vehicle.form.available-from-help"}}>
                 <Input @value={{@resource.time_window_start}} @type="time" class="form-input w-full" placeholder="HH:MM" disabled={{cannot-write @resource}} />
             </InputGroup>
-            <InputGroup @name="Available Until" @helpText="Latest time this vehicle should complete its last stop (HH:MM).">
+            <InputGroup @name={{t "vehicle.form.available-until"}} @helpText={{t "vehicle.form.available-until-help"}}>
                 <Input @value={{@resource.time_window_end}} @type="time" class="form-input w-full" placeholder="HH:MM" disabled={{cannot-write @resource}} />
             </InputGroup>
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
-                Task Limits
+                {{t "vehicle.form.task-limits"}}
             </div>
-            <InputGroup @name="Max Tasks" @helpText="Maximum number of stops/orders this vehicle can be assigned per Orchestrator run. Leave blank for no limit.">
-                <Input @value={{@resource.max_tasks}} @type="number" class="form-input w-full" placeholder="e.g. 20" disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "vehicle.form.max-tasks"}} @helpText={{t "vehicle.form.max-tasks-help"}}>
+                <Input @value={{@resource.max_tasks}} @type="number" class="form-input w-full" placeholder={{t "vehicle.form.example-20"}} disabled={{cannot-write @resource}} />
             </InputGroup>
         </div>
     </ContentPanel>

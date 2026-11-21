@@ -16,14 +16,14 @@
         @emptyStateComponent={{component
             "table/empty-state"
             icon="user-group"
-            title="Add your first customer"
-            description="Customers give orders an owner, contact details, and account context for service history."
-            filteredTitle="No customers match your filters"
-            filteredDescription="Adjust the search or filters to find another customer."
-            primaryText="New customer"
+            title=(t "management.empty-states.customers.title")
+            description=(t "management.empty-states.customers.description")
+            filteredTitle=(t "management.empty-states.customers.filtered-title")
+            filteredDescription=(t "management.empty-states.customers.filtered-description")
+            primaryText=(t "management.empty-states.customers.primary-text")
             primaryIcon="plus"
             primaryAction=this.customerActions.transition.create
-            secondaryText="Import"
+            secondaryText=(t "common.import")
             secondaryIcon="upload"
             secondaryAction=this.customerActions.import
         }}

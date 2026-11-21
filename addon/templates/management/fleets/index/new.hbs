@@ -2,7 +2,7 @@
     @resource={{this.fleet}}
     @controller={{this}}
     @actionButtons={{this.actionButtons}}
-    @headerTitle="Create a new fleet"
+    @headerTitle={{t "common.create-a-new-resource" resource=(lowercase (t "resource.fleet"))}}
     @saveTask={{this.save}}
     @onPressCancel={{transition-to "management.fleets.index"}}
     @onOverlayReady={{fn (mut this.overlay)}}

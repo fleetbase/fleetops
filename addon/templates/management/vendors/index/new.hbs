@@ -2,7 +2,7 @@
     @resource={{this.vendor}}
     @controller={{this}}
     @actionButtons={{this.actionButtons}}
-    @headerTitle="Create a new vendor"
+    @headerTitle={{t "common.create-a-new-resource" resource=(lowercase (t "resource.vendor"))}}
     @saveTask={{this.save}}
     @onPressCancel={{transition-to "management.vendors.index"}}
     @onOverlayReady={{fn (mut this.overlay)}}

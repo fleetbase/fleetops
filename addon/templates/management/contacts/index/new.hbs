@@ -2,7 +2,7 @@
     @resource={{this.contact}}
     @controller={{this}}
     @actionButtons={{this.actionButtons}}
-    @headerTitle="Create a new contact"
+    @headerTitle={{t "common.create-a-new-resource" resource=(lowercase (t "resource.contact"))}}
     @saveTask={{this.save}}
     @onPressCancel={{transition-to "management.contacts.index"}}
     @onOverlayReady={{fn (mut this.overlay)}}
