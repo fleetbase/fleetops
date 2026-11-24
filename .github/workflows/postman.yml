@@ -35,7 +35,4 @@ jobs:
       # published image, not the branch under review. The workflow checks this
       # repository out at the commit under test and swaps it into the container.
       overlay-package: fleetbase/fleetops-api
-      # v0.7.3 needs core-api 2.0.5, which isn't tagged yet. Link its release branch until it is.
-      extra-overlays: |
-        fleetbase/core-api@release/v2.0.5 fleetbase/core-api
     secrets: inherit
