@@ -103,6 +103,7 @@ menu:
     reports: Reports
     settings: Settings
     navigator-app: Navigator App
+    customer-apps: Customer Apps
     payments: Payments
     notifications: Notifications
     push-apps: Push Apps
@@ -2145,6 +2146,29 @@ navigator-app-review-settings:
     turned-on: App Review access is on.
     turned-off: App Review access is off.
     regenerated: New code created.
+customer-app-review-settings:
+    title: App Review
+    lede: Apple and Google test your customer app before it goes live, and their reviewers can't receive a text message. Turn this on to let them sign in as a test customer with a phone number and a code you give the app store.
+    'on': 'On'
+    'off': 'Off'
+    phone-label: Reviewer phone number
+    phone-help: A test number that is never texted. The code decides which organization it signs in to. It is different from Navigator's, because a customer and a driver are different accounts.
+    code-label: Sign-in code
+    code-new: Copy this code now. It is only shown once.
+    code-hidden: Code created {date}. It is only shown once, so create a new one if you've lost it.
+    code-none: No code yet. Turning this on creates one.
+    where: In App Store Connect, enter both under App Review Information, Sign-in required. In Google Play Console, enter them under App content, App access. The same number and code work in every customer app that uses this organization's API key.
+    customer: The reviewer signs in as a test customer, App Reviewer, in your customers list. Orders they place are real orders in your organization, marked app_review in their meta, so cancel them or assign a driver by hand if you want the reviewer to see one go through.
+    turn-on: Turn on
+    turn-off: Turn off
+    turn-off-title: Turn off App Review access?
+    turn-off-body: Reviewers can no longer sign in to your customer apps. Turn it off once your app is approved, and turn it back on before you submit an update.
+    regenerate: Create new code
+    regenerate-title: Create a new code?
+    regenerate-body: The current code stops working at once. Enter the new one in App Store Connect and Google Play Console.
+    turned-on: App Review access is on.
+    turned-off: App Review access is off.
+    regenerated: New code created.
 driver-onboard-settings:
     driver-onboard-settings: Driver Onboard Settings
     enable-driver-onboard-from-app: Enable driver onboard from Navigator App
@@ -3397,6 +3421,9 @@ settings:
         fit-to-vehicles-help-text: When the map opens, frame every vehicle that has a position. If no vehicle has a position yet, the default center is used.
     navigator-app:
         navigator-app-settings: Navigator App Settings
+    customer-apps:
+        customer-apps-settings: Customer Apps Settings
+        lede: Settings for the apps your customers sign in to with this organization's API key, such as a customer or rider app built on Fleet-Ops' customer API. These settings don't apply to Navigator, which has its own under Navigator App.
     payments:
         payments: Payments
         payment-settings: Payment Settings

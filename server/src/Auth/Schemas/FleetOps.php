@@ -200,6 +200,11 @@ class FleetOps
             'remove_actions' => ['delete', 'export', 'list', 'create'],
         ],
         [
+            'name'           => 'customer-app-settings', // App Review sign-in for apps customers use through the customer API
+            'actions'        => [],
+            'remove_actions' => ['delete', 'export', 'list', 'create'],
+        ],
+        [
             'name'           => 'payments',
             'actions'        => ['onboard'],
             'remove_actions' => ['delete', 'export', 'list', 'create'],
@@ -443,6 +448,14 @@ class FleetOps
             ],
         ],
         [
+            'name'        => 'CustomerAppSettingsManager',
+            'description' => 'Policy for managing settings of the apps customers sign in to through the customer API, such as App Review sign-in.',
+            'permissions' => [
+                'see extension',
+                '* customer-app-settings',
+            ],
+        ],
+        [
             'name'        => 'TelematicsSettingsManager',
             'description' => 'Policy for managing organization telematics history preferences.',
             'permissions' => [
@@ -548,6 +561,13 @@ class FleetOps
             'description' => 'Role responsible for managing the Navigator mobile app settings.',
             'policies'    => [
                 'NavigatorSettingsManager',
+            ],
+        ],
+        [
+            'name'        => 'Customer App Manager',
+            'description' => 'Role responsible for managing the settings of the apps customers sign in to.',
+            'policies'    => [
+                'CustomerAppSettingsManager',
             ],
         ],
         [

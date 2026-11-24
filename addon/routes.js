@@ -316,6 +316,7 @@ export default buildRoutes(function () {
     });
     this.route('settings', function () {
         this.route('navigator-app');
+        this.route('customer-apps');
         this.route('notifications');
         this.route('push-apps');
         this.route('custom-fields');

@@ -946,3 +946,39 @@ test('each organization gets one Navigator review driver, never linked to anothe
     $offered = Fleetbase\FleetOps\Support\NavigatorReview::excludeFrom(Driver::withoutGlobalScopes())->pluck('uuid')->all();
     expect($offered)->toBe(['driver-real']);
 });
+
+test('each organization gets one customer app review customer, never linked to another', function () {
+    $connection = fleetopsProfileAccountBoot();
+    $schema     = $connection->getSchemaBuilder();
+    $schema->table('users', fn ($table) => $table->string('phone_verified_at')->nullable());
+    $schema->table('contacts', function ($table) use ($schema) {
+        foreach (['phone', 'email', 'internal_id', 'meta', 'slug', '_key'] as $column) {
+            if (!$schema->hasColumn('contacts', $column)) {
+                $table->string($column)->nullable();
+            }
+        }
+    });
+    fleetopsProfileAccountRows($connection, 'users', [['uuid' => 'user-real', 'company_uuid' => 'company-1', 'phone' => '+6590003333', 'type' => 'customer']]);
+    fleetopsProfileAccountRows($connection, 'contacts', [['uuid' => 'customer-real', 'company_uuid' => 'company-1', 'user_uuid' => 'user-real', 'type' => 'customer']]);
+
+    $acme   = Fleetbase\Models\Company::where('uuid', 'company-1')->first();
+    $globex = Fleetbase\Models\Company::where('uuid', 'company-2')->first();
+
+    $first = Fleetbase\FleetOps\Support\CustomerAppReview::customer($acme);
+    $again = Fleetbase\FleetOps\Support\CustomerAppReview::customer($acme);
+    $other = Fleetbase\FleetOps\Support\CustomerAppReview::customer($globex);
+    $user  = $connection->table('users')->where('uuid', $first->user_uuid)->first();
+
+    expect($again->uuid)->toBe($first->uuid)
+        ->and($first->company_uuid)->toBe('company-1')
+        ->and($first->type)->toBe('customer')
+        ->and($first->name)->toBe('App Reviewer')
+        ->and($other->company_uuid)->toBe('company-2')
+        ->and($other->user_uuid)->not->toBe($first->user_uuid)
+        ->and($user->phone)->toBe(Fleetbase\FleetOps\Support\CustomerAppReview::PHONE)
+        ->and($user->type)->toBe('customer')
+        ->and($user->status)->toBe('active')
+        ->and($user->phone_verified_at)->not->toBeNull()
+        ->and(Fleetbase\FleetOps\Support\CustomerAppReview::isReviewCustomer($first))->toBeTrue()
+        ->and(Fleetbase\FleetOps\Support\CustomerAppReview::isReviewCustomer(Contact::withoutGlobalScopes()->where('uuid', 'customer-real')->first()))->toBeFalse();
+});
