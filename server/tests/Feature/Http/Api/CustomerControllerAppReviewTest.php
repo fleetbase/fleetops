@@ -2,6 +2,7 @@
 
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\CustomerController;
 use Fleetbase\FleetOps\Http\Requests\CreateCustomerRequest;
+use Fleetbase\FleetOps\Http\Requests\VerifyCreateCustomerRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\Customer as CustomerResource;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Support\CustomerAppReview;
@@ -347,4 +348,38 @@ test('the customer apps keep their own number, code and access next to Navigator
         ->and(NavigatorReview::acceptsCode($company, NavigatorReview::PHONE, $code))->toBeFalse()
         ->and(AppReview::definition(CustomerAppReview::TYPE)['permission'])->toBe('fleet-ops update customer-app-settings')
         ->and(AppReview::definition(CustomerAppReview::TYPE)['view_permission'])->toBe('fleet-ops view customer-app-settings');
+});
+
+test('a signup code request to the review number answers as sent while access is on, and is refused while it is off', function () {
+    fleetopsCustomerAppReviewBoot();
+    $twilio = fleetopsCustomerAppReviewTwilio();
+    fleetopsCustomerAppReviewOn('company-1');
+    $controller = new CustomerController();
+    $signup     = fn () => $controller->requestCreationCode(VerifyCreateCustomerRequest::create('/x', 'POST', ['mode' => 'sms', 'identity' => '+1 202 555 0145']));
+
+    $on = $signup();
+    CustomerAppReview::update(Company::where('uuid', 'company-1')->first(), false);
+    $off = $signup();
+
+    expect($on->getStatusCode())->toBe(200)
+        ->and($on->getData(true))->toBe(['status' => 'ok'])
+        ->and($off->getStatusCode())->toBe(422)
+        ->and($off->getData(true)['error'])->toBe(CustomerAppReview::OFF_MESSAGE)
+        ->and($twilio->messages)->toBe([]);
+});
+
+test('a review customer whose account cannot be found is told sign-in failed, and gets no token', function () {
+    $connection = fleetopsCustomerAppReviewBoot();
+    $code       = fleetopsCustomerAppReviewOn('company-1');
+    $controller = new class extends CustomerController {
+        protected function findUserByUuid(string $uuid): ?Fleetbase\Models\User
+        {
+            return null;
+        }
+    };
+
+    $response = $controller->verifyCode(Request::create('/x', 'POST', ['identity' => '+12025550145', 'code' => $code]));
+
+    expect($response->getData(true)['error'])->toBe('Unable to sign in the App Review customer.')
+        ->and($connection->table('personal_access_tokens')->count())->toBe(0);
 });
