@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Providers;
 
 use Brick\Geo\Engine\GeometryEngineRegistry;
 use Brick\Geo\Engine\GEOSEngine;
+use Fleetbase\FleetOps\Support\CustomerAppReview;
 use Fleetbase\FleetOps\Support\NavigatorReview;
 use Fleetbase\Providers\CoreServiceProvider;
 use Fleetbase\Support\NotificationRegistry;
@@ -325,13 +326,17 @@ class FleetOpsServiceProvider extends CoreServiceProvider
     }
 
     /**
-     * Registers the organization's Navigator app with core-api's App Review access, so its
-     * owner can let app store reviewers sign in to Navigator without a texted code.
+     * Registers the organization's Navigator app and customer apps with core-api's App Review
+     * access, so its owner can let app store reviewers sign in to them without a texted code.
      */
     public function registerAppReviewTypes(): void
     {
         if (NavigatorReview::isAvailable()) {
             NavigatorReview::register();
+        }
+
+        if (CustomerAppReview::isAvailable()) {
+            CustomerAppReview::register();
         }
     }
 }

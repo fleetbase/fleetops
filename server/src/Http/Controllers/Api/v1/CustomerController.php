@@ -17,6 +17,7 @@ use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\ServiceQuote;
+use Fleetbase\FleetOps\Support\CustomerAppReview;
 use Fleetbase\FleetOps\Support\CustomerAuth;
 use Fleetbase\FleetOps\Support\DriverRatings;
 use Fleetbase\FleetOps\Support\OrderChat;
@@ -29,6 +30,7 @@ use Fleetbase\FleetOps\Support\TrackingScope;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
+use Fleetbase\Models\Company;
 use Fleetbase\Models\File;
 use Fleetbase\Models\User;
 use Fleetbase\Models\UserDevice;
@@ -87,6 +89,10 @@ class CustomerController extends Controller
 
         if ($mode === 'sms') {
             $identity = static::phone($identity);
+
+            if ($review = $this->customerAppReviewSendResponse($identity, ['status' => 'ok'])) {
+                return $review;
+            }
         }
 
         $sessionCompany = $this->sessionCompany();
@@ -162,6 +168,12 @@ class CustomerController extends Controller
         $isEmail  = $this->isEmail($identity);
         if (!$isEmail) {
             $identity = static::phone($identity);
+        }
+
+        // The organization's App Review code signs the review number in as its review
+        // customer, whatever name the app sent for a new one: a reviewer always signs in.
+        if ($review = $this->customerAppReviewSignIn($identity, $code)) {
+            return $review;
         }
 
         // Verify the code is one we sent for this identity.
@@ -408,6 +420,10 @@ class CustomerController extends Controller
     {
         $phone = static::phone($request->input('phone') ?? $request->input('identity'));
 
+        if ($review = $this->customerAppReviewSendResponse($phone, ['status' => 'ok', 'method' => 'sms'])) {
+            return $review;
+        }
+
         $user = $this->findActiveUserByIdentity($phone, 'phone');
         if (!$user) {
             return response()->apiError('No customer with this phone number found.');
@@ -464,6 +480,10 @@ class CustomerController extends Controller
         $phone = static::phone($phone);
         $input = ['phone' => $phone, 'identity' => $phone, 'mode' => 'sms'];
 
+        if ($review = $this->customerAppReviewSendResponse($phone, ['status' => 'ok'])) {
+            return $review;
+        }
+
         $response = $this->findActiveUserByIdentity($phone, 'phone')
             ? $this->loginWithPhone(Request::create('', 'POST', $input))
             : $this->requestCreationCode(VerifyCreateCustomerRequest::create('', 'POST', $input));
@@ -482,6 +502,12 @@ class CustomerController extends Controller
 
         if ($for === 'fleetops_create_customer') {
             return $this->create(CreateCustomerRequest::createFrom($request));
+        }
+
+        // The organization's App Review code signs the review number in as its review
+        // customer, never as a new customer the app would ask to sign up.
+        if ($review = $this->customerAppReviewSignIn($identity, $code)) {
+            return $review;
         }
 
         $user = $this->findUserForVerification($identity);
@@ -907,7 +933,7 @@ class CustomerController extends Controller
             'internal_id'           => $request->input('internal_id'),
             'adhoc'                 => (bool) $orderConfig->policy('dispatch.adhoc.customer_orders'),
             'required_vehicle_type' => $vehicleType,
-            'meta'                  => (array) $request->input('meta', []),
+            'meta'                  => $this->customerOrderMeta($customer, (array) $request->input('meta', [])),
         ]);
 
         // If the customer picked a ServiceQuote up front, consume it now to
@@ -1588,6 +1614,84 @@ class CustomerController extends Controller
     protected function sessionCompany(): ?string
     {
         return session('company');
+    }
+
+    /**
+     * The organization of the API key the app signs in with, whose App Review access applies.
+     */
+    protected function customerAppReviewCompany(): ?Company
+    {
+        $uuid = $this->sessionCompany();
+
+        return $uuid ? Company::where('uuid', $uuid)->first() : null;
+    }
+
+    /**
+     * How a send to the customer apps' review number is answered: nothing is sent. With the
+     * organization's access on, the app gets the answer a real send gets and the reviewer
+     * enters the code the organization gave the app store; with it off, the number is refused.
+     * Null for any other number, and for a self-hosted review account listed in env config,
+     * which keeps its own flow.
+     */
+    protected function customerAppReviewSendResponse(?string $phone, array $sent): ?JsonResponse
+    {
+        if (!CustomerAppReview::isAvailable() || !CustomerAppReview::isReviewPhone($phone) || $this->verificationBypassListed($phone)) {
+            return null;
+        }
+
+        return CustomerAppReview::isEnabledFor($this->customerAppReviewCompany())
+            ? response()->json($sent)
+            : response()->apiError(CustomerAppReview::OFF_MESSAGE, 422);
+    }
+
+    /**
+     * Sign the review number in as the organization's review customer when the code is the
+     * organization's App Review code, with the response a normal sign-in gets. Null otherwise,
+     * so the code is checked the usual way.
+     */
+    protected function customerAppReviewSignIn(?string $identity, mixed $code): mixed
+    {
+        if (!CustomerAppReview::isReviewPhone($identity)) {
+            return null;
+        }
+
+        $company = $this->customerAppReviewCompany();
+        if (!$company || !CustomerAppReview::acceptsCode($company, $identity, $code)) {
+            return null;
+        }
+
+        $contact = CustomerAppReview::customer($company);
+        $user    = $this->findUserByUuid($contact->user_uuid);
+        if (!$user) {
+            return response()->apiError('Unable to sign in the App Review customer.');
+        }
+
+        $token          = $this->createCustomerToken($user, $contact);
+        $contact->token = $token->plainTextToken;
+
+        return $this->customerResource($contact);
+    }
+
+    /**
+     * An order's meta as the customer sent it, marked `app_review` when a review customer
+     * placed it, so operators can tell an app store reviewer's orders from real ones.
+     */
+    protected function customerOrderMeta(Contact $customer, array $meta): array
+    {
+        if (CustomerAppReview::isAvailable() && CustomerAppReview::isReviewCustomer($customer)) {
+            $meta['app_review'] = true;
+        }
+
+        return $meta;
+    }
+
+    /**
+     * Whether an identity is a self-hosted customer review account listed in env config.
+     */
+    protected function verificationBypassListed(?string $identity): bool
+    {
+        return class_exists(\Fleetbase\Support\AppReview::class)
+            && \Fleetbase\Support\AppReview::isConfiguredAccount('fleetops.customers.verification_bypass_code', 'fleetops.customers.review_accounts', $identity);
     }
 
     protected function currentCustomer(): ?Contact

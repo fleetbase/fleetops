@@ -95,6 +95,7 @@ class FleetOpsAiConsoleCommands
         $settings = [
             'map'           => ['Map', 'map-settings', ['map', 'provider', 'google maps', 'leaflet', 'openstreetmap', 'tiles', 'view maps']],
             'navigator-app' => ['Navigator App', 'navigator-settings', ['navigator', 'driver app', 'mobile app', 'onboard']],
+            'customer-apps' => ['Customer Apps', 'customer-app-settings', ['customer app', 'app review', 'app store', 'reviewer', 'sign-in']],
             'routing'       => ['Routing', 'routing-settings', ['routing', 'route', 'optimization', 'osrm', 'distance']],
             'notifications' => ['Notifications', 'notification-settings', ['notification', 'alert', 'email', 'sms']],
             'custom-fields' => ['Custom Fields', 'custom-field', ['custom field', 'field', 'attribute']],

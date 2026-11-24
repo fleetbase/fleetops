@@ -11,6 +11,7 @@ export default class SettingsIndexController extends Controller {
             description: 'Tune what dispatchers and drivers see while work is moving.',
             links: [
                 { label: 'Navigator App', route: 'settings.navigator-app', icon: 'location-arrow', description: 'Driver app behavior and workflow defaults.' },
+                { label: 'Customer Apps', route: 'settings.customer-apps', icon: 'mobile-screen-button', description: 'App store review sign-in for apps your customers use.' },
                 { label: 'Map', route: 'settings.map', icon: 'map', description: 'Map providers, defaults, and display behavior.' },
             ],
         },

@@ -202,6 +202,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
         return this.withRegistryItems('settings', [
             this.createHubItem('Settings Hub', 'sliders', 'settings.index', null, null, ['settings hub', 'configuration dashboard', 'setup focus']),
             this.createItem('menu.navigator-app', 'location-arrow', 'settings.navigator-app', 'fleet-ops view navigator-settings', 'fleet-ops see navigator-settings'),
+            this.createItem('menu.customer-apps', 'mobile-screen-button', 'settings.customer-apps', 'fleet-ops view customer-app-settings', 'fleet-ops see customer-app-settings'),
             this.createItem('menu.map', 'map', 'settings.map', 'fleet-ops view map-settings', 'fleet-ops see map-settings'),
             this.createItem('menu.payments', 'cash-register', 'settings.payments', 'fleet-ops view payments', 'fleet-ops see payments'),
             this.createItem('menu.notifications', 'bell', 'settings.notifications', 'fleet-ops view notification-settings', 'fleet-ops see notification-settings'),
@@ -409,6 +410,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             'analytics.reports': 1,
             'settings.index': 0,
             'settings.navigator-app': 1,
+            'settings.customer-apps': 1,
             'settings.map': 2,
             'settings.payments': 3,
             'settings.notifications': 4,
