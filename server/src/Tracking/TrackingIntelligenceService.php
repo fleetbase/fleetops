@@ -63,6 +63,26 @@ class TrackingIntelligenceService
             $warnings[] = 'low_confidence_eta';
         }
 
+        // Late means the live arrival estimate for the stop being driven to falls after
+        // the end of that stop's time window. With no window, or no live estimate, there
+        // is nothing to be late against.
+        $activeArray = $context->activeStop?->toArray();
+        $dueBy       = data_get($context->activeStop?->waypoint, 'time_window_end');
+        if (!$dueBy && data_get($activeArray, 'type') === 'dropoff') {
+            $dueBy = data_get($context->order, 'time_window_end');
+        }
+        $delaySeconds = 0;
+        if ($dueBy && $activeStopSeconds !== null) {
+            try {
+                $delaySeconds = max(0, $now->copy()->addSeconds((int) $activeStopSeconds)->getTimestamp() - \Illuminate\Support\Carbon::parse($dueBy)->getTimestamp());
+            } catch (\Throwable) {
+                $delaySeconds = 0;
+            }
+        }
+        if ($activeArray !== null && $dueBy) {
+            $activeArray['time_window_end'] = $activeArray['time_window_end'] ?? $dueBy;
+        }
+
         return [
             'provider'          => $providerResult->provider,
             'fallback_provider' => in_array('fallback_used', $warnings) ? $providerResult->provider : null,
@@ -77,7 +97,7 @@ class TrackingIntelligenceService
             'progress'          => $progress,
             'lifecycle'         => $lifecycle,
             'stops'             => $context->stops->map(fn (TrackingStop $stop) => $stop->toArray())->values()->all(),
-            'active_stop'       => $context->activeStop?->toArray(),
+            'active_stop'       => $activeArray,
             'next_stop'         => $context->nextStop?->toArray(),
             'route'             => [
                 'distance_m'            => $providerResult->distanceMeters,
@@ -96,8 +116,9 @@ class TrackingIntelligenceService
                 'start_at'            => $this->addSeconds($now, $startSeconds),
             ],
             'insights'          => [
-                'is_delayed'          => false,
-                'delay_seconds'       => 0,
+                'is_delayed'          => $delaySeconds > 0,
+                'delay_seconds'       => $delaySeconds,
+                'due_by'              => $dueBy ? \Illuminate\Support\Carbon::parse($dueBy)->toISOString() : null,
                 'is_location_stale'   => in_array('stale_driver_location', $warnings),
                 'is_off_route'        => in_array('off_route', $warnings),
             ],

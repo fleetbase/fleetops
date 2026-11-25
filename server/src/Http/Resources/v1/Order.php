@@ -112,6 +112,9 @@ class Order extends FleetbaseResource
             'dispatched_at'        => $this->dispatched_at,
             'started_at'           => $this->started_at,
             'scheduled_at'         => $this->scheduled_at,
+            // When the delivery is wanted: the order's own window, for its drop-off.
+            'time_window_start'    => $this->time_window_start,
+            'time_window_end'      => $this->time_window_end,
             'updated_at'           => $this->updated_at,
             'created_at'           => $this->created_at,
         ]);

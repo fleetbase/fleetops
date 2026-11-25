@@ -64,7 +64,7 @@ class ManifestController extends Controller
             return response()->apiError('Manifest resource not found.', 404);
         }
 
-        $manifest->load(['driver', 'vehicle', 'stops' => fn ($q) => $q->orderBy('sequence')->with(['place', 'order.trackingNumber'])]);
+        $manifest->load(['driver', 'vehicle', 'stops' => fn ($q) => $q->orderBy('sequence')->with(['place', 'order.trackingNumber', 'order.payload'])]);
 
         return new ManifestResource($manifest);
     }
