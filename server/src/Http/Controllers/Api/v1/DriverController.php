@@ -23,6 +23,8 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Support\ApiCacheThrottle;
+use Fleetbase\FleetOps\Support\DriverDaySummary;
+use Fleetbase\FleetOps\Support\DriverDuty;
 use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
 use Fleetbase\FleetOps\Support\NavigatorReview;
@@ -454,8 +456,14 @@ class DriverController extends Controller
         // Determine the final boolean value for "online"
         $onlineValue = is_null($onlineParam) ? !$driver->online : Utils::castBoolean($onlineParam);
 
+        // Record when the driver went on duty, or clear it. The save below is
+        // quiet, so the observer that does this for other writers never runs.
+        $driver->online = $onlineValue;
+        DriverDuty::stamp($driver);
+
         // Perform a single update call
-        $driver->updateQuietly(['online' => $onlineValue]);
+        $driver->saveQuietly();
+        DriverDuty::sync($driver);
         $driver->invalidateApiCache();
 
         // Update vehicle online too
@@ -467,6 +475,45 @@ class DriverController extends Controller
 
         // Return the updated resource
         return $this->driverResource($driver);
+    }
+
+    /**
+     * GET /v1/drivers/{id}/day-summary?date=YYYY-MM-DD&timezone=Area/City — what a
+     * driver did on one day.
+     *
+     * The driver is looked up inside the caller's organization, so a driver's
+     * token reads its own organization's drivers and no one else's. The day is
+     * cut in `timezone` when the caller names one, else the driver's, else the
+     * organization's, else the server's; the response says which was used.
+     * `date` defaults to today there.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function daySummary(string $id, Request $request)
+    {
+        try {
+            $driver = $this->findDriver($id, ['user']);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            return $this->jsonResponse([
+                'error' => 'Driver resource not found.',
+            ], 404);
+        }
+
+        $date = $request->input('date');
+        if (filled($date) && !(is_string($date) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && checkdate((int) substr($date, 5, 2), (int) substr($date, 8, 2), (int) substr($date, 0, 4)))) {
+            return $this->jsonResponse([
+                'error' => 'The date must be a day written as YYYY-MM-DD.',
+            ], 422);
+        }
+
+        $timezone = $request->input('timezone');
+        if (filled($timezone) && !DriverDaySummary::isTimezone($timezone)) {
+            return $this->jsonResponse([
+                'error' => 'The timezone must be a name such as Asia/Singapore.',
+            ], 422);
+        }
+
+        return $this->jsonResponse(DriverDaySummary::for($driver, filled($date) ? $date : null, filled($timezone) ? $timezone : null), 200);
     }
 
     /**

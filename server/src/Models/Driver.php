@@ -116,6 +116,7 @@ class Driver extends Model
         'currency',
         'city',
         'online',
+        'online_since',
         'current_status',
         'slug',
         'status',
@@ -159,6 +160,7 @@ class Driver extends Model
     protected $casts = [
         'location'        => Point::class,
         'online'          => 'boolean',
+        'online_since'    => 'datetime',
         'meta'            => Json::class,
         'rating_average'  => 'float',
         'rating_count'    => 'integer',

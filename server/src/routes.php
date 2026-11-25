@@ -109,6 +109,8 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->get('{id}/organizations', 'DriverController@listOrganizations');
                 // A driver's own routes for the day.
                 $router->get('{id}/manifests', 'ManifestController@forDriver');
+                // What a driver did on one day: waypoints, orders, distance, time on duty.
+                $router->get('{id}/day-summary', 'DriverController@daySummary');
                 $router->get('{id}/current-organization', 'DriverController@currentOrganization');
                 $router->put('{id}', 'DriverController@update');
                 $router->delete('{id}', 'DriverController@delete');
@@ -183,6 +185,8 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->post('/', 'IssueController@create');
                 $router->get('/', 'IssueController@query');
                 $router->get('{id}', 'IssueController@find');
+                // What has happened to an issue since it was filed.
+                $router->get('{id}/timeline', 'IssueController@timeline');
                 $router->put('{id}', 'IssueController@update');
                 $router->delete('{id}', 'IssueController@delete');
             });
@@ -282,6 +286,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
             // the internal namespace.
             $router->group(['prefix' => 'manifests'], function () use ($router) {
                 $router->get('{id}', 'ManifestController@show');
+                $router->get('{id}/route', 'ManifestController@route');
                 $router->post('{id}/optimize', 'ManifestController@optimize');
             });
             $router->group(['prefix' => 'manifest-stops'], function () use ($router) {

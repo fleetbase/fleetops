@@ -72,6 +72,8 @@ class Driver extends FleetbaseResource
             'currency'                      => data_get($this, 'currency', Utils::getCurrenyFromCountryCode($this->country)),
             'city'                          => data_get($this, 'city', Utils::getCapitalCityFromCountryCode($this->country)),
             'online'                        => data_get($this, 'online', false),
+            // When the driver went on duty; null while off duty.
+            'online_since'                  => $this->online_since,
             'current_status'                => data_get($this, 'current_status'),
             'status'                        => $this->status,
             'token'                         => $this->token,
@@ -148,6 +150,7 @@ class Driver extends FleetbaseResource
             'currency'               => data_get($this, 'currency', Utils::getCurrenyFromCountryCode($this->country)),
             'city'                   => data_get($this, 'city', Utils::getCapitalCityFromCountryCode($this->country)),
             'online'                 => data_get($this, 'online', false),
+            'online_since'           => $this->online_since,
             'current_status'         => data_get($this, 'current_status'),
             'status'                 => $this->status,
             'skills'                 => data_get($this, 'skills'),
