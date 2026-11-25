@@ -42,6 +42,7 @@ use Fleetbase\Models\User;
 use Fleetbase\Models\UserDevice;
 use Fleetbase\Models\VerificationCode;
 use Fleetbase\Support\Auth;
+use Fleetbase\Support\PlatformApi;
 use Geocoder\Query\ReverseQuery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -674,6 +675,12 @@ class DriverController extends Controller
         $attrs    = $request->input(['name', 'phone', 'email']);
 
         if ($for === 'create_driver') {
+            // The platform token belongs to no organization and ships inside apps, so it
+            // can't create a driver in one: signing up needs the organization's own key.
+            if ($this->isPlatformRequest($request)) {
+                return $this->apiError('Driver sign-up needs the organization\'s API key.', 403);
+            }
+
             return $this->create($request);
         }
 
@@ -1052,13 +1059,39 @@ class DriverController extends Controller
     }
 
     /**
-     * The organization whose Navigator the request is for: the API credential's.
+     * The organization whose Navigator the request is for: the API credential's. A request
+     * made with the platform token has none, so the app names it (`organization`).
      */
     protected function navigatorReviewCompany(): ?Company
     {
         $uuid = $this->sessionCompany();
+        if ($uuid) {
+            return Company::where('uuid', $uuid)->first();
+        }
 
-        return $uuid ? Company::where('uuid', $uuid)->first() : null;
+        $named = $this->isPlatformRequest() ? $this->namedOrganization() : null;
+        if (!is_string($named) || $named === '') {
+            return null;
+        }
+
+        return Company::where('public_id', $named)->orWhere('uuid', $named)->first();
+    }
+
+    /**
+     * The organization a platform-token request says it is for.
+     */
+    protected function namedOrganization(): mixed
+    {
+        return request()->input('organization');
+    }
+
+    /**
+     * Whether the request signed in with the instance's platform token, not an
+     * organization's API credential.
+     */
+    protected function isPlatformRequest(?Request $request = null): bool
+    {
+        return PlatformApi::authenticated($request);
     }
 
     protected function applyUserInfoFromRequest(Request $request, array $userDetails): array

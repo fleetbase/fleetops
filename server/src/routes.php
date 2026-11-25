@@ -51,21 +51,36 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
         |
         | End-user API routes, these are routes that the SDK and applications will interface with, and require API credentials.
         */
+        /*
+        |--------------------------------------------------------------------------
+        | Driver sign-in routes
+        |--------------------------------------------------------------------------
+        |
+        | What a driver app calls before its driver has signed in. Besides an API
+        | credential these accept the instance's platform token, so an app built for
+        | the whole instance (Navigator) needs no organization's key: the driver's
+        | organization comes from their account. The platform token ships inside
+        | apps, so nothing may be added here that isn't safe for anyone to call.
+        */
+        $router->group(['prefix' => 'v1', 'middleware' => ['fleetbase.api-or-platform', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class], 'namespace' => 'Api\v1'], function ($router) {
+            $router->group(['prefix' => 'drivers'], function () use ($router) {
+                // Routes that send a text message carry a small per-address bucket on top
+                // of the credential throttle; the SMS guard in core bounds the spend.
+                $router->post('login-with-sms', 'DriverController@loginWithPhone')->middleware('throttle:5,1,fleetops-sms');
+                $router->post('verify-code', 'DriverController@verifyCode');
+                $router->post('login', 'DriverController@login');
+                // Resetting a password requires a code, which a general PUT can't express.
+                $router->post('forgot-password', 'DriverController@forgotPassword')->middleware('throttle:5,1,fleetops-sms');
+                $router->post('reset-password', 'DriverController@resetPassword');
+            });
+        });
+
         $router->group(['prefix' => 'v1', 'middleware' => ['fleetbase.api', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class], 'namespace' => 'Api\v1'], function ($router) {
             // drivers routes
             $router->group(['prefix' => 'drivers', 'middleware' => []], function () use ($router) {
                 $router->post('register-device', 'DriverController@registerDevice');
-                // Routes that send a text message carry a small per-address bucket on top
-                // of the API credential throttle; the SMS guard in core bounds the spend.
-                $router->post('login-with-sms', 'DriverController@loginWithPhone')->middleware('throttle:5,1,fleetops-sms');
-                $router->post('verify-code', 'DriverController@verifyCode');
-                $router->post('login', 'DriverController@login');
-                // Password management. Deliberately separate from the driver
-                // update: changing a password requires proving the old one, and
-                // resetting it requires a code, neither of which a general PUT
-                // can express.
-                $router->post('forgot-password', 'DriverController@forgotPassword')->middleware('throttle:5,1,fleetops-sms');
-                $router->post('reset-password', 'DriverController@resetPassword');
+                // Changing a password requires proving the old one, which a general
+                // PUT can't express. Signing in and resetting one are above.
                 $router->post('{id}/change-password', 'DriverController@changePassword');
                 $router->post('{id}/simulate', 'DriverController@simulate');
                 $router->match(['put', 'patch', 'post'], '{id}/track', 'DriverController@track');

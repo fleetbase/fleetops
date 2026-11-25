@@ -293,3 +293,25 @@ test('fleetops route file wires route groups with expected middleware and namesp
         ],
     ]);
 });
+
+test('fleetops opens only the driver sign-in routes to the platform token', function () {
+    $recorder = fleetOpsRecordedRoutes();
+    $opened   = [];
+    foreach ($recorder->routes as $route) {
+        foreach ($route['groups'] as $group) {
+            if (in_array('fleetbase.api-or-platform', (array) ($group['middleware'] ?? []), true)) {
+                $opened[] = $route['method'] . ' ' . $route['uri'];
+            }
+        }
+    }
+    sort($opened);
+
+    // The platform token ships inside apps. Adding a route here opens it to anyone.
+    expect($opened)->toBe([
+        'POST v1/drivers/forgot-password',
+        'POST v1/drivers/login',
+        'POST v1/drivers/login-with-sms',
+        'POST v1/drivers/reset-password',
+        'POST v1/drivers/verify-code',
+    ]);
+});
