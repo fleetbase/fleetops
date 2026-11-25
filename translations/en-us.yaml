@@ -2200,6 +2200,11 @@ navigator-app-link:
     sent: "{count, plural, one {Link sent to # driver.} other {Link sent to # drivers.}}"
     not-sent: "{count, plural, one {# driver could not be sent the link.} other {# drivers could not be sent the link.}}"
     failed-title: Not sent
+navigator-app-display-settings:
+    title: What drivers see
+    show-service-rate: Show the service rate on orders
+    show-service-rate-help-text: When on, a driver sees what an order is charged at, with the rate's lines and total, on the order's Details tab. Turn it off to keep prices from drivers.
+    saved: Settings saved.
 driver-onboard-settings:
     driver-onboard-settings: Driver Onboard Settings
     enable-driver-onboard-from-app: Enable driver onboard from Navigator App

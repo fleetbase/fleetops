@@ -36,6 +36,21 @@ class NavigatorController extends Controller
         ]);
     }
 
+    /**
+     * The signed-in driver's organization's choices for the app: what to show, what to hide.
+     *
+     * @return JsonResponse
+     */
+    public function getSettings()
+    {
+        $companyUuid = session('company');
+        if (!is_string($companyUuid) || $companyUuid === '') {
+            return $this->errorResponse('Organization not found.', 404);
+        }
+
+        return $this->jsonResponse(\Fleetbase\FleetOps\Support\NavigatorSettings::forDriverApp($companyUuid));
+    }
+
     protected function findCompanyByPublicId(string $companyId): ?Company
     {
         return Company::select()->where('public_id', $companyId)->first();

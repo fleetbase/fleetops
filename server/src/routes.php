@@ -89,6 +89,9 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
         });
 
         $router->group(['prefix' => 'v1', 'middleware' => ['fleetbase.api', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class], 'namespace' => 'Api\v1'], function ($router) {
+            // What the organization shows its drivers in the Navigator app.
+            $router->get('navigator/settings', 'NavigatorController@getSettings');
+
             // drivers routes
             $router->group(['prefix' => 'drivers', 'middleware' => []], function () use ($router) {
                 $router->post('register-device', 'DriverController@registerDevice');
@@ -873,6 +876,8 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                         $router->post('entity-editing-settings', 'SettingController@saveEntityEditingSettings');
                                         $router->post('driver-onboard-settings', 'SettingController@savedDriverOnboardSettings');
                                         $router->get('driver-onboard-settings/{companyId}', 'SettingController@getDriverOnboardSettings');
+                                        $router->get('navigator-app-settings', 'SettingController@getNavigatorAppSettings');
+                                        $router->post('navigator-app-settings', 'SettingController@saveNavigatorAppSettings');
                                         $router->get('driver-join-code', 'SettingController@getDriverJoinCode');
                                         $router->post('driver-join-code', 'SettingController@rotateDriverJoinCode');
                                         $router->get('notification-notifiables', 'SettingController@getNotifiables');

@@ -1,0 +1,25 @@
+<ContentPanel @title={{t "navigator-app-display-settings.title"}} @open={{true}} @wrapperClass="bordered-classic">
+    {{#if this.loaded}}
+        <InputGroup>
+            <div class="flex items-center">
+                <Toggle
+                    @isToggled={{this.settings.showServiceRateToDrivers}}
+                    @onToggle={{this.toggleServiceRate}}
+                    @label={{t "navigator-app-display-settings.show-service-rate"}}
+                    @helpText={{t "navigator-app-display-settings.show-service-rate-help-text"}}
+                />
+            </div>
+        </InputGroup>
+        <div class="mt-3 flex items-center mb-4">
+            <Button
+                @type="primary"
+                @size="sm"
+                @icon="save"
+                @text={{t "common.save-changes"}}
+                @onClick={{perform this.save}}
+                @isLoading={{this.save.isRunning}}
+                @permission="fleet-ops update navigator-settings"
+            />
+        </div>
+    {{/if}}
+</ContentPanel>

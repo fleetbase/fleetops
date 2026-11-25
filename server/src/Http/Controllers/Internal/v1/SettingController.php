@@ -37,6 +37,7 @@ class SettingController extends Controller
             'saveEntityEditingSettings'               => 'update navigator-settings',
             'savedDriverOnboardSettings'              => 'update navigator-settings',
             'rotateDriverJoinCode'                    => 'update navigator-settings',
+            'saveNavigatorAppSettings'                => 'update navigator-settings',
             'saveCustomerEnabledOrderConfigs'         => 'update order-config',
             'saveCustomerPortalPaymentConfig'         => 'update payments',
             'saveNotificationSettings'                => 'update notification-settings',
@@ -173,6 +174,26 @@ class SettingController extends Controller
         }
 
         return response()->json(['driverOnboardSettings' => \Fleetbase\FleetOps\Support\DriverOnboarding::settings($driverOnboardSettings['companyId'])]);
+    }
+
+    /**
+     * What the organization shows its drivers in the Navigator app.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getNavigatorAppSettings()
+    {
+        return response()->json(['navigatorAppSettings' => \Fleetbase\FleetOps\Support\NavigatorSettings::get(session('company'))]);
+    }
+
+    /**
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveNavigatorAppSettings(Request $request)
+    {
+        $settings = \Fleetbase\FleetOps\Support\NavigatorSettings::save(session('company'), $request->inputArray('navigatorAppSettings', []));
+
+        return response()->json(['navigatorAppSettings' => $settings]);
     }
 
     /**
