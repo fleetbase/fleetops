@@ -2212,6 +2212,15 @@ driver-onboard-settings:
     required-onboard-documents-help-text: Input all the onboard documents required for a driver to provide below using the "Add onboard document" button.
     enter-document-name: Enter document name
     add-onboard-document: Add onboard document
+    join-title: Sign-up code for new drivers
+    join-help: A new driver opens Navigator, taps "Get started" and either scans this QR code or types the code. Scanning also connects the app to this server.
+    join-qr-alt: QR code a new driver scans to sign up
+    join-download: Download
+    join-code: Join code
+    join-code-help: Give this to drivers who cannot scan the QR code. It only works while sign-up by button is switched on.
+    join-replace: Replace the code
+    join-replace-help: The current code, and any QR code printed with it, stops working at once.
+    join-code-replaced: New join code created.
 
 cell:
     driver-name:

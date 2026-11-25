@@ -36,6 +36,7 @@ class SettingController extends Controller
         $this->authorizeMethods([
             'saveEntityEditingSettings'               => 'update navigator-settings',
             'savedDriverOnboardSettings'              => 'update navigator-settings',
+            'rotateDriverJoinCode'                    => 'update navigator-settings',
             'saveCustomerEnabledOrderConfigs'         => 'update order-config',
             'saveCustomerPortalPaymentConfig'         => 'update payments',
             'saveNotificationSettings'                => 'update notification-settings',
@@ -157,9 +158,60 @@ class SettingController extends Controller
         $driverOnboardSettings['requiredOnboardDocuments'] = $documents;
         unset($driverOnboardSettings['driverMustProvideOnboardDoucments']);
 
+        // The join code is the server's: it survives a save and is never taken from the form.
+        $stored = \Fleetbase\FleetOps\Support\DriverOnboarding::settings($driverOnboardSettings['companyId']);
+        unset($driverOnboardSettings['joinCode']);
+        if (!empty($stored['joinCode'])) {
+            $driverOnboardSettings['joinCode'] = $stored['joinCode'];
+        }
+
         $this->configureSetting('fleet-ops.driver-onboard-settings.' . $driverOnboardSettings['companyId'], $driverOnboardSettings);
 
-        return response()->json(['driverOnboardSettings' => $driverOnboardSettings]);
+        // Self sign-up needs a code for new drivers to name the organization with.
+        if (\Fleetbase\FleetOps\Support\DriverOnboarding::allowsSelfSignUp($driverOnboardSettings)) {
+            \Fleetbase\FleetOps\Support\DriverOnboarding::ensureJoinCode($driverOnboardSettings['companyId']);
+        }
+
+        return response()->json(['driverOnboardSettings' => \Fleetbase\FleetOps\Support\DriverOnboarding::settings($driverOnboardSettings['companyId'])]);
+    }
+
+    /**
+     * The organization's join code for new drivers, with the link and QR code that carry it.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getDriverJoinCode()
+    {
+        return response()->json($this->driverJoinCodePayload(session('company')));
+    }
+
+    /**
+     * Replaces the join code. The old one, and any QR code printed with it, stops working.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function rotateDriverJoinCode()
+    {
+        \Fleetbase\FleetOps\Support\DriverOnboarding::rotateJoinCode(session('company'));
+
+        return response()->json($this->driverJoinCodePayload(session('company')));
+    }
+
+    protected function driverJoinCodePayload(string $companyUuid): array
+    {
+        $settings = \Fleetbase\FleetOps\Support\DriverOnboarding::settings($companyUuid);
+        $allowed  = \Fleetbase\FleetOps\Support\DriverOnboarding::allowsSelfSignUp($settings);
+        $code     = $allowed ? \Fleetbase\FleetOps\Support\DriverOnboarding::ensureJoinCode($companyUuid) : \Fleetbase\FleetOps\Support\DriverOnboarding::joinCode($companyUuid);
+        $joinLink = $code ? app(NavigatorController::class)->joinLink($code) : null;
+
+        return [
+            'selfSignUp' => $allowed,
+            'joinCode'   => $code,
+            // Scanning this connects the app to this server and starts sign-up for this organization.
+            'joinLink'   => $joinLink,
+            'qrCode'     => $joinLink ? \Fleetbase\Support\Barcode::qrCodeDataUri($joinLink, 'M') : null,
+            'qrCodeSvg'  => $joinLink ? \Fleetbase\Support\Barcode::qrCodeSvg($joinLink, 'M') : null,
+        ];
     }
 
     public function saveCustomerEnabledOrderConfigs(Request $request)

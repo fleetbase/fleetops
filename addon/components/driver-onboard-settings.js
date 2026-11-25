@@ -8,15 +8,54 @@ export default class DriverOnboardSettingsComponent extends Component {
     @service fetch;
     @service currentUser;
     @service notifications;
+    @service intl;
     @tracked companyId;
     @tracked driverOnboardSettingsLoaded = false;
     @tracked driverOnboardSettings = {};
     @tracked driverOnboardMethods = ['invite', 'button'];
+    @tracked join;
 
     constructor() {
         super(...arguments);
         this.companyId = this.currentUser.companyId;
         this.getDriverOnboardSettings.perform();
+        this.loadJoinCode.perform();
+    }
+
+    get showsJoinCode() {
+        return this.driverOnboardSettings?.enableDriverOnboardFromApp && this.driverOnboardSettings?.driverOnboardAppMethod === 'button' && this.join?.joinCode;
+    }
+
+    @task *loadJoinCode() {
+        try {
+            this.join = yield this.fetch.get('fleet-ops/settings/driver-join-code');
+        } catch (error) {
+            this.join = null;
+        }
+    }
+
+    @task *rotateJoinCode() {
+        try {
+            this.join = yield this.fetch.post('fleet-ops/settings/driver-join-code');
+            this.notifications.success(this.intl.t('driver-onboard-settings.join-code-replaced'));
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
+
+    @action downloadJoinQrCode() {
+        if (!this.join?.qrCodeSvg) {
+            return;
+        }
+
+        const url = URL.createObjectURL(new Blob([this.join.qrCodeSvg], { type: 'image/svg+xml' }));
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'navigator-driver-sign-up.svg';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
     }
 
     @action enableDriverOnboard(enableDriverOnboardFromApp) {
@@ -50,6 +89,9 @@ export default class DriverOnboardSettingsComponent extends Component {
         if (driverOnboardSettingsResponse && driverOnboardSettings && driverOnboardSettings.enableDriverOnboardFromApp == false) {
             this.driverOnboardSettings = driverOnboardSettingsResponse.driverOnboardSettings;
         }
+
+        // Saving may have switched self sign-up on, which is when a join code first exists.
+        yield this.loadJoinCode.perform();
     }
 
     @task *getDriverOnboardSettings() {

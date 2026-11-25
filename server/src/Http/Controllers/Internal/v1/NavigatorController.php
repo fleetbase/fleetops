@@ -326,6 +326,20 @@ class NavigatorController extends Controller
         ]);
     }
 
+    /**
+     * The app link with an organization's join code on it: it connects the app to this
+     * instance and starts sign-up for that organization.
+     */
+    public function joinLink(string $joinCode): ?string
+    {
+        $params = $this->deepLinkParams();
+        if ($params === null) {
+            return null;
+        }
+
+        return $this->navigatorLinkScheme() . '://configure?' . $params . '&' . http_build_query(['join' => $joinCode]);
+    }
+
     protected function navigatorLinkScheme(): string
     {
         return config('fleetops.navigator.link_scheme', 'flbnavigator');

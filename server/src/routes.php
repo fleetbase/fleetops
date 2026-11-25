@@ -79,6 +79,12 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
             // organization's name and its onboarding choices.
             $router->group(['prefix' => 'onboard'], function () use ($router) {
                 $router->get('driver-onboard-settings/{companyId}', 'NavigatorController@getDriverOnboardSettings');
+
+                // A new driver signing themselves up with the organization's join code.
+                // Each call checks that the organization still allows it.
+                $router->get('join/{code}', 'DriverOnboardController@join')->middleware('throttle:20,1,fleetops-join');
+                $router->post('request-code', 'DriverOnboardController@requestCode')->middleware('throttle:5,1,fleetops-sms');
+                $router->post('driver', 'DriverOnboardController@create')->middleware('throttle:10,1,fleetops-join');
             });
         });
 
@@ -867,6 +873,8 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                         $router->post('entity-editing-settings', 'SettingController@saveEntityEditingSettings');
                                         $router->post('driver-onboard-settings', 'SettingController@savedDriverOnboardSettings');
                                         $router->get('driver-onboard-settings/{companyId}', 'SettingController@getDriverOnboardSettings');
+                                        $router->get('driver-join-code', 'SettingController@getDriverJoinCode');
+                                        $router->post('driver-join-code', 'SettingController@rotateDriverJoinCode');
                                         $router->get('notification-notifiables', 'SettingController@getNotifiables');
                                         $router->get('notification-registry', 'SettingController@getNotificationRegistry');
                                         $router->get('notification-settings', 'SettingController@getNotificationSettings');
