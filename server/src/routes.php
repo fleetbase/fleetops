@@ -73,6 +73,13 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->post('forgot-password', 'DriverController@forgotPassword')->middleware('throttle:5,1,fleetops-sms');
                 $router->post('reset-password', 'DriverController@resetPassword');
             });
+
+            // What an organization lets a new driver do from the app. Read before
+            // sign-in, so it accepts the platform token; it reveals only the
+            // organization's name and its onboarding choices.
+            $router->group(['prefix' => 'onboard'], function () use ($router) {
+                $router->get('driver-onboard-settings/{companyId}', 'NavigatorController@getDriverOnboardSettings');
+            });
         });
 
         $router->group(['prefix' => 'v1', 'middleware' => ['fleetbase.api', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class], 'namespace' => 'Api\v1'], function ($router) {
@@ -421,10 +428,6 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->post('commit', 'OrchestrationController@commit');
             });
 
-            // navigator routes
-            $router->group(['prefix' => 'onboard'], function () use ($router) {
-                $router->get('driver-onboard-settings/{companyId}', 'NavigatorController@getDriverOnboardSettings');
-            });
         });
 
         /*
@@ -465,6 +468,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                         // NavigatorController::linkApp() requires a valid signature.
                         $router->get('link-app', 'NavigatorController@linkApp');
                         $router->get('get-link-app', 'NavigatorController@getLinkAppUrl')->middleware(['fleetbase.protected']);
+                        $router->post('share-link', 'NavigatorController@shareLink')->middleware(['fleetbase.protected', 'throttle:10,1']);
                     }
                 );
 

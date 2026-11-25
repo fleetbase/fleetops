@@ -142,11 +142,20 @@ class SettingController extends Controller
         $driverOnboardSettings['companyId'] = session('company');
 
         if (empty($driverOnboardSettings['enableDriverOnboardFromApp'])) {
-            $driverOnboardSettings['driverMustProvideOnboardDoucments'] = false;
+            $driverOnboardSettings['driverMustProvideOnboardDocuments'] = false;
             $driverOnboardSettings['requiredOnboardDocuments']          = [];
             $driverOnboardSettings['driverOnboardAppMethod']            = '';
             $driverOnboardSettings['enableDriverOnboardFromApp']        = false;
         }
+
+        // No documents are required unless the organization asks for them and names at least one.
+        $documents = array_values(array_filter(array_map(fn ($name) => is_string($name) ? trim($name) : '', (array) ($driverOnboardSettings['requiredOnboardDocuments'] ?? []))));
+        if (empty($driverOnboardSettings['driverMustProvideOnboardDocuments'])) {
+            $documents                                                  = [];
+            $driverOnboardSettings['driverMustProvideOnboardDocuments'] = false;
+        }
+        $driverOnboardSettings['requiredOnboardDocuments'] = $documents;
+        unset($driverOnboardSettings['driverMustProvideOnboardDoucments']);
 
         $this->configureSetting('fleet-ops.driver-onboard-settings.' . $driverOnboardSettings['companyId'], $driverOnboardSettings);
 

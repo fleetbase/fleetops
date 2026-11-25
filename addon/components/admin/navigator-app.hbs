@@ -1,8 +1,1 @@
-<ContentPanel @title={{t "admin.navigator-app.title"}} @open={{true}} @wrapperClass="bordered-classic">
-    <InputGroup @name={{t "admin.navigator-app.name"}}>
-        <ClickToCopy class="px-4 py-2 border rounded-md bg-gray-100 shadow-sm dark:bg-gray-700 border-gray-200 dark:border-gray-800" @value={{this.url}}>{{this.url}}</ClickToCopy>
-        <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
-            <InputInfo>{{t "admin.navigator-app.message" htmlSafe=true companyName=@app.name}}</InputInfo>
-        </Attach::Tooltip>
-    </InputGroup>
-</ContentPanel>
+<NavigatorAppLink />

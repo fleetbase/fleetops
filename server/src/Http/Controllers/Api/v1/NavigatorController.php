@@ -29,7 +29,27 @@ class NavigatorController extends Controller
             $driverOnboardSettings = [];
         }
 
-        return $this->jsonResponse(['driverOnboardSettings' => $driverOnboardSettings]);
+        // `onboarding` is the same settings in the form the driver app reads: what a
+        // new driver may do from the app, and what they will be asked for.
+        $settings  = is_array($driverOnboardSettings) ? $driverOnboardSettings : [];
+        $enabled   = !empty($settings['enableDriverOnboardFromApp']);
+        $method    = $enabled && in_array($settings['driverOnboardAppMethod'] ?? null, ['invite', 'button'], true) ? $settings['driverOnboardAppMethod'] : null;
+        $documents = $enabled && !empty($settings['driverMustProvideOnboardDocuments']) ? array_values(array_filter((array) ($settings['requiredOnboardDocuments'] ?? []), 'is_string')) : [];
+
+        return $this->jsonResponse([
+            'driverOnboardSettings' => $driverOnboardSettings,
+            'onboarding'            => [
+                'organization'       => ['id' => $company->public_id, 'name' => $company->name],
+                'enabled'            => $enabled,
+                'method'             => $method,
+                // Anyone may create a driver account from the app.
+                'self_sign_up'       => $method === 'button',
+                // Drivers are added by the organization and invited.
+                'invite_only'        => $method === 'invite',
+                'documents_required' => count($documents) > 0,
+                'documents'          => $documents,
+            ],
+        ]);
     }
 
     protected function findCompanyByPublicId(string $companyId): ?Company

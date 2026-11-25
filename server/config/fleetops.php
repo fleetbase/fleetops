@@ -152,6 +152,9 @@ return [
     |--------------------------------------------------------------------------
     */
     'navigator' => [
+        // The URL scheme the Navigator build registers; a white-label build has its own.
+        'link_scheme' => env('NAVIGATOR_APP_LINK_SCHEME', 'flbnavigator'),
+
         /*
         | App store reviewers cannot receive our SMS, so a fixed verification code has
         | to keep working for them — including in production, which is where a review

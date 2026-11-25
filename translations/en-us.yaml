@@ -2169,6 +2169,37 @@ customer-app-review-settings:
     turned-on: App Review access is on.
     turned-off: App Review access is off.
     regenerated: New code created.
+navigator-app-link:
+    title: Link the Navigator app
+    unavailable: The Navigator link is not available to your account. Ask a system administrator.
+    organization-key-warning: This link still carries an organization API key. A system administrator can rotate the Platform API token once (Admin, Platform API token) so the link carries the safer platform token instead.
+    qr-alt: QR code that links the Navigator app to this server
+    download: Download
+    print: Print
+    print-title: Connect the driver app
+    print-hint: Open Navigator, tap "Scan its QR code" and point your phone at this code.
+    how-title: How a driver connects
+    how-1: Install the Navigator app and open it.
+    how-2: On the first screen, tap "Scan its QR code" and scan this code. The phone's own camera works too.
+    how-3: Confirm the server, then sign in with their phone number.
+    link: Link to send
+    link-help: Opening this on a phone opens the Navigator app and connects it. It stops working 30 minutes after it is shown here; refresh for a new one.
+    app-link: App link
+    app-link-help: The same details the QR code holds, for pasting into the app under "Enter by hand". It does not expire.
+    app-link-copy: Click to copy the app link
+    server: Server
+    live-updates: Live updates
+    refresh: Refresh
+    share-title: Send the link to drivers
+    share-help: Each driver gets the link by email, or by text message when they have no email. The link they receive works for 7 days.
+    share-drivers: Drivers
+    share-placeholder: Search for a driver to add
+    remove-driver: Remove {name}
+    send-selected: Send to selected drivers
+    send-all: Send to all drivers
+    sent: "{count, plural, one {Link sent to # driver.} other {Link sent to # drivers.}}"
+    not-sent: "{count, plural, one {# driver could not be sent the link.} other {# drivers could not be sent the link.}}"
+    failed-title: Not sent
 driver-onboard-settings:
     driver-onboard-settings: Driver Onboard Settings
     enable-driver-onboard-from-app: Enable driver onboard from Navigator App
