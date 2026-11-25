@@ -1,20 +1,23 @@
-> v0.7.3 ~ "App Review sign-in for customer apps"
+> v0.7.4 ~ "Drivers sign in with the platform token"
 
 ---
 ## Highlights
 
-- **App Review sign-in for customer apps.** Apps that customers sign in to through Fleet-Ops' customer API (`v1/customers`) send a texted code, and Apple's and Google's reviewers can't receive one. Fleet-Ops → Settings → **Customer Apps** now turns App Review sign-in on and off for the organization, the way Settings → Navigator App does for Navigator.
-  - Reviewers sign in with the number **+1 202 555 0145** and a six-digit code the Console shows once. Create a new code there at any time; the old one stops working at once. The number is from the range reserved for fiction and is never texted. It differs from Navigator's (+1 202 555 0144), because a customer and a driver are different accounts.
-  - With access on, `customers/request-code`, `customers/login-with-sms` and `customers/request-creation-code` (SMS) answer for the number as if a code were sent, and send nothing. With access off, they answer 422 and say where to turn it on.
-  - With the organization's code, `customers/verify-code` and `POST customers` (create) sign in as the organization's review customer, **App Reviewer**, created in its customers list the first time, and return the same response as any sign-in. They never answer `new_customer`. The organization is the one the app's API key belongs to, so a code only works in that organization's apps; a wrong code, or another organization's, is refused.
-  - Orders the review customer places get `meta.app_review = true`.
-  - New permissions `fleet-ops view customer-app-settings` and `fleet-ops update customer-app-settings`, a **CustomerAppSettingsManager** policy and a **Customer App Manager** role. Administrators have them already.
+- **Driver apps can sign in with the instance's platform token instead of an organization's API key.** Navigator is built for an instance, not for one organization, so an organization's API key had to be built into the app only to reach the sign-in routes. These routes now also accept the platform token (generated in the instance’s admin settings), and the driver's organization comes from their account as before:
+  - `POST v1/drivers/login`
+  - `POST v1/drivers/login-with-sms`
+  - `POST v1/drivers/verify-code`
+  - `POST v1/drivers/forgot-password`
+  - `POST v1/drivers/reset-password`
+- API keys and driver tokens work on these routes exactly as before, so apps already installed are unaffected. Every other route still refuses the platform token.
+- **Driver sign-up needs the organization's API key.** `verify-code` with `for=create_driver` answers 403 to a platform token: the token ships inside apps and belongs to no organization, so it can't create a driver in one.
+- **App Review sign-in with the platform token names the organization.** The review number's code belongs to an organization, which an API key used to identify. A platform-token request sends `organization` (the organization's id) with `login-with-sms` and `verify-code`. Without it, the review number answers as it does where review access is off.
 
 ---
 ## Upgrading
 
-- Requires `fleetbase/core-api` 2.0.5, which lets two App Review types share a model (Navigator and the customer apps are both registered on the organization).
-- No migration. Run `php artisan fleetbase:create-permissions` (or the install's usual permission sync) so the new permissions, policy and role exist.
+- Requires `fleetbase/core-api` 2.0.6, which adds the `fleetbase.api-or-platform` middleware group and rate limits platform-token requests per client address.
+- No migration.
 
 ---
 ## Need help?
