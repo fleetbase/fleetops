@@ -111,6 +111,9 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->get('{id}/manifests', 'ManifestController@forDriver');
                 // What a driver did on one day: waypoints, orders, distance, time on duty.
                 $router->get('{id}/day-summary', 'DriverController@daySummary');
+                // The documents the organization asks of a driver, and the driver's own copies.
+                $router->get('{id}/documents', 'DriverDocumentController@index');
+                $router->post('{id}/documents', 'DriverDocumentController@store')->middleware('throttle:20,1,fleetops-driver-documents');
                 $router->get('{id}/current-organization', 'DriverController@currentOrganization');
                 $router->put('{id}', 'DriverController@update');
                 $router->delete('{id}', 'DriverController@delete');
@@ -524,6 +527,8 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->post('{id}/reset-credentials', $controller('resetCredentials'));
                                 $router->post('{id}/deactivate-login', $controller('deactivateLogin'));
                                 $router->post('{id}/reactivate-login', $controller('reactivateLogin'));
+                                $router->get('{id}/documents', $controller('documents'));
+                                $router->post('{id}/documents/review', $controller('reviewDocument'));
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->post('import', $controller('import'));
                                 // Driver scheduling endpoints

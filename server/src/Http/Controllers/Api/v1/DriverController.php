@@ -24,6 +24,7 @@ use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Support\ApiCacheThrottle;
 use Fleetbase\FleetOps\Support\DriverDaySummary;
+use Fleetbase\FleetOps\Support\DriverDocuments;
 use Fleetbase\FleetOps\Support\DriverDuty;
 use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
@@ -455,6 +456,15 @@ class DriverController extends Controller
 
         // Determine the final boolean value for "online"
         $onlineValue = is_null($onlineParam) ? !$driver->online : Utils::castBoolean($onlineParam);
+
+        // A driver who signed themselves up works once the organization has
+        // approved the documents it asks for, not before.
+        if ($onlineValue && DriverDocuments::holdsDriver($driver)) {
+            return $this->jsonResponse([
+                'error' => 'Your documents have not been approved yet. You can go online once they are.',
+                'code'  => 'documents_pending',
+            ], 403);
+        }
 
         // Record when the driver went on duty, or clear it. The save below is
         // quiet, so the observer that does this for other writers never runs.

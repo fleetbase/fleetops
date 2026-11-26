@@ -2205,6 +2205,26 @@ navigator-app-display-settings:
     show-service-rate: Show the service rate on orders
     show-service-rate-help-text: When on, a driver sees what an order is charged at, with the rate's lines and total, on the order's Details tab. Turn it off to keep prices from drivers.
     saved: Settings saved.
+driver-documents:
+    title: Documents
+    held: This driver cannot go online until every document is approved.
+    all-approved: Every document has been approved.
+    status-missing: Not sent
+    status-submitted: Waiting for review
+    status-approved: Approved
+    status-rejected: Sent back
+    view: View
+    approve: Approve
+    reject: Send back
+    reject-title: Send this document back
+    reject-prompt: Tell the driver what is wrong so they can send it again.
+    reject-placeholder: For example, the photo is blurry or the document has expired
+    reject-confirm: Send back
+    approved: Document approved.
+    rejected: Document sent back to the driver.
+    released: Every document is approved. The driver can now go online.
+    sent-on: Sent {date}
+    reviewed-by: Reviewed by {name}
 driver-onboard-settings:
     driver-onboard-settings: Driver Onboard Settings
     enable-driver-onboard-from-app: Enable driver onboard from Navigator App

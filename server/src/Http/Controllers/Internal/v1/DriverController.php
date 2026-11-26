@@ -15,6 +15,7 @@ use Fleetbase\FleetOps\Imports\DriverImport;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\DriverDocuments;
 use Fleetbase\FleetOps\Support\ProfileAccountManager;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
@@ -538,6 +539,41 @@ class DriverController extends FleetOpsController
             'driver'  => $driver->fresh(['vehicle', 'currentOrder']),
             'vehicle' => $vehicle?->fresh(['driver']),
         ]);
+    }
+
+    /**
+     * The documents the organization asks of this driver and what the driver has sent.
+     */
+    #[SkipAuthorizationCheck]
+    public function documents(string $id): JsonResponse
+    {
+        $driver    = $this->findDriver($id);
+        $documents = DriverDocuments::forDriver($driver);
+
+        return response()->json(['documents' => $documents, 'summary' => DriverDocuments::summary($driver, $documents), 'status' => $driver->status]);
+    }
+
+    /**
+     * Approves one of a driver's documents, or sends it back with a reason.
+     */
+    #[SkipAuthorizationCheck]
+    public function reviewDocument(Request $request, string $id): JsonResponse
+    {
+        $driver = $this->findDriver($id);
+
+        try {
+            $result = DriverDocuments::review(
+                $driver,
+                (string) $request->input('document'),
+                (string) $request->input('decision'),
+                $request->input('note'),
+                User::where('uuid', session('user'))->first()
+            );
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+
+        return response()->json($result + ['status' => $driver->status]);
     }
 
     protected function findDriver(?string $id): Driver

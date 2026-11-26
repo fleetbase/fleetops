@@ -76,6 +76,8 @@ class Driver extends FleetbaseResource
             'online_since'                  => $this->online_since,
             'current_status'                => data_get($this, 'current_status'),
             'status'                        => $this->status,
+            // Only for a driver still waiting on the documents their organization asks for.
+            'documents'                     => $this->when($this->status === 'pending', fn () => \Fleetbase\FleetOps\Support\DriverDocuments::summary($this->resource)),
             'token'                         => $this->token,
             // Orchestrator constraints
             'skills'                        => data_get($this, 'skills'),
