@@ -55,6 +55,24 @@ class NavigatorSettings
 
         return [
             'show_service_rate' => $settings['showServiceRateToDrivers'],
+            // The organization's routing distance unit (Settings → Routing), so the app shows distances the way the console does.
+            'distance_unit'     => static::distanceUnit($companyUuid),
         ];
+    }
+
+    /**
+     * `km` or `mi`, from the organization's routing settings; `km` when it never chose.
+     */
+    public static function distanceUnit(string $companyUuid): string
+    {
+        try {
+            $routing = Setting::lookupForCompany($companyUuid, 'routing', ['unit' => 'km']);
+        } catch (\Throwable $e) {
+            $routing = null;
+        }
+
+        $unit = strtolower(trim((string) data_get($routing, 'unit', 'km')));
+
+        return in_array($unit, ['mi', 'mile', 'miles', 'imperial'], true) ? 'mi' : 'km';
     }
 }
