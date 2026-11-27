@@ -337,3 +337,74 @@ test('zero and blank coordinates resolve to no point', function () {
         ->and($reflection->invoke($controller, '0.0', '0.0'))->toBeNull()
         ->and($reflection->invoke($controller, '1.30', '103.80'))->not->toBeNull();
 });
+
+test('import orders reports an outcome for every row and marks created orders with their batch', function () {
+    $connection = fleetopsOrchImportBoot();
+
+    $rows = [
+        ['_rowIndex' => 'r1', 'order_type' => 'pickup_dropoff', 'dropoff_street1' => '1 Good Road', 'dropoff_lat' => '1.30', 'dropoff_lng' => '103.80', 'scheduled_at' => '2026-11-28 09:00'],
+        ['_rowIndex' => 'r2', 'order_type' => 'pickup_dropoff', 'priority' => 'high', 'weight_kg' => 'heavy', 'dropoff_lat' => '95', 'dropoff_lng' => '103.80', 'customer_type' => 'partner'],
+        ['_rowIndex' => 'r3', 'order_type' => 'courier', 'dropoff_street1' => '3 Road', 'time_window_start' => 'whenever', 'parcels' => '2.5'],
+        // One bad row fails its whole multi-waypoint order.
+        ['_rowIndex' => 'r4', 'order_type' => 'multi_waypoint', 'order_ref' => 'G1', 'dropoff_street1' => '4 Road'],
+        ['_rowIndex' => 'r5', 'order_type' => 'multi_waypoint', 'order_ref' => 'G1', 'dropoff_street1' => '5 Road', 'pickup_lng' => 'east'],
+        // A multi-waypoint order with no address at all.
+        ['order_type' => 'multi_waypoint', 'order_ref' => 'G2', 'entity_name' => 'Box'],
+    ];
+
+    $result = fleetopsOrchImportController()->importOrders(Request::create('/x', 'POST', ['rows' => $rows]))->getData(true);
+    $byRow  = collect($result['rows'])->keyBy('row');
+
+    expect($result['import_batch_id'])->toBeString()->not->toBe('')
+        ->and($result['validate_only'])->toBeFalse()
+        ->and($result['summary'])->toBe(['created' => 1, 'failed' => 5, 'valid' => 0])
+        ->and(array_column($result['rows'], 'row'))->toBe(['r1', 'r2', 'r3', 'r4', 'r5', 5])
+        ->and($byRow['r1']['status'])->toBe('created')
+        // This fixture runs without model events, so the order has no public id to compare.
+        ->and($byRow['r1'])->toHaveKey('order_id')
+        ->and($byRow['r2']['status'])->toBe('failed')
+        ->and(array_keys($byRow['r2']['errors']))->toBe(['dropoff_street1', 'priority', 'weight_kg', 'dropoff_lat', 'customer_type'])
+        ->and($byRow['r2']['reason'])->toBe('A drop-off street address or coordinates are required.')
+        ->and(array_keys($byRow['r3']['errors']))->toBe(['order_type', 'time_window_start', 'parcels'])
+        ->and($byRow['r4']['reason'])->toBe('Another row of this order is invalid.')
+        ->and($byRow['r4']['errors'])->toBe([])
+        ->and(array_keys($byRow['r5']['errors']))->toBe(['pickup_lng'])
+        ->and($byRow[5]['errors'])->toHaveKey('dropoff_street1')
+        ->and(count($result['failed']))->toBe(4)
+        ->and($connection->table('orders')->count())->toBe(1);
+
+    $meta = json_decode($connection->table('orders')->value('meta'), true);
+    expect($connection->table('orders')->value('scheduled_at'))->toStartWith('2026-11-28 09:00')
+        ->and($meta['imported_via_orchestrator'])->toBeTrue()
+        ->and($meta['import_batch_id'])->toBe($result['import_batch_id']);
+});
+
+test('edited rows can be validated without creating anything and then join the original batch', function () {
+    $connection = fleetopsOrchImportBoot();
+
+    $fixed = [['_rowIndex' => 7, 'order_type' => 'pickup_dropoff', 'dropoff_street1' => '7 Fixed Road', 'priority' => '3']];
+
+    $check = fleetopsOrchImportController()->importOrders(Request::create('/x', 'POST', ['rows' => $fixed, 'validate_only' => true]))->getData(true);
+    expect($check['rows'])->toBe([['row' => 7, 'status' => 'valid']])
+        ->and($check['summary'])->toBe(['created' => 0, 'failed' => 0, 'valid' => 1])
+        ->and($connection->table('orders')->count())->toBe(0);
+
+    $import = fleetopsOrchImportController()->importOrders(Request::create('/x', 'POST', ['rows' => $fixed, 'import_batch_id' => 'batch-earlier']))->getData(true);
+    expect($import['import_batch_id'])->toBe('batch-earlier')
+        ->and($import['rows'][0]['status'])->toBe('created')
+        ->and(json_decode($connection->table('orders')->value('meta'), true)['import_batch_id'])->toBe('batch-earlier');
+});
+
+test('a row that fails while it is being created is reported with the error', function () {
+    $connection = fleetopsOrchImportBoot();
+    $connection->getSchemaBuilder()->drop('payloads');
+
+    $result = fleetopsOrchImportController()->importOrders(Request::create('/x', 'POST', ['rows' => [
+        ['_rowIndex' => 1, 'order_type' => 'pickup_dropoff', 'dropoff_street1' => '1 Road'],
+    ]]))->getData(true);
+
+    expect($result['rows'][0]['status'])->toBe('failed')
+        ->and($result['rows'][0]['reason'])->toContain('payloads')
+        ->and($result['failed'][0]['row'])->toBe(1)
+        ->and($connection->table('orders')->count())->toBe(0);
+});

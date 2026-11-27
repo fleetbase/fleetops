@@ -2329,15 +2329,15 @@ test('manifest metadata relations scopes and status transitions are stable', fun
         ]);
 
     expect($manifest->start())->toBe($manifest)
-        ->and($manifest->status)->toBe('in_progress')
-        ->and($manifest->updates[0]['status'])->toBe('in_progress')
+        ->and($manifest->status)->toBe('active')
+        ->and($manifest->updates[0]['status'])->toBe('active')
         ->and($manifest->updates[0]['started_at']->toDateTimeString())->toBe('2026-04-05 09:30:00')
         ->and($manifest->complete())->toBe($manifest)
         ->and($manifest->status)->toBe('completed')
         ->and($manifest->updates[1]['completed_at']->toDateTimeString())->toBe('2026-04-05 09:30:00')
         ->and($manifest->cancel())->toBe($manifest)
         ->and($manifest->status)->toBe('cancelled')
-        ->and($manifest->updates[2])->toBe(['status' => 'cancelled']);
+        ->and($manifest->updates[2])->toBe(['status' => 'cancelled', 'publish_at' => null]);
 
     Carbon::setTestNow();
 });

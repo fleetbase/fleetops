@@ -444,7 +444,6 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->post('run', 'OrchestrationController@run');
                 $router->post('commit', 'OrchestrationController@commit');
             });
-
         });
 
         /*
@@ -1013,7 +1012,11 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                     ['prefix' => 'manifests'],
                                     function ($router) {
                                         $router->get('/', 'ManifestController@index');
+                                        $router->post('publish', 'ManifestController@publishMany');
+                                        $router->get('best-fit', 'ManifestController@bestFit');
                                         $router->get('{id}', 'ManifestController@show');
+                                        $router->post('{id}/publish', 'ManifestController@publish');
+                                        $router->post('{id}/stops', 'ManifestController@insertStop');
                                         $router->post('{id}/cancel', 'ManifestController@cancel');
                                         $router->delete('{id}', 'ManifestController@destroy');
                                     }

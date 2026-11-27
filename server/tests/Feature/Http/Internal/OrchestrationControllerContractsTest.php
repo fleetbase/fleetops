@@ -4,6 +4,7 @@ use Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrchestrationController;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Manifest;
 use Fleetbase\FleetOps\Models\ManifestStop;
+use Fleetbase\FleetOps\Models\OrchestrationRun;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Payload;
@@ -14,6 +15,7 @@ use Fleetbase\FleetOps\Orchestration\Engines\DriverAssignmentEngine;
 use Fleetbase\FleetOps\Orchestration\Engines\GreedyOrchestrationEngine;
 use Fleetbase\FleetOps\Orchestration\Engines\RouteSequencingEngine;
 use Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry;
+use Fleetbase\FleetOps\Support\Dispatch\ManifestPublisher;
 use Fleetbase\Models\CustomField;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -39,6 +41,34 @@ class FleetOpsOrchestrationCommitControllerProbe extends OrchestrationController
     public string $engineSetting                             = 'greedy';
     public bool $throwOnCreateManifest                       = false;
     public int $transactionLevel                             = 0;
+    public array $planRuns                                   = [];
+    public array $released                                   = [];
+    public array $committedRuns                              = [];
+    public ?FleetOpsManifestPublisherFake $publisher         = null;
+
+    protected function recordPlanRun(array $attributes): ?OrchestrationRun
+    {
+        $this->planRuns[] = $attributes;
+        $run              = new OrchestrationRun();
+        $run->setRawAttributes(['public_id' => 'plan_' . count($this->planRuns)], true);
+
+        return $run;
+    }
+
+    protected function releaseFromPreviousManifest(Order $order, Manifest $manifest): void
+    {
+        $this->released[] = [$order->public_id, $manifest->public_id];
+    }
+
+    protected function markPlanRunCommitted(mixed $planRunId, ?string $companyUuid): void
+    {
+        $this->committedRuns[] = [$planRunId, $companyUuid];
+    }
+
+    protected function manifestPublisher(): ManifestPublisher
+    {
+        return $this->publisher ??= new FleetOpsManifestPublisherFake();
+    }
 
     protected function companyUuid(): ?string
     {
@@ -166,6 +196,26 @@ class FleetOpsOrchestrationCommitControllerProbe extends OrchestrationController
     protected function getCustomFieldsForOrderConfig(string $orderConfigUuid)
     {
         return collect($this->fallbackCustomFields[$orderConfigUuid] ?? []);
+    }
+}
+
+class FleetOpsManifestPublisherFake extends ManifestPublisher
+{
+    public array $calls = [];
+
+    public function publish(Manifest $manifest): bool
+    {
+        $this->calls[] = ['publish', $manifest->public_id];
+        $manifest->setRawAttributes(array_merge($manifest->getAttributes(), ['status' => 'published']), true);
+
+        return true;
+    }
+
+    public function schedule(Manifest $manifest, Illuminate\Support\Carbon $at): bool
+    {
+        $this->calls[] = ['schedule', $manifest->public_id, $at->toIso8601String()];
+
+        return $manifest->public_id !== 'manifest_public_2';
     }
 }
 
@@ -419,6 +469,7 @@ test('orchestration run reports empty criteria and preview delegates to run', fu
     $controller->vehicleQuery = new FleetOpsOrchestrationQueryFake(collect([$vehicle]));
 
     $response = $controller->run(Request::create('/orchestrator/run', 'POST', [
+        'scheduled_date'    => '2026-11-28',
         'mode'              => 'allocate',
         'prior_assignments' => [
             ['order_id' => 'order_taken', 'vehicle_id' => 'vehicle_one'],
@@ -426,17 +477,22 @@ test('orchestration run reports empty criteria and preview delegates to run', fu
     ]));
 
     $preview = $controller->preview(Request::create('/orchestrator/preview', 'GET', [
-        'mode' => 'assign_vehicles',
+        'scheduled_date' => '2026-11-28',
+        'mode'           => 'assign_vehicles',
     ]));
 
     $orderMethods = array_column($controller->orderQuery->calls, 0);
 
     expect($response->getStatusCode())->toBe(200)
         ->and($response->getData(true))->toBe([
-            'message'     => 'No orders found for the given criteria.',
-            'assignments' => [],
-            'unassigned'  => [],
+            'message'            => 'No orders found for the given criteria.',
+            'assignments'        => [],
+            'unassigned'         => [],
+            'unassigned_reasons' => [],
+            'plan_run_id'        => null,
+            'scheduled_date'     => '2026-11-28',
         ])
+        ->and($controller->planRuns)->toBe([])
         ->and($preview->getData(true)['message'])->toBe('No orders found for the given criteria.')
         ->and($orderMethods)->toContain('whereNull', 'whereNotIn', 'get');
 });
@@ -458,9 +514,20 @@ test('orchestration run reports unavailable vehicles with selected order ids', f
 
     expect($response->getStatusCode())->toBe(200)
         ->and($response->getData(true))->toBe([
-            'message'     => 'No available vehicles found.',
-            'assignments' => [],
-            'unassigned'  => ['order_one'],
+            'message'            => 'No available vehicles found.',
+            'assignments'        => [],
+            'unassigned'         => ['order_one'],
+            'unassigned_reasons' => ['order_one' => ['reason' => 'no_available_vehicle', 'message' => 'No vehicle was available for this order.']],
+            'plan_run_id'        => 'plan_1',
+            'scheduled_date'     => null,
+        ])
+        ->and($controller->planRuns[0])->toMatchArray([
+            'company_uuid'       => 'company-uuid',
+            'mode'               => 'assign_vehicles',
+            'engine'             => null,
+            'order_ids'          => ['order_one'],
+            'unassigned'         => ['order_one'],
+            'unassigned_reasons' => ['order_one' => ['reason' => 'no_available_vehicle', 'message' => 'No vehicle was available for this order.']],
         ])
         ->and($orderMethods)->toContain('whereIn')
         ->and($vehicleMethods)->toContain('whereIn');
@@ -480,6 +547,7 @@ test('orchestration assign drivers augments orders from prior assignments before
     $controller->driverEngine            = new FleetOpsDriverAssignmentEngineFake();
 
     $response = $controller->run(Request::create('/orchestrator/run', 'POST', [
+        'scheduled_date'    => '2026-11-28',
         'mode'              => 'assign_drivers',
         'options'           => ['respect_skills' => false],
         'prior_assignments' => [
@@ -518,7 +586,8 @@ test('orchestration optimize routes hydrates missing vehicle relations before se
     $controller->routeEngine                        = new FleetOpsRouteSequencingEngineFake();
 
     $response = $controller->run(Request::create('/orchestrator/run', 'POST', [
-        'mode' => 'optimize_routes',
+        'scheduled_date' => '2026-11-28',
+        'mode'           => 'optimize_routes',
     ]));
 
     $payload = $response->getData(true);
@@ -546,7 +615,8 @@ test('orchestration run returns structured engine failures', function () {
     $controller->vehicleQuery = new FleetOpsOrchestrationQueryFake(collect([fleetopsOrchestrationVehicle('vehicle_one')]));
 
     $response = $controller->run(Request::create('/orchestrator/run', 'POST', [
-        'options' => ['engine' => 'throwing'],
+        'scheduled_date'    => '2026-11-28',
+        'options'           => ['engine' => 'throwing'],
     ]));
 
     expect($response->getStatusCode())->toBe(503)
@@ -744,7 +814,42 @@ test('orchestration commit creates manifests stops assignments and waypoint orde
         ->and($first->driver_assigned_uuid)->toBe('driver_one-uuid')
         ->and($first->is_route_optimized)->toBeTrue()
         ->and($second->saved)->toBeTrue()
-        ->and($second->manifest_uuid)->toBe('manifest-1');
+        ->and($second->manifest_uuid)->toBe('manifest-1')
+        // Each order left any route it was on before it joined the new one.
+        ->and($controller->released)->toBe([['order_a', 'manifest_public_1'], ['order_b', 'manifest_public_1']])
+        ->and($controller->committedRuns)->toBe([[null, 'company-uuid']])
+        ->and($controller->publisher)->toBeNull();
+});
+
+test('orchestration commit books a publish for each new route and reports the ones it could not book', function () {
+    session(['company' => 'company-uuid']);
+
+    $controller                          = fleetopsOrchestrationCommitController();
+    $controller->vehicles['vehicle_one'] = fleetopsOrchestrationVehicle('vehicle_one');
+    $controller->vehicles['vehicle_two'] = fleetopsOrchestrationVehicle('vehicle_two');
+    $controller->orders                  = ['order_a' => fleetopsOrchestrationOrder('order_a'), 'order_b' => fleetopsOrchestrationOrder('order_b')];
+
+    $payload = $controller->commit(Request::create('/orchestrator/commit', 'POST', [
+        'scheduled_date' => '2026-08-01',
+        'plan_run_id'    => 'plan_1',
+        'publish'        => true,
+        'publish_at'     => '2026-08-01T05:00:00+00:00',
+        'assignments'    => [
+            ['vehicle_id' => 'vehicle_one', 'order_id' => 'order_a'],
+            ['vehicle_id' => 'vehicle_two', 'order_id' => 'order_b'],
+        ],
+    ]))->getData(true);
+
+    // A booked time wins over `publish`; the second booking is refused by the fake.
+    expect($payload['scheduled'])->toBe(['manifest_public_1'])
+        ->and($payload['published'])->toBe([])
+        ->and($controller->publisher->calls)->toBe([
+            ['schedule', 'manifest_public_1', '2026-08-01T05:00:00+00:00'],
+            ['schedule', 'manifest_public_2', '2026-08-01T05:00:00+00:00'],
+        ])
+        ->and($controller->committedRuns)->toBe([['plan_1', 'company-uuid']])
+        // An order without a time is dated at the start of the plan's day.
+        ->and($controller->orders['order_a']->getAttributes()['scheduled_at'])->toStartWith('2026-08-01 00:00:00');
 });
 
 test('orchestration commit rolls back and reports persistence failures', function () {
@@ -872,7 +977,8 @@ test('public orchestration wrappers sanitize run and commit payloads', function 
     $registry->register(new GreedyOrchestrationEngine());
     $controller = new FleetOpsPublicOrchestrationProbe($registry);
 
-    $run = $controller->run(Request::create('/v1/orchestration/run', 'POST', ['mode' => 'assign_vehicles']));
+    $run = $controller->run(Request::create('/v1/orchestration/run', 'POST', [
+        'scheduled_date' => '2026-11-28', 'mode' => 'assign_vehicles']));
     expect($run->getStatusCode())->toBe(200)
         ->and($run->getData(true)['message'] ?? '')->toContain('No orders');
 
@@ -891,14 +997,16 @@ test('run modes scope orders by vehicle assignment and drivers by public id', fu
     $optimize               = fleetopsOrchestrationCommitController();
     $optimize->orderQuery   = new FleetOpsOrchestrationQueryFake();
     $optimize->vehicleQuery = new FleetOpsOrchestrationQueryFake();
-    $optimize->run(Request::create('/orchestrator/run', 'POST', ['mode' => 'optimize']));
+    $optimize->run(Request::create('/orchestrator/run', 'POST', [
+        'scheduled_date' => '2026-11-28', 'mode' => 'optimize']));
     expect(array_column($optimize->orderQuery->calls, 0))->toContain('whereNotNull');
 
     // standalone assign_drivers takes every driverless order regardless of vehicle
     $assign               = fleetopsOrchestrationCommitController();
     $assign->orderQuery   = new FleetOpsOrchestrationQueryFake();
     $assign->vehicleQuery = new FleetOpsOrchestrationQueryFake();
-    $assign->run(Request::create('/orchestrator/run', 'POST', ['mode' => 'assign_drivers']));
+    $assign->run(Request::create('/orchestrator/run', 'POST', [
+        'scheduled_date' => '2026-11-28', 'mode' => 'assign_drivers']));
     expect(array_column($assign->orderQuery->calls, 0))->toContain('whereNull');
 
     // driver ids narrow the vehicle pool through the driver relation
@@ -907,8 +1015,9 @@ test('run modes scope orders by vehicle assignment and drivers by public id', fu
     $byDriver->orderQuery   = new FleetOpsOrchestrationQueryFake(collect([$order]));
     $byDriver->vehicleQuery = new FleetOpsOrchestrationQueryFake();
     $byDriver->run(Request::create('/orchestrator/run', 'POST', [
-        'mode'       => 'assign_vehicles',
-        'driver_ids' => ['driver_one'],
+        'scheduled_date'    => '2026-11-28',
+        'mode'              => 'assign_vehicles',
+        'driver_ids'        => ['driver_one'],
     ]));
     expect(array_column($byDriver->vehicleQuery->calls, 0))->toContain('whereHas');
 });
@@ -928,6 +1037,7 @@ test('assign drivers skips orders without a prior assignment entry', function ()
     $controller->driverEngine            = new FleetOpsDriverAssignmentEngineFake();
 
     $controller->run(Request::create('/orchestrator/run', 'POST', [
+        'scheduled_date'    => '2026-11-28',
         'mode'              => 'assign_drivers',
         'prior_assignments' => [
             ['order_id' => 'order_one', 'vehicle_id' => 'vehicle_one', 'driver_id' => 'driver_one'],
@@ -1002,8 +1112,9 @@ test('orchestration run falls back to greedy and reports why when the selected e
 
     // an empty engine option defers to the organization's selected engine
     $response = $controller->run(Request::create('/orchestrator/run', 'POST', [
-        'mode'    => 'assign_vehicles',
-        'options' => ['engine' => ''],
+        'scheduled_date'    => '2026-11-28',
+        'mode'              => 'assign_vehicles',
+        'options'           => ['engine' => ''],
     ]));
 
     $payload = $response->getData(true);
@@ -1044,8 +1155,9 @@ test('orchestration optimize routes runs the selected solver once per vehicle', 
     $controller->vehicleQuery = new FleetOpsOrchestrationQueryFake(collect([$vehicle]));
 
     $response = $controller->run(Request::create('/orchestrator/run', 'POST', [
-        'mode'    => 'optimize_routes',
-        'options' => ['allocation_strategy' => 'capacity_only'],
+        'scheduled_date'    => '2026-11-28',
+        'mode'              => 'optimize_routes',
+        'options'           => ['allocation_strategy' => 'capacity_only'],
     ]));
 
     $payload = $response->getData(true);
@@ -1083,7 +1195,8 @@ test('orchestration optimize routes falls back to the route sequencer with a war
     $controller->orderQuery    = new FleetOpsOrchestrationQueryFake(collect([fleetopsOrchestrationAssignedOrder('order_one', 'vehicle-one-uuid', $vehicle)]));
     $controller->vehicleQuery  = new FleetOpsOrchestrationQueryFake(collect([$vehicle]));
 
-    $payload = $controller->run(Request::create('/orchestrator/run', 'POST', ['mode' => 'optimize_routes']))->getData(true);
+    $payload = $controller->run(Request::create('/orchestrator/run', 'POST', [
+        'scheduled_date' => '2026-11-28', 'mode' => 'optimize_routes']))->getData(true);
 
     expect($controller->routeEngine->calls)->toHaveCount(1)
         ->and($payload['summary'])->toMatchArray([

@@ -583,7 +583,7 @@ function fleetopsManifestTenantDatabase(): Illuminate\Database\SQLiteConnection
 
     $schema = $connection->getSchemaBuilder();
     $tables = [
-        'manifests'      => ['uuid', 'public_id', 'company_uuid', 'driver_uuid', 'vehicle_uuid', 'status', 'scheduled_date'],
+        'manifests'      => ['uuid', 'public_id', 'company_uuid', 'driver_uuid', 'vehicle_uuid', 'status', 'scheduled_date', 'published_at'],
         'manifest_stops' => ['uuid', 'public_id', 'manifest_uuid', 'status', 'sequence'],
         'drivers'        => ['uuid', 'public_id', 'company_uuid', 'user_uuid'],
         'users'          => ['uuid', 'public_id', 'company_uuid', 'name'],
@@ -602,7 +602,7 @@ function fleetopsManifestTenantDatabase(): Illuminate\Database\SQLiteConnection
     foreach (['a', 'b'] as $tenant) {
         $connection->table('users')->insert(['uuid' => "user-{$tenant}", 'company_uuid' => "company-{$tenant}", 'name' => "Driver {$tenant}"]);
         $connection->table('drivers')->insert(['uuid' => "driver-{$tenant}-uuid", 'public_id' => "driver_{$tenant}", 'company_uuid' => "company-{$tenant}", 'user_uuid' => "user-{$tenant}"]);
-        $connection->table('manifests')->insert(['uuid' => "manifest-{$tenant}-uuid", 'public_id' => "manifest_{$tenant}", 'company_uuid' => "company-{$tenant}", 'driver_uuid' => "driver-{$tenant}-uuid", 'status' => 'pending']);
+        $connection->table('manifests')->insert(['uuid' => "manifest-{$tenant}-uuid", 'public_id' => "manifest_{$tenant}", 'company_uuid' => "company-{$tenant}", 'driver_uuid' => "driver-{$tenant}-uuid", 'status' => 'published', 'published_at' => '2026-11-27 06:00:00']);
         $connection->table('manifest_stops')->insert(['uuid' => "stop-{$tenant}-uuid", 'public_id' => "stop_{$tenant}", 'manifest_uuid' => "manifest-{$tenant}-uuid", 'status' => 'pending', 'sequence' => '1']);
     }
 
@@ -665,4 +665,77 @@ test('manifest controller lookups resolve nothing without a company session', fu
     expect(FleetOpsManifestRealLookupProbe::callFindManifest('manifest_a'))->toBeNull()
         ->and(FleetOpsManifestRealLookupProbe::callFindStop('stop_a'))->toBeNull()
         ->and(FleetOpsManifestRealLookupProbe::callFindDriverRecord('driver_a'))->toBeNull();
+});
+
+test('drivers see published routes and never a draft', function () {
+    $connection = fleetopsManifestTenantDatabase();
+    session(['company' => 'company-a']);
+
+    $connection->table('manifests')->insert([
+        ['uuid' => 'draft-uuid', 'public_id' => 'manifest_draft', 'company_uuid' => 'company-a', 'driver_uuid' => 'driver-a-uuid', 'status' => 'draft', 'published_at' => null],
+        ['uuid' => 'active-uuid', 'public_id' => 'manifest_active', 'company_uuid' => 'company-a', 'driver_uuid' => 'driver-a-uuid', 'status' => 'active', 'published_at' => '2026-11-27 06:00:00'],
+        ['uuid' => 'done-uuid', 'public_id' => 'manifest_done', 'company_uuid' => 'company-a', 'driver_uuid' => 'driver-a-uuid', 'status' => 'completed', 'published_at' => '2026-11-27 06:00:00'],
+        ['uuid' => 'legacy-uuid', 'public_id' => 'manifest_legacy', 'company_uuid' => 'company-a', 'driver_uuid' => 'driver-a-uuid', 'status' => 'in_progress', 'published_at' => null],
+        ['uuid' => 'called-off-uuid', 'public_id' => 'manifest_called_off', 'company_uuid' => 'company-a', 'driver_uuid' => 'driver-a-uuid', 'status' => 'cancelled', 'published_at' => '2026-11-27 06:00:00'],
+        ['uuid' => 'dropped-draft-uuid', 'public_id' => 'manifest_dropped_draft', 'company_uuid' => 'company-a', 'driver_uuid' => 'driver-a-uuid', 'status' => 'cancelled', 'published_at' => null],
+    ]);
+    $connection->table('manifest_stops')->insert(['uuid' => 'draft-stop-uuid', 'public_id' => 'stop_draft', 'manifest_uuid' => 'draft-uuid', 'status' => 'pending', 'sequence' => '1']);
+
+    $driver = FleetOpsManifestRealLookupProbe::callFindDriverRecord('driver_a');
+    $listed = FleetOpsManifestRealLookupProbe::callManifestsFor($driver)->pluck('public_id')->sort()->values()->all();
+
+    expect($listed)->toBe(['manifest_a', 'manifest_active', 'manifest_called_off', 'manifest_done', 'manifest_legacy'])
+        ->and(FleetOpsManifestRealLookupProbe::callFindManifest('manifest_draft'))->toBeNull()
+        ->and(FleetOpsManifestRealLookupProbe::callFindManifest('manifest_dropped_draft'))->toBeNull()
+        ->and(FleetOpsManifestRealLookupProbe::callFindManifest('manifest_called_off')?->public_id)->toBe('manifest_called_off')
+        ->and(FleetOpsManifestRealLookupProbe::callFindStop('stop_draft'))->toBeNull()
+        ->and((new ManifestController())->show('manifest_draft')->getStatusCode())->toBe(404);
+});
+
+test('the route endpoint answers with the road line, or no line when routing fails', function () {
+    $manifest = new Manifest();
+    $manifest->setRawAttributes(['uuid' => 'manifest-uuid', 'public_id' => 'manifest_route'], true);
+    FleetOpsManifestControllerProbe::$manifest = null;
+
+    expect((new FleetOpsManifestControllerProbe())->route(new Request(), 'missing')->getStatusCode())->toBe(404);
+
+    FleetOpsManifestControllerProbe::$manifest = $manifest;
+    $service                                   = new class extends Fleetbase\FleetOps\Tracking\ManifestRouteService {
+        public bool $fail   = false;
+        public array $calls = [];
+
+        public function __construct()
+        {
+        }
+
+        public function route(Manifest $manifest, bool $remaining = false): array
+        {
+            $this->calls[] = [$manifest->public_id, $remaining];
+            if ($this->fail) {
+                throw new RuntimeException('engine down');
+            }
+
+            return ['polyline' => 'abc'];
+        }
+    };
+    app()->instance(Fleetbase\FleetOps\Tracking\ManifestRouteService::class, $service);
+    app()->instance('log', new class {
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+    Illuminate\Support\Facades\Log::clearResolvedInstance('log');
+
+    $line          = (new FleetOpsManifestControllerProbe())->route(new Request(['remaining' => '1']), 'manifest_route');
+    $service->fail = true;
+    $none          = (new FleetOpsManifestControllerProbe())->route(new Request(), 'manifest_route');
+
+    expect($line->getData())->toBe(['polyline' => 'abc'])
+        ->and($none->getData()['polyline'])->toBeNull()
+        ->and($none->getData()['provider'])->toBe('none')
+        ->and($service->calls)->toBe([['manifest_route', true], ['manifest_route', false]]);
+
+    app()->forgetInstance(Fleetbase\FleetOps\Tracking\ManifestRouteService::class);
+    FleetOpsManifestControllerProbe::$manifest = null;
 });

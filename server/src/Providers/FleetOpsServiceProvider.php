@@ -261,6 +261,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             \Fleetbase\FleetOps\Notifications\ProlongedStoppage::class,
             \Fleetbase\FleetOps\Notifications\OrderChanged::class,
             \Fleetbase\FleetOps\Notifications\OrderUnassigned::class,
+            \Fleetbase\FleetOps\Notifications\ManifestPublished::class,
         ]);
 
         // Register Notifiables

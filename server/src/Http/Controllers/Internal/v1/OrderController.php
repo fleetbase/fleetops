@@ -35,6 +35,7 @@ use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Notifications\OrderPing;
+use Fleetbase\FleetOps\Support\Dispatch\RouteReassignment;
 use Fleetbase\FleetOps\Support\OrderEdit;
 use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
 use Fleetbase\FleetOps\Support\Utils;
@@ -97,6 +98,12 @@ class OrderController extends FleetOpsController
      */
     public function onAfterUpdate($request, $order)
     {
+        // The order form changes the driver with a plain save; the order's
+        // route follows it to the new driver's route (or off every route).
+        if ($order instanceof Order && $order->wasChanged('driver_assigned_uuid') && $order->manifest_uuid) {
+            $this->routeReassignment()->followDriverChange($order);
+        }
+
         $uploads = $request->inputArray('order.files');
         if ($uploads) {
             $order->attachFiles($uploads);
@@ -785,23 +792,29 @@ class OrderController extends FleetOpsController
         return ['order' => new $this->resource($order)];
     }
 
+    /**
+     * Each order moves through the reassignment service, so it also moves to
+     * the driver's route for its day and its old route closes up. Drivers
+     * being replaced hear through the order observer; the new driver's
+     * per-order notices are queued by the caller, so the assignment is silent.
+     */
     protected function assignDriverToOrders($orderUuids, Driver $driver): void
     {
-        // Drivers being replaced are told once the assignment is written
-        $replaced = $this->scopedToCompany(Order::whereIn('uuid', $orderUuids))
-            ->whereNotNull('driver_assigned_uuid')
-            ->where('driver_assigned_uuid', '!=', $driver->uuid)
-            ->get();
+        $reassignment = $this->routeReassignment();
+        foreach ($this->scopedToCompany(Order::whereIn('uuid', $orderUuids))->get() as $order) {
+            if ($order->driver_assigned_uuid === $driver->uuid) {
+                continue;
+            }
 
-        $this->scopedToCompany(Order::whereIn('uuid', $orderUuids))->update([
-            'driver_assigned_uuid' => $driver->uuid,
-            'updated_at'           => now(),
-        ]);
-        Order::invalidateApiCacheManually(session('company'));
-
-        foreach ($replaced as $order) {
-            $order->notifyDriverUnassigned($order->driver_assigned_uuid);
+            $reassignment->reassign($order, $driver, ['silent' => true]);
         }
+
+        Order::invalidateApiCacheManually(session('company'));
+    }
+
+    protected function routeReassignment(): RouteReassignment
+    {
+        return app(RouteReassignment::class);
     }
 
     protected function dispatchBulkAssignedDriverNotification(array $orderUuids, Driver $driver): void
@@ -2005,6 +2018,11 @@ class OrderController extends FleetOpsController
      * This endpoint intentionally does NOT trigger dispatch or change the
      * order status, so it is safe to call from the scheduler UI.
      *
+     * A new driver, or a new day for an order that is on a route, goes
+     * through the reassignment service: the order moves to that driver's
+     * route for the day, its old route closes up, and both drivers are told.
+     * A time change within the same day stays a quiet save.
+     *
      * @return \Illuminate\Http\Response
      */
     #[SkipAuthorizationCheck]
@@ -2019,19 +2037,23 @@ class OrderController extends FleetOpsController
             return response()->error('No order found to schedule.');
         }
 
+        $previousDay = $order->scheduled_at?->toDateString();
         if ($scheduledAt) {
             $order->scheduled_at = \Carbon\Carbon::parse($scheduledAt);
         }
+        $day = $order->scheduled_at?->toDateString();
 
-        if ($driverId) {
-            // Resolve by uuid or public_id
-            $driver = $this->findDriverForSchedule($driverId);
-            if ($driver) {
-                $order->driver_assigned_uuid = $driver->uuid;
-            }
+        // Resolve by uuid or public_id
+        $driver = $driverId ? $this->findDriverForSchedule($driverId) : null;
+
+        $newDriver = $driver && $driver->uuid !== $order->driver_assigned_uuid;
+        $newDay    = $order->manifest_uuid && $day !== $previousDay;
+        if ($newDriver || $newDay) {
+            $driver ??= $order->driver_assigned_uuid ? $this->findDriverForSchedule($order->driver_assigned_uuid) : null;
+            $this->routeReassignment()->reassign($order, $driver, ['date' => $day]);
+        } else {
+            $order->saveQuietly();
         }
-
-        $order->saveQuietly();
         $order->invalidateApiCache();
 
         return response()->json([
