@@ -576,6 +576,90 @@ class DriverController extends FleetOpsController
         return response()->json($result + ['status' => $driver->status]);
     }
 
+    /**
+     * The phones a driver has used the Navigator app on, newest first.
+     */
+    #[SkipAuthorizationCheck]
+    public function devices(string $id): JsonResponse
+    {
+        $driver = $this->findDriver($id);
+
+        return response()->json(['devices' => $this->devicesOf($driver)]);
+    }
+
+    /**
+     * Sends a notification written in the console to the driver's phones, or to one of them.
+     */
+    #[SkipAuthorizationCheck]
+    public function sendNotification(Request $request, string $id): JsonResponse
+    {
+        $driver  = $this->findDriver($id);
+        $title   = trim((string) $request->input('title'));
+        $message = trim((string) $request->input('message'));
+        if ($title === '' || $message === '') {
+            return response()->json(['error' => 'Write a title and a message.'], 422);
+        }
+
+        $devices = \Fleetbase\Models\UserDevice::where('user_uuid', $driver->user_uuid)->whereNotIn('status', ['signed_out', 'invalid'])->get();
+        if ($request->filled('device')) {
+            $devices = $devices->filter(fn ($device) => $device->public_id === $request->input('device') || $device->uuid === $request->input('device'))->values();
+        }
+        if ($devices->isEmpty()) {
+            return response()->json(['error' => 'This driver has no phone signed in to send to.'], 422);
+        }
+
+        // The notification goes to the devices chosen here, not to every device on record.
+        $driver->setRelation('devices', $devices);
+        $failures = [];
+        $listener = function (\Illuminate\Notifications\Events\NotificationFailed $event) use (&$failures) {
+            $failures[] = (string) (data_get($event->data, 'error') ?: 'failed');
+        };
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Notifications\Events\NotificationFailed::class, $listener);
+
+        try {
+            $driver->notifyNow(new \Fleetbase\FleetOps\Notifications\DriverMessage($driver, Str::limit($title, 120, ''), Str::limit($message, 500, ''), optional(User::where('uuid', session('user'))->first())->name));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json(['error' => app()->hasDebugModeEnabled() ? $e->getMessage() : 'The notification could not be sent. Check the push settings.'], 422);
+        }
+
+        return response()->json([
+            'status'   => $failures && count($failures) >= $devices->count() ? 'failed' : 'ok',
+            'sent_to'  => $devices->count(),
+            'failures' => array_values(array_unique($failures)),
+            'devices'  => $this->devicesOf($driver->unsetRelation('devices')),
+        ], $failures && count($failures) >= $devices->count() ? 422 : 200);
+    }
+
+    protected function devicesOf(Driver $driver): array
+    {
+        return \Fleetbase\Models\UserDevice::where('user_uuid', $driver->user_uuid)
+            ->orderByRaw('COALESCE(last_seen_at, updated_at) desc')
+            ->limit(20)
+            ->get()
+            ->map(fn ($device) => [
+                'id'            => $device->public_id,
+                'platform'      => $device->platform,
+                'name'          => $device->name,
+                'model'         => $device->model,
+                'manufacturer'  => $device->manufacturer,
+                'os_version'    => $device->os_version,
+                'app_version'   => $device->app_version,
+                'app_build'     => $device->app_build,
+                'environment'   => $device->environment,
+                'locale'        => $device->locale,
+                'timezone'      => $device->timezone,
+                'status'        => $device->status ?: 'active',
+                'signed_in'     => !in_array($device->status, ['signed_out', 'invalid'], true),
+                'can_push'      => !in_array($device->status, ['signed_out', 'invalid'], true) && filled($device->token),
+                'last_seen_at'  => optional($device->last_seen_at ?? $device->updated_at)->toISOString(),
+                'signed_out_at' => optional($device->signed_out_at)->toISOString(),
+                'registered_at' => optional($device->created_at)->toISOString(),
+            ])
+            ->all();
+    }
+
     protected function findDriver(?string $id): Driver
     {
         return Driver::where(function ($query) use ($id) {

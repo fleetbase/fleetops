@@ -589,9 +589,50 @@ class DriverController extends Controller
         );
         PushAppDevices::link($device, $pushApp, $request);
 
+        // What the device is and which build is on it, refreshed each time the app
+        // registers, so the console can tell a driver's phones apart and a push is
+        // sent through the service the token belongs to.
+        try {
+            $details = ['status' => 'active', 'last_seen_at' => now(), 'signed_out_at' => null];
+            foreach (['name', 'model', 'manufacturer', 'os_version', 'app_version', 'app_build', 'locale', 'timezone', 'environment', 'app_identifier'] as $field) {
+                if ($request->filled($field)) {
+                    $details[$field] = Str::limit(trim((string) $request->input($field)), 180, '');
+                }
+            }
+            if (!$device->company_uuid) {
+                $details['company_uuid'] = $driver->company_uuid;
+            }
+            $device->forceFill(array_intersect_key($details, array_flip(\Illuminate\Support\Facades\Schema::getColumnListing($device->getTable()))))->save();
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         return $this->jsonResponse([
             'device' => $device->public_id,
         ], 200);
+    }
+
+    /**
+     * POST /v1/drivers/{id}/unregister-device — the driver signed out on this device.
+     *
+     * The device stays on record, marked signed out, and is no longer pushed to.
+     */
+    public function unregisterDevice(string $id, Request $request)
+    {
+        try {
+            $driver = $this->findDriver($id);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            return $this->jsonResponse(['error' => 'Driver resource not found.'], 404);
+        }
+
+        $token = $request->input('token');
+        if (!$token) {
+            return $this->apiError('Token is required to unregister a device.');
+        }
+
+        UserDevice::where('user_uuid', $driver->user_uuid)->where('token', $token)->update(['status' => 'signed_out', 'signed_out_at' => now()]);
+
+        return $this->jsonResponse(['status' => 'ok'], 200);
     }
 
     /**

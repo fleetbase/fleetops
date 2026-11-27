@@ -2205,6 +2205,27 @@ navigator-app-display-settings:
     show-service-rate: Show the service rate on orders
     show-service-rate-help-text: When on, a driver sees what an order is charged at, with the rate's lines and total, on the order's Details tab. Turn it off to keep prices from drivers.
     saved: Settings saved.
+driver-devices:
+    title: Devices
+    none: This driver has not signed in to the Navigator app on any phone yet.
+    unknown-device: Unknown device
+    app-version: Navigator {version}
+    status-signed-in: Signed in
+    status-signed-out: Signed out
+    status-invalid: Notifications not reaching it
+    development-build: Development build
+    last-seen: Last seen {date}
+    notify: Notify
+    notify-all: Send a notification
+    message-title: Title
+    message-title-placeholder: For example, Call dispatch
+    message-body: Message
+    message-body-placeholder: What the driver should know
+    to-one-device: Sent to this device only.
+    to-all-devices: Sent to every phone the driver is signed in on.
+    send: Send
+    sent: "Notification sent to {count, plural, one {# device} other {# devices}}."
+    sent-partly: "Sent, but at least one device did not accept it: {reason}"
 driver-documents:
     title: Documents
     held: This driver cannot go online until every document is approved.

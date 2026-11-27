@@ -101,6 +101,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->post('{id}/simulate', 'DriverController@simulate');
                 $router->match(['put', 'patch', 'post'], '{id}/track', 'DriverController@track');
                 $router->post('{id}/register-device', 'DriverController@registerDevice');
+                $router->post('{id}/unregister-device', 'DriverController@unregisterDevice');
                 $router->post('{id}/switch-organization', 'DriverController@switchOrganization');
                 $router->post('{id}/toggle-online', 'DriverController@toggleOnline');
                 $router->post('/', 'DriverController@create');
@@ -533,6 +534,8 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->post('{id}/deactivate-login', $controller('deactivateLogin'));
                                 $router->post('{id}/reactivate-login', $controller('reactivateLogin'));
                                 $router->get('{id}/documents', $controller('documents'));
+                                $router->get('{id}/devices', $controller('devices'));
+                                $router->post('{id}/send-notification', $controller('sendNotification'))->middleware('throttle:20,1,fleetops-driver-push');
                                 $router->post('{id}/documents/review', $controller('reviewDocument'));
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->post('import', $controller('import'));
