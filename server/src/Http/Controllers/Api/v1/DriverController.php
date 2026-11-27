@@ -523,6 +523,9 @@ class DriverController extends Controller
             ], 422);
         }
 
+        // A driver already online when recording began has no start on record; begin one now.
+        DriverDuty::reconcile($driver);
+
         return $this->jsonResponse(DriverDaySummary::for($driver, filled($date) ? $date : null, filled($timezone) ? $timezone : null), 200);
     }
 

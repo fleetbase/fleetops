@@ -29,6 +29,7 @@ return new class extends Migration {
             $table->timestamp('started_at')->nullable();
             $table->timestamp('ended_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index(['driver_uuid', 'started_at'], 'driver_duty_periods_driver_started_index');
         });

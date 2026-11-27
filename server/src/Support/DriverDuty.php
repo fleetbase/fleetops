@@ -63,6 +63,29 @@ class DriverDuty
         $open->update(['ended_at' => $at]);
     }
 
+    /**
+     * Start the record for a driver who is found online with none: one who went
+     * online before this was being recorded, or whose record could not be
+     * written at the time. Their time online counts from now, which is the
+     * earliest moment anything can vouch for.
+     */
+    public static function reconcile(Driver $driver): void
+    {
+        if (!$driver->uuid || !$driver->online) {
+            return;
+        }
+
+        try {
+            if (!$driver->online_since) {
+                static::stamp($driver);
+                $driver->saveQuietly();
+            }
+            static::sync($driver);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
     /** Close whatever is open, for a driver who is going away. */
     public static function close(Driver $driver, ?Carbon $at = null): void
     {
