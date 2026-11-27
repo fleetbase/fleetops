@@ -235,13 +235,18 @@ class ManifestController extends Controller
         /** @var Driver|null $driver */
         $driver = static::scopedToCompany(static::matchingIdentifier(Driver::query(), $id))->first();
 
+        // A driver's own token reads that driver's routes and no one else's.
+        if ($driver && session('is_sanctum_token') && $driver->user_uuid !== session('user')) {
+            return null;
+        }
+
         return $driver;
     }
 
     protected static function findManifest(string $id): ?Manifest
     {
         /** @var Manifest|null $manifest */
-        $manifest = static::scopedToCompany(static::matchingIdentifier(Manifest::query(), $id))->first();
+        $manifest = static::scopedToCaller(static::scopedToCompany(static::matchingIdentifier(Manifest::query(), $id)))->first();
 
         return $manifest;
     }
@@ -254,7 +259,7 @@ class ManifestController extends Controller
     {
         /** @var ManifestStop|null $stop */
         $stop = static::matchingIdentifier(ManifestStop::query(), $id)
-            ->whereHas('manifest', fn (Builder $query) => static::scopedToCompany($query))
+            ->whereHas('manifest', fn (Builder $query) => static::scopedToCaller(static::scopedToCompany($query)))
             ->first();
 
         return $stop;
@@ -269,6 +274,27 @@ class ManifestController extends Controller
     protected static function matchingIdentifier(Builder $query, string $id): Builder
     {
         return $query->where(fn (Builder $query) => $query->where('public_id', $id)->orWhere('uuid', $id));
+    }
+
+    /**
+     * Constrain a manifest query to the routes the caller may run.
+     *
+     * An organization's API key may read and run any of its manifests. A driver
+     * signed in with their own token only their own: without this, any driver
+     * could open, re-order or complete a colleague's route by its id.
+     */
+    protected static function scopedToCaller(Builder $query): Builder
+    {
+        if (!session('is_sanctum_token')) {
+            return $query;
+        }
+
+        $driverUuid = Driver::where('user_uuid', session('user'))->where('company_uuid', session('company'))->value('uuid');
+        if (!$driverUuid) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where($query->getModel()->qualifyColumn('driver_uuid'), $driverUuid);
     }
 
     /**

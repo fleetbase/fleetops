@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\Concerns\ResolvesOwnDriver;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Support\DriverDocuments;
 use Fleetbase\Http\Controllers\Controller;
@@ -18,9 +19,11 @@ use Illuminate\Http\Request;
  */
 class DriverDocumentController extends Controller
 {
+    use ResolvesOwnDriver;
+
     public function index(string $id)
     {
-        $driver = $this->driver($id);
+        $driver = $this->ownDriver($id);
         if (!$driver) {
             return response()->apiError('Driver resource not found.', 404);
         }
@@ -30,7 +33,7 @@ class DriverDocumentController extends Controller
 
     public function store(string $id, Request $request)
     {
-        $driver = $this->driver($id);
+        $driver = $this->ownDriver($id);
         if (!$driver) {
             return response()->apiError('Driver resource not found.', 404);
         }
@@ -62,27 +65,5 @@ class DriverDocumentController extends Controller
         $documents = DriverDocuments::forDriver($driver);
 
         return ['documents' => $documents, 'summary' => DriverDocuments::summary($driver, $documents)];
-    }
-
-    /**
-     * The driver, inside the caller's organization; and when the caller is a
-     * driver signed in with their own token, only themselves.
-     */
-    protected function driver(string $id): ?Driver
-    {
-        try {
-            $driver = Driver::findRecordOrFail($id);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return null;
-        }
-
-        if (session('company') && $driver->company_uuid !== session('company')) {
-            return null;
-        }
-        if (session('is_sanctum_token') && $driver->user_uuid !== session('user')) {
-            return null;
-        }
-
-        return $driver;
     }
 }

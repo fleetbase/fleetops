@@ -99,7 +99,8 @@ class OrderPing extends Notification implements ShouldQueue, SendsToPushApps
     {
         $this->notifiable = $notifiable;
 
-        return ['broadcast', FcmChannel::class, ApnChannel::class, PushAppChannel::class];
+        // A driver who has switched this kind of alert off is not rung about it; an open app still hears.
+        return \Fleetbase\FleetOps\Support\DriverAlerts::channels($notifiable, 'offers', ['broadcast', FcmChannel::class, ApnChannel::class, PushAppChannel::class]);
     }
 
     /**

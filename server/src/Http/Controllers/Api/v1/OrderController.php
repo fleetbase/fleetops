@@ -2136,6 +2136,64 @@ class OrderController extends Controller
     }
 
     /**
+     * POST /v1/orders/{id}/cash-collected — the driver says they took the cash.
+     *
+     * Records the amount, when, and who, on the order (`meta.cash_collected`).
+     * Without it the only sign that cash on delivery changed hands was that the
+     * order was completed, so an end-of-day hand-in could not be checked against
+     * anything. `amount` defaults to what the order asks for; a different amount
+     * is kept as given, because that is what is in the driver's hand.
+     * `collected: false` withdraws a record made by mistake.
+     */
+    public function cashCollected(string $id, Request $request)
+    {
+        try {
+            $order = $this->findOrder($id);
+        } catch (ModelNotFoundException $e) {
+            return $this->apiError('Order resource not found.', 404);
+        }
+
+        $order->loadMissing('payload');
+        $due = (int) data_get($order, 'payload.cod_amount', 0);
+        if ($due <= 0) {
+            return $this->apiError('This order has no cash to collect.', 422);
+        }
+
+        // A driver signed in with their own token records cash only on their own order.
+        $driver = session('is_sanctum_token') ? Driver::where('user_uuid', session('user'))->where('company_uuid', session('company'))->first() : null;
+        if (session('is_sanctum_token') && (!$driver || $order->driver_assigned_uuid !== $driver->uuid)) {
+            return $this->apiError('This order is not assigned to you.', 403);
+        }
+
+        $meta = (array) $order->meta;
+        if ($request->has('collected') && !Utils::castBoolean($request->input('collected'))) {
+            unset($meta['cash_collected']);
+        } else {
+            $amount = $request->filled('amount') ? (int) Utils::numbersOnly($request->input('amount')) : $due;
+            if ($amount < 0) {
+                return $this->apiError('The amount collected cannot be negative.', 422);
+            }
+
+            $meta['cash_collected'] = [
+                'amount'     => $amount,
+                'due'        => $due,
+                'currency'   => data_get($order, 'payload.cod_currency'),
+                'at'         => now()->toISOString(),
+                'by'         => $driver?->public_id,
+                'by_name'    => $driver?->name,
+            ];
+        }
+
+        $order->meta = $meta;
+        $order->saveQuietly();
+        if (method_exists($order, 'invalidateApiCache')) {
+            $order->invalidateApiCache();
+        }
+
+        return $this->jsonResponse(['id' => $order->public_id, 'cash_collected' => $meta['cash_collected'] ?? null]);
+    }
+
+    /**
      * Retrieves editable fields for a specific order entity based on its configuration.
      *
      * This function looks up an order by its ID and retrieves configurable editable fields

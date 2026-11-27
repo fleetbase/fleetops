@@ -110,6 +110,8 @@ class DriverDaySummary
             'planned_distance_m'    => $plannedDistance->isEmpty() ? null : (int) $plannedDistance->sum(),
             'distance_driven_m'     => $positions['metres'],
             'cash_on_delivery_due'  => static::cashDueOn($completedOrders),
+            // What drivers said they took, from the record made when they confirmed it.
+            'cash_on_delivery_collected' => static::cashCollectedOn($completedOrders),
             'first_activity_at'     => $moments->first(),
             'last_activity_at'      => $moments->last(),
         ];
@@ -159,7 +161,7 @@ class DriverDaySummary
             ->where('updated_at', '>=', $from)
             ->whereNotNull('tracking_number_uuid')
             ->toBase()
-            ->get(['uuid', 'payload_uuid', 'tracking_number_uuid']);
+            ->get(['uuid', 'payload_uuid', 'tracking_number_uuid', 'meta']);
 
         if ($orders->isEmpty()) {
             return collect();
@@ -178,7 +180,7 @@ class DriverDaySummary
             ->map(function ($order) use ($completedAt) {
                 $at = $completedAt->get($order->tracking_number_uuid);
 
-                return $at ? ['uuid' => $order->uuid, 'payload_uuid' => $order->payload_uuid, 'completed_at' => Carbon::parse($at, 'UTC')] : null;
+                return $at ? ['uuid' => $order->uuid, 'payload_uuid' => $order->payload_uuid, 'completed_at' => Carbon::parse($at, 'UTC'), 'meta' => is_string($order->meta) ? (json_decode($order->meta, true) ?: []) : (array) $order->meta] : null;
             })
             ->filter(fn ($order) => $order && $order['completed_at'] >= $from && $order['completed_at'] < $to)
             ->values();
@@ -228,6 +230,24 @@ class DriverDaySummary
             ->map(fn (Collection $group, string $currency) => [
                 'currency' => $currency !== '' ? $currency : null,
                 'amount'   => (int) $group->sum(fn ($payload) => (int) $payload->cod_amount),
+                'orders'   => $group->count(),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Cash the driver confirmed taking on these orders, per currency.
+     */
+    protected static function cashCollectedOn(Collection $orders): array
+    {
+        return $orders
+            ->map(fn ($order) => data_get($order, 'meta.cash_collected'))
+            ->filter(fn ($record) => is_array($record) && (int) ($record['amount'] ?? 0) > 0)
+            ->groupBy(fn ($record) => (string) ($record['currency'] ?? ''))
+            ->map(fn (Collection $group, string $currency) => [
+                'currency' => $currency !== '' ? $currency : null,
+                'amount'   => (int) $group->sum(fn ($record) => (int) $record['amount']),
                 'orders'   => $group->count(),
             ])
             ->values()

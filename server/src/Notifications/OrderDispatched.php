@@ -90,7 +90,8 @@ class OrderDispatched extends Notification implements ShouldQueue, SendsToPushAp
      */
     public function via($notifiable)
     {
-        return ['broadcast', 'mail', FcmChannel::class, ApnChannel::class, PushAppChannel::class];
+        // A driver who has switched this kind of alert off is not rung about it; an open app still hears.
+        return \Fleetbase\FleetOps\Support\DriverAlerts::channels($notifiable, 'new_work', ['broadcast', 'mail', FcmChannel::class, ApnChannel::class, PushAppChannel::class]);
     }
 
     /**

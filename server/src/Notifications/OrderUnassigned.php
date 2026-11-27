@@ -45,7 +45,8 @@ class OrderUnassigned extends Notification implements ShouldQueue, SendsToPushAp
 
     public function via($notifiable): array
     {
-        return [FcmChannel::class, ApnChannel::class, PushAppChannel::class];
+        // A driver who has switched this kind of alert off is not rung about it; an open app still hears.
+        return \Fleetbase\FleetOps\Support\DriverAlerts::channels($notifiable, 'order_changes', [FcmChannel::class, ApnChannel::class, PushAppChannel::class]);
     }
 
     public function toArray($notifiable = null): array

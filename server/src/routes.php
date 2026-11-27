@@ -114,6 +114,9 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 // The documents the organization asks of a driver, and the driver's own copies.
                 $router->get('{id}/documents', 'DriverDocumentController@index');
                 $router->post('{id}/documents', 'DriverDocumentController@store')->middleware('throttle:20,1,fleetops-driver-documents');
+                // What the driver wants to be rung about.
+                $router->get('{id}/notification-preferences', 'DriverNotificationPreferenceController@show');
+                $router->match(['put', 'patch', 'post'], '{id}/notification-preferences', 'DriverNotificationPreferenceController@update');
                 $router->get('{id}/current-organization', 'DriverController@currentOrganization');
                 $router->put('{id}', 'DriverController@update');
                 $router->delete('{id}', 'DriverController@delete');
@@ -271,6 +274,8 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->delete('{id}/cancel', 'OrderController@cancelOrder');
                 $router->match(['post', 'patch'], '{id}/update-activity', 'OrderController@updateActivity');
                 $router->post('{id}/complete', 'OrderController@completeOrder');
+                // The driver says they took the cash an order asks for.
+                $router->post('{id}/cash-collected', 'OrderController@cashCollected');
                 $router->get('{id}/next-activity', 'OrderController@getNextActivity');
                 $router->get('{id}/tracker', 'OrderController@trackerData');
                 $router->get('{id}/eta', 'OrderController@etaData');
