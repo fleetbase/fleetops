@@ -277,6 +277,8 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->post('{id}/complete', 'OrderController@completeOrder');
                 // The driver says they took the cash an order asks for.
                 $router->post('{id}/cash-collected', 'OrderController@cashCollected');
+                // The order's chat between its driver and dispatch: returned, and started when there is none yet.
+                $router->post('{id}/chat-channel', 'OrderController@chatChannel');
                 $router->get('{id}/next-activity', 'OrderController@getNextActivity');
                 $router->get('{id}/tracker', 'OrderController@trackerData');
                 $router->get('{id}/eta', 'OrderController@etaData');

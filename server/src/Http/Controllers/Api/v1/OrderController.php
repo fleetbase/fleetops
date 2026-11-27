@@ -27,6 +27,7 @@ use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocDispatch;
 use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocOfferListing;
+use Fleetbase\FleetOps\Support\OrderChat;
 use Fleetbase\FleetOps\Support\OrderCustomFields;
 use Fleetbase\FleetOps\Support\OrderEdit;
 use Fleetbase\FleetOps\Support\OrderOffers;
@@ -34,7 +35,9 @@ use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
 use Fleetbase\FleetOps\Support\TrackingCode;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
+use Fleetbase\Http\Resources\ChatChannel as ChatChannelResource;
 use Fleetbase\Http\Resources\Comment as CommentResource;
+use Fleetbase\Models\ChatChannel;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Setting;
@@ -2191,6 +2194,42 @@ class OrderController extends Controller
         }
 
         return $this->jsonResponse(['id' => $order->public_id, 'cash_collected' => $meta['cash_collected'] ?? null]);
+    }
+
+    /**
+     * POST /v1/orders/{id}/chat-channel — the order's chat between its driver and dispatch.
+     *
+     * Returns the channel, starting it when the order has none yet, so asking twice gives the
+     * same one. It is an ordinary core chat channel (read and written through
+     * `/v1/chat-channels`), named for the order's tracking number and tied to the order by its
+     * meta (`order_public_id`, `kind: driver`). The assigned driver is in it, with the
+     * organisation's side as `OrderChat::dispatchStaff()` names it.
+     *
+     * A driver signed in with their own token only gets the channel of an order assigned to them.
+     */
+    public function chatChannel(string $id, Request $request)
+    {
+        try {
+            $order = $this->findOrder($id, ['driverAssigned', 'trackingNumber']);
+        } catch (ModelNotFoundException $e) {
+            return $this->apiError('Order resource not found.', 404);
+        }
+
+        $driver = session('is_sanctum_token') ? Driver::where('user_uuid', session('user'))->where('company_uuid', session('company'))->first() : null;
+        if (session('is_sanctum_token') && (!$driver || $order->driver_assigned_uuid !== $driver->uuid)) {
+            return $this->apiError('This order is not assigned to you.', 403);
+        }
+
+        $driverUser = $driver?->user_uuid ?? data_get($order, 'driverAssigned.user_uuid');
+        if (!$driverUser) {
+            return $this->apiError('This order has no driver to chat with yet.', 409);
+        }
+
+        $channel = OrderChat::openDispatch($order, $driverUser);
+        // As in the channel list: the latest entries only; the conversation asks for the rest.
+        $channel->limitFeed(ChatChannel::LIST_FEED_LIMIT);
+
+        return new ChatChannelResource($channel);
     }
 
     /**
