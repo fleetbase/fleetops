@@ -27,6 +27,7 @@ use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocDispatch;
 use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocOfferListing;
+use Fleetbase\FleetOps\Support\NavigatorSettings;
 use Fleetbase\FleetOps\Support\OrderChat;
 use Fleetbase\FleetOps\Support\OrderCustomFields;
 use Fleetbase\FleetOps\Support\OrderEdit;
@@ -433,6 +434,11 @@ class OrderController extends Controller
                 ],
                 404
             );
+        }
+
+        // A driver's own token does not dispatch an order unless the organization lets drivers do so.
+        if ($request->boolean('dispatch') && $this->driverMayNotDispatch($order->company_uuid)) {
+            return response()->apiError(static::DRIVER_DISPATCH_REFUSAL, 403);
         }
 
         // get request input
@@ -1072,6 +1078,11 @@ class OrderController extends Controller
             );
         }
 
+        // Dispatch is the console's to do, unless the organization lets its drivers dispatch from the app.
+        if ($this->driverMayNotDispatch($order->company_uuid)) {
+            return response()->apiError(static::DRIVER_DISPATCH_REFUSAL, 403);
+        }
+
         if (!$order->hasDriverAssigned && !$order->adhoc) {
             return $this->apiError('No driver assigned to dispatch!');
         }
@@ -1163,6 +1174,13 @@ class OrderController extends Controller
 
         if ($order->status === 'canceled') {
             return response()->apiError('This order was canceled.', 409);
+        }
+
+        // Starting an order that was never dispatched, by skipping dispatch, is dispatching it in all
+        // but name: a driver's own token may only do it where the organization lets drivers dispatch.
+        // An order type that is never dispatched is started as before.
+        if ($skipDispatch && $order->isNotDispatched && $this->driverMayNotDispatch($order->company_uuid) && $order->config()?->allowsDispatch() !== false) {
+            return response()->apiError(static::DRIVER_DISPATCH_REFUSAL, 403);
         }
 
         // An adhoc order goes to the first driver who claims it; everyone after is refused.
@@ -1357,6 +1375,26 @@ class OrderController extends Controller
     }
 
     /**
+     * What a driver is told when they try to dispatch an order and their organization keeps
+     * dispatch in the console.
+     */
+    public const DRIVER_DISPATCH_REFUSAL = 'This order has not been dispatched yet. Orders are dispatched from the console.';
+
+    /**
+     * Whether this request may not dispatch an order: it is signed with a driver's own token
+     * (the Navigator app) and the organization has not turned on "drivers can dispatch"
+     * (FleetOps → Settings → Navigator App). API keys and the console are never refused here.
+     */
+    protected function driverMayNotDispatch(?string $companyUuid = null): bool
+    {
+        if (!session('is_sanctum_token')) {
+            return false;
+        }
+
+        return !NavigatorSettings::allowsDriverDispatch($companyUuid ?: session('company'));
+    }
+
+    /**
      * Update an order activity.
      *
      * @return \Fleetbase\Http\Resources\v1\Order
@@ -1404,6 +1442,11 @@ class OrderController extends Controller
         }
         // @codeCoverageIgnoreEnd
 
+        // Read before the order is flagged as started below: whether a driver, who may not dispatch,
+        // is moving on an order that still waits for dispatch.
+        $driverMayNotDispatch    = $this->driverMayNotDispatch($order->company_uuid);
+        $driverAwaitingDispatch  = $driverMayNotDispatch && $order->isAwaitingDispatch();
+
         // if order is still status of `created` trigger started flag
         if ($order->status === 'created') {
             $order->started    = true;
@@ -1420,6 +1463,13 @@ class OrderController extends Controller
         $activity    = $request->inputArray('activity');
         if (!Utils::isActivity($activity)) {
             $activity = new Activity($activity, $order->getConfigFlow());
+        }
+
+        // A driver's own token neither dispatches an order nor steps past dispatch on one that
+        // still waits for it, unless the organization lets drivers dispatch. An order type that is
+        // never dispatched moves on as before.
+        if ($driverMayNotDispatch && ($activity->is('dispatched') || ($driverAwaitingDispatch && $orderConfig?->allowsDispatch() !== false))) {
+            return response()->apiError(static::DRIVER_DISPATCH_REFUSAL, 403);
         }
 
         // The order's config decides whether the update is allowed: a finished order, a step the
@@ -1551,6 +1601,14 @@ class OrderController extends Controller
             return response()->apiError('No order config found for order.');
         }
         $activities = $stop ? $this->nextActivitiesForServiceStop($order, $order->payload, $stop) : $orderConfig->nextActivity();
+
+        // Dispatch is not a driver's step unless the organization lets drivers dispatch: it is not
+        // offered, and an order still waiting for dispatch has no step for the driver at all.
+        if ($this->driverMayNotDispatch($order->company_uuid)) {
+            $activities = $order->isAwaitingDispatch() && $orderConfig->allowsDispatch()
+                ? collect()
+                : $activities->reject(fn ($activity) => $activity->is('dispatched'))->values();
+        }
 
         // If activity is to complete order add proof of delivery properties if required
         // This is a temporary fix until activity is updated to handle POD on it's own
@@ -1787,6 +1845,21 @@ class OrderController extends Controller
         $subject = $this->resolveSubject($order, $type, $subjectId);
         if (!$subject) {
             return $this->apiError('Unable to capture QR code data.');
+        }
+
+        // An item named as the subject must be one of this order's items: a label from
+        // another order proves nothing about this one.
+        if ($subject instanceof Entity && (empty($order->payload_uuid) || $subject->payload_uuid !== $order->payload_uuid)) {
+            return $this->apiError('Unable to capture QR code data.');
+        }
+
+        // A scan sent for the order as a whole is usually the label of one of its items: a
+        // driver scans what is on the parcel, and a barcode names no owner the app could put
+        // in the url. When the code is not the order's own, the proof belongs to the item
+        // (or waypoint) of this order the code names. A code that names nothing on the order
+        // is still refused below.
+        if (!$subjectId && !TrackingCode::matches($code, $subject)) {
+            $subject = $this->scannedSubjectOnOrder($order, $code) ?? $subject;
         }
 
         // validate: the scan must name this subject, in any code format still in circulation
@@ -2099,6 +2172,33 @@ class OrderController extends Controller
 
             default => $order,
         };
+    }
+
+    /**
+     * The item or waypoint of this order that a scanned code names, if any. Only the
+     * order's own payload is searched, so a label from another order matches nothing.
+     */
+    protected function scannedSubjectOnOrder(Order $order, $code): Entity|Waypoint|null
+    {
+        if (!is_string($code) || empty($order->payload_uuid)) {
+            return null;
+        }
+
+        $entities = Entity::withoutGlobalScopes()->where('payload_uuid', $order->payload_uuid)->whereNull('deleted_at')->with('trackingNumber')->get();
+        foreach ($entities as $entity) {
+            if (TrackingCode::matches($code, $entity)) {
+                return $entity;
+            }
+        }
+
+        $waypoints = Waypoint::withoutGlobalScopes()->where('payload_uuid', $order->payload_uuid)->whereNull('deleted_at')->with('trackingNumber')->get();
+        foreach ($waypoints as $waypoint) {
+            if (TrackingCode::matches($code, $waypoint)) {
+                return $waypoint;
+            }
+        }
+
+        return null;
     }
 
     /**

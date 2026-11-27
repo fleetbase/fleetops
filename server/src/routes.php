@@ -622,6 +622,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->get('{id}/tracker', 'OrderController@trackerInfo');
                                 $router->get('{id}/eta', 'OrderController@waypointEtas');
                                 $router->post('{id}/ping-driver', $controller('pingDriver'));
+                                $router->post('{id}/offer-again', $controller('offerAgain'));
                                 $router->post('{id}/capture-photo/{subjectId?}', $controller('capturePhoto'));
                                 $router->post('process-imports', $controller('importFromFiles'));
                                 $router->patch('route/{id}', $controller('editOrderRoute'));

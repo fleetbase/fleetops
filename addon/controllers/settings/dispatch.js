@@ -14,7 +14,7 @@ export default class SettingsDispatchController extends Controller {
     @service store;
     @tracked adhocDistance = 6000;
     @tracked adhocStrategy = 'sequential';
-    @tracked adhocOfferTimeout = 20;
+    @tracked adhocOfferTimeout = 90;
     @tracked strategies = [];
     @tracked orderConfigs = [];
 
@@ -26,7 +26,7 @@ export default class SettingsDispatchController extends Controller {
 
     get timeoutInvalid() {
         const value = Number(this.adhocOfferTimeout);
-        return this.adhocOfferTimeout !== '' && this.adhocOfferTimeout !== null && (Number.isNaN(value) || value < 10 || value > 120);
+        return this.adhocOfferTimeout !== '' && this.adhocOfferTimeout !== null && (Number.isNaN(value) || value < 10 || value > 600);
     }
 
     /**

@@ -1200,6 +1200,10 @@ order:
         dispatch-title: Are you sure you want to dispatch this order?
         dispatch-body: Once this order is dispatched the assigned driver will be notified.
         dispatch-success: Order {orderId} has been dispatched.
+        offer-again-title: Offer this order to nearby drivers again?
+        offer-again-body: Drivers near the pickup who are online will be offered this order again, including any who declined it or let the offer run out.
+        offer-again-success: '{count, plural, one {Order {orderId} was offered to # driver.} other {Order {orderId} was offered to # drivers.}}'
+        offer-again-none: No available driver is online within range of the pickup, so order {orderId} was offered to nobody. Try again when a driver is online, or assign one.
         order-bulk-search: Input comma delimited order ID's or tracking numbers to perform a bulk search
     actions:
         create-new-customer: Create New Customer
@@ -1214,6 +1218,7 @@ order:
         cancel-order: Cancel Order
         dispatch-order: Dispatch Order
         dispatch-orders: Dispatch Orders
+        offer-again: Offer Again
         assign-driver-to-orders: Assign Driver to Orders
         edit-order-details: Edit Order Details
         edit-order-route: Edit Order Route
@@ -2204,6 +2209,8 @@ navigator-app-display-settings:
     title: What drivers see
     show-service-rate: Show the service rate on orders
     show-service-rate-help-text: When on, a driver sees what an order is charged at, with the rate's lines and total, on the order's Details tab. Turn it off to keep prices from drivers.
+    allow-driver-dispatch: Let drivers dispatch orders from the app
+    allow-driver-dispatch-help-text: When off, an order is dispatched from the console only. Until then the driver sees it as waiting for dispatch and cannot start it. Turn it on to let a driver dispatch an order assigned to them from the app.
     saved: Settings saved.
 driver-devices:
     title: Devices
@@ -3397,9 +3404,9 @@ settings:
         strategy-placeholder: One driver at a time
         strategy-help-text: 'One at a time offers the order to the nearest driver first, then the next if they decline or run out of time. All at once offers it to every nearby driver, and the first to accept gets it.'
         offer-timeout: Time each driver has to accept
-        offer-timeout-placeholder: '20'
-        offer-timeout-help-text: Between 10 and 120. Leave empty for 20 seconds.
-        offer-timeout-error: Enter a number between 10 and 120.
+        offer-timeout-placeholder: '90'
+        offer-timeout-help-text: Between 10 and 600. Leave empty for 90 seconds. Give drivers long enough to open the app and read the offer.
+        offer-timeout-error: Enter a number between 10 and 600.
         ping-radius: Search radius around the pickup
         ping-radius-placeholder: '6000'
         ping-radius-help-text: 'Drivers farther from the pickup aren’t offered the order. Leave empty for 6,000 m.'

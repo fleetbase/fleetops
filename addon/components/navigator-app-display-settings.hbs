@@ -10,6 +10,16 @@
                 />
             </div>
         </InputGroup>
+        <InputGroup>
+            <div class="flex items-center">
+                <Toggle
+                    @isToggled={{this.settings.allowDriverDispatch}}
+                    @onToggle={{this.toggleDriverDispatch}}
+                    @label={{t "navigator-app-display-settings.allow-driver-dispatch"}}
+                    @helpText={{t "navigator-app-display-settings.allow-driver-dispatch-help-text"}}
+                />
+            </div>
+        </InputGroup>
         <div class="mt-3 flex items-center mb-4">
             <Button
                 @type="primary"

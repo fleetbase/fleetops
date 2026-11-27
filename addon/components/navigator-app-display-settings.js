@@ -12,7 +12,7 @@ export default class NavigatorAppDisplaySettingsComponent extends Component {
     @service notifications;
     @service intl;
 
-    @tracked settings = { showServiceRateToDrivers: true };
+    @tracked settings = { showServiceRateToDrivers: true, allowDriverDispatch: false };
     @tracked loaded = false;
 
     constructor() {
@@ -32,6 +32,10 @@ export default class NavigatorAppDisplaySettingsComponent extends Component {
 
     @action toggleServiceRate(showServiceRateToDrivers) {
         this.settings = { ...this.settings, showServiceRateToDrivers };
+    }
+
+    @action toggleDriverDispatch(allowDriverDispatch) {
+        this.settings = { ...this.settings, allowDriverDispatch };
     }
 
     @task *save() {

@@ -34,6 +34,13 @@ class FinalizeApiOrderCreation implements ShouldQueue
 
         $serviceQuote = $this->findServiceQuote();
 
+        // Said before the assignment is announced, so a driver assigned and dispatched together
+        // gets the one "dispatched" push and not an "assigned" one as well.
+        $willDispatch = $this->shouldDispatch && $order->isAwaitingDispatch();
+        if ($willDispatch) {
+            \Fleetbase\FleetOps\Support\OrderDriverPushes::dispatching($order);
+        }
+
         $order->notifyDriverAssigned();
         $order->setPreliminaryDistanceAndTime();
         $order->purchaseServiceQuote($serviceQuote);

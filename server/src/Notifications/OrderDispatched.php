@@ -90,6 +90,12 @@ class OrderDispatched extends Notification implements ShouldQueue, SendsToPushAp
      */
     public function via($notifiable)
     {
+        // The driver is sent this by its listener and, when a company lists them as a recipient,
+        // by the notification registry too. The second copy within moments is dropped.
+        if (!\Fleetbase\FleetOps\Support\OrderDriverPushes::firstFor('dispatched', $this->order, $notifiable)) {
+            return [];
+        }
+
         // A driver who has switched this kind of alert off is not rung about it; an open app still hears.
         return \Fleetbase\FleetOps\Support\DriverAlerts::channels($notifiable, 'new_work', ['broadcast', 'mail', FcmChannel::class, ApnChannel::class, PushAppChannel::class]);
     }

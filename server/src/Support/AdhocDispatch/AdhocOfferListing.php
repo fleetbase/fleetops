@@ -69,7 +69,16 @@ class AdhocOfferListing
      */
     public static function present(?OrderOffer $offer): ?array
     {
-        return $offer ? ['status' => $offer->status, 'expires_at' => $offer->expires_at?->toISOString()] : null;
+        if (!$offer) {
+            return null;
+        }
+
+        return [
+            'status'     => $offer->status,
+            'expires_at' => $offer->expires_at?->toISOString(),
+            // Seconds left by the server's clock, so a phone whose clock is off still counts down right.
+            'expires_in' => $offer->expires_at ? max(0, (int) now()->diffInSeconds($offer->expires_at, false)) : null,
+        ];
     }
 
     protected static function offersOf($offers, string $orders, string $driverUuid)

@@ -122,7 +122,7 @@ class SequentialStrategy implements AdhocDispatchStrategy
         $offer   = OrderOffers::record($order, $driver, now()->addSeconds($timeout));
 
         try {
-            $driver->notify(new OrderPing($order, $offer->distance));
+            $driver->notify(new OrderPing($order, $offer->distance, $offer->expires_at));
         } catch (\Throwable $exception) {
             Log::warning('Unable to send an order offer', ['order' => $order->public_id, 'error' => $exception->getMessage()]);
         }

@@ -1419,6 +1419,10 @@ class Order extends Model
             $this->invalidateApiCache();
         }
 
+        // The assigned driver is about to be told it was dispatched; an "assigned" push for the
+        // same moment would be a second notification about one action.
+        \Fleetbase\FleetOps\Support\OrderDriverPushes::dispatching($this);
+
         dispatch(fn () => event(new OrderDispatched($this)))->afterCommit();
 
         return $this;

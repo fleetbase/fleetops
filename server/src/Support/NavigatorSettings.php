@@ -16,6 +16,8 @@ class NavigatorSettings
     public const DEFAULTS = [
         // Whether drivers see what an order is charged at (its service rate and lines).
         'showServiceRateToDrivers' => true,
+        // Whether a driver may dispatch an order to themselves from the app. Off: orders are dispatched from the console only.
+        'allowDriverDispatch'      => false,
     ];
 
     public static function get(string $companyUuid): array
@@ -54,10 +56,29 @@ class NavigatorSettings
         $settings = static::get($companyUuid);
 
         return [
-            'show_service_rate' => $settings['showServiceRateToDrivers'],
+            'show_service_rate'     => $settings['showServiceRateToDrivers'],
+            // Whether the app offers a driver the dispatch step of an order that has not been dispatched.
+            'allow_driver_dispatch' => $settings['allowDriverDispatch'],
             // The organization's routing distance unit (Settings → Routing), so the app shows distances the way the console does.
-            'distance_unit'     => static::distanceUnit($companyUuid),
+            'distance_unit'         => static::distanceUnit($companyUuid),
         ];
+    }
+
+    /**
+     * Whether the organization lets its drivers dispatch orders from the app. Off unless it was
+     * turned on: an organization that never chose keeps dispatch in the console.
+     */
+    public static function allowsDriverDispatch(?string $companyUuid): bool
+    {
+        if (!$companyUuid) {
+            return false;
+        }
+
+        try {
+            return (bool) static::get($companyUuid)['allowDriverDispatch'];
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     /**
