@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Manifest;
 use Fleetbase\FleetOps\Models\ManifestStop;
+use Fleetbase\FleetOps\Models\OrchestrationRun;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Payload;
@@ -20,6 +21,10 @@ use Fleetbase\FleetOps\Orchestration\Engines\RouteSequencingEngine;
 use Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry;
 use Fleetbase\FleetOps\Orchestration\Support\OrchestratorSettings;
 use Fleetbase\FleetOps\Orchestration\Support\RouteMetrics;
+use Fleetbase\FleetOps\Orchestration\Support\UnassignedReasons;
+use Fleetbase\FleetOps\Support\Dispatch\DispatchDate;
+use Fleetbase\FleetOps\Support\Dispatch\ManifestPublisher;
+use Fleetbase\FleetOps\Support\Dispatch\RouteReassignment;
 use Fleetbase\FleetOps\Support\Routing\RoutingProviderPolicy;
 use Fleetbase\FleetOps\Traits\AuthorizesMethods;
 use Fleetbase\Http\Controllers\Controller;
@@ -50,6 +55,11 @@ class OrchestrationController extends Controller
      * Engines that assign orders to vehicles without producing a stop sequence.
      */
     protected const ASSIGNMENT_ONLY_ENGINES = ['greedy', 'capacity'];
+
+    /**
+     * Order statuses a plan run may take in. `order_statuses` narrows this.
+     */
+    public const PLANNABLE_STATUSES = ['created', 'dispatched', 'started'];
 
     public function __construct(protected OrchestrationEngineRegistry $registry)
     {
@@ -135,13 +145,36 @@ class OrchestrationController extends Controller
     /**
      * Run an orchestration phase for the given mode.
      *
+     * Scope: the orders in `order_ids`, or, without them, the orders whose
+     * `scheduled_at` falls on `scheduled_date` (Y-m-d). One of the two is
+     * required; a run never plans every unassigned order on every date.
+     * `order_statuses` narrows which statuses are taken in (any of created,
+     * dispatched, started; all three when omitted).
+     *
+     * The response carries `unassigned_reasons` keyed by order public id and
+     * `plan_run_id`, the stored run those reasons were saved with.
+     *
      * POST /int/v1/fleet-ops/orchestrator/run
      */
     public function run(Request $request): JsonResponse
     {
         $companyUuid       = $this->companyUuid();
         $mode              = $request->input('mode', 'assign_vehicles');
-        $orderIds          = $request->input('order_ids', []);
+        $orderIds          = array_values(array_filter((array) $request->input('order_ids', []), fn ($id) => is_string($id) && $id !== ''));
+        $scheduledDate     = null;
+        if ($request->filled('scheduled_date')) {
+            $scheduledDate = DispatchDate::normalize($request->input('scheduled_date'));
+            if (!$scheduledDate) {
+                return response()->json(['error' => 'scheduled_date must be a date (Y-m-d).'], 422);
+            }
+        }
+        if (empty($orderIds) && !$scheduledDate) {
+            return response()->json(['error' => 'Send order_ids or a scheduled_date to plan.'], 422);
+        }
+        $statuses = $this->plannableStatuses($request->input('order_statuses'));
+        if ($statuses === []) {
+            return response()->json(['error' => 'order_statuses may only contain: ' . implode(', ', self::PLANNABLE_STATUSES) . '.'], 422);
+        }
         $vehicleIds        = $request->input('vehicle_ids', []);
         $driverIds         = $request->input('driver_ids', []);
         $options           = $request->input('options', []);
@@ -192,6 +225,11 @@ class OrchestrationController extends Controller
 
         if (!empty($orderIds)) {
             $ordersQuery->whereIn('public_id', $orderIds);
+        } else {
+            $ordersQuery->whereDate('scheduled_at', $scheduledDate);
+        }
+        if ($statuses !== null) {
+            $ordersQuery->whereIn('status', $statuses);
         }
         $orders = $ordersQuery->get();
 
@@ -273,18 +311,24 @@ class OrchestrationController extends Controller
 
         if ($orders->isEmpty()) {
             return response()->json([
-                'message'     => 'No orders found for the given criteria.',
-                'assignments' => [],
-                'unassigned'  => [],
+                'message'            => 'No orders found for the given criteria.',
+                'assignments'        => [],
+                'unassigned'         => [],
+                'unassigned_reasons' => (object) [],
+                'plan_run_id'        => null,
+                'scheduled_date'     => $scheduledDate,
             ], 200);
         }
 
         if ($vehicles->isEmpty() && $mode !== 'assign_drivers') {
-            return response()->json([
-                'message'     => 'No available vehicles found.',
-                'assignments' => [],
-                'unassigned'  => $orders->pluck('public_id'),
-            ], 200);
+            $unassigned = $orders->pluck('public_id')->values()->all();
+
+            return response()->json($this->withPlanRun([
+                'message'            => 'No available vehicles found.',
+                'assignments'        => [],
+                'unassigned'         => $unassigned,
+                'unassigned_reasons' => UnassignedReasons::all($unassigned, 'no_available_vehicle'),
+            ], $mode, null, $scheduledDate, $orders), 200);
         }
 
         // ── Run engine ────────────────────────────────────────────────────────
@@ -337,7 +381,57 @@ class OrchestrationController extends Controller
             $result = RouteMetrics::annotate($result, $orders, $vehicles);
         }
 
-        return response()->json($result);
+        $ranEngine                    = $result['summary']['engine'] ?? $engineId;
+        $result['unassigned_reasons'] = UnassignedReasons::fromResult($result, $ranEngine);
+
+        return response()->json($this->withPlanRun($result, $mode, $ranEngine, $scheduledDate, $orders));
+    }
+
+    /**
+     * The statuses `order_statuses` asks for, limited to plannable ones. Null
+     * when it was not sent (no narrowing); an empty array when it named none
+     * of the plannable statuses.
+     */
+    protected function plannableStatuses(mixed $requested): ?array
+    {
+        if ($requested === null || $requested === [] || $requested === '') {
+            return null;
+        }
+
+        return array_values(array_intersect(self::PLANNABLE_STATUSES, (array) $requested));
+    }
+
+    /**
+     * Store the run with its reasons and add `plan_run_id` and
+     * `scheduled_date` to the response. An empty reasons map is sent as `{}`
+     * so clients always read an object keyed by order id.
+     */
+    protected function withPlanRun(array $result, string $mode, ?string $engine, ?string $scheduledDate, $orders): array
+    {
+        $reasons = $result['unassigned_reasons'] ?? [];
+        $run     = $this->recordPlanRun([
+            'company_uuid'       => $this->companyUuid(),
+            'created_by_uuid'    => session('user'),
+            'mode'               => $mode,
+            'engine'             => $engine,
+            'scheduled_date'     => $scheduledDate,
+            'order_ids'          => $orders->pluck('public_id')->values()->all(),
+            'assignments'        => $result['assignments'] ?? [],
+            'unassigned'         => array_values((array) ($result['unassigned'] ?? [])),
+            'unassigned_reasons' => $reasons,
+            'summary'            => $result['summary'] ?? [],
+        ]);
+
+        $result['unassigned_reasons'] = $reasons ?: (object) [];
+        $result['plan_run_id']        = $run?->public_id;
+        $result['scheduled_date']     = $scheduledDate;
+
+        return $result;
+    }
+
+    protected function recordPlanRun(array $attributes): ?OrchestrationRun
+    {
+        return OrchestrationRun::create($attributes);
     }
 
     /**
@@ -476,6 +570,20 @@ class OrchestrationController extends Controller
     /**
      * Commit an orchestration plan — creates Manifests and ManifestStops.
      *
+     * Body:
+     *   assignments     the plan, as returned by run (with any overrides)
+     *   scheduled_date  Y-m-d the routes are for (today when omitted). The
+     *                   manifests are dated by it and each order's
+     *                   `scheduled_at` moves to that day, keeping its time
+     *                   of day (or taking the stop's planned arrival).
+     *   plan_run_id     the run the plan came from; marked committed
+     *   publish         true to publish the new routes to their drivers now
+     *   publish_at      ISO 8601: publish them at that time instead
+     *
+     * Manifests are created as drafts, and drivers hear nothing until they
+     * are published. An order already on another open route leaves it first
+     * (that route closes up), so a re-plan never leaves an order on two routes.
+     *
      * Does NOT trigger dispatch or update order status. That is the
      * responsibility of the operational flow (driver actions / dispatcher).
      *
@@ -484,17 +592,34 @@ class OrchestrationController extends Controller
     public function commit(Request $request): JsonResponse
     {
         $assignments   = $request->input('assignments', []);
-        $scheduledDate = $request->input('scheduled_date', now()->toDateString());
         $companyUuid   = session('company');
 
         if (empty($assignments)) {
             return response()->json(['error' => 'No assignments provided.'], 422);
         }
 
-        $committed   = [];
-        $failed      = [];
-        $manifests   = [];
-        $resequenced = false;
+        $scheduledDate = now()->toDateString();
+        if ($request->filled('scheduled_date')) {
+            $scheduledDate = DispatchDate::normalize($request->input('scheduled_date'));
+            if (!$scheduledDate) {
+                return response()->json(['error' => 'scheduled_date must be a date (Y-m-d).'], 422);
+            }
+        }
+
+        $publishAt = null;
+        if ($request->filled('publish_at')) {
+            $publishAt = DispatchDate::moment($request->input('publish_at'));
+            if (!$publishAt) {
+                return response()->json(['error' => 'publish_at must be a date and time.'], 422);
+            }
+        }
+        $publishNow = !$publishAt && $request->boolean('publish');
+
+        $committed       = [];
+        $failed          = [];
+        $manifests       = [];
+        $manifestRecords = [];
+        $resequenced     = false;
 
         $this->beginOrchestrationTransaction();
         try {
@@ -549,6 +674,9 @@ class OrchestrationController extends Controller
                         continue;
                     }
 
+                    // A re-plan moves the order off the route it was on.
+                    $this->releaseFromPreviousManifest($order, $manifest);
+
                     $placeUuid = $order->payload?->dropoff?->uuid ?? null;
 
                     $this->createManifestStop([
@@ -573,7 +701,16 @@ class OrchestrationController extends Controller
                     if (isset($assignment['sequence'])) {
                         $order->is_route_optimized = true;
                     }
-                    $order->save();
+                    $order->scheduled_at = $this->scheduledAtOn($order, $scheduledDate, $assignment['arrival'] ?? null);
+
+                    // A draft is the dispatcher's alone: the driver hears about
+                    // these orders when the route is published.
+                    $order->silentDriverAssignment = true;
+                    try {
+                        $order->save();
+                    } finally {
+                        $order->silentDriverAssignment = false;
+                    }
 
                     // Update waypoint sequence if provided
                     if (!empty($assignment['waypoint_sequence']) && $order->payload) {
@@ -586,7 +723,8 @@ class OrchestrationController extends Controller
                     $committed[] = $assignment['order_id'];
                 }
 
-                $manifests[] = $manifest->public_id;
+                $manifests[]       = $manifest->public_id;
+                $manifestRecords[] = $manifest;
             }
 
             $this->commitOrchestrationTransaction();
@@ -606,11 +744,82 @@ class OrchestrationController extends Controller
             Waypoint::invalidateApiCacheManually($companyUuid);
         }
 
+        $this->markPlanRunCommitted($request->input('plan_run_id'), $companyUuid);
+
+        $published = [];
+        $scheduled = [];
+        if ($publishNow || $publishAt) {
+            $publisher = $this->manifestPublisher();
+            foreach ($manifestRecords as $manifest) {
+                if (!($publishAt ? $publisher->schedule($manifest, $publishAt) : $publisher->publish($manifest))) {
+                    continue;
+                }
+                // A booked time that has already passed publishes at once.
+                if ($manifest->isDraft()) {
+                    $scheduled[] = $manifest->public_id;
+                } else {
+                    $published[] = $manifest->public_id;
+                }
+            }
+        }
+
         return response()->json([
-            'committed' => $committed,
-            'failed'    => $failed,
-            'manifests' => $manifests,
+            'committed'      => $committed,
+            'failed'         => $failed,
+            'manifests'      => $manifests,
+            'scheduled_date' => $scheduledDate,
+            'published'      => $published,
+            'scheduled'      => $scheduled,
         ]);
+    }
+
+    /**
+     * The order's `scheduled_at` moved to the plan's day. Its time of day is
+     * kept; an order with none takes the stop's planned arrival when that is
+     * on the same day, else the start of the day.
+     */
+    protected function scheduledAtOn(Order $order, string $date, mixed $arrival): Carbon
+    {
+        $current = $order->scheduled_at ? Carbon::parse($order->scheduled_at) : null;
+        if ($current) {
+            return Carbon::parse($date . ' ' . $current->format('H:i:s'), $current->getTimezone());
+        }
+
+        if (is_numeric($arrival)) {
+            $planned = Carbon::createFromTimestamp((int) $arrival);
+            if ($planned->toDateString() === $date) {
+                return $planned;
+            }
+        }
+
+        return Carbon::parse($date)->startOfDay();
+    }
+
+    protected function releaseFromPreviousManifest(Order $order, Manifest $manifest): void
+    {
+        $this->routeReassignment()->release($order, $manifest);
+    }
+
+    protected function markPlanRunCommitted(mixed $planRunId, ?string $companyUuid): void
+    {
+        if (!is_string($planRunId) || $planRunId === '') {
+            return;
+        }
+
+        OrchestrationRun::where('public_id', $planRunId)
+            ->where('company_uuid', $companyUuid)
+            ->whereNull('committed_at')
+            ->update(['committed_at' => now()]);
+    }
+
+    protected function routeReassignment(): RouteReassignment
+    {
+        return app(RouteReassignment::class);
+    }
+
+    protected function manifestPublisher(): ManifestPublisher
+    {
+        return app(ManifestPublisher::class);
     }
 
     protected function beginOrchestrationTransaction(): void
@@ -742,6 +951,23 @@ class OrchestrationController extends Controller
     /**
      * Import orders from parsed CSV/Excel row data.
      *
+     * Body:
+     *   rows             mapped rows; `_rowIndex` names a row in the outcomes
+     *                    (its position in `rows` when absent)
+     *   validate_only    true to check the rows and create nothing, e.g. after
+     *                    the dispatcher edited the rows that failed
+     *   import_batch_id  join an earlier import's batch (re-submitting fixed
+     *                    rows); a new batch id is generated when absent
+     *
+     * Every row gets an outcome, in the order sent:
+     *   { row, status: created | failed | valid, order_id?, reason?, errors?: { field: message } }
+     * Rows of one multi-waypoint order (same `order_ref`) share an outcome: one
+     * bad row fails the whole order. Created orders carry
+     * `meta.imported_via_orchestrator = true` and `meta.import_batch_id`.
+     *
+     * `created` (order ids) and `failed` ([{ row, error }]) are kept for
+     * clients written against the earlier response.
+     *
      * POST /int/v1/fleet-ops/orchestrator/import-orders
      */
     public function importOrders(Request $request): JsonResponse
@@ -749,30 +975,62 @@ class OrchestrationController extends Controller
         $rows        = $request->input('rows', []);
         $companyUuid = session('company');
 
-        if (empty($rows)) {
+        if (empty($rows) || !is_array($rows)) {
             return response()->json(['error' => 'No rows provided.'], 422);
         }
 
-        $created = [];
-        $failed  = [];
+        $validateOnly = $request->boolean('validate_only');
+        $batchId      = $request->input('import_batch_id');
+        if (!is_string($batchId) || trim($batchId) === '') {
+            $batchId = (string) Str::uuid();
+        }
+
+        $created  = [];
+        $failed   = [];
+        $outcomes = [];
 
         // ── Group multi-waypoint rows by order_ref ────────────────────────────
         // Rows with order_type = 'multi_waypoint' and the same order_ref are
         // collapsed into a single order where each row becomes one waypoint.
         $groups = [];
-        foreach ($rows as $row) {
-            $orderType = strtolower(trim($row['order_type'] ?? 'pickup_dropoff'));
-            $orderRef  = trim($row['order_ref'] ?? '');
+        foreach (array_values($rows) as $position => $row) {
+            $row                 = is_array($row) ? $row : [];
+            $row['_rowIndex']    = $row['_rowIndex'] ?? $position;
+            $orderType           = strtolower(trim((string) ($row['order_type'] ?? 'pickup_dropoff')));
+            $orderRef            = trim((string) ($row['order_ref'] ?? ''));
+            $outcomes[$position] = ['row' => $row['_rowIndex']];
 
             if ($orderType === 'multi_waypoint' && $orderRef !== '') {
-                $groups[$orderRef][] = $row;
+                $groups['__multi_' . $orderRef][$position] = $row;
             } else {
                 // Each pickup/dropoff row is its own independent group.
-                $groups['__single_' . Str::uuid()][] = $row;
+                $groups['__single_' . $position][$position] = $row;
             }
         }
 
-        foreach ($groups as $groupKey => $groupRows) {
+        foreach ($groups as $groupRows) {
+            $errors = $this->importGroupErrors($groupRows);
+            if ($errors) {
+                $reason = 'Another row of this order is invalid.';
+                foreach ($groupRows as $position => $row) {
+                    $rowErrors           = $errors[$position] ?? [];
+                    $outcomes[$position] += ['status' => 'failed', 'reason' => $rowErrors ? reset($rowErrors) : $reason, 'errors' => (object) $rowErrors];
+                }
+                $firstErrors = $errors[array_key_first($errors)];
+                $failed[]    = ['row' => $groupRows[array_key_first($groupRows)]['_rowIndex'], 'error' => reset($firstErrors)];
+                continue;
+            }
+
+            if ($validateOnly) {
+                foreach (array_keys($groupRows) as $position) {
+                    $outcomes[$position] += ['status' => 'valid'];
+                }
+                continue;
+            }
+
+            $positions = array_keys($groupRows);
+            $groupRows = array_values($groupRows);
+
             DB::beginTransaction();
             try {
                 // Use the first row for order-level metadata.
@@ -881,9 +1139,11 @@ class OrchestrationController extends Controller
                     'required_skills'       => $requiredSkills,
                     'orchestrator_priority' => (int) ($firstRow['priority'] ?? 0),
                     'meta'                  => array_filter([
-                        'service_time_min' => $firstRow['service_time_min'] ?? null,
-                        'order_type'       => $orderType,
-                        'order_ref'        => $firstRow['order_ref'] ?? null,
+                        'service_time_min'          => $firstRow['service_time_min'] ?? null,
+                        'order_type'                => $orderType,
+                        'order_ref'                 => $firstRow['order_ref'] ?? null,
+                        'imported_via_orchestrator' => true,
+                        'import_batch_id'           => $batchId,
                     ]),
                 ]);
 
@@ -918,7 +1178,7 @@ class OrchestrationController extends Controller
                     foreach ($groupRows as $wpIndex => $wpRow) {
                         $importId  = 'wp_' . $wpIndex;
                         $placeData = $this->buildPlaceData($wpRow, 'dropoff');
-                        if (!empty($placeData['street1'])) {
+                        if ($this->importHasPlace($wpRow, 'dropoff')) {
                             $place = Place::createFromMixed($placeData, [], true);
                             if ($place) {
                                 $waypoints[]             = [
@@ -972,11 +1232,11 @@ class OrchestrationController extends Controller
                     $pickupData  = $this->buildPlaceData($firstRow, 'pickup');
                     $dropoffData = $this->buildPlaceData($firstRow, 'dropoff');
 
-                    if (!empty($pickupData['street1'])) {
+                    if ($this->importHasPlace($firstRow, 'pickup')) {
                         $payload->setPickup($pickupData, ['save' => true]);
                     }
 
-                    if (!empty($dropoffData['street1'])) {
+                    if ($this->importHasPlace($firstRow, 'dropoff')) {
                         $payload->setDropoff($dropoffData, ['save' => true]);
                     }
 
@@ -1002,17 +1262,131 @@ class OrchestrationController extends Controller
 
                 DB::commit();
                 $created[] = $order->public_id;
+                foreach ($positions as $position) {
+                    $outcomes[$position] += ['status' => 'created', 'order_id' => $order->public_id];
+                }
             } catch (\Exception $e) {
                 DB::rollBack();
-                $rowIndex = ($groupRows[0]['_rowIndex'] ?? '?');
-                $failed[] = ['row' => $rowIndex, 'error' => $e->getMessage()];
+                $failed[] = ['row' => $groupRows[0]['_rowIndex'], 'error' => $e->getMessage()];
+                foreach ($positions as $position) {
+                    $outcomes[$position] += ['status' => 'failed', 'reason' => $e->getMessage(), 'errors' => (object) []];
+                }
             }
         }
 
+        ksort($outcomes);
+        $outcomes = array_values($outcomes);
+        $counts   = array_count_values(array_column($outcomes, 'status'));
+
         return response()->json([
-            'created' => $created,
-            'failed'  => $failed,
+            'import_batch_id' => $batchId,
+            'validate_only'   => $validateOnly,
+            'rows'            => $outcomes,
+            'summary'         => [
+                'created' => $counts['created'] ?? 0,
+                'failed'  => $counts['failed'] ?? 0,
+                'valid'   => $counts['valid'] ?? 0,
+            ],
+            'created'         => $created,
+            'failed'          => $failed,
         ]);
+    }
+
+    /**
+     * Field problems in one order's rows, keyed by row position then field.
+     * Checks what would otherwise fail inside the import or be silently
+     * dropped: a missing drop-off, unreadable dates and numbers, coordinates
+     * off the globe and unknown types.
+     *
+     * @return array<int, array<string, string>>
+     */
+    protected function importGroupErrors(array $groupRows): array
+    {
+        $errors = [];
+        $first  = reset($groupRows);
+        $multi  = strtolower(trim((string) ($first['order_type'] ?? 'pickup_dropoff'))) === 'multi_waypoint';
+
+        foreach ($groupRows as $position => $row) {
+            $rowErrors = [];
+
+            $orderType = strtolower(trim((string) ($row['order_type'] ?? '')));
+            if ($orderType !== '' && !in_array($orderType, ['pickup_dropoff', 'multi_waypoint'], true)) {
+                $rowErrors['order_type'] = 'order_type must be pickup_dropoff or multi_waypoint.';
+            }
+
+            if (!$multi && !$this->importHasPlace($row, 'dropoff')) {
+                $rowErrors['dropoff_street1'] = 'A drop-off street address or coordinates are required.';
+            }
+
+            foreach (['scheduled_at', 'time_window_start', 'time_window_end'] as $field) {
+                if (!$this->importBlank($row[$field] ?? null) && !DispatchDate::moment((string) $row[$field])) {
+                    $rowErrors[$field] = sprintf('%s is not a date or time.', $field);
+                }
+            }
+
+            foreach (['priority', 'parcels'] as $field) {
+                if (!$this->importBlank($row[$field] ?? null) && filter_var($row[$field], FILTER_VALIDATE_INT) === false) {
+                    $rowErrors[$field] = sprintf('%s must be a whole number.', $field);
+                }
+            }
+
+            foreach (['weight_kg', 'volume_m3', 'cod_amount', 'service_time_min', 'entity_declared_value', 'entity_price', 'entity_sale_price', 'entity_weight', 'entity_length', 'entity_width', 'entity_height'] as $field) {
+                if (!$this->importBlank($row[$field] ?? null) && !is_numeric($row[$field])) {
+                    $rowErrors[$field] = sprintf('%s must be a number.', $field);
+                }
+            }
+
+            foreach (['pickup', 'dropoff'] as $prefix) {
+                foreach (["{$prefix}_lat" => 90, "{$prefix}_lng" => 180] as $field => $limit) {
+                    $value = $row[$field] ?? null;
+                    if (!$this->importBlank($value) && (!is_numeric($value) || abs((float) $value) > $limit)) {
+                        $rowErrors[$field] = sprintf('%s must be a number between -%d and %d.', $field, $limit, $limit);
+                    }
+                }
+            }
+
+            foreach (['customer_type' => ['contact', 'vendor'], 'facilitator_type' => ['contact', 'vendor']] as $field => $allowed) {
+                $value = strtolower(trim((string) ($row[$field] ?? '')));
+                if ($value !== '' && !in_array($value, $allowed, true)) {
+                    $rowErrors[$field] = sprintf('%s must be contact or vendor.', $field);
+                }
+            }
+
+            if ($rowErrors) {
+                $errors[$position] = $rowErrors;
+            }
+        }
+
+        if ($multi && !array_filter($groupRows, fn ($row) => $this->importHasPlace($row, 'dropoff'))) {
+            $position                             = array_key_first($groupRows);
+            $errors[$position]['dropoff_street1'] = 'A multi-waypoint order needs at least one row with a street address or coordinates.';
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Whether a row names a place for `pickup` or `dropoff`: a street, or
+     * coordinates (which buildLocationPoint turns into the place's location).
+     */
+    protected function importHasPlace(array $row, string $prefix): bool
+    {
+        if (trim((string) ($row["{$prefix}_street1"] ?? '')) !== '') {
+            return true;
+        }
+
+        $lat = $row["{$prefix}_lat"] ?? null;
+        $lng = $row["{$prefix}_lng"] ?? null;
+        if (!is_numeric($lat) || !is_numeric($lng) || abs((float) $lat) > 90 || abs((float) $lng) > 180) {
+            return false;
+        }
+
+        return $this->buildLocationPoint((string) $lat, (string) $lng) !== null;
+    }
+
+    protected function importBlank(mixed $value): bool
+    {
+        return $value === null || (is_string($value) && trim($value) === '');
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

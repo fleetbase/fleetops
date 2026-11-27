@@ -61,10 +61,16 @@ class DriverAssignmentEngine
         }
 
         if ($availableDrivers->isEmpty()) {
+            // The orders are what went unplaced, so they are what is reported.
+            $orderIds = $orders->pluck('public_id')->values()->toArray();
+
             return [
                 'assignments' => [],
-                'unassigned'  => $vehicles->pluck('public_id')->toArray(),
-                'summary'     => ['message' => 'No available drivers found.'],
+                'unassigned'  => $orderIds,
+                'summary'     => [
+                    'message'            => 'No available drivers found.',
+                    'unassigned_reasons' => array_map(fn ($orderId) => ['order_id' => $orderId, 'reason' => 'no_available_driver'], $orderIds),
+                ],
             ];
         }
 
@@ -72,6 +78,7 @@ class DriverAssignmentEngine
         $assignedDrivers    = [];
         $assignedVehicles   = [];
         $unassignedOrders   = [];
+        $reasons            = [];
 
         // Determine if this is a standalone run (no prior vehicle assignment)
         // or a post-vehicle-assignment run.
@@ -97,6 +104,7 @@ class DriverAssignmentEngine
                 if (!$bestDriver) {
                     foreach ($vehicleOrders as $order) {
                         $unassignedOrders[] = $order->public_id;
+                        $reasons[]          = ['order_id' => $order->public_id, 'reason' => 'no_matching_driver'];
                     }
                     continue;
                 }
@@ -139,6 +147,7 @@ class DriverAssignmentEngine
 
                 if (!$bestVehicle) {
                     $unassignedOrders[] = $order->public_id;
+                    $reasons[]          = ['order_id' => $order->public_id, 'reason' => 'no_available_vehicle'];
                     continue;
                 }
 
@@ -152,6 +161,7 @@ class DriverAssignmentEngine
 
                 if (!$bestDriver) {
                     $unassignedOrders[] = $order->public_id;
+                    $reasons[]          = ['order_id' => $order->public_id, 'reason' => 'no_matching_driver'];
                     continue;
                 }
 
@@ -173,6 +183,7 @@ class DriverAssignmentEngine
             'summary'     => [
                 'drivers_assigned'    => count($assignedDrivers),
                 'vehicles_assigned'   => count($assignedVehicles),
+                'unassigned_reasons'  => $reasons,
             ],
         ];
     }

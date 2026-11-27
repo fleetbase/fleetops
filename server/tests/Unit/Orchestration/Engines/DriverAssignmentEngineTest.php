@@ -163,7 +163,7 @@ function fleetopsDriverAssignmentOrder(
     return $order;
 }
 
-test('driver assignment engine reports every vehicle unassigned when no drivers are available', function () {
+test('driver assignment engine reports every order unassigned when no drivers are available', function () {
     $engine = fleetopsDriverAssignmentEngine();
 
     $result = $engine->assign(collect([
@@ -175,8 +175,11 @@ test('driver assignment engine reports every vehicle unassigned when no drivers 
 
     expect($result)->toBe([
         'assignments' => [],
-        'unassigned'  => ['vehicle_a', 'vehicle_b'],
-        'summary'     => ['message' => 'No available drivers found.'],
+        'unassigned'  => ['order_public'],
+        'summary'     => [
+            'message'            => 'No available drivers found.',
+            'unassigned_reasons' => [['order_id' => 'order_public', 'reason' => 'no_available_driver']],
+        ],
     ]);
     expect($engine->companyLookups)->toBe(['company-uuid']);
 });
@@ -229,8 +232,9 @@ test('driver assignment engine assigns grouped vehicle orders to the best skille
     ]);
     expect($result['unassigned'])->toBe(['order_three']);
     expect($result['summary'])->toBe([
-        'drivers_assigned'  => 1,
-        'vehicles_assigned' => 0,
+        'drivers_assigned'   => 1,
+        'vehicles_assigned'  => 0,
+        'unassigned_reasons' => [['order_id' => 'order_three', 'reason' => 'no_matching_driver']],
     ]);
 });
 
@@ -270,8 +274,9 @@ test('driver assignment engine supports standalone order assignment and soft ski
     ]);
     expect($result['unassigned'])->toBe(['order_overflow']);
     expect($result['summary'])->toBe([
-        'drivers_assigned'  => 1,
-        'vehicles_assigned' => 1,
+        'drivers_assigned'   => 1,
+        'vehicles_assigned'  => 1,
+        'unassigned_reasons' => [['order_id' => 'order_overflow', 'reason' => 'no_available_vehicle']],
     ]);
 });
 
@@ -297,8 +302,11 @@ test('driver assignment engine filters scheduled drivers without active shifts w
 
     expect($result)->toBe([
         'assignments' => [],
-        'unassigned'  => ['vehicle_a'],
-        'summary'     => ['message' => 'No available drivers found.'],
+        'unassigned'  => ['order_public'],
+        'summary'     => [
+            'message'            => 'No available drivers found.',
+            'unassigned_reasons' => [['order_id' => 'order_public', 'reason' => 'no_available_driver']],
+        ],
     ]);
 });
 

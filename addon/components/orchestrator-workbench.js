@@ -365,8 +365,11 @@ export default class OrchestratorWorkbenchComponent extends Component {
         });
 
         try {
+            // Drivers only see published routes; this screen has no separate
+            // publish step, so its routes are published as they are committed.
             const result = yield this.fetch.post('fleet-ops/orchestrator/commit', {
                 assignments: finalAssignments,
+                publish: true,
             });
 
             this.notifications.success(this.intl.t('orchestrator.committed', { count: result?.committed?.length ?? finalAssignments.length }));

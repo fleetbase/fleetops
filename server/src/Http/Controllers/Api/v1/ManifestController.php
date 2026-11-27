@@ -26,6 +26,11 @@ use Illuminate\Support\Facades\Log;
  * manifests, update the stops on them, and re-sequence the ones they have not
  * done yet. They may not create, cancel or delete a manifest — that is dispatch
  * work, and it stays on the internal namespace.
+ *
+ * Only routes that were published reach a driver: `published`, `active`,
+ * `completed`, and `cancelled` when it had been published. A draft is the
+ * dispatcher's working copy; every endpoint here answers 404 for one, exactly
+ * as for a manifest that does not exist.
  */
 class ManifestController extends Controller
 {
@@ -226,6 +231,7 @@ class ManifestController extends Controller
     protected static function manifestsFor(Driver $driver)
     {
         return static::scopedToCompany(Manifest::where('driver_uuid', $driver->uuid))
+            ->visibleToDriver()
             ->with(['driver', 'vehicle'])
             ->orderBy('scheduled_date', 'desc');
     }
@@ -241,7 +247,7 @@ class ManifestController extends Controller
     protected static function findManifest(string $id): ?Manifest
     {
         /** @var Manifest|null $manifest */
-        $manifest = static::scopedToCompany(static::matchingIdentifier(Manifest::query(), $id))->first();
+        $manifest = static::scopedToCompany(static::matchingIdentifier(Manifest::query(), $id))->visibleToDriver()->first();
 
         return $manifest;
     }
@@ -254,7 +260,7 @@ class ManifestController extends Controller
     {
         /** @var ManifestStop|null $stop */
         $stop = static::matchingIdentifier(ManifestStop::query(), $id)
-            ->whereHas('manifest', fn (Builder $query) => static::scopedToCompany($query))
+            ->whereHas('manifest', fn (Builder $query) => static::scopedToCompany($query)->visibleToDriver())
             ->first();
 
         return $stop;

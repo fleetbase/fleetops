@@ -117,6 +117,52 @@ test('manifest scopes apply company driver vehicle and active status filters', f
         ->and($activeQuery->getQuery()->wheres[0]['type'])->toBe('In')
         ->and($activeQuery->getQuery()->wheres[0]['column'])->toBe('status')
         ->and($activeQuery->getQuery()->wheres[0]['values'])->toBe(['active', 'in_progress']);
+
+    $openQuery = Manifest::query();
+    (new Manifest())->scopeOpen($openQuery);
+
+    $visibleQuery = Manifest::query();
+    (new Manifest())->scopeVisibleToDriver($visibleQuery);
+
+    expect($openQuery->getQuery()->wheres[0]['values'])->toBe(['draft', 'published', 'active', 'in_progress'])
+        ->and($visibleQuery->toSql())->toContain('("status" in (?, ?, ?, ?) or ("status" = ? and "published_at" is not null))')
+        ->and($visibleQuery->getBindings())->toBe(['published', 'active', 'in_progress', 'completed', 'cancelled']);
+});
+
+test('a draft is published once and a published route becomes active when the driver starts it', function () {
+    fleetopsManifestUseInMemoryConnection();
+    Carbon::setTestNow(Carbon::parse('2026-11-27 18:00:00'));
+
+    $manifest = new FleetOpsManifestModelProbe();
+    $manifest->setRawAttributes(['uuid' => 'manifest-uuid', 'status' => 'draft', 'publish_at' => '2026-11-28 05:00:00'], true);
+
+    expect($manifest->isDraft())->toBeTrue()
+        ->and($manifest->isOpen())->toBeTrue()
+        ->and($manifest->isVisibleToDriver())->toBeFalse()
+        ->and($manifest->markPublished())->toBeTrue()
+        ->and($manifest->updates[0]['status'])->toBe('published')
+        ->and($manifest->updates[0]['published_at']->toDateTimeString())->toBe('2026-11-27 18:00:00')
+        ->and($manifest->updates[0]['publish_at'])->toBeNull()
+        ->and($manifest->isVisibleToDriver())->toBeTrue()
+        // Publishing twice changes nothing.
+        ->and($manifest->markPublished())->toBeFalse()
+        ->and($manifest->updates)->toHaveCount(1);
+
+    expect($manifest->activateIfPublished())->toBe($manifest)
+        ->and($manifest->updates[1]['status'])->toBe('active')
+        ->and($manifest->activateIfPublished())->toBe($manifest)
+        ->and($manifest->updates)->toHaveCount(2);
+
+    $calledOff = new Manifest();
+    $calledOff->setRawAttributes(['status' => 'cancelled', 'published_at' => '2026-11-27 06:00:00'], true);
+    $droppedDraft = new Manifest();
+    $droppedDraft->setRawAttributes(['status' => 'cancelled'], true);
+
+    expect($calledOff->isVisibleToDriver())->toBeTrue()
+        ->and($calledOff->isOpen())->toBeFalse()
+        ->and($droppedDraft->isVisibleToDriver())->toBeFalse();
+
+    Carbon::setTestNow();
 });
 
 test('manifest lifecycle helpers update state and auto-complete only when no pending stops remain', function () {
@@ -127,11 +173,11 @@ test('manifest lifecycle helpers update state and auto-complete only when no pen
     $manifest->setRawAttributes(['uuid' => 'manifest-uuid', 'status' => 'active'], true);
 
     expect($manifest->start())->toBe($manifest)
-        ->and($manifest->updates[0]['status'])->toBe('in_progress')
+        ->and($manifest->updates[0]['status'])->toBe('active')
         ->and($manifest->updates[0]['started_at']->toDateTimeString())->toBe('2026-08-05 13:45:00');
 
     expect($manifest->cancel())->toBe($manifest)
-        ->and($manifest->updates[1])->toBe(['status' => 'cancelled']);
+        ->and($manifest->updates[1])->toBe(['status' => 'cancelled', 'publish_at' => null]);
 
     expect($manifest->complete())->toBe($manifest)
         ->and($manifest->updates[2]['status'])->toBe('completed')

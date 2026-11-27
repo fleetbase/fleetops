@@ -109,9 +109,15 @@ class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
     public Collection $proofResults;
     public array $exportDownloads                                    = [];
     public ?FleetOpsInternalOrderLifecycleOrderFake $trackingOrder   = null;
-    public array $trackingLookups                                   = [];
+    public array $trackingLookups                                    = [];
     public ?FleetOpsInternalOrderLifecycleOrderFake $scheduleOrder   = null;
     public ?FleetOpsInternalOrderLifecycleDriverFake $scheduleDriver = null;
+    public ?FleetOpsInternalOrderReassignmentFake $reassignment      = null;
+
+    protected function routeReassignment(): Fleetbase\FleetOps\Support\Dispatch\RouteReassignment
+    {
+        return $this->reassignment ??= new FleetOpsInternalOrderReassignmentFake();
+    }
 
     public function callHelper(string $method, mixed ...$arguments): mixed
     {
@@ -382,6 +388,26 @@ class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
     protected function trackingNumberStatus(string $trackingNumberUuid): ?TrackingStatus
     {
         return $this->trackingNumberStatuses[$trackingNumberUuid] ?? null;
+    }
+}
+
+class FleetOpsInternalOrderReassignmentFake extends Fleetbase\FleetOps\Support\Dispatch\RouteReassignment
+{
+    public array $calls = [];
+
+    public function reassign(Order $order, ?Driver $driver, array $options = []): array
+    {
+        $this->calls[]               = ['reassign', $order->uuid, $driver?->uuid, $options];
+        $order->driver_assigned_uuid = $driver?->uuid;
+
+        return ['order' => $order, 'from' => null, 'to' => null];
+    }
+
+    public function followDriverChange(Order $order): ?array
+    {
+        $this->calls[] = ['follow', $order->uuid];
+
+        return null;
     }
 }
 
@@ -949,7 +975,26 @@ test('internal order controller after-update syncs files waypoints and custom fi
     expect($order->attachedFiles)->toBe(['file-one', 'file-two'])
         ->and($order->loadedMissing)->toBe(['payload'])
         ->and($payload->calls)->toContain(['updateWaypoints', [['name' => 'Stop one']]])
-        ->and($order->customFieldValues)->toBe(['fragile' => true]);
+        ->and($order->customFieldValues)->toBe(['fragile' => true])
+        // The driver did not change, so the route is left alone.
+        ->and($controller->reassignment?->calls ?? [])->toBe([]);
+});
+
+test('internal order controller after-update moves a routed order with its new driver', function () {
+    $order = fleetopsInternalOrderLifecycleOrder('order-routed');
+    $order->setRawAttributes(array_merge($order->getAttributes(), ['manifest_uuid' => 'manifest-uuid', 'driver_assigned_uuid' => 'driver-old']), true);
+    $order->driver_assigned_uuid = 'driver-new';
+    $order->syncChanges();
+
+    $unrouted                       = fleetopsInternalOrderLifecycleOrder('order-unrouted');
+    $unrouted->driver_assigned_uuid = 'driver-new';
+    $unrouted->syncChanges();
+
+    $controller = fleetopsInternalOrderLifecycleController([$order]);
+    $controller->onAfterUpdate(new Request(), $order);
+    $controller->onAfterUpdate(new Request(), $unrouted);
+
+    expect($controller->reassignment->calls)->toBe([['follow', $order->uuid]]);
 });
 
 test('internal order controller edits order routes and refreshes current destination', function () {
@@ -1693,8 +1738,33 @@ test('internal order controller export lookup and schedule endpoints use resolve
         ->and($scheduledOrder->schedule_lookup_id)->toBe('scheduled-order')
         ->and($driver->schedule_lookup_id)->toBe('driver-public')
         ->and($scheduledOrder->driver_assigned_uuid)->toBe('driver-scheduled')
-        ->and($scheduledOrder->quietlySavedForTest)->toBeTrue()
+        // A new driver moves the order through the reassignment service, for the new day.
+        ->and($controller->reassignment->calls)->toBe([['reassign', $scheduledOrder->uuid, 'driver-scheduled', ['date' => '2026-08-01']]])
+        ->and($scheduledOrder->quietlySavedForTest)->toBeFalse()
         ->and($scheduledOrder->scheduled_at->format('Y-m-d H:i:s'))->toBe('2026-08-01 09:30:00');
+
+    // Same driver, same day: a time change is a quiet save and nobody is told.
+    $controller->reassignment->calls = [];
+    $sameDay                         = $controller->scheduleOrder(new Request([
+        'order'        => 'scheduled-order',
+        'scheduled_at' => '2026-08-01 11:00:00',
+        'driver_id'    => 'driver-public',
+    ]))->getData(true);
+
+    expect($sameDay['status'])->toBe('OK')
+        ->and($controller->reassignment->calls)->toBe([])
+        ->and($scheduledOrder->quietlySavedForTest)->toBeTrue();
+
+    // A routed order dragged to another day follows its driver to that day's route.
+    $scheduledOrder->quietlySavedForTest = false;
+    $scheduledOrder->manifest_uuid       = 'manifest-uuid';
+    $controller->scheduleOrder(new Request([
+        'order'        => 'scheduled-order',
+        'scheduled_at' => '2026-08-02 11:00:00',
+    ]));
+
+    expect($controller->reassignment->calls)->toBe([['reassign', $scheduledOrder->uuid, 'driver-scheduled', ['date' => '2026-08-02']]])
+        ->and($scheduledOrder->quietlySavedForTest)->toBeFalse();
 });
 
 test('internal order controller waypoint helpers detect waypoint state and proof objects', function () {

@@ -126,6 +126,17 @@ class ManifestStop extends Model
         return $this->place?->address ?? $this->order?->payload?->dropoff?->address;
     }
 
+    /**
+     * Stop statuses the driver has finished with. A stop in one of these keeps
+     * its place when a route is re-sequenced or changes hands.
+     */
+    public const DONE_STATUSES = ['completed', 'skipped'];
+
+    public function isDone(): bool
+    {
+        return in_array($this->status, self::DONE_STATUSES, true);
+    }
+
     // ── Business Logic ────────────────────────────────────────────────────────
 
     /**
@@ -133,6 +144,7 @@ class ManifestStop extends Model
      */
     public function markArrived(): self
     {
+        $this->manifest?->activateIfPublished();
         $this->update(['status' => 'arrived', 'actual_arrival' => now()]);
 
         return $this;
@@ -143,6 +155,7 @@ class ManifestStop extends Model
      */
     public function markCompleted(): self
     {
+        $this->manifest?->activateIfPublished();
         $this->update(['status' => 'completed']);
         $this->manifest?->checkAndAutoComplete();
 
@@ -154,6 +167,7 @@ class ManifestStop extends Model
      */
     public function markSkipped(): self
     {
+        $this->manifest?->activateIfPublished();
         $this->update(['status' => 'skipped']);
         $this->manifest?->checkAndAutoComplete();
 
