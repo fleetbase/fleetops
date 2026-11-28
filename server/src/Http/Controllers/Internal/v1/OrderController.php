@@ -958,6 +958,10 @@ class OrderController extends FleetOpsController
 
         $proof       = $request->input('proof');
         $bypassProof = $request->boolean('bypass_proof');
+        // The console cannot file an inspection for the driver; an operator either sends the one
+        // the driver filed or bypasses it, as with proof.
+        $inspection       = $request->input('inspection');
+        $bypassInspection = $request->boolean('bypass_inspection');
         $activity    = $request->inputArray('activity');
         $activity    = new Activity($activity, $order->getConfigFlow());
 
@@ -965,7 +969,7 @@ class OrderController extends FleetOpsController
         // finished order, so a terminal status alone doesn't refuse it here.
         $orderConfig = $order->config();
         if ($orderConfig) {
-            [$activity, $refusal] = $orderConfig->authorizeTransition($order, $activity, $proof, $bypassProof, true);
+            [$activity, $refusal] = $orderConfig->authorizeTransition($order, $activity, $proof, $bypassProof, true, $inspection, $bypassInspection);
             if ($refusal) {
                 return response()->error($refusal, 422);
             }
@@ -1085,10 +1089,19 @@ class OrderController extends FleetOpsController
 
         // If activity is to complete order add proof of delivery properties if required
         // This is a temporary fix until activity is updated to handle POD on it's own
-        $activities = $activities->map(function ($activity) use ($order) {
+        $activities = $activities->map(function ($activity) use ($order, $orderConfig) {
             if ($activity->completesOrder() && $order->pod_required) {
                 $activity->set('require_pod', true);
                 $activity->set('pod_method', $order->pod_method);
+            }
+
+            // A step that needs an inspection says so, and names the form, so the console can
+            // ask an operator to wait for the driver's inspection or bypass it.
+            $inspectionActivity = $orderConfig->inspectionActivityFor($activity);
+            if ($inspectionActivity) {
+                $activity->set('require_inspection', true);
+                $activity->set('inspection_form', $inspectionActivity->inspectionFormId());
+                $activity->withInspectionForm($order->company_uuid);
             }
 
             // resolved status and details

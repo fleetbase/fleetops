@@ -1682,6 +1682,11 @@ order-config-manager:
         completes-order-help: Reaching this step marks the order complete.
         requires-pod: Requires proof of delivery
         requires-pod-help: 'The driver must capture proof, such as a photo or signature, to reach this step.'
+        requires-inspection: Requires an inspection
+        requires-inspection-help: 'The driver must file the chosen inspection form for the order to reach this step. An inspection that finds the vehicle unsafe holds the order here and tells dispatch.'
+        inspection-form: Inspection form
+        inspection-form-placeholder: Select a published inspection form
+        inspection-form-missing: Choose the inspection form the driver must file, or the step cannot be reached from the app.
         developer-events: Developer events
         developer-events-help: 'Webhook events sent when an order reaches this step, for integrations. For notifications and other actions, use What happens here.'
         conditions-lead: 'Conditions decide whether an order can move to {step}, not what happens when it does.'

@@ -632,6 +632,9 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             actions: activityObject.actions ?? [],
             require_pod: activityObject.require_pod ?? false,
             pod_method: activityObject.pod_method ?? 'scan',
+            require_inspection: activityObject.require_inspection ?? false,
+            inspection_form: activityObject.inspection_form ?? null,
+            inspection_form_name: activityObject.inspection_form_name ?? null,
             complete: activityObject.complete ?? false,
             internalId: activityObject.internalId ?? generateUUID(),
         });

@@ -1403,6 +1403,8 @@ class OrderController extends Controller
     {
         $skipDispatch = $request->or(['skip_dispatch', 'skipDispatch'], false);
         $proof        = $request->input('proof', null);
+        // The inspection the driver filed for a step that needs one: a submission id.
+        $inspection   = $request->input('inspection', null);
         $order        = null;
 
         // if instance of order is passed directly to this method
@@ -1474,10 +1476,10 @@ class OrderController extends Controller
 
         // The order's config decides whether the update is allowed: a finished order, a step the
         // config's strict transitions don't permit, dispatch on a config that turns it off, or a
-        // step that needs proof of delivery without it. With strict transitions the server's
-        // activity definition replaces the one sent.
+        // step that needs an inspection or proof of delivery without it. With strict transitions the
+        // server's activity definition replaces the one sent.
         if ($orderConfig && !($activity->is('dispatched') && $skipDispatch)) {
-            [$activity, $refusal] = $orderConfig->authorizeTransition($order, $activity, $proof);
+            [$activity, $refusal] = $orderConfig->authorizeTransition($order, $activity, $proof, inspection: $inspection);
             if ($refusal) {
                 return response()->apiError($refusal, 422);
             }
@@ -1612,10 +1614,19 @@ class OrderController extends Controller
 
         // If activity is to complete order add proof of delivery properties if required
         // This is a temporary fix until activity is updated to handle POD on it's own
-        $activities = $activities->map(function ($activity) use ($order) {
+        $activities = $activities->map(function ($activity) use ($order, $orderConfig) {
             if ($activity->completesOrder() && $order->pod_required) {
                 $activity->set('require_pod', true);
                 $activity->set('pod_method', $order->pod_method);
+            }
+
+            // A step that needs an inspection says which form, by public id and name, so the app
+            // can open it. The config's own definition is what the update will be checked against.
+            $inspectionActivity = $orderConfig->inspectionActivityFor($activity);
+            if ($inspectionActivity) {
+                $activity->set('require_inspection', true);
+                $activity->set('inspection_form', $inspectionActivity->inspectionFormId());
+                $activity->withInspectionForm($order->company_uuid);
             }
 
             // resolved status and details

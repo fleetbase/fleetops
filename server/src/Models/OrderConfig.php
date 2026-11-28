@@ -559,12 +559,15 @@ class OrderConfig extends Model
      * - a finished order takes no more activities, unless `$fromTerminal` (operator corrections)
      * - strict transitions only allow a configured child of the current activity
      * - a config whose lifecycle turns dispatch off refuses `dispatched`
+     * - an activity that needs an inspection (`require_inspection`, with the form in
+     *   `inspection_form`) needs `$inspection`, a submitted inspection of that form filed for the
+     *   order that did not find the vehicle unsafe, unless `$bypassInspection`
      * - an activity that needs proof of delivery (`require_pod`, or completing an order that
      *   requires proof) needs proof, unless `$bypassProof`
      *
      * @return array{0: Activity, 1: ?string}
      */
-    public function authorizeTransition(Order $order, Activity $activity, mixed $proof = null, bool $bypassProof = false, bool $fromTerminal = false): array
+    public function authorizeTransition(Order $order, Activity $activity, mixed $proof = null, bool $bypassProof = false, bool $fromTerminal = false, mixed $inspection = null, bool $bypassInspection = false): array
     {
         if (!$fromTerminal && $this->isTerminalActivityCode($order->status)) {
             return [$activity, 'This order has already finished.'];
@@ -584,12 +587,91 @@ class OrderConfig extends Model
             return [$activity, 'Orders of this type are not dispatched.'];
         }
 
+        // The inspection comes before proof, as the app asks for them: a step held by an unsafe
+        // vehicle should say so, not ask for a photo first.
+        $inspectionRefusal = $this->inspectionRefusal($order, $activity, $inspection, $bypassInspection);
+        if ($inspectionRefusal) {
+            return [$activity, $inspectionRefusal];
+        }
+
         $requiresProof = $activity->get('require_pod') || ($activity->completesOrder() && $order->pod_required);
         if ($requiresProof && !$proof && !$bypassProof) {
             return [$activity, 'Proof of delivery is required for this activity or must be explicitly bypassed.'];
         }
 
         return [$activity, null];
+    }
+
+    /**
+     * The activity's inspection requirement, as the config declares it.
+     *
+     * Without strict transitions the activity is the one the client sent, which may have lost
+     * `require_inspection` on the way (a client that sends only the code, or an older app). The
+     * config's own activity of the same code is asked first, so leaving the flag off, or naming
+     * another form, does not get a step past its inspection.
+     */
+    public function inspectionActivityFor(Activity $activity): ?Activity
+    {
+        $code       = $activity->get('code');
+        $configured = $code ? $this->getActivityByCode($code) : null;
+        if ($configured && $configured->requiresInspection()) {
+            return $configured;
+        }
+
+        return $activity->requiresInspection() ? $activity : null;
+    }
+
+    /**
+     * Why a step that needs an inspection is refused, or null when it may go ahead.
+     *
+     * `$inspection` is the id (public id or uuid) of the submission the driver filed for it. It must
+     * belong to the order's company, be of the form the step names, be submitted rather than a
+     * draft and be for this order. One that found the vehicle unsafe holds the order at the step,
+     * and dispatch is told. `$bypassInspection` lets an operator move the order on from the
+     * console without one, as `bypass_proof` does for proof.
+     */
+    protected function inspectionRefusal(Order $order, Activity $activity, mixed $inspection, bool $bypassInspection): ?string
+    {
+        $required = $this->inspectionActivityFor($activity);
+        if (!$required || $bypassInspection) {
+            return null;
+        }
+
+        $id = is_array($inspection) ? (data_get($inspection, 'id') ?? data_get($inspection, 'uuid')) : $inspection;
+        if (!is_string($id) || trim($id) === '') {
+            return 'An inspection is required for this activity or must be explicitly bypassed.';
+        }
+
+        $submission = InspectionSubmission::query()
+            ->where('company_uuid', $order->company_uuid)
+            ->where(fn ($query) => $query->where('public_id', $id)->orWhere('uuid', $id))
+            ->first();
+        if (!$submission) {
+            return 'The inspection for this activity was not found.';
+        }
+
+        // A step whose form has since been deleted takes any inspection filed for the order: the
+        // driver cannot file a form that no longer exists, and dispatch can still read what was.
+        $form = $required->inspectionForm($order->company_uuid);
+        if ($form && $submission->inspection_form_uuid !== $form->uuid) {
+            return sprintf('This activity needs the %s inspection; the one sent was filed on a different form.', $form->name ?? 'configured');
+        }
+
+        if (in_array($submission->status, ['draft', null, ''], true) || !$submission->submitted_at) {
+            return 'The inspection for this activity has not been submitted yet.';
+        }
+
+        if (!$submission->isForOrder($order)) {
+            return 'The inspection sent was not filed for this order.';
+        }
+
+        if ($submission->foundUnsafe()) {
+            $submission->notifyDispatchIfUnsafe($order, $required->get('code'));
+
+            return 'The inspection found the vehicle unsafe, so this activity cannot go ahead; dispatch has been told.';
+        }
+
+        return null;
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Notifications\UnsafeInspection;
 use Fleetbase\FleetOps\Support\InspectionFileStore;
 use Fleetbase\Models\Category;
 use Fleetbase\Models\CustomField;
@@ -10,6 +11,7 @@ use Fleetbase\Models\CustomFieldValue;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
+use Fleetbase\Support\NotificationRegistry;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasMetaAttributes;
@@ -299,6 +301,77 @@ class InspectionSubmission extends Model
     public function getHasFailuresAttribute(): bool
     {
         return (int) $this->failed_items > 0 || $this->result === 'failed';
+    }
+
+    /**
+     * Whether the inspection found the vehicle unsafe to drive.
+     *
+     * A form answered through fields records it in `meta.unsafe` (a failed check whose field, or
+     * whose driver, marks the vehicle unsafe). A first-cut checklist filed as bare item results
+     * never works that out, so for it a failed result is read as unsafe: the safer reading when
+     * the inspection cannot say more.
+     */
+    public function foundUnsafe(): bool
+    {
+        $meta = is_array($this->meta) ? $this->meta : [];
+        if (array_key_exists('unsafe', $meta)) {
+            return filter_var($meta['unsafe'], FILTER_VALIDATE_BOOLEAN);
+        }
+
+        return $this->result === 'failed';
+    }
+
+    /**
+     * Whether the inspection was filed for this order: the app records the order it was for in
+     * `meta.order_uuid`, and a link minted for an order records it on the link.
+     */
+    public function isForOrder(Order $order): bool
+    {
+        $meta = is_array($this->meta) ? $this->meta : [];
+        if (data_get($meta, 'order_uuid') === $order->uuid || ($order->public_id && data_get($meta, 'order_id') === $order->public_id)) {
+            return true;
+        }
+
+        $linkUuid = data_get($meta, 'inspection_link_uuid');
+        if ($linkUuid) {
+            $link = InspectionLink::withTrashed()->where('uuid', $linkUuid)->first();
+            if ($link && data_get($link->meta, 'order_uuid') === $order->uuid) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Tells dispatch, once, that an inspection an order needed found the vehicle unsafe. Goes
+     * through the notification settings, as the order alerts do; the time it was sent is kept on
+     * the submission so a retried step or a replayed submit does not send it again.
+     */
+    public function notifyDispatchIfUnsafe(Order $order, ?string $activityCode = null): void
+    {
+        if (!$this->foundUnsafe() || data_get($this->meta, 'dispatch_notified_at')) {
+            return;
+        }
+
+        try {
+            NotificationRegistry::notify(UnsafeInspection::class, $order, [
+                'inspection_submission_id' => $this->public_id,
+                'inspection_form'          => $this->form_name,
+                'vehicle_name'             => $this->vehicle_name,
+                'driver_name'              => $this->driver_name,
+                'activity'                 => $activityCode ?? data_get($this->meta, 'activity'),
+            ]);
+        } catch (\Throwable $exception) {
+            // The step is refused either way; a notification that could not be sent must not
+            // turn that refusal into a server error.
+            report($exception);
+
+            return;
+        }
+
+        $this->setAttribute('meta', array_merge(is_array($this->meta) ? $this->meta : [], ['dispatch_notified_at' => now()->toDateTimeString()]));
+        $this->saveQuietly();
     }
 
     public function syncResultCounts(): bool

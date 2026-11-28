@@ -259,6 +259,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             \Fleetbase\FleetOps\Notifications\LateDeparture::class,
             \Fleetbase\FleetOps\Notifications\RouteDeviation::class,
             \Fleetbase\FleetOps\Notifications\ProlongedStoppage::class,
+            \Fleetbase\FleetOps\Notifications\UnsafeInspection::class,
             \Fleetbase\FleetOps\Notifications\OrderChanged::class,
             \Fleetbase\FleetOps\Notifications\OrderUnassigned::class,
         ]);
