@@ -135,6 +135,38 @@ test('set and insert entities resolve destinations from imports keys and search 
         ->and($connection->table('entities')->where('name', 'Insert 3')->value('destination_uuid'))->toBe('22222222-2222-4222-8222-222222222222');
 });
 
+test('entity destinations sent as a stop address resolve to that stop or are dropped', function () {
+    $connection = fleetopsPayloadWaypointBoot();
+    $connection->table('payloads')->insert(['uuid' => 'payload-1', 'company_uuid' => 'company-1']);
+    $connection->table('places')->insert([
+        ['uuid' => '11111111-1111-4111-8111-111111111111', 'public_id' => 'place_payadr1', 'company_uuid' => 'company-1', 'street1' => 'Baga Toiruu', 'city' => 'Ulaanbaatar'],
+        ['uuid' => '22222222-2222-4222-8222-222222222222', 'public_id' => 'place_payadr2', 'company_uuid' => 'company-1', 'street1' => 'Their Street,  СБД - 8 хороо', 'city' => 'Улаанбаатар'],
+    ]);
+    $connection->table('waypoints')->insert([
+        ['uuid' => 'wp-1', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-1', 'place_uuid' => '11111111-1111-4111-8111-111111111111', 'order' => 0],
+        ['uuid' => 'wp-2', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-1', 'place_uuid' => '22222222-2222-4222-8222-222222222222', 'order' => 1],
+    ]);
+
+    $payload   = fleetopsPayloadWaypointFetch('payload-1');
+    $payload->load('waypoints');
+    $addresses = $payload->waypoints->map(fn ($stop) => $stop->address)->values();
+
+    // the browser posts the option text, which collapses runs of whitespace
+    $payload->insertEntities([
+        ['name' => 'T1', 'destination_uuid' => mb_strtoupper($addresses[0])],
+        ['name' => 'T2', 'destination_uuid' => preg_replace('/\s+/u', ' ', $addresses[1])],
+        ['name' => 'T3', 'destination_uuid' => 'Somewhere not on this order'],
+    ]);
+    $payload->setEntities([
+        ['name' => 'S1', 'destination_uuid' => $addresses[1]],
+    ]);
+
+    expect($connection->table('entities')->where('name', 'T1')->value('destination_uuid'))->toBe('11111111-1111-4111-8111-111111111111')
+        ->and($connection->table('entities')->where('name', 'T2')->value('destination_uuid'))->toBe('22222222-2222-4222-8222-222222222222')
+        ->and($connection->table('entities')->where('name', 'T3')->value('destination_uuid'))->toBeNull()
+        ->and($connection->table('entities')->where('name', 'S1')->value('destination_uuid'))->toBe('22222222-2222-4222-8222-222222222222');
+});
+
 test('insert waypoints resolve nested places existing uuids and customers', function () {
     $connection = fleetopsPayloadWaypointBoot();
     $connection->table('payloads')->insert(['uuid' => 'payload-1', 'company_uuid' => 'company-1']);

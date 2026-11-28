@@ -377,13 +377,7 @@ class Payload extends Model
             }
         }
 
-        // Validate destination actually exists
-        if (isset($attributes['destination_uuid']) && Place::where('uuid', $attributes['destination_uuid'])->doesntExist()) {
-            $validDestination = $this->_findCorrectDestinationForEntity($attributes);
-            if ($validDestination) {
-                $attributes['destination_uuid'] = $validDestination->uuid;
-            }
-        }
+        $attributes = $this->ensureEntityDestinationIsPlace($attributes);
 
         // Handle entity photo upload
         if (isset($attributes['photo'])) {
@@ -514,13 +508,7 @@ class Payload extends Model
                 }
             }
 
-            // Validate destination actually exists
-            if (isset($attributes['destination_uuid']) && Place::where('uuid', $attributes['destination_uuid'])->doesntExist()) {
-                $validDestination = $this->_findCorrectDestinationForEntity($attributes);
-                if ($validDestination) {
-                    $attributes['destination_uuid'] = $validDestination->uuid;
-                }
-            }
+            $attributes = $this->ensureEntityDestinationIsPlace($attributes);
 
             // Handle entity photo upload
             if (isset($attributes['photo'])) {
@@ -857,6 +845,54 @@ class Payload extends Model
             ->delete();
 
         return $this->refresh()->load(['waypoints']);
+    }
+
+    /**
+     * Make sure an entity's destination_uuid names a stored place. A key that is
+     * not one is looked up through console search metadata, then matched to one
+     * of this payload's stops by address (the console order form submits the
+     * stop's address when the stop has no id yet). A key that still matches
+     * nothing is dropped rather than written into the uuid column.
+     */
+    protected function ensureEntityDestinationIsPlace(array $attributes): array
+    {
+        $destinationKey = $attributes['destination_uuid'] ?? null;
+        if ($destinationKey === null || $destinationKey === '') {
+            return $attributes;
+        }
+
+        if (is_string($destinationKey) && Place::where('uuid', $destinationKey)->exists()) {
+            return $attributes;
+        }
+
+        $destination = is_string($destinationKey)
+            ? ($this->_findCorrectDestinationForEntity($attributes) ?? $this->findStopByAddress($destinationKey))
+            : null;
+
+        if ($destination instanceof Place) {
+            $attributes['destination_uuid'] = $destination->uuid;
+        } else {
+            unset($attributes['destination_uuid']);
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * Find this payload's stop (waypoint, pickup or dropoff) whose address reads
+     * as the given text, ignoring case and runs of whitespace.
+     */
+    protected function findStopByAddress(string $address): ?Place
+    {
+        $normalize = fn ($value) => is_string($value) ? mb_strtolower(trim(preg_replace('/\s+/u', ' ', $value))) : null;
+        $needle    = $normalize($address);
+        if (!$needle) {
+            return null;
+        }
+
+        $stops = collect($this->waypoints ?? [])->merge([$this->pickup, $this->dropoff])->filter(fn ($stop) => $stop instanceof Place);
+
+        return $stops->first(fn (Place $stop) => $normalize($stop->address) === $needle);
     }
 
     public function _findCorrectDestinationForEntity($entityAttributes = []): ?Place
