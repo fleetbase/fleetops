@@ -110,6 +110,7 @@ class Order extends FleetbaseResource
             }),
             'meta'                 => data_get($this, 'meta', Utils::createObject()),
             'dispatched_at'        => $this->dispatched_at,
+            'driver_assigned_at'   => $this->driver_assigned_at,
             'started_at'           => $this->started_at,
             'scheduled_at'         => $this->scheduled_at,
             // When the delivery is wanted: the order's own window, for its drop-off.
@@ -221,6 +222,7 @@ class Order extends FleetbaseResource
             'adhoc'           => $this->adhoc,
             'meta'            => data_get($this, 'meta', Utils::createObject()),
             'dispatched_at'   => $this->dispatched_at,
+            'driver_assigned_at' => $this->driver_assigned_at,
             'started_at'      => $this->started_at,
             'scheduled_at'    => $this->scheduled_at,
             'updated_at'      => $this->updated_at,

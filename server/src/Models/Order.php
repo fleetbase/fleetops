@@ -114,6 +114,7 @@ class Order extends Model
         'updated_by_uuid',
         'scheduled_at',
         'dispatched_at',
+        'driver_assigned_at',
         'dispatched',
         'adhoc',
         'adhoc_distance',
@@ -255,6 +256,7 @@ class Order extends Model
         'pod_required'      => 'boolean',
         'scheduled_at'      => 'datetime',
         'dispatched_at'     => 'datetime',
+        'driver_assigned_at' => 'datetime',
         'started_at'        => 'datetime',
         // Orchestrator
         'required_skills'       => Json::class,

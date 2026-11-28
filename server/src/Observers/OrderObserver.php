@@ -39,6 +39,19 @@ class OrderObserver
     }
 
     /**
+     * Handle the Order "saving" event.
+     *
+     * Records when the order was given to the driver it has: stamped whenever the
+     * assigned driver changes, on create as on update, and cleared when it has none.
+     */
+    public function saving(Order $order): void
+    {
+        if ($order->isDirty('driver_assigned_uuid')) {
+            $order->driver_assigned_at = $order->driver_assigned_uuid ? now() : null;
+        }
+    }
+
+    /**
      * Handle the Order "updating" event.
      *
      * This event is fired before the order is persisted to the database.
