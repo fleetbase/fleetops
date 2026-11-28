@@ -7,7 +7,7 @@ import { inject as service } from '@ember/service';
 
 /**
  * A step of an order config's flow, in its side panel: Details (status, code, details, whether it
- * completes the order and needs proof of delivery), What happens here (the triggers that run when
+ * completes the order, needs proof of delivery or needs an inspection filed), What happens here (the triggers that run when
  * an order reaches it) and Conditions (logic that must pass to reach it).
  *
  * The panel passes options on its overlay: `readonlyDetails` for system configs and steps that
@@ -16,12 +16,14 @@ import { inject as service } from '@ember/service';
 export default class ActivityFormComponent extends Component {
     @service abilities;
     @service intl;
+    @service store;
 
     @tracked tab;
 
     constructor() {
         super(...arguments);
         this.tab = this.args.overlay?.initialTab ?? 'details';
+        this.loadInspectionForm.perform();
     }
 
     get canUpdate() {
@@ -63,6 +65,43 @@ export default class ActivityFormComponent extends Component {
      * @memberof ActivityFormComponent
      */
     @tracked podOptions = ['scan', 'signature', 'photo'];
+
+    /**
+     * The inspection form the step requires, as a record for the picker. The flow stores only the
+     * form's public id (and its name, for reading the flow without a lookup), so the record is
+     * found once when the panel opens on a step that already names one.
+     *
+     * @memberof ActivityFormComponent
+     */
+    @tracked inspectionForm = null;
+
+    @task *loadInspectionForm() {
+        const id = this.args.resource?.get?.('inspection_form') ?? this.args.resource?.inspection_form;
+        if (!id) {
+            return;
+        }
+
+        try {
+            this.inspectionForm = yield this.store.findRecord('inspection-form', id);
+        } catch {
+            // A form that was deleted or archived since leaves the picker empty; the stored id
+            // stays until someone chooses another form.
+            this.inspectionForm = null;
+        }
+    }
+
+    /**
+     * Sets the inspection form the driver must file to reach this step. The public id is what the
+     * server and the app resolve; the name rides along for display.
+     *
+     * @param {Object|null} form
+     * @memberof ActivityFormComponent
+     */
+    @action setInspectionForm(form) {
+        this.inspectionForm = form ?? null;
+        this.args.resource.set('inspection_form', form ? (form.public_id ?? form.id) : null);
+        this.args.resource.set('inspection_form_name', form?.name ?? null);
+    }
 
     /**
      * Task to save the activity. It triggers an optional onSave callback

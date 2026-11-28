@@ -454,6 +454,14 @@ export default class OperationsOrdersIndexController extends Controller {
                         isVisible: (order) => order.canBeDispatched,
                     },
                     {
+                        id: 'offer-again',
+                        label: this.intl.t('order.actions.offer-again'),
+                        icon: 'arrows-rotate',
+                        fn: this.orderActions.offerAgain,
+                        permission: 'fleet-ops dispatch order',
+                        isVisible: (order) => this.orderActions.canOfferAgain(order),
+                    },
+                    {
                         id: 'assign-driver',
                         label: this.intl.t('common.assign-driver'),
                         icon: 'edit',

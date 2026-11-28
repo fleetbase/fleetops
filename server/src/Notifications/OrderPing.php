@@ -42,6 +42,11 @@ class OrderPing extends Notification implements ShouldQueue, SendsToPushApps
     public $distance;
 
     /**
+     * When the driver's offer runs out, as an ISO 8601 time. Null for an offer with no time limit.
+     */
+    public ?string $expiresAt = null;
+
+    /**
      * Notification name.
      */
     public static string $name = 'Order Ping';
@@ -81,13 +86,18 @@ class OrderPing extends Notification implements ShouldQueue, SendsToPushApps
      *
      * @return void
      */
-    public function __construct(Order $order, $distance = null)
+    public function __construct(Order $order, $distance = null, $expiresAt = null)
     {
-        $this->order    = $order->setRelations([]);
-        $this->distance = $distance;
+        $this->order     = $order->setRelations([]);
+        $this->distance  = $distance;
+        $this->expiresAt = $expiresAt instanceof \DateTimeInterface ? \Illuminate\Support\Carbon::instance($expiresAt)->toISOString() : (is_string($expiresAt) && $expiresAt !== '' ? $expiresAt : null);
         $this->title    = 'New incoming order!';
         $this->message  = $this->distance ? 'New order available for pickup about ' . Utils::formatMeters($this->distance, false) . ' away' : 'New order is available for pickup.';
         $this->data     = ['id' => $this->order->public_id, 'type' => 'order_ping'];
+        // The app counts down to the server's own expiry rather than guessing one.
+        if ($this->expiresAt) {
+            $this->data['expires_at'] = $this->expiresAt;
+        }
     }
 
     /**
@@ -99,7 +109,8 @@ class OrderPing extends Notification implements ShouldQueue, SendsToPushApps
     {
         $this->notifiable = $notifiable;
 
-        return ['broadcast', FcmChannel::class, ApnChannel::class, PushAppChannel::class];
+        // A driver who has switched this kind of alert off is not rung about it; an open app still hears.
+        return \Fleetbase\FleetOps\Support\DriverAlerts::channels($notifiable, 'offers', ['broadcast', FcmChannel::class, ApnChannel::class, PushAppChannel::class]);
     }
 
     /**
@@ -172,6 +183,11 @@ class OrderPing extends Notification implements ShouldQueue, SendsToPushApps
             'created_at'  => now()->toDateTimeString(),
             'data'        => $resourceData,
         ];
+
+        // This driver's offer, shaped as the order resource shows it (`adhoc_offer`).
+        if (is_array($data['data'])) {
+            $data['data']['adhoc_offer'] = ['status' => 'pending', 'expires_at' => $this->expiresAt];
+        }
 
         return new BroadcastMessage($data);
     }

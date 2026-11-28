@@ -2,6 +2,8 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Models\InspectionForm;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
 
@@ -67,8 +69,9 @@ class OrderConfig extends FleetbaseResource
      * per-activity fields.
      *
      * `code` and `status` (the label) are the contract; `complete`, `color`,
-     * `details`, `pod_method` and `require_pod` are useful UI hints that ride
-     * along.
+     * `details`, `pod_method`, `require_pod`, `require_inspection` and the
+     * inspection form it names (`inspection_form`, a public id, with
+     * `inspection_form_name`) are useful UI hints that ride along.
      *
      * `activities`, `sequence` and `logic` describe the flow's *shape*, and are
      * published because without them the list cannot be sequenced. The stored
@@ -90,26 +93,65 @@ class OrderConfig extends FleetbaseResource
             return [];
         }
 
+        $formNames  = $this->inspectionFormNames($flow);
         $activities = [];
         foreach ($flow as $activity) {
             if (!is_array($activity)) {
                 continue;
             }
-            $activities[] = [
-                'code'        => $activity['code'] ?? ($activity['key'] ?? null),
-                'status'      => $activity['status'] ?? null,
-                'details'     => $activity['details'] ?? null,
-                'color'       => $activity['color'] ?? null,
-                'complete'    => (bool) ($activity['complete'] ?? false),
-                'pod_method'  => $activity['pod_method'] ?? null,
-                'require_pod' => (bool) ($activity['require_pod'] ?? false),
-                'sequence'    => isset($activity['sequence']) ? (int) $activity['sequence'] : null,
-                'activities'  => static::projectTransitions($activity),
-                'logic'       => $activity['logic'] ?? null,
+            $requiresInspection = Utils::isTrue($activity['require_inspection'] ?? false);
+            $storedForm         = is_string($activity['inspection_form'] ?? null) ? $activity['inspection_form'] : null;
+            $form               = $storedForm ? ($formNames[$storedForm] ?? null) : null;
+            $activities[]       = [
+                'code'                 => $activity['code'] ?? ($activity['key'] ?? null),
+                'status'               => $activity['status'] ?? null,
+                'details'              => $activity['details'] ?? null,
+                'color'                => $activity['color'] ?? null,
+                'complete'             => (bool) ($activity['complete'] ?? false),
+                'pod_method'           => $activity['pod_method'] ?? null,
+                'require_pod'          => (bool) ($activity['require_pod'] ?? false),
+                'require_inspection'   => $requiresInspection,
+                'inspection_form'      => $requiresInspection ? ($form['public_id'] ?? $storedForm) : null,
+                'inspection_form_name' => $requiresInspection ? ($form['name'] ?? ($activity['inspection_form_name'] ?? null)) : null,
+                'sequence'             => isset($activity['sequence']) ? (int) $activity['sequence'] : null,
+                'activities'           => static::projectTransitions($activity),
+                'logic'                => $activity['logic'] ?? null,
             ];
         }
 
         return $activities;
+    }
+
+    /**
+     * The inspection forms the flow's activities name, by the id each stored (public id or uuid),
+     * read in one query. The name is the form's own, so a renamed form reads as it is now.
+     *
+     * @return array<string, array{public_id: string, name: ?string}>
+     */
+    protected function inspectionFormNames(array $flow): array
+    {
+        $ids = collect($flow)
+            ->filter(fn ($activity) => is_array($activity) && Utils::isTrue($activity['require_inspection'] ?? false) && is_string($activity['inspection_form'] ?? null))
+            ->pluck('inspection_form')
+            ->unique()
+            ->values();
+        if ($ids->isEmpty()) {
+            return [];
+        }
+
+        $forms = InspectionForm::query()
+            ->where('company_uuid', $this->company_uuid)
+            ->where(fn ($query) => $query->whereIn('public_id', $ids)->orWhereIn('uuid', $ids))
+            ->get(['uuid', 'public_id', 'name']);
+
+        $byId = [];
+        foreach ($forms as $form) {
+            $entry                   = ['public_id' => $form->public_id, 'name' => $form->name];
+            $byId[$form->public_id]  = $entry;
+            $byId[$form->uuid]       = $entry;
+        }
+
+        return $byId;
     }
 
     /**

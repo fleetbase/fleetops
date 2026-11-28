@@ -17,6 +17,7 @@ use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class FuelReport extends Model
 {
@@ -143,6 +144,16 @@ class FuelReport extends Model
     }
 
     /**
+     * Files attached to the report: the receipt a driver photographed at the
+     * pump. Attached the way an issue's photos are, by uploading a file whose
+     * subject is this report.
+     */
+    public function files(): HasMany
+    {
+        return $this->hasMany(\Fleetbase\Models\File::class, 'subject_uuid', 'uuid')->latest();
+    }
+
+    /**
      * Bootstrap the model.
      *
      * `location` is declared nullable in CreateFuelReportRequest but the column is
@@ -190,6 +201,18 @@ class FuelReport extends Model
     public function getReporterNameAttribute()
     {
         return data_get($this, 'reportedBy.name');
+    }
+
+    /** Where the driver filled up, as they wrote it. Kept in `meta`: the table has no column for it. */
+    public function getStationAttribute(): ?string
+    {
+        return data_get($this, 'meta.station');
+    }
+
+    /** What went in the tank ("diesel", "petrol 95"), as the driver wrote it. Kept in `meta`. */
+    public function getFuelTypeAttribute(): ?string
+    {
+        return data_get($this, 'meta.fuel_type');
     }
 
     public function getSourceAttribute(): ?string

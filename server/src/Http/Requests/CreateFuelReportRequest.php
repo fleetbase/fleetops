@@ -37,6 +37,9 @@ class CreateFuelReportRequest extends FleetbaseRequest
             'metric_unit'     => ['nullable'],
             'location'        => ['nullable'],
             'amount'          => ['nullable'],
+            'station'         => ['nullable', 'string', 'max:191'],
+            'fuel_type'       => ['nullable', 'string', 'max:64'],
+            'note'            => ['nullable', 'string', 'max:2000'],
         ];
     }
 }

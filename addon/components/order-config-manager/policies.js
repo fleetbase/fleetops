@@ -39,7 +39,7 @@ export default class OrderConfigManagerPoliciesComponent extends Component {
     @tracked savedValues = {};
 
     /** The company's adhoc dispatch defaults. */
-    @tracked companyDefaults = { adhoc_strategy: 'sequential', adhoc_offer_timeout: 20, adhoc_distance: 6000 };
+    @tracked companyDefaults = { adhoc_strategy: 'sequential', adhoc_offer_timeout: 90, adhoc_distance: 6000 };
 
     constructor(owner, { config, configManagerContext }) {
         super(...arguments);
@@ -272,9 +272,9 @@ export default class OrderConfigManagerPoliciesComponent extends Component {
         const strategyBase = this.choice(K, 'strategy', strategyChoices, 'offering.strategy-aria');
         // An empty strategy follows the company's, so that is the option marked as the default.
         const strategyPart = { ...strategyBase, value: strategy, options: strategyBase.options.map((option) => ({ ...option, isDefault: option.value === company.adhoc_strategy })) };
-        const [seconds, secondsError] = this.number(K, 'offer_timeout', String(company.adhoc_offer_timeout ?? 20), 'offering.seconds-aria', 132);
+        const [seconds, secondsError] = this.number(K, 'offer_timeout', String(company.adhoc_offer_timeout ?? 90), 'offering.seconds-aria', 132);
         const [metres, metresError] = this.number(K, 'radius', Number(company.adhoc_distance ?? 6000).toLocaleString(), 'offering.radius-aria', 150);
-        const companyHelp = this.t('offering.strategy-help', { strategy: this.strategyLabel(company.adhoc_strategy), seconds: company.adhoc_offer_timeout ?? 20 });
+        const companyHelp = this.t('offering.strategy-help', { strategy: this.strategyLabel(company.adhoc_strategy), seconds: company.adhoc_offer_timeout ?? 90 });
 
         return {
             id: K,

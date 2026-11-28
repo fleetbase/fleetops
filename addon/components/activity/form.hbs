@@ -78,6 +78,37 @@
                 </select>
             </InputGroup>
         {{/if}}
+        <div class="flex flex-col gap-4 mb-4">
+            <Toggle
+                @label={{t "order-config-manager.step.requires-inspection"}}
+                @helpText={{t "order-config-manager.step.requires-inspection-help"}}
+                @isToggled={{@resource.require_inspection}}
+                @onToggle={{fn this.toggle "require_inspection"}}
+                @disabled={{this.readonlyDetails}}
+            />
+        </div>
+        {{#if @resource.require_inspection}}
+            <InputGroup @name={{t "order-config-manager.step.inspection-form"}}>
+                <ModelSelect
+                    @modelName="inspection-form"
+                    @selectedItemComponent={{component "select-option/inspection-form" compact=true}}
+                    @selectedModel={{this.inspectionForm}}
+                    @query={{hash status="published"}}
+                    @placeholder={{t "order-config-manager.step.inspection-form-placeholder"}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{this.setInspectionForm}}
+                    @disabled={{this.readonlyDetails}}
+                    as |form|
+                >
+                    <SelectOption::InspectionForm @option={{form}} />
+                </ModelSelect>
+                {{#unless @resource.inspection_form}}
+                    <span class="oc-line__help mt-1">{{t "order-config-manager.step.inspection-form-missing"}}</span>
+                {{/unless}}
+            </InputGroup>
+        {{/if}}
         {{#unless this.readonlyDetails}}
             <div class="oc-developer-events">
                 <span class="oc-section__title text-sm">{{t "order-config-manager.step.developer-events"}}</span>

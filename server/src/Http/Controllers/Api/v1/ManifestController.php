@@ -8,9 +8,11 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Manifest;
 use Fleetbase\FleetOps\Models\ManifestStop;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\FleetOps\Tracking\ManifestRouteService;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Driver-facing manifests.
@@ -64,9 +66,42 @@ class ManifestController extends Controller
             return response()->apiError('Manifest resource not found.', 404);
         }
 
-        $manifest->load(['driver', 'vehicle', 'stops' => fn ($q) => $q->orderBy('sequence')->with(['place', 'order.trackingNumber'])]);
+        $manifest->load(['driver', 'vehicle', 'stops' => fn ($q) => $q->orderBy('sequence')->with(['place', 'order.trackingNumber', 'order.payload'])]);
 
         return new ManifestResource($manifest);
+    }
+
+    /**
+     * GET /v1/manifests/{id}/route — the road the stops are joined by.
+     *
+     * Without this a driver app can only join a manifest's stops with straight
+     * lines, which cross rivers and buildings and say nothing about the drive.
+     * The line comes from the organisation's routing engine, the same one that
+     * draws a single order's route.
+     *
+     * `remaining=1` routes only through the stops still to do, from the driver's
+     * last known position when there is one, so a map can draw "from here".
+     *
+     * A map without a road line is still a usable map, so a routing engine that
+     * is missing or failing is answered with `polyline: null` and a warning, not
+     * an error: the app then draws its own straight lines.
+     */
+    public function route(Request $request, string $id)
+    {
+        $manifest = static::findManifest($id);
+        if (!$manifest) {
+            return response()->apiError('Manifest resource not found.', 404);
+        }
+
+        $remaining = $request->boolean('remaining');
+
+        try {
+            return response()->json(app(ManifestRouteService::class)->route($manifest, $remaining));
+        } catch (\Throwable $e) {
+            Log::warning('Manifest route could not be built.', ['manifest' => $manifest->public_id, 'error' => $e->getMessage()]);
+
+            return response()->json(ManifestRouteService::unavailable(['route_unavailable'], $remaining));
+        }
     }
 
     /**
@@ -200,13 +235,18 @@ class ManifestController extends Controller
         /** @var Driver|null $driver */
         $driver = static::scopedToCompany(static::matchingIdentifier(Driver::query(), $id))->first();
 
+        // A driver's own token reads that driver's routes and no one else's.
+        if ($driver && session('is_sanctum_token') && $driver->user_uuid !== session('user')) {
+            return null;
+        }
+
         return $driver;
     }
 
     protected static function findManifest(string $id): ?Manifest
     {
         /** @var Manifest|null $manifest */
-        $manifest = static::scopedToCompany(static::matchingIdentifier(Manifest::query(), $id))->first();
+        $manifest = static::scopedToCaller(static::scopedToCompany(static::matchingIdentifier(Manifest::query(), $id)))->first();
 
         return $manifest;
     }
@@ -219,7 +259,7 @@ class ManifestController extends Controller
     {
         /** @var ManifestStop|null $stop */
         $stop = static::matchingIdentifier(ManifestStop::query(), $id)
-            ->whereHas('manifest', fn (Builder $query) => static::scopedToCompany($query))
+            ->whereHas('manifest', fn (Builder $query) => static::scopedToCaller(static::scopedToCompany($query)))
             ->first();
 
         return $stop;
@@ -234,6 +274,27 @@ class ManifestController extends Controller
     protected static function matchingIdentifier(Builder $query, string $id): Builder
     {
         return $query->where(fn (Builder $query) => $query->where('public_id', $id)->orWhere('uuid', $id));
+    }
+
+    /**
+     * Constrain a manifest query to the routes the caller may run.
+     *
+     * An organization's API key may read and run any of its manifests. A driver
+     * signed in with their own token only their own: without this, any driver
+     * could open, re-order or complete a colleague's route by its id.
+     */
+    protected static function scopedToCaller(Builder $query): Builder
+    {
+        if (!session('is_sanctum_token')) {
+            return $query;
+        }
+
+        $driverUuid = Driver::where('user_uuid', session('user'))->where('company_uuid', session('company'))->value('uuid');
+        if (!$driverUuid) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where($query->getModel()->qualifyColumn('driver_uuid'), $driverUuid);
     }
 
     /**

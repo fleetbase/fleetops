@@ -39,7 +39,9 @@ class FleetOpsApiDriverControllerProbe extends DriverController
     public array $pointInputs               = [];
     public array $createdDrivers            = [];
     public array $resolvedFiles             = [];
-    public string $sessionCompanyUuid       = 'company-uuid';
+    public ?string $sessionCompanyUuid      = 'company-uuid';
+    public bool $platformRequest            = false;
+    public mixed $namedOrganization         = null;
 
     protected function currentCompany(): ?Company
     {
@@ -51,6 +53,21 @@ class FleetOpsApiDriverControllerProbe extends DriverController
     protected function sessionCompany(): ?string
     {
         return $this->sessionCompanyUuid;
+    }
+
+    protected function isPlatformRequest(?Request $request = null): bool
+    {
+        return $this->platformRequest;
+    }
+
+    protected function namedOrganization(): mixed
+    {
+        return $this->namedOrganization;
+    }
+
+    public function reviewCompanyForTest(): ?Company
+    {
+        return $this->navigatorReviewCompany();
     }
 
     protected function applyUserInfoFromRequest(Request $request, array $userDetails): array
@@ -1026,4 +1043,39 @@ test('api driver controller refuses a device whose push app key is not the organ
         'status'   => 400,
     ])
         ->and($controller->deviceCreates)->toBe([]);
+});
+
+test('api driver controller refuses driver sign-up to a platform token request', function () {
+    // The platform token ships inside apps and belongs to no organization, so it
+    // must not be able to create a driver in one. An organization's key still can.
+    $controller                  = new FleetOpsApiDriverControllerProbe();
+    $controller->platformRequest = true;
+
+    $response = $controller->verifyCode(Request::create('/v1/drivers/verify-code', 'POST', [
+        'identity' => '+15551234567',
+        'code'     => '123456',
+        'for'      => 'create_driver',
+        'company'  => 'company_public',
+    ]));
+
+    expect($response)->toBe(['apiError' => "Driver sign-up needs the organization's API key.", 'status' => 403])
+        ->and($controller->createdDrivers)->toBe([])
+        ->and($controller->companyCalls)->toBe([]);
+});
+
+test('api driver controller only reads a named organization from a platform token request', function () {
+    $controller                     = new FleetOpsApiDriverControllerProbe();
+    $controller->sessionCompanyUuid = null;
+
+    // A platform request that names no organization has none.
+    $controller->platformRequest = true;
+    expect($controller->reviewCompanyForTest())->toBeNull();
+
+    $controller->namedOrganization = ['company_public'];
+    expect($controller->reviewCompanyForTest())->toBeNull();
+
+    // An API credential's organization is its own: a name in the request is ignored.
+    $controller->platformRequest   = false;
+    $controller->namedOrganization = 'company_public';
+    expect($controller->reviewCompanyForTest())->toBeNull();
 });

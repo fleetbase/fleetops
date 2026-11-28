@@ -164,5 +164,26 @@
                 {{/if}}
             </div>
         {{/if}}
+
+        {{#if this.selectedActivityRequiresInspection}}
+            <div class="mb-4 rounded-md border border-yellow-300 bg-yellow-50 py-2 text-yellow-900 dark:border-yellow-700 dark:bg-yellow-900 dark:text-yellow-50">
+                <div class="px-3">
+                    <div class="text-xs font-semibold uppercase">Inspection required</div>
+                    <div class="text-xs text-yellow-800 dark:text-yellow-100">
+                        {{#if this.bypassInspection}}
+                            Inspection bypass enabled.
+                        {{else}}
+                            The driver files
+                            {{or this.selectedActivityRecord.inspection_form_name "the step's inspection form"}}
+                            from the app to reach this step.
+                        {{/if}}
+                    </div>
+                </div>
+                <div class="px-3 mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-yellow-50 pt-2 dark:border-yellow-700">
+                    <Toggle @isToggled={{this.bypassInspection}} @onToggle={{this.toggleBypassInspection}} @label="Bypass inspection" @labelClass="text-xs" />
+                    <span class="text-xs text-yellow-800 dark:text-yellow-100">Use only when the inspection cannot be filed from the app.</span>
+                </div>
+            </div>
+        {{/if}}
     </div>
 </Modal::Default>

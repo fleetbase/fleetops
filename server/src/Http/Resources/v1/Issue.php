@@ -35,6 +35,10 @@ class Issue extends FleetbaseResource
             'vehicle'                     => $this->whenLoaded('vehicle', fn () => new Vehicle($this->vehicle)),
             'driver'                      => $this->whenLoaded('driver', fn () => new Driver($this->driver)),
             'order'                       => $this->when(Http::isInternalRequest(), fn () => $this->resolveLinkedOrder()),
+            // Public callers get the order the issue is about as its public id
+            // and tracking number, not as a nested order.
+            'order_id'                    => $this->when(Http::isPublicRequest(), fn () => data_get($this->linkedOrder(), 'public_id')),
+            'order_tracking_number'       => $this->when(Http::isPublicRequest(), fn () => data_get($this->linkedOrder(), 'trackingNumber.tracking_number')),
             'files'                       => $this->whenLoaded('files', fn () => File::collection($this->files)),
             'driver_name'                 => $this->driver_name,
             'vehicle_name'                => $this->vehicle_name,
@@ -57,6 +61,34 @@ class Issue extends FleetbaseResource
             'updated_at'                  => $this->updated_at,
             'created_at'                  => $this->created_at,
         ]);
+    }
+
+    /**
+     * The order the issue is about, read once. Uses the loaded relation when
+     * the controller loaded it, and otherwise looks the order up inside the
+     * issue's own organization.
+     */
+    protected function linkedOrder(): ?\Fleetbase\FleetOps\Models\Order
+    {
+        // An issue linked before the column existed keeps its order in `meta`;
+        // a loaded relation that came back empty does not rule that out.
+        if ($this->relationLoaded('order') && ($this->order || !data_get($this, 'meta.order_uuid'))) {
+            return $this->order;
+        }
+
+        $orderUuid = $this->order_uuid ?? data_get($this, 'meta.order_uuid');
+        if (!$orderUuid) {
+            return null;
+        }
+
+        $order = \Fleetbase\FleetOps\Models\Order::with(['trackingNumber'])
+            ->where('uuid', $orderUuid)
+            ->where('company_uuid', $this->company_uuid)
+            ->first();
+
+        $this->resource->setRelation('order', $order);
+
+        return $order;
     }
 
     protected function resolveLinkedOrder()

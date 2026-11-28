@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\Http\Resources\File;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Support\Http;
@@ -36,6 +37,12 @@ class FuelReport extends FleetbaseResource
             'volume'                         => $this->volume,
             'metric_unit'                    => $this->metric_unit,
             'type'                           => $this->type,
+            // What the driver wrote at the pump. `meta` as a whole stays
+            // internal; these are the parts of it a driver put there.
+            'station'                        => $this->station,
+            'fuel_type'                      => $this->fuel_type,
+            'note'                           => $this->report,
+            'files'                          => $this->whenLoaded('files', fn () => File::collection($this->files)),
             'status'                         => $this->status,
             'source'                         => $this->when(Http::isInternalRequest(), $this->source),
             'provider'                       => $this->when(Http::isInternalRequest(), $this->provider),
@@ -66,6 +73,8 @@ class FuelReport extends FleetbaseResource
             'volume'             => $this->volume,
             'metric_unit'        => $this->metric_unit,
             'type'               => $this->type,
+            'station'            => $this->station,
+            'fuel_type'          => $this->fuel_type,
             'status'             => $this->status,
             'source'             => $this->source,
             'provider'           => $this->provider,

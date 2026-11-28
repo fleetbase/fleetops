@@ -4,6 +4,8 @@ namespace Fleetbase\FleetOps\Support\AdhocDispatch;
 
 use Fleetbase\FleetOps\Contracts\AdhocDispatchStrategy;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\OrderOffer;
+use Fleetbase\FleetOps\Support\OrderOffers;
 use Fleetbase\Models\Company;
 
 /**
@@ -16,11 +18,12 @@ class AdhocDispatch
     public const DEFAULT    = self::SEQUENTIAL;
 
     /**
-     * Seconds a driver has to accept a one-at-a-time offer, and its limits.
+     * Seconds a driver has to accept a one-at-a-time offer, and its limits. The default leaves
+     * time to hear the alert, open the app and read where the job goes before deciding.
      */
-    public const OFFER_TIMEOUT     = 20;
+    public const OFFER_TIMEOUT     = 90;
     public const MIN_OFFER_TIMEOUT = 10;
-    public const MAX_OFFER_TIMEOUT = 120;
+    public const MAX_OFFER_TIMEOUT = 600;
 
     /**
      * @var array<string, class-string<AdhocDispatchStrategy>>
@@ -126,5 +129,45 @@ class AdhocDispatch
         $timeout = $order->currentConfig()?->policy('dispatch.adhoc.offer_timeout') ?? $order->company?->getOption('fleetops.adhoc_offer_timeout') ?? self::OFFER_TIMEOUT;
 
         return max(self::MIN_OFFER_TIMEOUT, min(self::MAX_OFFER_TIMEOUT, (int) $timeout));
+    }
+
+    /**
+     * Whether the order can be offered to drivers again: adhoc, dispatched, and still without
+     * a driver or an ending.
+     */
+    public static function canReoffer(Order $order): bool
+    {
+        return (bool) $order->adhoc
+            && (bool) $order->dispatched
+            && !$order->driver_assigned_uuid
+            && !$order->started
+            && !in_array($order->status, ['completed', 'canceled'], true);
+    }
+
+    /**
+     * Start offering the order over, for a dispatcher who asks: open offers are withdrawn, the
+     * earlier round (declines and expiries included) is set aside so every nearby driver can be
+     * offered it again, the "no driver found" outcome is cleared, and the order's strategy
+     * offers it afresh. Returns how many drivers now hold an open offer.
+     */
+    public static function reoffer(Order $order): int
+    {
+        if (!static::canReoffer($order)) {
+            return 0;
+        }
+
+        OrderOffers::withdraw($order);
+        // Soft-deleted, so the earlier round stays on record without counting against this one.
+        OrderOffer::where('order_uuid', $order->uuid)->delete();
+
+        if ($order->getMeta('dispatch_outcome') !== null) {
+            $order->updateMeta('dispatch_outcome', null);
+        }
+        // The scheduled re-offer measures its interval from here.
+        $order->forceFill(['dispatched_at' => now()])->saveQuietly();
+
+        static::for($order)->dispatch($order);
+
+        return OrderOffer::where('order_uuid', $order->uuid)->where('status', OrderOffer::PENDING)->count();
     }
 }

@@ -117,6 +117,7 @@ class Order extends FleetbaseResource
             // Timestamps
             'scheduled_at'         => $this->scheduled_at,
             'dispatched_at'        => $this->dispatched_at,
+            'driver_assigned_at'   => $this->driver_assigned_at,
             'started_at'           => $this->started_at,
             'created_at'           => $this->created_at,
             'updated_at'           => $this->updated_at,

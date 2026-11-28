@@ -18,6 +18,7 @@ export default class ModalsUpdateOrderActivityComponent extends Component {
     @tracked proofFiles = [];
     @tracked proof;
     @tracked bypassProof = false;
+    @tracked bypassInspection = false;
 
     constructor(owner, { options = {} }) {
         super(...arguments);
@@ -102,6 +103,14 @@ export default class ModalsUpdateOrderActivityComponent extends Component {
         return Boolean(this.selectedActivityRecord?.require_pod);
     }
 
+    /**
+     * Whether the step needs an inspection filed. The console cannot file one for the driver, so
+     * an operator moving the order on here either waits for the app or bypasses it, as with proof.
+     */
+    get selectedActivityRequiresInspection() {
+        return Boolean(this.selectedActivityRecord?.require_inspection);
+    }
+
     get acceptedProofFileTypes() {
         return ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     }
@@ -148,11 +157,17 @@ export default class ModalsUpdateOrderActivityComponent extends Component {
             return this.notifications.warning('Upload photo proof of delivery or choose to bypass proof of delivery.');
         }
 
+        if (this.selectedActivityRequiresInspection && !this.bypassInspection) {
+            modal.stopLoading();
+            return this.notifications.warning('This step needs an inspection filed from the driver app, or choose to bypass the inspection.');
+        }
+
         try {
             yield this.fetch.patch(`orders/update-activity/${this.order.id}`, {
                 activity,
                 proof: this.hasUploadedProof ? this.uploadedProofId : null,
                 bypass_proof: this.selectedActivityRequiresPod && this.bypassProof,
+                bypass_inspection: this.selectedActivityRequiresInspection && this.bypassInspection,
             });
 
             if (typeof this.order?.reload === 'function') {
@@ -227,6 +242,10 @@ export default class ModalsUpdateOrderActivityComponent extends Component {
             this.proofFiles = [];
             this.proof = null;
         }
+    }
+
+    @action toggleBypassInspection(value) {
+        this.bypassInspection = value;
     }
 
     normalizeProofResponse(response) {

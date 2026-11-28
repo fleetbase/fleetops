@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Observers;
 
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Support\DriverDuty;
 use Fleetbase\FleetOps\Support\LiveCacheService;
 use Fleetbase\FleetOps\Support\ProfileAccountManager;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
@@ -21,6 +22,34 @@ class DriverObserver
         // if the driver has no default location set one
         if (empty($driver->location)) {
             $driver->location = new Point(0, 0);
+        }
+    }
+
+    /**
+     * Handle the Driver "saving" event.
+     *
+     * Whoever changes `online` — the public update endpoint, the console —
+     * `online_since` follows it. The app's own duty toggle saves quietly and
+     * does the same itself.
+     *
+     * @return void
+     */
+    public function saving(Driver $driver)
+    {
+        if ($driver->isDirty('online')) {
+            DriverDuty::stamp($driver);
+        }
+    }
+
+    /**
+     * Handle the Driver "saved" event.
+     *
+     * @return void
+     */
+    public function saved(Driver $driver)
+    {
+        if ($driver->wasChanged('online') || ($driver->wasRecentlyCreated && $driver->online)) {
+            DriverDuty::sync($driver);
         }
     }
 
@@ -64,6 +93,9 @@ class DriverObserver
     {
         // Unassign them from any order they are assigned to
         $this->unassignOrders($driver);
+
+        // A deleted driver is not on duty; leave no period running forever.
+        DriverDuty::close($driver);
 
         // Delete the driver's managed login account, which frees its email and
         // phone. A team member's account linked to the driver is left alone.

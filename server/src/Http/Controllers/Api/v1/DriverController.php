@@ -23,6 +23,9 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Support\ApiCacheThrottle;
+use Fleetbase\FleetOps\Support\DriverDaySummary;
+use Fleetbase\FleetOps\Support\DriverDocuments;
+use Fleetbase\FleetOps\Support\DriverDuty;
 use Fleetbase\FleetOps\Support\Geocoding;
 use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
 use Fleetbase\FleetOps\Support\NavigatorReview;
@@ -42,6 +45,7 @@ use Fleetbase\Models\User;
 use Fleetbase\Models\UserDevice;
 use Fleetbase\Models\VerificationCode;
 use Fleetbase\Support\Auth;
+use Fleetbase\Support\PlatformApi;
 use Geocoder\Query\ReverseQuery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -453,8 +457,23 @@ class DriverController extends Controller
         // Determine the final boolean value for "online"
         $onlineValue = is_null($onlineParam) ? !$driver->online : Utils::castBoolean($onlineParam);
 
+        // A driver who signed themselves up works once the organization has
+        // approved the documents it asks for, not before.
+        if ($onlineValue && DriverDocuments::holdsDriver($driver)) {
+            return $this->jsonResponse([
+                'error' => 'Your documents have not been approved yet. You can go online once they are.',
+                'code'  => 'documents_pending',
+            ], 403);
+        }
+
+        // Record when the driver went on duty, or clear it. The save below is
+        // quiet, so the observer that does this for other writers never runs.
+        $driver->online = $onlineValue;
+        DriverDuty::stamp($driver);
+
         // Perform a single update call
-        $driver->updateQuietly(['online' => $onlineValue]);
+        $driver->saveQuietly();
+        DriverDuty::sync($driver);
         $driver->invalidateApiCache();
 
         // Update vehicle online too
@@ -466,6 +485,48 @@ class DriverController extends Controller
 
         // Return the updated resource
         return $this->driverResource($driver);
+    }
+
+    /**
+     * GET /v1/drivers/{id}/day-summary?date=YYYY-MM-DD&timezone=Area/City — what a
+     * driver did on one day.
+     *
+     * The driver is looked up inside the caller's organization, so a driver's
+     * token reads its own organization's drivers and no one else's. The day is
+     * cut in `timezone` when the caller names one, else the driver's, else the
+     * organization's, else the server's; the response says which was used.
+     * `date` defaults to today there.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function daySummary(string $id, Request $request)
+    {
+        try {
+            $driver = $this->findDriver($id, ['user']);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            return $this->jsonResponse([
+                'error' => 'Driver resource not found.',
+            ], 404);
+        }
+
+        $date = $request->input('date');
+        if (filled($date) && !(is_string($date) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && checkdate((int) substr($date, 5, 2), (int) substr($date, 8, 2), (int) substr($date, 0, 4)))) {
+            return $this->jsonResponse([
+                'error' => 'The date must be a day written as YYYY-MM-DD.',
+            ], 422);
+        }
+
+        $timezone = $request->input('timezone');
+        if (filled($timezone) && !DriverDaySummary::isTimezone($timezone)) {
+            return $this->jsonResponse([
+                'error' => 'The timezone must be a name such as Asia/Singapore.',
+            ], 422);
+        }
+
+        // A driver already online when recording began has no start on record; begin one now.
+        DriverDuty::reconcile($driver);
+
+        return $this->jsonResponse(DriverDaySummary::for($driver, filled($date) ? $date : null, filled($timezone) ? $timezone : null), 200);
     }
 
     /**
@@ -528,9 +589,50 @@ class DriverController extends Controller
         );
         PushAppDevices::link($device, $pushApp, $request);
 
+        // What the device is and which build is on it, refreshed each time the app
+        // registers, so the console can tell a driver's phones apart and a push is
+        // sent through the service the token belongs to.
+        try {
+            $details = ['status' => 'active', 'last_seen_at' => now(), 'signed_out_at' => null];
+            foreach (['name', 'model', 'manufacturer', 'os_version', 'app_version', 'app_build', 'locale', 'timezone', 'environment', 'app_identifier'] as $field) {
+                if ($request->filled($field)) {
+                    $details[$field] = Str::limit(trim((string) $request->input($field)), 180, '');
+                }
+            }
+            if (!$device->company_uuid) {
+                $details['company_uuid'] = $driver->company_uuid;
+            }
+            $device->forceFill(array_intersect_key($details, array_flip(\Illuminate\Support\Facades\Schema::getColumnListing($device->getTable()))))->save();
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         return $this->jsonResponse([
             'device' => $device->public_id,
         ], 200);
+    }
+
+    /**
+     * POST /v1/drivers/{id}/unregister-device — the driver signed out on this device.
+     *
+     * The device stays on record, marked signed out, and is no longer pushed to.
+     */
+    public function unregisterDevice(string $id, Request $request)
+    {
+        try {
+            $driver = $this->findDriver($id);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            return $this->jsonResponse(['error' => 'Driver resource not found.'], 404);
+        }
+
+        $token = $request->input('token');
+        if (!$token) {
+            return $this->apiError('Token is required to unregister a device.');
+        }
+
+        UserDevice::where('user_uuid', $driver->user_uuid)->where('token', $token)->update(['status' => 'signed_out', 'signed_out_at' => now()]);
+
+        return $this->jsonResponse(['status' => 'ok'], 200);
     }
 
     /**
@@ -674,6 +776,12 @@ class DriverController extends Controller
         $attrs    = $request->input(['name', 'phone', 'email']);
 
         if ($for === 'create_driver') {
+            // The platform token belongs to no organization and ships inside apps, so it
+            // can't create a driver in one: signing up needs the organization's own key.
+            if ($this->isPlatformRequest($request)) {
+                return $this->apiError('Driver sign-up needs the organization\'s API key.', 403);
+            }
+
             return $this->create($request);
         }
 
@@ -1052,13 +1160,39 @@ class DriverController extends Controller
     }
 
     /**
-     * The organization whose Navigator the request is for: the API credential's.
+     * The organization whose Navigator the request is for: the API credential's. A request
+     * made with the platform token has none, so the app names it (`organization`).
      */
     protected function navigatorReviewCompany(): ?Company
     {
         $uuid = $this->sessionCompany();
+        if ($uuid) {
+            return Company::where('uuid', $uuid)->first();
+        }
 
-        return $uuid ? Company::where('uuid', $uuid)->first() : null;
+        $named = $this->isPlatformRequest() ? $this->namedOrganization() : null;
+        if (!is_string($named) || $named === '') {
+            return null;
+        }
+
+        return Company::where('public_id', $named)->orWhere('uuid', $named)->first();
+    }
+
+    /**
+     * The organization a platform-token request says it is for.
+     */
+    protected function namedOrganization(): mixed
+    {
+        return request()->input('organization');
+    }
+
+    /**
+     * Whether the request signed in with the instance's platform token, not an
+     * organization's API credential.
+     */
+    protected function isPlatformRequest(?Request $request = null): bool
+    {
+        return PlatformApi::authenticated($request);
     }
 
     protected function applyUserInfoFromRequest(Request $request, array $userDetails): array

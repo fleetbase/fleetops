@@ -51,25 +51,57 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
         |
         | End-user API routes, these are routes that the SDK and applications will interface with, and require API credentials.
         */
-        $router->group(['prefix' => 'v1', 'middleware' => ['fleetbase.api', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class], 'namespace' => 'Api\v1'], function ($router) {
-            // drivers routes
-            $router->group(['prefix' => 'drivers', 'middleware' => []], function () use ($router) {
-                $router->post('register-device', 'DriverController@registerDevice');
+        /*
+        |--------------------------------------------------------------------------
+        | Driver sign-in routes
+        |--------------------------------------------------------------------------
+        |
+        | What a driver app calls before its driver has signed in. Besides an API
+        | credential these accept the instance's platform token, so an app built for
+        | the whole instance (Navigator) needs no organization's key: the driver's
+        | organization comes from their account. The platform token ships inside
+        | apps, so nothing may be added here that isn't safe for anyone to call.
+        */
+        $router->group(['prefix' => 'v1', 'middleware' => ['fleetbase.api-or-platform', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class], 'namespace' => 'Api\v1'], function ($router) {
+            $router->group(['prefix' => 'drivers'], function () use ($router) {
                 // Routes that send a text message carry a small per-address bucket on top
-                // of the API credential throttle; the SMS guard in core bounds the spend.
+                // of the credential throttle; the SMS guard in core bounds the spend.
                 $router->post('login-with-sms', 'DriverController@loginWithPhone')->middleware('throttle:5,1,fleetops-sms');
                 $router->post('verify-code', 'DriverController@verifyCode');
                 $router->post('login', 'DriverController@login');
-                // Password management. Deliberately separate from the driver
-                // update: changing a password requires proving the old one, and
-                // resetting it requires a code, neither of which a general PUT
-                // can express.
+                // Resetting a password requires a code, which a general PUT can't express.
                 $router->post('forgot-password', 'DriverController@forgotPassword')->middleware('throttle:5,1,fleetops-sms');
                 $router->post('reset-password', 'DriverController@resetPassword');
+            });
+
+            // What an organization lets a new driver do from the app. Read before
+            // sign-in, so it accepts the platform token; it reveals only the
+            // organization's name and its onboarding choices.
+            $router->group(['prefix' => 'onboard'], function () use ($router) {
+                $router->get('driver-onboard-settings/{companyId}', 'NavigatorController@getDriverOnboardSettings');
+
+                // A new driver signing themselves up with the organization's join code.
+                // Each call checks that the organization still allows it.
+                $router->get('join/{code}', 'DriverOnboardController@join')->middleware('throttle:20,1,fleetops-join');
+                $router->post('request-code', 'DriverOnboardController@requestCode')->middleware('throttle:5,1,fleetops-sms');
+                $router->post('driver', 'DriverOnboardController@create')->middleware('throttle:10,1,fleetops-join');
+            });
+        });
+
+        $router->group(['prefix' => 'v1', 'middleware' => ['fleetbase.api', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class], 'namespace' => 'Api\v1'], function ($router) {
+            // What the organization shows its drivers in the Navigator app.
+            $router->get('navigator/settings', 'NavigatorController@getSettings');
+
+            // drivers routes
+            $router->group(['prefix' => 'drivers', 'middleware' => []], function () use ($router) {
+                $router->post('register-device', 'DriverController@registerDevice');
+                // Changing a password requires proving the old one, which a general
+                // PUT can't express. Signing in and resetting one are above.
                 $router->post('{id}/change-password', 'DriverController@changePassword');
                 $router->post('{id}/simulate', 'DriverController@simulate');
                 $router->match(['put', 'patch', 'post'], '{id}/track', 'DriverController@track');
                 $router->post('{id}/register-device', 'DriverController@registerDevice');
+                $router->post('{id}/unregister-device', 'DriverController@unregisterDevice');
                 $router->post('{id}/switch-organization', 'DriverController@switchOrganization');
                 $router->post('{id}/toggle-online', 'DriverController@toggleOnline');
                 $router->post('/', 'DriverController@create');
@@ -78,6 +110,14 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->get('{id}/organizations', 'DriverController@listOrganizations');
                 // A driver's own routes for the day.
                 $router->get('{id}/manifests', 'ManifestController@forDriver');
+                // What a driver did on one day: waypoints, orders, distance, time on duty.
+                $router->get('{id}/day-summary', 'DriverController@daySummary');
+                // The documents the organization asks of a driver, and the driver's own copies.
+                $router->get('{id}/documents', 'DriverDocumentController@index');
+                $router->post('{id}/documents', 'DriverDocumentController@store')->middleware('throttle:20,1,fleetops-driver-documents');
+                // What the driver wants to be rung about.
+                $router->get('{id}/notification-preferences', 'DriverNotificationPreferenceController@show');
+                $router->match(['put', 'patch', 'post'], '{id}/notification-preferences', 'DriverNotificationPreferenceController@update');
                 $router->get('{id}/current-organization', 'DriverController@currentOrganization');
                 $router->put('{id}', 'DriverController@update');
                 $router->delete('{id}', 'DriverController@delete');
@@ -152,6 +192,8 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->post('/', 'IssueController@create');
                 $router->get('/', 'IssueController@query');
                 $router->get('{id}', 'IssueController@find');
+                // What has happened to an issue since it was filed.
+                $router->get('{id}/timeline', 'IssueController@timeline');
                 $router->put('{id}', 'IssueController@update');
                 $router->delete('{id}', 'IssueController@delete');
             });
@@ -233,6 +275,10 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->delete('{id}/cancel', 'OrderController@cancelOrder');
                 $router->match(['post', 'patch'], '{id}/update-activity', 'OrderController@updateActivity');
                 $router->post('{id}/complete', 'OrderController@completeOrder');
+                // The driver says they took the cash an order asks for.
+                $router->post('{id}/cash-collected', 'OrderController@cashCollected');
+                // The order's chat between its driver and dispatch: returned, and started when there is none yet.
+                $router->post('{id}/chat-channel', 'OrderController@chatChannel');
                 $router->get('{id}/next-activity', 'OrderController@getNextActivity');
                 $router->get('{id}/tracker', 'OrderController@trackerData');
                 $router->get('{id}/eta', 'OrderController@etaData');
@@ -251,6 +297,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
             // the internal namespace.
             $router->group(['prefix' => 'manifests'], function () use ($router) {
                 $router->get('{id}', 'ManifestController@show');
+                $router->get('{id}/route', 'ManifestController@route');
                 $router->post('{id}/optimize', 'ManifestController@optimize');
             });
             $router->group(['prefix' => 'manifest-stops'], function () use ($router) {
@@ -406,10 +453,6 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->post('commit', 'OrchestrationController@commit');
             });
 
-            // navigator routes
-            $router->group(['prefix' => 'onboard'], function () use ($router) {
-                $router->get('driver-onboard-settings/{companyId}', 'NavigatorController@getDriverOnboardSettings');
-            });
         });
 
         /*
@@ -450,6 +493,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                         // NavigatorController::linkApp() requires a valid signature.
                         $router->get('link-app', 'NavigatorController@linkApp');
                         $router->get('get-link-app', 'NavigatorController@getLinkAppUrl')->middleware(['fleetbase.protected']);
+                        $router->post('share-link', 'NavigatorController@shareLink')->middleware(['fleetbase.protected', 'throttle:10,1']);
                     }
                 );
 
@@ -491,6 +535,10 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->post('{id}/reset-credentials', $controller('resetCredentials'));
                                 $router->post('{id}/deactivate-login', $controller('deactivateLogin'));
                                 $router->post('{id}/reactivate-login', $controller('reactivateLogin'));
+                                $router->get('{id}/documents', $controller('documents'));
+                                $router->get('{id}/devices', $controller('devices'));
+                                $router->post('{id}/send-notification', $controller('sendNotification'))->middleware('throttle:20,1,fleetops-driver-push');
+                                $router->post('{id}/documents/review', $controller('reviewDocument'));
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->post('import', $controller('import'));
                                 // Driver scheduling endpoints
@@ -574,6 +622,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->get('{id}/tracker', 'OrderController@trackerInfo');
                                 $router->get('{id}/eta', 'OrderController@waypointEtas');
                                 $router->post('{id}/ping-driver', $controller('pingDriver'));
+                                $router->post('{id}/offer-again', $controller('offerAgain'));
                                 $router->post('{id}/capture-photo/{subjectId?}', $controller('capturePhoto'));
                                 $router->post('process-imports', $controller('importFromFiles'));
                                 $router->patch('route/{id}', $controller('editOrderRoute'));
@@ -848,6 +897,10 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                         $router->post('entity-editing-settings', 'SettingController@saveEntityEditingSettings');
                                         $router->post('driver-onboard-settings', 'SettingController@savedDriverOnboardSettings');
                                         $router->get('driver-onboard-settings/{companyId}', 'SettingController@getDriverOnboardSettings');
+                                        $router->get('navigator-app-settings', 'SettingController@getNavigatorAppSettings');
+                                        $router->post('navigator-app-settings', 'SettingController@saveNavigatorAppSettings');
+                                        $router->get('driver-join-code', 'SettingController@getDriverJoinCode');
+                                        $router->post('driver-join-code', 'SettingController@rotateDriverJoinCode');
                                         $router->get('notification-notifiables', 'SettingController@getNotifiables');
                                         $router->get('notification-registry', 'SettingController@getNotificationRegistry');
                                         $router->get('notification-settings', 'SettingController@getNotificationSettings');

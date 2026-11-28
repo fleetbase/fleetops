@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Flow;
 
+use Fleetbase\FleetOps\Models\InspectionForm;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\Utils;
@@ -250,6 +251,63 @@ class Activity extends FlowResource
     public function completesOrder(): bool
     {
         return $this->complete();
+    }
+
+    /**
+     * Whether reaching this activity needs an inspection filed, set on the activity in the
+     * config's flow as `require_inspection`.
+     */
+    public function requiresInspection(): bool
+    {
+        return Utils::isTrue($this->get('require_inspection'));
+    }
+
+    /**
+     * The id of the inspection form the activity needs filed, as the activity editor stored it
+     * (`inspection_form`, a public id, though a uuid is accepted too).
+     */
+    public function inspectionFormId(): ?string
+    {
+        $id = $this->get('inspection_form');
+
+        return is_string($id) && $id !== '' ? $id : null;
+    }
+
+    /**
+     * The inspection form this activity needs filed, resolved by public id or uuid within the
+     * company. Null when the activity needs none, or names a form that no longer exists.
+     */
+    public function inspectionForm(?string $companyUuid = null): ?InspectionForm
+    {
+        $id = $this->inspectionFormId();
+        if (!$this->requiresInspection() || !$id) {
+            return null;
+        }
+
+        return InspectionForm::query()
+            ->when($companyUuid, fn ($query) => $query->where('company_uuid', $companyUuid))
+            ->where(fn ($query) => $query->where('public_id', $id)->orWhere('uuid', $id))
+            ->first();
+    }
+
+    /**
+     * Fills in what an app needs to ask for the inspection: the form's public id and its name.
+     * An activity that needs no inspection is left as it is.
+     */
+    public function withInspectionForm(?string $companyUuid = null): self
+    {
+        if (!$this->requiresInspection()) {
+            return $this;
+        }
+
+        $form = $this->inspectionForm($companyUuid);
+        $this->set('require_inspection', true);
+        if ($form) {
+            $this->set('inspection_form', $form->public_id);
+            $this->set('inspection_form_name', $form->name);
+        }
+
+        return $this;
     }
 
     /**

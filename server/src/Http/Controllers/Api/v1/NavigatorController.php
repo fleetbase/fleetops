@@ -29,7 +29,26 @@ class NavigatorController extends Controller
             $driverOnboardSettings = [];
         }
 
-        return $this->jsonResponse(['driverOnboardSettings' => $driverOnboardSettings]);
+        return $this->jsonResponse([
+            'driverOnboardSettings' => \Illuminate\Support\Arr::except(is_array($driverOnboardSettings) ? $driverOnboardSettings : [], ['joinCode']),
+            // The same settings in the form the driver app reads.
+            'onboarding'            => \Fleetbase\FleetOps\Support\DriverOnboarding::summary($company),
+        ]);
+    }
+
+    /**
+     * The signed-in driver's organization's choices for the app: what to show, what to hide.
+     *
+     * @return JsonResponse
+     */
+    public function getSettings()
+    {
+        $companyUuid = session('company');
+        if (!is_string($companyUuid) || $companyUuid === '') {
+            return $this->errorResponse('Organization not found.', 404);
+        }
+
+        return $this->jsonResponse(\Fleetbase\FleetOps\Support\NavigatorSettings::forDriverApp($companyUuid));
     }
 
     protected function findCompanyByPublicId(string $companyId): ?Company

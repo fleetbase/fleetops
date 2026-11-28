@@ -114,6 +114,7 @@ class Order extends Model
         'updated_by_uuid',
         'scheduled_at',
         'dispatched_at',
+        'driver_assigned_at',
         'dispatched',
         'adhoc',
         'adhoc_distance',
@@ -255,6 +256,7 @@ class Order extends Model
         'pod_required'      => 'boolean',
         'scheduled_at'      => 'datetime',
         'dispatched_at'     => 'datetime',
+        'driver_assigned_at' => 'datetime',
         'started_at'        => 'datetime',
         // Orchestrator
         'required_skills'       => Json::class,
@@ -1418,6 +1420,10 @@ class Order extends Model
             $this->flushAttributesCache();
             $this->invalidateApiCache();
         }
+
+        // The assigned driver is about to be told it was dispatched; an "assigned" push for the
+        // same moment would be a second notification about one action.
+        \Fleetbase\FleetOps\Support\OrderDriverPushes::dispatching($this);
 
         dispatch(fn () => event(new OrderDispatched($this)))->afterCommit();
 

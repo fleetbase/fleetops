@@ -43,6 +43,10 @@ class TrackingStop implements \JsonSerializable
             'completed'            => $this->completed,
             'sequence'             => $this->sequence,
             'tracking_number_uuid' => $this->trackingNumberUuid,
+            // When this stop is wanted, where the order says: a waypoint's own window.
+            'time_window_start'    => data_get($this->waypoint, 'time_window_start'),
+            'time_window_end'      => data_get($this->waypoint, 'time_window_end'),
+            'service_time'         => data_get($this->waypoint, 'service_time'),
             'address'              => data_get($this->place, 'address'),
             'name'                 => data_get($this->place, 'name'),
             'location'             => $point ? [

@@ -27,6 +27,8 @@ use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocDispatch;
 use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocOfferListing;
+use Fleetbase\FleetOps\Support\NavigatorSettings;
+use Fleetbase\FleetOps\Support\OrderChat;
 use Fleetbase\FleetOps\Support\OrderCustomFields;
 use Fleetbase\FleetOps\Support\OrderEdit;
 use Fleetbase\FleetOps\Support\OrderOffers;
@@ -34,7 +36,9 @@ use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
 use Fleetbase\FleetOps\Support\TrackingCode;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
+use Fleetbase\Http\Resources\ChatChannel as ChatChannelResource;
 use Fleetbase\Http\Resources\Comment as CommentResource;
+use Fleetbase\Models\ChatChannel;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Setting;
@@ -430,6 +434,11 @@ class OrderController extends Controller
                 ],
                 404
             );
+        }
+
+        // A driver's own token does not dispatch an order unless the organization lets drivers do so.
+        if ($request->boolean('dispatch') && $this->driverMayNotDispatch($order->company_uuid)) {
+            return response()->apiError(static::DRIVER_DISPATCH_REFUSAL, 403);
         }
 
         // get request input
@@ -1069,6 +1078,11 @@ class OrderController extends Controller
             );
         }
 
+        // Dispatch is the console's to do, unless the organization lets its drivers dispatch from the app.
+        if ($this->driverMayNotDispatch($order->company_uuid)) {
+            return response()->apiError(static::DRIVER_DISPATCH_REFUSAL, 403);
+        }
+
         if (!$order->hasDriverAssigned && !$order->adhoc) {
             return $this->apiError('No driver assigned to dispatch!');
         }
@@ -1160,6 +1174,13 @@ class OrderController extends Controller
 
         if ($order->status === 'canceled') {
             return response()->apiError('This order was canceled.', 409);
+        }
+
+        // Starting an order that was never dispatched, by skipping dispatch, is dispatching it in all
+        // but name: a driver's own token may only do it where the organization lets drivers dispatch.
+        // An order type that is never dispatched is started as before.
+        if ($skipDispatch && $order->isNotDispatched && $this->driverMayNotDispatch($order->company_uuid) && $order->config()?->allowsDispatch() !== false) {
+            return response()->apiError(static::DRIVER_DISPATCH_REFUSAL, 403);
         }
 
         // An adhoc order goes to the first driver who claims it; everyone after is refused.
@@ -1354,6 +1375,26 @@ class OrderController extends Controller
     }
 
     /**
+     * What a driver is told when they try to dispatch an order and their organization keeps
+     * dispatch in the console.
+     */
+    public const DRIVER_DISPATCH_REFUSAL = 'This order has not been dispatched yet. Orders are dispatched from the console.';
+
+    /**
+     * Whether this request may not dispatch an order: it is signed with a driver's own token
+     * (the Navigator app) and the organization has not turned on "drivers can dispatch"
+     * (FleetOps → Settings → Navigator App). API keys and the console are never refused here.
+     */
+    protected function driverMayNotDispatch(?string $companyUuid = null): bool
+    {
+        if (!session('is_sanctum_token')) {
+            return false;
+        }
+
+        return !NavigatorSettings::allowsDriverDispatch($companyUuid ?: session('company'));
+    }
+
+    /**
      * Update an order activity.
      *
      * @return \Fleetbase\Http\Resources\v1\Order
@@ -1362,6 +1403,8 @@ class OrderController extends Controller
     {
         $skipDispatch = $request->or(['skip_dispatch', 'skipDispatch'], false);
         $proof        = $request->input('proof', null);
+        // The inspection the driver filed for a step that needs one: a submission id.
+        $inspection   = $request->input('inspection', null);
         $order        = null;
 
         // if instance of order is passed directly to this method
@@ -1401,6 +1444,11 @@ class OrderController extends Controller
         }
         // @codeCoverageIgnoreEnd
 
+        // Read before the order is flagged as started below: whether a driver, who may not dispatch,
+        // is moving on an order that still waits for dispatch.
+        $driverMayNotDispatch    = $this->driverMayNotDispatch($order->company_uuid);
+        $driverAwaitingDispatch  = $driverMayNotDispatch && $order->isAwaitingDispatch();
+
         // if order is still status of `created` trigger started flag
         if ($order->status === 'created') {
             $order->started    = true;
@@ -1419,12 +1467,19 @@ class OrderController extends Controller
             $activity = new Activity($activity, $order->getConfigFlow());
         }
 
+        // A driver's own token neither dispatches an order nor steps past dispatch on one that
+        // still waits for it, unless the organization lets drivers dispatch. An order type that is
+        // never dispatched moves on as before.
+        if ($driverMayNotDispatch && ($activity->is('dispatched') || ($driverAwaitingDispatch && $orderConfig?->allowsDispatch() !== false))) {
+            return response()->apiError(static::DRIVER_DISPATCH_REFUSAL, 403);
+        }
+
         // The order's config decides whether the update is allowed: a finished order, a step the
         // config's strict transitions don't permit, dispatch on a config that turns it off, or a
-        // step that needs proof of delivery without it. With strict transitions the server's
-        // activity definition replaces the one sent.
+        // step that needs an inspection or proof of delivery without it. With strict transitions the
+        // server's activity definition replaces the one sent.
         if ($orderConfig && !($activity->is('dispatched') && $skipDispatch)) {
-            [$activity, $refusal] = $orderConfig->authorizeTransition($order, $activity, $proof);
+            [$activity, $refusal] = $orderConfig->authorizeTransition($order, $activity, $proof, inspection: $inspection);
             if ($refusal) {
                 return response()->apiError($refusal, 422);
             }
@@ -1549,12 +1604,29 @@ class OrderController extends Controller
         }
         $activities = $stop ? $this->nextActivitiesForServiceStop($order, $order->payload, $stop) : $orderConfig->nextActivity();
 
+        // Dispatch is not a driver's step unless the organization lets drivers dispatch: it is not
+        // offered, and an order still waiting for dispatch has no step for the driver at all.
+        if ($this->driverMayNotDispatch($order->company_uuid)) {
+            $activities = $order->isAwaitingDispatch() && $orderConfig->allowsDispatch()
+                ? collect()
+                : $activities->reject(fn ($activity) => $activity->is('dispatched'))->values();
+        }
+
         // If activity is to complete order add proof of delivery properties if required
         // This is a temporary fix until activity is updated to handle POD on it's own
-        $activities = $activities->map(function ($activity) use ($order) {
+        $activities = $activities->map(function ($activity) use ($order, $orderConfig) {
             if ($activity->completesOrder() && $order->pod_required) {
                 $activity->set('require_pod', true);
                 $activity->set('pod_method', $order->pod_method);
+            }
+
+            // A step that needs an inspection says which form, by public id and name, so the app
+            // can open it. The config's own definition is what the update will be checked against.
+            $inspectionActivity = $orderConfig->inspectionActivityFor($activity);
+            if ($inspectionActivity) {
+                $activity->set('require_inspection', true);
+                $activity->set('inspection_form', $inspectionActivity->inspectionFormId());
+                $activity->withInspectionForm($order->company_uuid);
             }
 
             // resolved status and details
@@ -1784,6 +1856,21 @@ class OrderController extends Controller
         $subject = $this->resolveSubject($order, $type, $subjectId);
         if (!$subject) {
             return $this->apiError('Unable to capture QR code data.');
+        }
+
+        // An item named as the subject must be one of this order's items: a label from
+        // another order proves nothing about this one.
+        if ($subject instanceof Entity && (empty($order->payload_uuid) || $subject->payload_uuid !== $order->payload_uuid)) {
+            return $this->apiError('Unable to capture QR code data.');
+        }
+
+        // A scan sent for the order as a whole is usually the label of one of its items: a
+        // driver scans what is on the parcel, and a barcode names no owner the app could put
+        // in the url. When the code is not the order's own, the proof belongs to the item
+        // (or waypoint) of this order the code names. A code that names nothing on the order
+        // is still refused below.
+        if (!$subjectId && !TrackingCode::matches($code, $subject)) {
+            $subject = $this->scannedSubjectOnOrder($order, $code) ?? $subject;
         }
 
         // validate: the scan must name this subject, in any code format still in circulation
@@ -2099,6 +2186,33 @@ class OrderController extends Controller
     }
 
     /**
+     * The item or waypoint of this order that a scanned code names, if any. Only the
+     * order's own payload is searched, so a label from another order matches nothing.
+     */
+    protected function scannedSubjectOnOrder(Order $order, $code): Entity|Waypoint|null
+    {
+        if (!is_string($code) || empty($order->payload_uuid)) {
+            return null;
+        }
+
+        $entities = Entity::withoutGlobalScopes()->where('payload_uuid', $order->payload_uuid)->whereNull('deleted_at')->with('trackingNumber')->get();
+        foreach ($entities as $entity) {
+            if (TrackingCode::matches($code, $entity)) {
+                return $entity;
+            }
+        }
+
+        $waypoints = Waypoint::withoutGlobalScopes()->where('payload_uuid', $order->payload_uuid)->whereNull('deleted_at')->with('trackingNumber')->get();
+        foreach ($waypoints as $waypoint) {
+            if (TrackingCode::matches($code, $waypoint)) {
+                return $waypoint;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Retrieve proof of delivery resources associated with a given order and optional subject.
      *
      * This method supports retrieving proofs related to the order itself or a subject within the order,
@@ -2133,6 +2247,100 @@ class OrderController extends Controller
         $proofs = $this->proofsForSubject($order, $subject);
 
         return $this->proofResourceCollection($proofs);
+    }
+
+    /**
+     * POST /v1/orders/{id}/cash-collected — the driver says they took the cash.
+     *
+     * Records the amount, when, and who, on the order (`meta.cash_collected`).
+     * Without it the only sign that cash on delivery changed hands was that the
+     * order was completed, so an end-of-day hand-in could not be checked against
+     * anything. `amount` defaults to what the order asks for; a different amount
+     * is kept as given, because that is what is in the driver's hand.
+     * `collected: false` withdraws a record made by mistake.
+     */
+    public function cashCollected(string $id, Request $request)
+    {
+        try {
+            $order = $this->findOrder($id);
+        } catch (ModelNotFoundException $e) {
+            return $this->apiError('Order resource not found.', 404);
+        }
+
+        $order->loadMissing('payload');
+        $due = (int) data_get($order, 'payload.cod_amount', 0);
+        if ($due <= 0) {
+            return $this->apiError('This order has no cash to collect.', 422);
+        }
+
+        // A driver signed in with their own token records cash only on their own order.
+        $driver = session('is_sanctum_token') ? Driver::where('user_uuid', session('user'))->where('company_uuid', session('company'))->first() : null;
+        if (session('is_sanctum_token') && (!$driver || $order->driver_assigned_uuid !== $driver->uuid)) {
+            return $this->apiError('This order is not assigned to you.', 403);
+        }
+
+        $meta = (array) $order->meta;
+        if ($request->has('collected') && !Utils::castBoolean($request->input('collected'))) {
+            unset($meta['cash_collected']);
+        } else {
+            $amount = $request->filled('amount') ? (int) Utils::numbersOnly($request->input('amount')) : $due;
+            if ($amount < 0) {
+                return $this->apiError('The amount collected cannot be negative.', 422);
+            }
+
+            $meta['cash_collected'] = [
+                'amount'     => $amount,
+                'due'        => $due,
+                'currency'   => data_get($order, 'payload.cod_currency'),
+                'at'         => now()->toISOString(),
+                'by'         => $driver?->public_id,
+                'by_name'    => $driver?->name,
+            ];
+        }
+
+        $order->meta = $meta;
+        $order->saveQuietly();
+        if (method_exists($order, 'invalidateApiCache')) {
+            $order->invalidateApiCache();
+        }
+
+        return $this->jsonResponse(['id' => $order->public_id, 'cash_collected' => $meta['cash_collected'] ?? null]);
+    }
+
+    /**
+     * POST /v1/orders/{id}/chat-channel — the order's chat between its driver and dispatch.
+     *
+     * Returns the channel, starting it when the order has none yet, so asking twice gives the
+     * same one. It is an ordinary core chat channel (read and written through
+     * `/v1/chat-channels`), named for the order's tracking number and tied to the order by its
+     * meta (`order_public_id`, `kind: driver`). The assigned driver is in it, with the
+     * organisation's side as `OrderChat::dispatchStaff()` names it.
+     *
+     * A driver signed in with their own token only gets the channel of an order assigned to them.
+     */
+    public function chatChannel(string $id, Request $request)
+    {
+        try {
+            $order = $this->findOrder($id, ['driverAssigned', 'trackingNumber']);
+        } catch (ModelNotFoundException $e) {
+            return $this->apiError('Order resource not found.', 404);
+        }
+
+        $driver = session('is_sanctum_token') ? Driver::where('user_uuid', session('user'))->where('company_uuid', session('company'))->first() : null;
+        if (session('is_sanctum_token') && (!$driver || $order->driver_assigned_uuid !== $driver->uuid)) {
+            return $this->apiError('This order is not assigned to you.', 403);
+        }
+
+        $driverUser = $driver?->user_uuid ?? data_get($order, 'driverAssigned.user_uuid');
+        if (!$driverUser) {
+            return $this->apiError('This order has no driver to chat with yet.', 409);
+        }
+
+        $channel = OrderChat::openDispatch($order, $driverUser);
+        // As in the channel list: the latest entries only; the conversation asks for the rest.
+        $channel->limitFeed(ChatChannel::LIST_FEED_LIMIT);
+
+        return new ChatChannelResource($channel);
     }
 
     /**

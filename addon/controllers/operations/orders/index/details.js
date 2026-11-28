@@ -135,6 +135,15 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         disabled: this.model.has_driver_assigned ? !this.model.hasActiveStatus || !this.model.driver_assigned : !this.model.hasActiveStatus,
                         fn: () => (this.model.has_driver_assigned ? this.orderActions.unassignDriver(this.model) : this.orderActions.assignDriver(this.model)),
                     },
+                    this.orderActions.canOfferAgain(this.model)
+                        ? {
+                              id: 'offer-again',
+                              text: 'Offer again',
+                              icon: 'arrows-rotate',
+                              permission: 'fleet-ops dispatch order',
+                              fn: () => this.orderActions.offerAgain(this.model),
+                          }
+                        : null,
                     {
                         id: 'view-label',
                         text: 'View order label',

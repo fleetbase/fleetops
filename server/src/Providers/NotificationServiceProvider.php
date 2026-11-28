@@ -40,6 +40,7 @@ class NotificationServiceProvider extends CoreServiceProvider
             \Fleetbase\FleetOps\Notifications\LateDeparture::class,
             \Fleetbase\FleetOps\Notifications\RouteDeviation::class,
             \Fleetbase\FleetOps\Notifications\ProlongedStoppage::class,
+            \Fleetbase\FleetOps\Notifications\UnsafeInspection::class,
         ]);
 
         // Register Notifiables

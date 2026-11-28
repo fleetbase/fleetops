@@ -50,12 +50,13 @@ class FuelReportController extends Controller
         $input['driver_uuid']       = $driver->uuid;
         $input['reported_by_uuid']  = $driver->user_uuid;
         $input['vehicle_uuid']      = $driver->vehicle_uuid;
+        $input                      = array_merge($input, $this->driverDetails($request));
 
         // create the fuel report
         $fuelReport = $this->createFuelReport($input);
 
         // response the driver resource
-        return $this->fuelReportResource($fuelReport);
+        return $this->fuelReportResource($fuelReport->load('files'));
     }
 
     /**
@@ -90,10 +91,10 @@ class FuelReportController extends Controller
         ]);
 
         // update the fuel report
-        $fuelReport->update($input);
+        $fuelReport->update(array_merge($input, $this->driverDetails($request, $fuelReport)));
 
         // response the fuel report resource
-        return $this->fuelReportResource($fuelReport);
+        return $this->fuelReportResource($fuelReport->load('files'));
     }
 
     /**
@@ -104,6 +105,12 @@ class FuelReportController extends Controller
     public function query(Request $request)
     {
         $results = $this->queryFuelReports($request);
+
+        // One query for every report's receipts, so a list can show which
+        // fills have one without asking report by report.
+        if ($results instanceof \Illuminate\Database\Eloquent\Collection) {
+            $results->load('files');
+        }
 
         return $this->fuelReportResourceCollection($results);
     }
@@ -128,7 +135,7 @@ class FuelReportController extends Controller
         }
 
         // response the fuel report resource
-        return $this->fuelReportResource($fuelReport);
+        return $this->fuelReportResource($fuelReport->load('files'));
     }
 
     /**
@@ -155,6 +162,44 @@ class FuelReportController extends Controller
 
         // response the fuel report resource
         return $this->deletedFuelReportResource($fuelReport);
+    }
+
+    /**
+     * The station, fuel type and note a driver may write, as model attributes.
+     *
+     * The table has `report` for free text and nothing for the other two, so
+     * station and fuel type go into `meta` beside what is already there — a
+     * report matched to a fuel card keeps its `source` and `provider`. A field
+     * the request does not mention is left alone; one sent empty is cleared.
+     */
+    protected function driverDetails(Request $request, ?FuelReport $fuelReport = null): array
+    {
+        $details = [];
+
+        if ($request->exists('note')) {
+            $details['report'] = filled($request->input('note')) ? trim((string) $request->input('note')) : null;
+        }
+
+        $meta    = (array) ($fuelReport?->meta ?? []);
+        $changed = false;
+        foreach (['station', 'fuel_type'] as $key) {
+            if (!$request->exists($key)) {
+                continue;
+            }
+
+            $changed = true;
+            if (filled($request->input($key))) {
+                $meta[$key] = trim((string) $request->input($key));
+            } else {
+                unset($meta[$key]);
+            }
+        }
+
+        if ($changed) {
+            $details['meta'] = $meta;
+        }
+
+        return $details;
     }
 
     protected function findDriverRecord(?string $id): Driver

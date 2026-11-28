@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Http\Resources\v1\InspectionSubmission as InspectionSubmi
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\InspectionForm;
 use Fleetbase\FleetOps\Models\InspectionSubmission;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\InspectionSubmitter;
 use Fleetbase\FleetOps\Support\Utils;
@@ -100,6 +101,9 @@ class InspectionController extends Controller
             'driver'          => 'required|string',
             'vehicle'         => 'nullable|string',
             'started_at'      => 'nullable|date',
+            // The order and the step of it the inspection was filed for, when a step needs one.
+            'order'           => 'nullable|string',
+            'activity'        => 'nullable|string|max:191',
         ]));
 
         $driver = static::findDriverRecord($request->input('driver'));
@@ -120,6 +124,14 @@ class InspectionController extends Controller
             }
         }
 
+        $order = null;
+        if ($request->filled('order')) {
+            $order = static::findOrderRecord($request->input('order'));
+            if (!$order) {
+                return response()->apiError('Order resource not found.', 404);
+            }
+        }
+
         $idempotencyKey = trim((string) $request->header('Idempotency-Key'));
         if ($idempotencyKey !== '') {
             $replayed = static::findSubmissionByIdempotencyKey($driver, $idempotencyKey);
@@ -135,7 +147,14 @@ class InspectionController extends Controller
             'driver_uuid'       => $driver->uuid,
             'submitted_by_uuid' => $driver->user_uuid,
             'source'            => 'navigator',
-            'meta'              => $idempotencyKey !== '' ? ['idempotency_key' => $idempotencyKey] : [],
+            'meta'              => array_filter([
+                'idempotency_key' => $idempotencyKey !== '' ? $idempotencyKey : null,
+                // What the inspection was for, so the step it unlocks can check it was filed for
+                // this order, and the console can show which order a submission held.
+                'order_uuid'      => $order?->uuid,
+                'order_id'        => $order?->public_id,
+                'activity'        => $order ? $request->input('activity') : null,
+            ], fn ($value) => $value !== null && $value !== ''),
         ];
 
         if ($request->filled('started_at')) {
@@ -143,6 +162,12 @@ class InspectionController extends Controller
         }
 
         $submission = InspectionSubmitter::submit($form, $validated, $attributes);
+
+        // An inspection a step of an order needed that found the vehicle unsafe holds the order
+        // there; dispatch hears of it now rather than when the driver next tries the step.
+        if ($order) {
+            $submission->notifyDispatchIfUnsafe($order, $request->input('activity'));
+        }
 
         return new InspectionSubmissionResource($submission->fresh(static::SUBMISSION_RELATIONS));
     }
@@ -217,6 +242,17 @@ class InspectionController extends Controller
                 $query->whereIn($column, Utils::arrayFrom($request->input($column)));
             }
         }
+
+        // The inspections filed for an order, and for one step of it: how the app finds the id of
+        // an inspection it queued without signal, once the queue has sent it.
+        if ($request->filled('order')) {
+            $order = static::findOrderRecord($request->input('order'));
+            $query->where('meta->order_uuid', $order?->uuid ?? '');
+        }
+
+        if ($request->filled('activity')) {
+            $query->where('meta->activity', $request->input('activity'));
+        }
     }
 
     /**
@@ -283,6 +319,15 @@ class InspectionController extends Controller
     protected static function findDriverRecord(string $id): ?Driver
     {
         return Driver::where('company_uuid', session('company'))
+            ->where(function ($query) use ($id) {
+                $query->where('public_id', $id)->orWhere('uuid', $id);
+            })
+            ->first();
+    }
+
+    protected static function findOrderRecord(string $id): ?Order
+    {
+        return Order::where('company_uuid', session('company'))
             ->where(function ($query) use ($id) {
                 $query->where('public_id', $id)->orWhere('uuid', $id);
             })

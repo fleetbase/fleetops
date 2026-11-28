@@ -183,6 +183,51 @@ export default class OrderActionsService extends ResourceActionService {
         });
     }
 
+    /**
+     * Whether the order can be offered to nearby drivers again: an adhoc order that was
+     * dispatched and still has no driver, and has not ended.
+     */
+    canOfferAgain(order) {
+        return Boolean(order?.adhoc && order?.dispatched && !order?.has_driver_assigned && !['canceled', 'completed'].includes(order?.status));
+    }
+
+    /**
+     * Offer an adhoc order to nearby drivers again, after nobody took it. Says how many
+     * drivers were offered it.
+     */
+    @action offerAgain(order, options = {}) {
+        this.modalsManager.confirm({
+            title: this.intl.t('order.prompts.offer-again-title'),
+            body: this.intl.t('order.prompts.offer-again-body'),
+            acceptButtonScheme: 'primary',
+            acceptButtonText: this.intl.t('order.actions.offer-again'),
+            acceptButtonIcon: 'arrows-rotate',
+            order,
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                try {
+                    const { offered } = await this.fetch.post(`orders/${order.id}/offer-again`);
+                    const count = Number(offered) || 0;
+                    if (count > 0) {
+                        this.notifications.success(this.intl.t('order.prompts.offer-again-success', { orderId: order.tracking, count }));
+                    } else {
+                        this.notifications.warning(this.intl.t('order.prompts.offer-again-none', { orderId: order.tracking }));
+                    }
+                    // The "no driver found" outcome is cleared on the server; show the order as it now is.
+                    if (typeof order.reload === 'function') {
+                        await order.reload().catch(() => {});
+                    }
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+            ...options,
+        });
+    }
+
     @action bulkCancel(selected = []) {
         selected = [...(isArray(selected) ? selected : []), ...this.tableContext.getSelectedRows()];
         if (!selected) return;

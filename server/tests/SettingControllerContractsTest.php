@@ -1089,7 +1089,7 @@ test('adhoc dispatch settings read and save the company defaults and list the st
     $save                = fn (array $input) => $controller->saveAdhocDispatchSettings(Request::create('/', 'POST', $input));
 
     $defaults = $controller->getAdhocDispatchSettings()->getData(true);
-    expect($defaults)->toMatchArray(['adhoc_distance' => 6000, 'adhoc_strategy' => 'sequential', 'adhoc_offer_timeout' => 20])
+    expect($defaults)->toMatchArray(['adhoc_distance' => 6000, 'adhoc_strategy' => 'sequential', 'adhoc_offer_timeout' => 90])
         ->and(array_column($defaults['strategies'], 'name'))->toContain('broadcast', 'sequential')
         ->and($controller->getAdhocDispatchStrategies()->getData(true)['strategies'][0])->toHaveKeys(['name', 'label', 'description']);
 

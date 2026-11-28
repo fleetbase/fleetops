@@ -35,6 +35,7 @@ use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Notifications\OrderPing;
+use Fleetbase\FleetOps\Support\AdhocDispatch\AdhocDispatch;
 use Fleetbase\FleetOps\Support\OrderEdit;
 use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
 use Fleetbase\FleetOps\Support\Utils;
@@ -957,6 +958,10 @@ class OrderController extends FleetOpsController
 
         $proof       = $request->input('proof');
         $bypassProof = $request->boolean('bypass_proof');
+        // The console cannot file an inspection for the driver; an operator either sends the one
+        // the driver filed or bypasses it, as with proof.
+        $inspection       = $request->input('inspection');
+        $bypassInspection = $request->boolean('bypass_inspection');
         $activity    = $request->inputArray('activity');
         $activity    = new Activity($activity, $order->getConfigFlow());
 
@@ -964,7 +969,7 @@ class OrderController extends FleetOpsController
         // finished order, so a terminal status alone doesn't refuse it here.
         $orderConfig = $order->config();
         if ($orderConfig) {
-            [$activity, $refusal] = $orderConfig->authorizeTransition($order, $activity, $proof, $bypassProof, true);
+            [$activity, $refusal] = $orderConfig->authorizeTransition($order, $activity, $proof, $bypassProof, true, $inspection, $bypassInspection);
             if ($refusal) {
                 return response()->error($refusal, 422);
             }
@@ -1084,10 +1089,19 @@ class OrderController extends FleetOpsController
 
         // If activity is to complete order add proof of delivery properties if required
         // This is a temporary fix until activity is updated to handle POD on it's own
-        $activities = $activities->map(function ($activity) use ($order) {
+        $activities = $activities->map(function ($activity) use ($order, $orderConfig) {
             if ($activity->completesOrder() && $order->pod_required) {
                 $activity->set('require_pod', true);
                 $activity->set('pod_method', $order->pod_method);
+            }
+
+            // A step that needs an inspection says so, and names the form, so the console can
+            // ask an operator to wait for the driver's inspection or bypass it.
+            $inspectionActivity = $orderConfig->inspectionActivityFor($activity);
+            if ($inspectionActivity) {
+                $activity->set('require_inspection', true);
+                $activity->set('inspection_form', $inspectionActivity->inspectionFormId());
+                $activity->withInspectionForm($order->company_uuid);
             }
 
             // resolved status and details
@@ -1609,6 +1623,61 @@ class OrderController extends FleetOpsController
     protected function sendDriverPing(Driver $driver, Order $order): void
     {
         $driver->notify(new OrderPing($order));
+    }
+
+    /**
+     * Offer an adhoc order to nearby drivers again, after nobody took it (every driver declined
+     * or let the offer run out, leaving it "no driver found"). The earlier round is set aside and
+     * the order's own strategy and ping radius offer it afresh.
+     *
+     * Responds with `offered`, how many drivers now hold an open offer.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function offerAgain(string $id)
+    {
+        if (!Auth::can('fleet-ops dispatch order')) {
+            return response()->error('Unauthorized.', 403);
+        }
+
+        $order = $this->findOrderById($id, ['company', 'payload']);
+        if (!$order) {
+            return response()->error('Order resource not found.', 404);
+        }
+
+        if (!$order->adhoc) {
+            return response()->error('Only an order offered to nearby drivers can be offered again.', 422);
+        }
+
+        if ($order->driver_assigned_uuid) {
+            return response()->error('This order already has a driver.', 422);
+        }
+
+        if (!$order->dispatched) {
+            return response()->error('Dispatch the order first to offer it to drivers.', 422);
+        }
+
+        if (!AdhocDispatch::canReoffer($order)) {
+            return response()->error('This order has already started or ended.', 422);
+        }
+
+        try {
+            $offered = $this->reofferOrder($order);
+        } catch (\Throwable $e) {
+            return response()->error('Unable to offer the order again.', 500);
+        }
+
+        return response()->json([
+            'status'   => 'ok',
+            'offered'  => $offered,
+            'strategy' => AdhocDispatch::nameFor($order),
+            'message'  => $offered ? 'Order offered to ' . $offered . ' ' . Str::plural('driver', $offered) . '.' : 'No available driver is online within range of the pickup.',
+        ]);
+    }
+
+    protected function reofferOrder(Order $order): int
+    {
+        return AdhocDispatch::reoffer($order);
     }
 
     /**

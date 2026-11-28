@@ -1,0 +1,67 @@
+{{#if this.documents.length}}
+    <ContentPanel @title={{t "driver-documents.title"}} @open={{true}} @wrapperClass="bordered-top">
+        {{#if this.summary.held}}
+            <InfoBlock @type="warning" @icon="triangle-exclamation" @text={{t "driver-documents.held"}} class="mb-3" />
+        {{/if}}
+        <div class="space-y-2 text-xs dark:text-gray-100">
+            {{#each this.rows as |document|}}
+                <div class="rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="font-semibold truncate">{{document.name}}</div>
+                            <div class="mt-1 flex items-center gap-2">
+                                <Badge @status={{document.statusColor}} @hideStatusDot={{true}}>{{document.statusLabel}}</Badge>
+                                {{#if document.submitted_at}}
+                                    <span class="text-gray-500 dark:text-gray-400">{{t "driver-documents.sent-on" date=(format-date-fns document.submitted_at "yyyy-MM-dd HH:mm")}}</span>
+                                {{/if}}
+                            </div>
+                            {{#if document.note}}
+                                <div class="mt-1 text-red-600 dark:text-red-400">{{document.note}}</div>
+                            {{/if}}
+                            {{#if document.reviewed_by}}
+                                <div class="mt-1 text-gray-500 dark:text-gray-400">{{t "driver-documents.reviewed-by" name=document.reviewed_by}}</div>
+                            {{/if}}
+                        </div>
+                        {{#if document.file}}
+                            <div class="flex items-center gap-1 shrink-0">
+                                <Button @size="xs" @icon="eye" @text={{t "driver-documents.view"}} @onClick={{fn this.view document}} />
+                                {{#if document.canApprove}}
+                                    <Button
+                                        @size="xs"
+                                        @type="success"
+                                        @icon="check"
+                                        @text={{t "driver-documents.approve"}}
+                                        @onClick={{fn this.approve document}}
+                                        @isLoading={{this.review.isRunning}}
+                                        @permission="fleet-ops update driver"
+                                    />
+                                {{/if}}
+                                {{#if document.canReject}}
+                                    <Button @size="xs" @type="danger" @icon="rotate-left" @text={{t "driver-documents.reject"}} @onClick={{fn this.startRejecting document}} @permission="fleet-ops update driver" />
+                                {{/if}}
+                            </div>
+                        {{/if}}
+                    </div>
+                    {{#if document.isRejecting}}
+                        <div class="mt-3">
+                            <InputGroup @name={{t "driver-documents.reject-title"}} @helpText={{t "driver-documents.reject-prompt"}}>
+                                <Textarea class="form-input w-full" rows="2" placeholder={{t "driver-documents.reject-placeholder"}} @value={{this.note}} />
+                            </InputGroup>
+                            <div class="flex items-center gap-2">
+                                <Button
+                                    @size="xs"
+                                    @type="danger"
+                                    @text={{t "driver-documents.reject-confirm"}}
+                                    @onClick={{fn this.confirmRejecting document}}
+                                    @isLoading={{this.review.isRunning}}
+                                    @disabled={{not this.note}}
+                                />
+                                <Button @size="xs" @text={{t "common.cancel"}} @onClick={{this.cancelRejecting}} />
+                            </div>
+                        </div>
+                    {{/if}}
+                </div>
+            {{/each}}
+        </div>
+    </ContentPanel>
+{{/if}}

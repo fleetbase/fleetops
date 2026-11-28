@@ -1200,6 +1200,10 @@ order:
         dispatch-title: Are you sure you want to dispatch this order?
         dispatch-body: Once this order is dispatched the assigned driver will be notified.
         dispatch-success: Order {orderId} has been dispatched.
+        offer-again-title: Offer this order to nearby drivers again?
+        offer-again-body: Drivers near the pickup who are online will be offered this order again, including any who declined it or let the offer run out.
+        offer-again-success: '{count, plural, one {Order {orderId} was offered to # driver.} other {Order {orderId} was offered to # drivers.}}'
+        offer-again-none: No available driver is online within range of the pickup, so order {orderId} was offered to nobody. Try again when a driver is online, or assign one.
         order-bulk-search: Input comma delimited order ID's or tracking numbers to perform a bulk search
     actions:
         create-new-customer: Create New Customer
@@ -1214,6 +1218,7 @@ order:
         cancel-order: Cancel Order
         dispatch-order: Dispatch Order
         dispatch-orders: Dispatch Orders
+        offer-again: Offer Again
         assign-driver-to-orders: Assign Driver to Orders
         edit-order-details: Edit Order Details
         edit-order-route: Edit Order Route
@@ -1677,6 +1682,11 @@ order-config-manager:
         completes-order-help: Reaching this step marks the order complete.
         requires-pod: Requires proof of delivery
         requires-pod-help: 'The driver must capture proof, such as a photo or signature, to reach this step.'
+        requires-inspection: Requires an inspection
+        requires-inspection-help: 'The driver must file the chosen inspection form for the order to reach this step. An inspection that finds the vehicle unsafe holds the order here and tells dispatch.'
+        inspection-form: Inspection form
+        inspection-form-placeholder: Select a published inspection form
+        inspection-form-missing: Choose the inspection form the driver must file, or the step cannot be reached from the app.
         developer-events: Developer events
         developer-events-help: 'Webhook events sent when an order reaches this step, for integrations. For notifications and other actions, use What happens here.'
         conditions-lead: 'Conditions decide whether an order can move to {step}, not what happens when it does.'
@@ -2169,6 +2179,85 @@ customer-app-review-settings:
     turned-on: App Review access is on.
     turned-off: App Review access is off.
     regenerated: New code created.
+navigator-app-link:
+    title: Link the Navigator app
+    unavailable: The Navigator link is not available to your account. Ask a system administrator.
+    organization-key-warning: This link still carries an organization API key. A system administrator can rotate the Platform API token once (Admin, Platform API token) so the link carries the safer platform token instead.
+    qr-alt: QR code that links the Navigator app to this server
+    download: Download
+    print: Print
+    print-title: Connect the driver app
+    print-hint: Open Navigator, tap "Scan its QR code" and point your phone at this code.
+    how-title: How a driver connects
+    how-1: Install the Navigator app and open it.
+    how-2: On the first screen, tap "Scan its QR code" and scan this code. The phone's own camera works too.
+    how-3: Confirm the server, then sign in with their phone number.
+    link: Link to send
+    link-help: Opening this on a phone opens the Navigator app and connects it. It stops working 30 minutes after it is shown here; refresh for a new one.
+    app-link: App link
+    app-link-help: The same details the QR code holds, for pasting into the app under "Enter by hand". It does not expire.
+    app-link-copy: Click to copy the app link
+    server: Server
+    live-updates: Live updates
+    refresh: Refresh
+    share-title: Send the link to drivers
+    share-help: Each driver gets the link by email, or by text message when they have no email. The link they receive works for 7 days.
+    share-drivers: Drivers
+    share-placeholder: Search for a driver to add
+    remove-driver: Remove {name}
+    send-selected: Send to selected drivers
+    send-all: Send to all drivers
+    sent: "{count, plural, one {Link sent to # driver.} other {Link sent to # drivers.}}"
+    not-sent: "{count, plural, one {# driver could not be sent the link.} other {# drivers could not be sent the link.}}"
+    failed-title: Not sent
+navigator-app-display-settings:
+    title: What drivers see
+    show-service-rate: Show the service rate on orders
+    show-service-rate-help-text: When on, a driver sees what an order is charged at, with the rate's lines and total, on the order's Details tab. Turn it off to keep prices from drivers.
+    allow-driver-dispatch: Let drivers dispatch orders from the app
+    allow-driver-dispatch-help-text: When off, an order is dispatched from the console only. Until then the driver sees it as waiting for dispatch and cannot start it. Turn it on to let a driver dispatch an order assigned to them from the app.
+    saved: Settings saved.
+driver-devices:
+    title: Devices
+    none: This driver has not signed in to the Navigator app on any phone yet.
+    unknown-device: Unknown device
+    app-version: Navigator {version}
+    status-signed-in: Signed in
+    status-signed-out: Signed out
+    status-invalid: Notifications not reaching it
+    development-build: Development build
+    last-seen: Last seen {date}
+    notify: Notify
+    notify-all: Send a notification
+    message-title: Title
+    message-title-placeholder: For example, Call dispatch
+    message-body: Message
+    message-body-placeholder: What the driver should know
+    to-one-device: Sent to this device only.
+    to-all-devices: Sent to every phone the driver is signed in on.
+    send: Send
+    sent: "Notification sent to {count, plural, one {# device} other {# devices}}."
+    sent-partly: "Sent, but at least one device did not accept it: {reason}"
+driver-documents:
+    title: Documents
+    held: This driver cannot go online until every document is approved.
+    all-approved: Every document has been approved.
+    status-missing: Not sent
+    status-submitted: Waiting for review
+    status-approved: Approved
+    status-rejected: Sent back
+    view: View
+    approve: Approve
+    reject: Send back
+    reject-title: Send this document back
+    reject-prompt: Tell the driver what is wrong so they can send it again.
+    reject-placeholder: For example, the photo is blurry or the document has expired
+    reject-confirm: Send back
+    approved: Document approved.
+    rejected: Document sent back to the driver.
+    released: Every document is approved. The driver can now go online.
+    sent-on: Sent {date}
+    reviewed-by: Reviewed by {name}
 driver-onboard-settings:
     driver-onboard-settings: Driver Onboard Settings
     enable-driver-onboard-from-app: Enable driver onboard from Navigator App
@@ -2181,6 +2270,15 @@ driver-onboard-settings:
     required-onboard-documents-help-text: Input all the onboard documents required for a driver to provide below using the "Add onboard document" button.
     enter-document-name: Enter document name
     add-onboard-document: Add onboard document
+    join-title: Sign-up code for new drivers
+    join-help: A new driver opens Navigator, taps "Get started" and either scans this QR code or types the code. Scanning also connects the app to this server.
+    join-qr-alt: QR code a new driver scans to sign up
+    join-download: Download
+    join-code: Join code
+    join-code-help: Give this to drivers who cannot scan the QR code. It only works while sign-up by button is switched on.
+    join-replace: Replace the code
+    join-replace-help: The current code, and any QR code printed with it, stops working at once.
+    join-code-replaced: New join code created.
 
 cell:
     driver-name:
@@ -3311,9 +3409,9 @@ settings:
         strategy-placeholder: One driver at a time
         strategy-help-text: 'One at a time offers the order to the nearest driver first, then the next if they decline or run out of time. All at once offers it to every nearby driver, and the first to accept gets it.'
         offer-timeout: Time each driver has to accept
-        offer-timeout-placeholder: '20'
-        offer-timeout-help-text: Between 10 and 120. Leave empty for 20 seconds.
-        offer-timeout-error: Enter a number between 10 and 120.
+        offer-timeout-placeholder: '90'
+        offer-timeout-help-text: Between 10 and 600. Leave empty for 90 seconds. Give drivers long enough to open the app and read the offer.
+        offer-timeout-error: Enter a number between 10 and 600.
         ping-radius: Search radius around the pickup
         ping-radius-placeholder: '6000'
         ping-radius-help-text: 'Drivers farther from the pickup aren’t offered the order. Leave empty for 6,000 m.'
